@@ -4,4 +4,4 @@ pypdf>=5.0
 requests>=2.32
 tzdata>=2025.1
 pillow>=10.4
-Pin Swiss Ephemeris for Python 3.11
+
