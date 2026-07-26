@@ -804,6 +804,12 @@ def period_report(
     )
     retrograde_sections = "\n".join(_retrograde_section(cycle) for cycle in cycles)
 
+    strategic_chapters_section = (
+        "# Nine strategic chapters\n\n" + strategic_chapter_markdown
+        if strategic_chapter_markdown
+        else ""
+    )
+
     house_rows = ["| Rank | House | Main field |", "|---:|---:|---|"]
     for rank, (house, weight) in enumerate(houses, 1):
         house_rows.append(f"| {rank} | {house} | {HOUSE_NAMES[house]} |")
@@ -829,7 +835,7 @@ The selected sign becomes house 1 under the whole-sign method. The dominant and 
 
 {chr(10).join(house_rows)}
 
-{("# Nine strategic chapters\n\n" + strategic_chapter_markdown) if strategic_chapter_markdown else ""}
+{strategic_chapters_section}
 
 # Major transitions
 
