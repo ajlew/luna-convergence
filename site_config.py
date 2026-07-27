@@ -7,8 +7,8 @@ SUBTITLE = (
     "whole-sign houses, retrogrades and convergence points."
 )
 
-MONTHLY_PRICE = "A$9.95"
-YEARLY_PRICE = "A$29.95"
+MONTHLY_PRICE = "A$4.95"
+YEARLY_PRICE = "A$14.95"
 
 DEFAULT_SIGN = "Sagittarius"
 DEFAULT_TIMEZONE = "Australia/Sydney"

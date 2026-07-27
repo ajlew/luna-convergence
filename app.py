@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import date
+from functools import lru_cache
+import json
 from calendar import month_name
 from pathlib import Path
 from html import escape
@@ -9,9 +11,10 @@ from PIL import Image
 
 import streamlit as st
 
-from astrology_engine import SIGNS
+from astrology_engine import SIGNS, HOUSE_NAMES
 from customer_experience import free_daily_reading, prepared_order_email
-from synthesis import house_reference_matrix
+from synthesis import house_reference_matrix, house_aware_conclusion, period_report
+from interpretation_library import HOUSE_STRATEGY
 from site_config import (
     BRAND_NAME,
     TAGLINE,
@@ -50,6 +53,9 @@ YEARLY_PAYMENT_URL = secret("STRIPE_YEARLY_URL")
 REPORT_REQUEST_URL = secret("REPORT_REQUEST_URL")
 NEWSLETTER_URL = secret("NEWSLETTER_URL")
 CONTACT_EMAIL = secret("CONTACT_EMAIL", "your-email@example.com")
+GA_MEASUREMENT_ID = secret("GA_MEASUREMENT_ID", "G-TE5HPKV94D")
+PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
+DAILY_PAGE_REF = None
 
 
 def install_css() -> None:
@@ -344,6 +350,164 @@ a {
     line-height:1.5;
 }
 
+.top-nav {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:0;
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    margin:.2rem 0 2.6rem;
+}
+
+.top-nav a {
+    display:flex;
+    align-items:center;
+    gap:.48rem;
+    min-height:2.75rem;
+    padding:.15rem .82rem;
+    color:var(--black) !important;
+    text-decoration:none !important;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.67rem;
+    letter-spacing:.015em;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+
+.top-nav a:hover {
+    background:var(--soft);
+}
+
+.nav-dot {
+    width:.72rem;
+    height:.72rem;
+    border:1px solid var(--line);
+    border-radius:50%;
+    display:inline-block;
+    background:var(--white);
+}
+
+.top-nav a.active .nav-dot {
+    border-color:var(--black);
+    box-shadow:inset 0 0 0 .23rem var(--black);
+}
+
+.payment-link {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:100%;
+    min-height:3.25rem;
+    margin-top:.55rem;
+    background:var(--black);
+    color:var(--white) !important;
+    border:1px solid var(--black);
+    text-decoration:none !important;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.76rem;
+    font-weight:500;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
+.payment-link:hover {
+    opacity:.78;
+}
+
+.sign-grid {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:1rem;
+}
+
+.sign-card {
+    display:block;
+    border:1px solid var(--black);
+    padding:1.2rem;
+    color:var(--black) !important;
+    text-decoration:none !important;
+    min-height:10rem;
+}
+
+.sign-card:hover {
+    background:var(--soft);
+}
+
+.sign-card-title {
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:1.7rem;
+    line-height:1.05;
+    margin:.35rem 0 .75rem;
+}
+
+.sign-card-copy,
+.date-line {
+    font-family:"Josefin Sans", sans-serif;
+    font-size:.98rem;
+    line-height:1.5;
+}
+
+.date-list {
+    border-top:1px solid var(--black);
+}
+
+.date-row {
+    display:grid;
+    grid-template-columns:8.5rem 1fr;
+    gap:1rem;
+    padding:1rem 0;
+    border-bottom:1px solid var(--line);
+}
+
+.date-label {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.69rem;
+    text-transform:uppercase;
+}
+
+.related-signs {
+    display:flex;
+    flex-wrap:wrap;
+    gap:.45rem;
+    margin:1rem 0;
+}
+
+.related-signs a {
+    border:1px solid var(--black);
+    padding:.42rem .62rem;
+    color:var(--black) !important;
+    text-decoration:none !important;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.66rem;
+    text-transform:uppercase;
+}
+
+.related-signs a:hover {
+    background:var(--black);
+    color:var(--white) !important;
+}
+
+@media (max-width: 900px) {
+    .sign-grid {
+        grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .top-nav a {
+        padding:.1rem .55rem;
+        font-size:.61rem;
+    }
+    .sign-grid {
+        grid-template-columns:1fr;
+    }
+    .date-row {
+        grid-template-columns:1fr;
+        gap:.3rem;
+    }
+}
+
 div[data-testid="stRadio"] {
     border-top:1px solid var(--black);
     border-bottom:1px solid var(--black);
@@ -535,23 +699,166 @@ def brand_header() -> None:
     )
 
 
-def navigation() -> str:
-    if "page" not in st.session_state:
-        st.session_state.page = "Home"
-    chosen = st.radio(
-        "Main navigation",
-        NAV_ITEMS,
-        index=NAV_ITEMS.index(st.session_state.page),
-        horizontal=True,
-        label_visibility="collapsed",
+def top_navigation(current_path: str) -> None:
+    path = current_path or ""
+    items = [
+        ("", "Home"),
+        ("daily-horoscope", "Daily horoscope"),
+        ("august-2026-horoscopes", "August 2026"),
+        ("reports", "Reports"),
+        ("house-guide", "House guide"),
+        ("sample-report", "Sample report"),
+        ("how-it-works", "How it works"),
+    ]
+    links = []
+    for item_path, label in items:
+        active = " active" if path == item_path else ""
+        href = "/" if not item_path else f"/{item_path}"
+        links.append(
+            f'<a class="{active.strip()}" href="{href}">'
+            f'<span class="nav-dot"></span>{escape(label)}</a>'
+        )
+    st.markdown(
+        '<nav class="top-nav" aria-label="Primary navigation">'
+        + "".join(links)
+        + "</nav>",
+        unsafe_allow_html=True,
     )
-    st.session_state.page = chosen
-    return chosen
 
 
-def payment_button(label: str, url: str, key: str) -> None:
+def set_page_metadata(title: str, description: str, path: str) -> None:
+    canonical = PUBLIC_SITE_URL + (path if path.startswith("/") else f"/{path}")
+    if path in ("", "/"):
+        canonical = PUBLIC_SITE_URL + "/"
+    st.html(
+        f"""
+<script>
+(() => {{
+  const title = {json.dumps(title)};
+  const description = {json.dumps(description)};
+  const canonical = {json.dumps(canonical)};
+  document.title = title;
+
+  let meta = document.head.querySelector('meta[name="description"]');
+  if (!meta) {{
+    meta = document.createElement('meta');
+    meta.setAttribute('name', 'description');
+    document.head.appendChild(meta);
+  }}
+  meta.setAttribute('content', description);
+
+  let link = document.head.querySelector('link[rel="canonical"]');
+  if (!link) {{
+    link = document.createElement('link');
+    link.setAttribute('rel', 'canonical');
+    document.head.appendChild(link);
+  }}
+  link.setAttribute('href', canonical);
+
+  const upsert = (property, value) => {{
+    let node = document.head.querySelector(`meta[property="${{property}}"]`);
+    if (!node) {{
+      node = document.createElement('meta');
+      node.setAttribute('property', property);
+      document.head.appendChild(node);
+    }}
+    node.setAttribute('content', value);
+  }};
+  upsert('og:title', title);
+  upsert('og:description', description);
+  upsert('og:url', canonical);
+  upsert('og:type', 'website');
+}})();
+</script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+
+
+def install_google_analytics(page_title: str, page_path: str) -> None:
+    if not GA_MEASUREMENT_ID.startswith("G-"):
+        return
+
+    session_key = f"_ga_page_view::{page_path}"
+    send_page_view = not st.session_state.get(session_key, False)
+    st.session_state[session_key] = True
+
+    st.html(
+        f"""
+<script>
+(() => {{
+  const measurementId = {json.dumps(GA_MEASUREMENT_ID)};
+  if (!window.dataLayer) window.dataLayer = [];
+  if (!window.gtag) {{
+    window.gtag = function() {{ window.dataLayer.push(arguments); }};
+  }}
+  if (!document.getElementById('luna-google-tag')) {{
+    const tag = document.createElement('script');
+    tag.id = 'luna-google-tag';
+    tag.async = true;
+    tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
+    document.head.appendChild(tag);
+    window.gtag('js', new Date());
+  }}
+  window.gtag('config', measurementId, {{
+    send_page_view: false,
+    page_path: {json.dumps(page_path)},
+    page_title: {json.dumps(page_title)}
+  }});
+  if ({str(send_page_view).lower()}) {{
+    window.gtag('event', 'page_view', {{
+      page_path: {json.dumps(page_path)},
+      page_location: window.location.href,
+      page_title: {json.dumps(page_title)}
+    }});
+  }}
+}})();
+</script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+
+
+def track_event(event_name: str, parameters: dict | None = None) -> None:
+    if not GA_MEASUREMENT_ID.startswith("G-"):
+        return
+    st.html(
+        f"""
+<script>
+if (window.gtag) {{
+  window.gtag('event', {json.dumps(event_name)}, {json.dumps(parameters or {})});
+}}
+</script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+
+
+def payment_button(
+    label: str,
+    url: str,
+    key: str,
+    event_name: str,
+) -> None:
     if url:
-        st.link_button(label, url, use_container_width=True)
+        safe_url = escape(url, quote=True)
+        safe_label = escape(label)
+        st.html(
+            f"""
+<a class="payment-link"
+   href="{safe_url}"
+   target="_blank"
+   rel="noopener noreferrer"
+   onclick="if(window.gtag){{window.gtag('event','{event_name}',{{
+      event_category:'conversion',
+      link_url:'{safe_url}',
+      value:1
+   }});}}">
+   {safe_label}
+</a>
+            """,
+            unsafe_allow_javascript=True,
+        )
     else:
         st.button(
             f"{label} — link not connected",
@@ -579,7 +886,12 @@ def report_cta() -> None:
             """,
             unsafe_allow_html=True,
         )
-        payment_button("Get the monthly report", MONTHLY_PAYMENT_URL, "monthly-disabled")
+        payment_button(
+            "Get the monthly report",
+            MONTHLY_PAYMENT_URL,
+            "monthly-disabled",
+            "monthly_report_click",
+        )
     with right:
         st.markdown(
             f"""
@@ -594,7 +906,12 @@ def report_cta() -> None:
             """,
             unsafe_allow_html=True,
         )
-        payment_button("Get the year-ahead report", YEARLY_PAYMENT_URL, "yearly-disabled")
+        payment_button(
+            "Get the year-ahead report",
+            YEARLY_PAYMENT_URL,
+            "yearly-disabled",
+            "yearly_report_click",
+        )
 
 
 def daily_controls(prefix: str = "daily") -> tuple[str, date, str]:
@@ -698,6 +1015,11 @@ retrograde phases, important dates and strategic chapters.
 
 
 def home_page() -> None:
+    set_page_metadata(
+        "Luna Convergence | Strategic Astrology",
+        "Free daily horoscopes and detailed monthly and year-ahead astrology reports using whole-sign houses, retrogrades and convergence analysis.",
+        "/",
+    )
     left, right = st.columns([1.2, .8], gap="large")
     with left:
         st.markdown('<div class="eyebrow">Astrology / timing / practical interpretation</div>', unsafe_allow_html=True)
@@ -715,9 +1037,13 @@ def home_page() -> None:
             key="home-sign",
         )
         if st.button("Read today's free horoscope", type="primary", use_container_width=True):
-            st.session_state.page = "Daily Horoscope"
             st.session_state["daily-sign"] = sign
-            st.rerun()
+            track_event(
+                "daily_reading_start",
+                {"source": "homepage", "zodiac_sign": sign},
+            )
+            if DAILY_PAGE_REF is not None:
+                st.switch_page(DAILY_PAGE_REF)
 
     with right:
         try:
@@ -798,6 +1124,11 @@ def home_page() -> None:
 
 
 def daily_page() -> None:
+    set_page_metadata(
+        "Free Daily Horoscope | Luna Convergence",
+        "Generate a free daily horoscope with active houses, major aspects, opportunity, caution and wider convergence context.",
+        "/daily-horoscope",
+    )
     st.markdown('<div class="eyebrow">Free daily horoscope</div>', unsafe_allow_html=True)
     st.markdown("# Read today in context")
     st.markdown(
@@ -806,12 +1137,25 @@ def daily_page() -> None:
     sign, reading_date, timezone_name = daily_controls()
     if st.button("Generate my daily reading", type="primary", use_container_width=True):
         st.session_state.force_daily = True
+        track_event(
+            "daily_reading_generated",
+            {
+                "zodiac_sign": sign,
+                "reading_date": reading_date.isoformat(),
+                "timezone": timezone_name,
+            },
+        )
     if st.session_state.get("force_daily"):
         render_free_reading(sign, reading_date, timezone_name)
         report_cta()
 
 
 def reports_page() -> None:
+    set_page_metadata(
+        "Monthly and Year-Ahead Astrology Reports | Luna Convergence",
+        "Order a monthly strategic astrology report or a detailed year-ahead forecast delivered electronically.",
+        "/reports",
+    )
     st.markdown('<div class="eyebrow">Paid reports</div>', unsafe_allow_html=True)
     st.markdown("# Choose the depth you need")
     st.markdown(
@@ -889,6 +1233,11 @@ def reports_page() -> None:
 
 
 def houses_page() -> None:
+    set_page_metadata(
+        "The 12 Astrological Houses | Luna Convergence",
+        "Learn what the twelve astrological houses mean for identity, income, communication, home, work, relationships, career and long-term goals.",
+        "/house-guide",
+    )
     st.markdown('<div class="eyebrow">House guide</div>', unsafe_allow_html=True)
     st.markdown("# The twelve areas of life")
     st.markdown(
@@ -915,6 +1264,11 @@ def houses_page() -> None:
 
 
 def sample_page() -> None:
+    set_page_metadata(
+        "Sagittarius 2026 Astrology Report Sample | Luna Convergence",
+        "Read a sample Luna Convergence year-ahead astrology report showing houses, transitions, convergence points and practical conclusions.",
+        "/sample-report",
+    )
     st.markdown('<div class="eyebrow">Example report</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="editorial-title">Sagittarius 2026 —<br>sample</div>',
@@ -976,6 +1330,11 @@ growth, but unclear ownership, payment or messaging can turn the same opening in
 
 
 def method_page() -> None:
+    set_page_metadata(
+        "How Luna Convergence Astrology Works",
+        "See how Luna Convergence combines Swiss Ephemeris calculations, whole-sign houses, retrogrades, eclipses and convergence-point interpretation.",
+        "/how-it-works",
+    )
     st.markdown('<div class="eyebrow">Method and transparency</div>', unsafe_allow_html=True)
     st.markdown("# How the forecast is built")
     st.markdown(
@@ -1008,32 +1367,359 @@ as causal prediction and should not replace financial, medical, legal or other p
     )
 
 
-install_css()
-brand_header()
-page = navigation()
-st.divider()
+SEO_YEAR = 2026
+SEO_MONTH = 8
+SEO_MONTH_NAME = "August"
 
-if page == "Home":
-    home_page()
-elif page == "Daily Horoscope":
-    daily_page()
-elif page == "Reports":
-    reports_page()
-elif page == "House Guide":
-    houses_page()
-elif page == "Sample Report":
-    sample_page()
-else:
-    method_page()
 
-st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-st.divider()
-st.markdown(
-    f"""
+@lru_cache(maxsize=32)
+def monthly_seo_data(sign: str) -> dict:
+    return period_report(
+        sign,
+        date(SEO_YEAR, SEO_MONTH, 1),
+        date(SEO_YEAR, SEO_MONTH, 31),
+        DEFAULT_TIMEZONE,
+        f"{SEO_MONTH_NAME} {SEO_YEAR}",
+        transition_count=7,
+    )
+
+
+def sign_slug(sign: str) -> str:
+    return sign.lower().replace(" ", "-")
+
+
+def focus_paragraph(data: dict, target_houses: set[int], label: str) -> str:
+    transitions = [
+        event
+        for event in data["major_transitions"]
+        if set(event.get("houses", [])) & target_houses
+    ]
+    primary = data["dominant_houses"][0]["house"]
+    if transitions:
+        event = transitions[0]
+        relevant = next(
+            house for house in event["houses"] if house in target_houses
+        )
+        return (
+            f"**{event['title']}** activates house {relevant}, "
+            f"which governs **{HOUSE_NAMES[relevant]}**. "
+            f"The constructive use of this period is to "
+            f"{HOUSE_STRATEGY[relevant]['action']}; the risk is "
+            f"{HOUSE_STRATEGY[relevant]['risk']}."
+        )
+    return (
+        f"No single major transition completely dominates {label}. "
+        f"Use the month's leading house {primary}—"
+        f"**{HOUSE_NAMES[primary]}**—as the organising principle: "
+        f"{HOUSE_STRATEGY[primary]['action']}."
+    )
+
+
+def monthly_index_page() -> None:
+    set_page_metadata(
+        "August 2026 Horoscopes for Every Zodiac Sign | Luna Convergence",
+        "Read the free August 2026 horoscope overview for Aries through Pisces, including active houses, important dates, opportunities and cautions.",
+        "/august-2026-horoscopes",
+    )
+    st.markdown('<div class="eyebrow">Monthly horoscope library</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="editorial-title">August 2026<br>horoscopes</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "Choose your Sun sign or rising sign. Each page uses the same planetary sky "
+        "but maps it into a different whole-sign house pattern, producing a distinct "
+        "focus for work, money, relationships, home and long-term direction."
+    )
+
+    cards = []
+    for sign in SIGNS:
+        data = monthly_seo_data(sign)
+        primary = data["dominant_houses"][0]
+        key_event = data["major_transitions"][0]
+        cards.append(
+            f"""
+<a class="sign-card" href="/august-2026-{sign_slug(sign)}">
+  <div class="eyebrow">{escape(sign)}</div>
+  <div class="sign-card-title">House {primary['house']}</div>
+  <div class="sign-card-copy"><strong>{escape(primary['topic'].capitalize())}</strong></div>
+  <div class="sign-card-copy">{escape(key_event['title'])}</div>
+</a>
+            """
+        )
+    st.markdown(
+        '<div class="sign-grid">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## What the free monthly overview includes")
+    st.markdown(
+        """
+- the two strongest active houses;
+- major ingresses, eclipses and lunations;
+- work, money and relationship implications;
+- the leading convergence period;
+- a direct opportunity, caution and practical conclusion.
+        """
+    )
+    report_cta()
+
+
+def monthly_sign_page(sign: str) -> None:
+    data = monthly_seo_data(sign)
+    primary = data["dominant_houses"][0]
+    secondary = data["dominant_houses"][1]
+    title = f"{sign} August 2026 Horoscope | Luna Convergence"
+    description = (
+        f"{sign} August 2026 horoscope covering active houses, major transitions, "
+        "important dates, work, money, relationships, opportunities and cautions."
+    )
+    path = f"/august-2026-{sign_slug(sign)}"
+    set_page_metadata(title, description, path)
+
+    st.markdown('<div class="eyebrow">Free monthly horoscope</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="editorial-title">{escape(sign)}<br>August 2026</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"For **{sign}**, August 2026 is led by house {primary['house']}: "
+        f"**{primary['topic']}**. The secondary pressure point is house "
+        f"{secondary['house']}: **{secondary['topic']}**. The month works best "
+        "when expansion, timing and responsibility are treated as one connected system."
+    )
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown(
+            f"""
+<div class="card">
+  <div class="eyebrow">Opportunity</div>
+  <h3>Build through house {primary['house']}</h3>
+  <p>{escape(HOUSE_STRATEGY[primary['house']]['opportunity'].capitalize())}.</p>
+  <p><strong>Best move:</strong> {escape(HOUSE_STRATEGY[primary['house']]['action'].capitalize())}.</p>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            f"""
+<div class="card">
+  <div class="eyebrow">Caution</div>
+  <h3>Protect house {secondary['house']}</h3>
+  <p>{escape(HOUSE_STRATEGY[secondary['house']]['risk'].capitalize())}.</p>
+  <p><strong>Rule:</strong> do not mistake urgency for a complete decision.</p>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("## Important dates and transitions")
+    rows = []
+    for event in data["major_transitions"][:7]:
+        event_date = date.fromisoformat(event["event_date"]).strftime("%B %d")
+        rows.append(
+            f"""
+<div class="date-row">
+  <div class="date-label">{escape(event_date)}</div>
+  <div class="date-line"><strong>{escape(event['title'])}</strong><br>{escape(event['detail'])}</div>
+</div>
+            """
+        )
+    st.markdown(
+        '<div class="date-list">' + "".join(rows) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## Work and direction")
+    st.markdown(focus_paragraph(data, {6, 10}, "work and career"))
+
+    st.markdown("## Money and obligations")
+    st.markdown(focus_paragraph(data, {2, 8}, "money and financial commitments"))
+
+    st.markdown("## Relationships and alliances")
+    st.markdown(focus_paragraph(data, {5, 7, 11}, "relationships and alliances"))
+
+    st.markdown("## The leading convergence point")
+    if data["convergences"]:
+        convergence = data["convergences"][0]
+        start = date.fromisoformat(convergence["start_date"]).strftime("%B %d")
+        end = date.fromisoformat(convergence["end_date"]).strftime("%B %d")
+        house_list = ", ".join(str(house) for house in convergence["houses"])
+        st.markdown(
+            f"**{convergence['title']} — {start} to {end}.** "
+            f"This cluster connects houses {house_list} through "
+            f"{len(convergence['events'])} overlapping events. Its value comes from "
+            "reading the events together: opportunity is strongest when contracts, "
+            "money, communication and operational capacity support the same decision."
+        )
+    else:
+        st.markdown(
+            "No high-density convergence met the engine's threshold. "
+            "The dominant-house pattern is therefore the clearest guide."
+        )
+
+    st.markdown("## Practical conclusion")
+    st.info(
+        house_aware_conclusion(
+            sign,
+            primary["house"],
+            secondary["house"],
+        )
+    )
+
+    st.markdown("## Read another August 2026 sign")
+    links = [
+        f'<a href="/august-2026-{sign_slug(item)}">{escape(item)}</a>'
+        for item in SIGNS
+    ]
+    st.markdown(
+        '<div class="related-signs">' + "".join(links) + "</div>",
+        unsafe_allow_html=True,
+    )
+    report_cta()
+
+
+def make_monthly_page(sign: str):
+    def page() -> None:
+        monthly_sign_page(sign)
+
+    page.__name__ = f"{sign_slug(sign).replace('-', '_')}_august_2026"
+    return page
+
+
+def privacy_page() -> None:
+    set_page_metadata(
+        "Privacy and Analytics | Luna Convergence",
+        "How Luna Convergence uses Google Analytics, Stripe and customer information for digital astrology reports.",
+        "/privacy",
+    )
+    st.markdown('<div class="eyebrow">Privacy</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="editorial-title">Privacy and<br>analytics</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+Luna Convergence uses **Google Analytics 4** to understand website visits,
+page use, free-reading generation and clicks leading to Stripe checkout.
+Google Analytics may process device, browser, approximate location and usage
+information according to Google's own privacy terms.
+
+Payments are processed by **Stripe**. Luna Convergence does not receive or
+store complete card details. Stripe supplies the payment status, customer
+email and any checkout information the customer submits.
+
+Paid reports are currently fulfilled manually. Information such as name,
+email, zodiac sign, requested period and timezone is used only to prepare,
+deliver and support the purchased report.
+
+To request correction or deletion of order information, use the contact
+email displayed during checkout or in the report-delivery message.
+        """
+    )
+    st.markdown("## Analytics events used")
+    st.markdown(
+        """
+- page views;
+- free daily reading generation;
+- monthly report checkout clicks;
+- year-ahead report checkout clicks.
+        """
+    )
+
+
+def footer() -> None:
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    st.divider()
+    st.markdown(
+        f"""
 <div class="small-note">
 <strong>{escape(BRAND_NAME)}</strong> — tropical geocentric astrology using whole-sign houses.
 Astrology is a symbolic interpretive framework and is not a substitute for professional advice.
+<br><a href="/privacy">Privacy and analytics</a> ·
+<a href="/august-2026-horoscopes">August 2026 horoscopes</a>
 </div>
-    """,
-    unsafe_allow_html=True,
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+install_css()
+
+HOME_PAGE_REF = st.Page(
+    home_page,
+    title="Home",
+    default=True,
 )
+DAILY_PAGE_REF = st.Page(
+    daily_page,
+    title="Daily Horoscope",
+    url_path="daily-horoscope",
+)
+MONTHLY_INDEX_REF = st.Page(
+    monthly_index_page,
+    title="August 2026 Horoscopes",
+    url_path="august-2026-horoscopes",
+)
+REPORTS_PAGE_REF = st.Page(
+    reports_page,
+    title="Reports",
+    url_path="reports",
+)
+HOUSES_PAGE_REF = st.Page(
+    houses_page,
+    title="House Guide",
+    url_path="house-guide",
+)
+SAMPLE_PAGE_REF = st.Page(
+    sample_page,
+    title="Sample Report",
+    url_path="sample-report",
+)
+METHOD_PAGE_REF = st.Page(
+    method_page,
+    title="How It Works",
+    url_path="how-it-works",
+)
+PRIVACY_PAGE_REF = st.Page(
+    privacy_page,
+    title="Privacy",
+    url_path="privacy",
+    visibility="hidden",
+)
+
+MONTHLY_PAGE_REFS = {
+    sign: st.Page(
+        make_monthly_page(sign),
+        title=f"{sign} August 2026",
+        url_path=f"august-2026-{sign_slug(sign)}",
+        visibility="hidden",
+    )
+    for sign in SIGNS
+}
+
+ALL_PAGES = [
+    HOME_PAGE_REF,
+    DAILY_PAGE_REF,
+    MONTHLY_INDEX_REF,
+    REPORTS_PAGE_REF,
+    HOUSES_PAGE_REF,
+    SAMPLE_PAGE_REF,
+    METHOD_PAGE_REF,
+    PRIVACY_PAGE_REF,
+    *MONTHLY_PAGE_REFS.values(),
+]
+
+current_page = st.navigation(ALL_PAGES, position="hidden")
+
+brand_header()
+top_navigation(current_page.url_path)
+install_google_analytics(
+    f"{current_page.title} | {BRAND_NAME}",
+    "/" if not current_page.url_path else f"/{current_page.url_path}",
+)
+
+current_page.run()
+footer()
