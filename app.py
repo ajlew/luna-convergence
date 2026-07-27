@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from functools import lru_cache
 import json
+import secrets
 from calendar import month_name
 from pathlib import Path
 from html import escape
@@ -15,6 +16,15 @@ from astrology_engine import SIGNS, HOUSE_NAMES
 from customer_experience import free_daily_reading, prepared_order_email
 from synthesis import house_reference_matrix, house_aware_conclusion, period_report
 from interpretation_library import HOUSE_STRATEGY
+from order_capture import (
+    build_order_reference,
+    build_stripe_checkout_url,
+    default_month_label,
+    default_year,
+    month_choices,
+    valid_email,
+    year_choices,
+)
 from site_config import (
     BRAND_NAME,
     TAGLINE,
@@ -544,6 +554,43 @@ a {
     opacity:.78;
 }
 
+.order-summary {
+    display:grid;
+    grid-template-columns:9.5rem 1fr;
+    gap:.55rem 1rem;
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    padding:1rem 0;
+    margin:1rem 0;
+}
+
+.order-label {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    text-transform:uppercase;
+    color:var(--muted);
+}
+
+.order-value {
+    font-family:"Josefin Sans", sans-serif;
+    font-size:1rem;
+    overflow-wrap:anywhere;
+}
+
+.checkout-note {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    line-height:1.55;
+    color:var(--muted);
+}
+
+@media (max-width: 700px) {
+    .order-summary {
+        grid-template-columns:1fr;
+        gap:.2rem;
+    }
+}
+
 .sign-grid {
     display:grid;
     grid-template-columns:repeat(3, minmax(0,1fr));
@@ -968,21 +1015,33 @@ def payment_button(
     url: str,
     key: str,
     event_name: str,
+    event_parameters: dict | None = None,
 ) -> None:
     if url:
         safe_url = escape(url, quote=True)
         safe_label = escape(label)
+        parameters = {
+            "event_category": "conversion",
+            "link_url": url,
+            "value": 1,
+            **(event_parameters or {}),
+        }
+        onclick = (
+            "if(window.gtag){window.gtag("
+            + json.dumps("event")
+            + ","
+            + json.dumps(event_name)
+            + ","
+            + json.dumps(parameters)
+            + ");}"
+        )
         st.html(
             f"""
 <a class="payment-link"
    href="{safe_url}"
    target="_blank"
    rel="noopener noreferrer"
-   onclick="if(window.gtag){{window.gtag('event','{event_name}',{{
-      event_category:'conversion',
-      link_url:'{safe_url}',
-      value:1
-   }});}}">
+   onclick='{escape(onclick, quote=True)}'>
    {safe_label}
 </a>
             """,
@@ -997,9 +1056,60 @@ def payment_button(
         )
 
 
-def report_cta() -> None:
+def _order_token(context: str, product_code: str) -> str:
+    key = f"order-token::{context}::{product_code}"
+    if key not in st.session_state:
+        st.session_state[key] = secrets.token_hex(4).upper()
+    return str(st.session_state[key])
+
+
+def _order_summary(
+    report_name: str,
+    sign: str,
+    period: str,
+    timezone_name: str,
+    delivery_email: str,
+    reference: str,
+) -> None:
+    st.markdown(
+        f"""
+<div class="order-summary">
+  <div class="order-label">Report</div>
+  <div class="order-value">{escape(report_name)}</div>
+  <div class="order-label">Star sign</div>
+  <div class="order-value">{escape(sign)}</div>
+  <div class="order-label">Period</div>
+  <div class="order-value">{escape(period)}</div>
+  <div class="order-label">Timezone</div>
+  <div class="order-value">{escape(timezone_name)}</div>
+  <div class="order-label">Delivery email</div>
+  <div class="order-value">{escape(delivery_email)}</div>
+  <div class="order-label">Order reference</div>
+  <div class="order-value">{escape(reference)}</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def report_cta(
+    context: str = "general",
+    prefill_sign: str | None = None,
+    prefill_month: str | None = None,
+    prefill_year: int | None = None,
+) -> None:
+    key_context = "".join(
+        character if character.isalnum() else "-"
+        for character in context.lower()
+    ).strip("-") or "general"
+
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("## Choose the depth you need")
+    st.markdown("## Choose and personalise your report")
+    st.markdown(
+        "Select the star sign and report period **before payment**. "
+        "Use your Sun sign unless you know and prefer your rising sign."
+    )
+
     left, right = st.columns(2, gap="large")
     with left:
         st.markdown(
@@ -1008,18 +1118,12 @@ def report_cta() -> None:
   <div class="eyebrow">Monthly strategic report</div>
   <div class="price">{MONTHLY_PRICE}</div>
   <p>Major transitions, convergence points, retrogrades, work, money, relationships and important dates.</p>
-  <span class="pill">One zodiac sign</span>
+  <span class="pill">One star sign</span>
   <span class="pill">One month</span>
-  <span class="pill">Manual delivery</span>
+  <span class="pill">Email delivery</span>
 </div>
             """,
             unsafe_allow_html=True,
-        )
-        payment_button(
-            "Get the monthly report",
-            MONTHLY_PAYMENT_URL,
-            "monthly-disabled",
-            "monthly_report_click",
         )
     with right:
         st.markdown(
@@ -1028,19 +1132,248 @@ def report_cta() -> None:
   <div class="eyebrow">Year-ahead strategic report</div>
   <div class="price">{YEARLY_PRICE}</div>
   <p>Nine strategic chapters, eclipse sequence, full retrograde cycles, convergence windows and a month-by-month map.</p>
-  <span class="pill">One zodiac sign</span>
-  <span class="pill">Full year</span>
-  <span class="pill">Detailed report</span>
+  <span class="pill">One star sign</span>
+  <span class="pill">Calendar year</span>
+  <span class="pill">Email delivery</span>
 </div>
             """,
             unsafe_allow_html=True,
         )
-        payment_button(
-            "Get the year-ahead report",
-            YEARLY_PAYMENT_URL,
-            "yearly-disabled",
-            "yearly_report_click",
+
+    monthly_tab, yearly_tab = st.tabs(
+        [
+            f"Monthly report — {MONTHLY_PRICE}",
+            f"Year-ahead report — {YEARLY_PRICE}",
+        ]
+    )
+
+    with monthly_tab:
+        pairs = month_choices()
+        month_labels = [label for label, _ in pairs]
+        month_codes = dict(pairs)
+        chosen_default_month = (
+            prefill_month
+            if prefill_month in month_labels
+            else default_month_label()
         )
+        chosen_default_sign = (
+            prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
+        )
+
+        with st.form(f"{key_context}-monthly-checkout"):
+            st.markdown("### Choose your monthly report")
+            m1, m2 = st.columns(2)
+            with m1:
+                delivery_email = st.text_input(
+                    "Delivery email",
+                    key=f"{key_context}-monthly-email",
+                    placeholder="name@example.com",
+                )
+                sign = st.selectbox(
+                    "Your star sign",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-monthly-sign",
+                    help="Use your Sun sign unless you know and prefer your rising sign.",
+                )
+            with m2:
+                month_label = st.selectbox(
+                    "Report month",
+                    month_labels,
+                    index=month_labels.index(chosen_default_month),
+                    key=f"{key_context}-monthly-period",
+                )
+                timezone_name = st.selectbox(
+                    "Timezone",
+                    TIMEZONES,
+                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    key=f"{key_context}-monthly-timezone",
+                )
+            submitted = st.form_submit_button(
+                f"Prepare monthly checkout — {MONTHLY_PRICE}",
+                type="primary",
+                use_container_width=True,
+            )
+
+        state_key = f"prepared-order::{key_context}::monthly"
+        if submitted:
+            if not valid_email(delivery_email):
+                st.error("Enter a valid delivery email before continuing to payment.")
+                st.session_state.pop(state_key, None)
+            else:
+                period_code = month_codes[month_label]
+                reference = build_order_reference(
+                    "MONTHLY",
+                    sign,
+                    period_code,
+                    timezone_name,
+                    _order_token(key_context, "MONTHLY"),
+                )
+                checkout_url = build_stripe_checkout_url(
+                    MONTHLY_PAYMENT_URL,
+                    delivery_email,
+                    reference,
+                    f"monthly-{period_code}-{sign}",
+                )
+                st.session_state[state_key] = {
+                    "report_name": "Monthly Strategic Report",
+                    "email": delivery_email.strip(),
+                    "sign": sign,
+                    "period": month_label,
+                    "period_code": period_code,
+                    "timezone": timezone_name,
+                    "reference": reference,
+                    "checkout_url": checkout_url,
+                }
+                track_event(
+                    "monthly_order_prepared",
+                    {
+                        "zodiac_sign": sign,
+                        "report_period": period_code,
+                        "timezone": timezone_name,
+                    },
+                )
+
+        order = st.session_state.get(state_key)
+        if order:
+            _order_summary(
+                order["report_name"],
+                order["sign"],
+                order["period"],
+                order["timezone"],
+                order["email"],
+                order["reference"],
+            )
+            payment_button(
+                f"Continue to secure payment — {MONTHLY_PRICE}",
+                order["checkout_url"],
+                f"{key_context}-monthly-payment-disabled",
+                "monthly_report_click",
+                {
+                    "zodiac_sign": order["sign"],
+                    "report_period": order["period_code"],
+                    "order_reference": order["reference"],
+                },
+            )
+            st.markdown(
+                '<div class="checkout-note">'
+                "Stripe opens in a new tab. Your sign, period and timezone are attached "
+                "to the checkout through the order reference shown above."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+    with yearly_tab:
+        years = year_choices()
+        chosen_default_year = (
+            prefill_year if prefill_year in years else default_year()
+        )
+        chosen_default_sign = (
+            prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
+        )
+
+        with st.form(f"{key_context}-yearly-checkout"):
+            st.markdown("### Choose your year-ahead report")
+            y1, y2 = st.columns(2)
+            with y1:
+                delivery_email = st.text_input(
+                    "Delivery email",
+                    key=f"{key_context}-yearly-email",
+                    placeholder="name@example.com",
+                )
+                sign = st.selectbox(
+                    "Your star sign",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-yearly-sign",
+                    help="Use your Sun sign unless you know and prefer your rising sign.",
+                )
+            with y2:
+                selected_year = st.selectbox(
+                    "Calendar year",
+                    years,
+                    index=years.index(chosen_default_year),
+                    key=f"{key_context}-yearly-period",
+                )
+                timezone_name = st.selectbox(
+                    "Timezone",
+                    TIMEZONES,
+                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    key=f"{key_context}-yearly-timezone",
+                )
+            submitted = st.form_submit_button(
+                f"Prepare year-ahead checkout — {YEARLY_PRICE}",
+                type="primary",
+                use_container_width=True,
+            )
+
+        state_key = f"prepared-order::{key_context}::yearly"
+        if submitted:
+            if not valid_email(delivery_email):
+                st.error("Enter a valid delivery email before continuing to payment.")
+                st.session_state.pop(state_key, None)
+            else:
+                period_code = str(selected_year)
+                reference = build_order_reference(
+                    "YEAR",
+                    sign,
+                    period_code,
+                    timezone_name,
+                    _order_token(key_context, "YEAR"),
+                )
+                checkout_url = build_stripe_checkout_url(
+                    YEARLY_PAYMENT_URL,
+                    delivery_email,
+                    reference,
+                    f"year-{period_code}-{sign}",
+                )
+                st.session_state[state_key] = {
+                    "report_name": "Year-Ahead Strategic Report",
+                    "email": delivery_email.strip(),
+                    "sign": sign,
+                    "period": f"Calendar year {selected_year}",
+                    "period_code": period_code,
+                    "timezone": timezone_name,
+                    "reference": reference,
+                    "checkout_url": checkout_url,
+                }
+                track_event(
+                    "yearly_order_prepared",
+                    {
+                        "zodiac_sign": sign,
+                        "report_period": period_code,
+                        "timezone": timezone_name,
+                    },
+                )
+
+        order = st.session_state.get(state_key)
+        if order:
+            _order_summary(
+                order["report_name"],
+                order["sign"],
+                order["period"],
+                order["timezone"],
+                order["email"],
+                order["reference"],
+            )
+            payment_button(
+                f"Continue to secure payment — {YEARLY_PRICE}",
+                order["checkout_url"],
+                f"{key_context}-yearly-payment-disabled",
+                "yearly_report_click",
+                {
+                    "zodiac_sign": order["sign"],
+                    "report_period": order["period_code"],
+                    "order_reference": order["reference"],
+                },
+            )
+            st.markdown(
+                '<div class="checkout-note">'
+                "Stripe opens in a new tab. Your sign, year and timezone are attached "
+                "to the checkout through the order reference shown above."
+                "</div>",
+                unsafe_allow_html=True,
+            )
 
 
 def daily_controls(prefix: str = "daily") -> tuple[str, date, str]:
@@ -1281,7 +1614,7 @@ def home_page() -> None:
         unsafe_allow_html=True,
     )
 
-    report_cta()
+    report_cta(context="home")
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Why this is different")
@@ -1344,7 +1677,7 @@ def daily_page() -> None:
         )
     if st.session_state.get("force_daily"):
         render_free_reading(sign, reading_date, timezone_name)
-        report_cta()
+        report_cta(context="daily", prefill_sign=sign)
 
 
 def reports_page() -> None:
@@ -1356,18 +1689,27 @@ def reports_page() -> None:
     st.markdown('<div class="eyebrow">Paid reports</div>', unsafe_allow_html=True)
     st.markdown("# Choose the depth you need")
     st.markdown(
-        "Launch pricing is deliberately simple: one monthly product and one year-ahead product. "
+        "Choose your star sign and report period before entering Stripe. "
         "Reports are generated with the calculation engine and checked before manual delivery."
     )
-    report_cta()
+    report_cta(context="reports")
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## How ordering works")
     c1, c2, c3 = st.columns(3, gap="large")
     steps = [
-        ("1. Pay", "Use the secure payment link for the monthly or year-ahead report."),
-        ("2. Send details", "Provide your email, zodiac sign, requested period and timezone."),
-        ("3. Receive the report", "The finished report is delivered manually during the validation phase."),
+        (
+            "1. Choose",
+            "Select the report, star sign, month or calendar year, timezone and delivery email.",
+        ),
+        (
+            "2. Pay",
+            "Continue to the secure Stripe checkout carrying your Luna order reference.",
+        ),
+        (
+            "3. Receive",
+            "The checked report is delivered to the email used for the order.",
+        ),
     ]
     for column, (title, body) in zip((c1, c2, c3), steps):
         with column:
@@ -1376,58 +1718,76 @@ def reports_page() -> None:
                 unsafe_allow_html=True,
             )
 
-    st.markdown("## Send your report details")
-    with st.form("report-order-details"):
-        product = st.selectbox(
-            "Report ordered",
-            [
-                f"Monthly Strategic Report — {MONTHLY_PRICE}",
-                f"Year-Ahead Strategic Report — {YEARLY_PRICE}",
-            ],
+    with st.expander("Already paid without selecting a star sign or report period?"):
+        st.markdown(
+            "Use this recovery form for an earlier payment. It prepares an email "
+            "with the missing fulfilment information and your payment reference."
         )
-        c1, c2 = st.columns(2)
-        with c1:
-            customer_name = st.text_input("Name")
-            customer_email = st.text_input("Email")
-            sign = st.selectbox("Zodiac sign", SIGNS, index=SIGNS.index(DEFAULT_SIGN))
-        with c2:
-            requested_period = st.text_input(
-                "Requested month or year",
-                placeholder="Example: August 2026 or 2027",
+        with st.form("report-order-details"):
+            product = st.selectbox(
+                "Report ordered",
+                [
+                    f"Monthly Strategic Report — {MONTHLY_PRICE}",
+                    f"Year-Ahead Strategic Report — {YEARLY_PRICE}",
+                ],
             )
-            timezone_name = st.selectbox(
-                "Timezone",
-                TIMEZONES,
-                index=TIMEZONES.index(DEFAULT_TIMEZONE),
+            c1, c2 = st.columns(2)
+            with c1:
+                customer_name = st.text_input("Name")
+                customer_email = st.text_input("Email")
+                sign = st.selectbox(
+                    "Star sign",
+                    SIGNS,
+                    index=SIGNS.index(DEFAULT_SIGN),
+                )
+            with c2:
+                requested_period = st.text_input(
+                    "Requested month or calendar year",
+                    placeholder="Example: August 2026 or 2027",
+                )
+                timezone_name = st.selectbox(
+                    "Timezone",
+                    TIMEZONES,
+                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                )
+                payment_reference = st.text_input(
+                    "Stripe payment reference or receipt number",
+                    placeholder="Add the reference shown in Stripe or your receipt",
+                )
+            submitted = st.form_submit_button(
+                "Prepare recovery email",
+                type="primary",
             )
-            payment_reference = st.text_input(
-                "Payment reference",
-                placeholder="Optional at this stage",
-            )
-        submitted = st.form_submit_button("Prepare my order email", type="primary")
 
-    if submitted:
-        if not customer_name or not customer_email or not requested_period:
-            st.error("Enter your name, email and requested month or year.")
-        elif CONTACT_EMAIL == "your-email@example.com":
-            st.warning(
-                "The site owner must add CONTACT_EMAIL to Streamlit secrets before public launch."
-            )
-        else:
-            mailto = prepared_order_email(
-                CONTACT_EMAIL,
-                product,
-                customer_name,
-                customer_email,
-                sign,
-                requested_period,
-                timezone_name,
-            )
-            st.link_button("Open the prepared email", mailto, use_container_width=True)
+        if submitted:
+            if not customer_name or not valid_email(customer_email) or not requested_period:
+                st.error("Enter your name, a valid email and the requested month or year.")
+            elif CONTACT_EMAIL == "your-email@example.com":
+                st.warning(
+                    "The site owner must add CONTACT_EMAIL to Streamlit secrets before public launch."
+                )
+            else:
+                mailto = prepared_order_email(
+                    CONTACT_EMAIL,
+                    product,
+                    customer_name,
+                    customer_email,
+                    sign,
+                    requested_period,
+                    timezone_name,
+                    payment_reference,
+                )
+                st.link_button(
+                    "Open the prepared recovery email",
+                    mailto,
+                    use_container_width=True,
+                )
 
-    if REPORT_REQUEST_URL:
-        st.link_button("Use the online order-details form instead", REPORT_REQUEST_URL)
-
+        if REPORT_REQUEST_URL:
+            st.link_button(
+                "Use the online order-details form instead",
+                REPORT_REQUEST_URL,
+            )
 
 def houses_page() -> None:
     set_page_metadata(
@@ -1457,6 +1817,17 @@ def houses_page() -> None:
 - **Review a house:** correct the area before expanding it during a retrograde cycle.
 - **Consolidate a house:** make gains repeatable, measurable and durable.
         """
+    )
+
+    st.markdown("## Use this sign for a report")
+    st.markdown(
+        "The twelve-house map is fixed by the selected sign, so it does **not** need "
+        "a month selector. The purchase panel below asks for a month or calendar year "
+        "because that determines which planetary movements are analysed."
+    )
+    report_cta(
+        context="house-guide",
+        prefill_sign=sign,
     )
 
 
@@ -1523,7 +1894,11 @@ growth, but unclear ownership, payment or messaging can turn the same opening in
         "should not derail the larger transition."
     )
 
-    report_cta()
+    report_cta(
+        context="sample",
+        prefill_sign=DEFAULT_SIGN,
+        prefill_year=2026,
+    )
 
 
 def method_page() -> None:
@@ -1659,7 +2034,10 @@ def monthly_index_page() -> None:
 - a direct opportunity, caution and practical conclusion.
         """
     )
-    report_cta()
+    report_cta(
+        context="august-2026-index",
+        prefill_month=f"{SEO_MONTH_NAME} {SEO_YEAR}",
+    )
 
 
 def monthly_sign_page(sign: str) -> None:
@@ -1775,7 +2153,11 @@ def monthly_sign_page(sign: str) -> None:
         '<div class="related-signs">' + "".join(links) + "</div>",
         unsafe_allow_html=True,
     )
-    report_cta()
+    report_cta(
+        context=f"august-2026-{sign_slug(sign)}",
+        prefill_sign=sign,
+        prefill_month=f"{SEO_MONTH_NAME} {SEO_YEAR}",
+    )
 
 
 def make_monthly_page(sign: str):

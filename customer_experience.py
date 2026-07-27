@@ -768,6 +768,7 @@ def prepared_order_email(
     sign: str,
     requested_period: str,
     timezone_name: str,
+    payment_reference: str = "",
 ) -> str:
     subject = quote(f"{product} order details — {sign}")
     body = quote(
@@ -780,7 +781,7 @@ def prepared_order_email(
                 f"Requested month/year: {requested_period}",
                 f"Timezone: {timezone_name}",
                 "",
-                "Payment reference or receipt:",
+                f"Payment reference or receipt: {payment_reference}",
                 "",
                 "Additional note:",
             ]

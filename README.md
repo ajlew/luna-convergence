@@ -150,3 +150,14 @@ The public daily horoscope now translates the calculated astrology into:
 The prose remains deterministic and grounded in the Swiss Ephemeris calculation,
 whole-sign house mapping and detected planetary aspects. It does not claim a
 specific personal event that the calculation cannot support.
+
+
+## Pre-payment order capture
+
+The public purchase flow now requires the customer to choose the delivery
+email, star sign, report month or calendar year, and timezone before the
+Stripe payment button is shown.
+
+The app passes a prefilled email and compact Luna order reference to Stripe.
+The same panel appears below the House Guide and is prefilled with the sign
+currently selected there.
