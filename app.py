@@ -287,6 +287,135 @@ a {
     color:rgba(255,255,255,.76);
 }
 
+.daily-kicker {
+    color:rgba(255,255,255,.78);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
+.daily-headline {
+    position:relative;
+    z-index:2;
+    color:var(--white) !important;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif !important;
+    font-size:clamp(2.6rem, 5.5vw, 5.6rem);
+    line-height:.94;
+    letter-spacing:-.045em;
+    margin:.65rem 0 1rem;
+    max-width:900px;
+}
+
+.daily-date {
+    position:relative;
+    z-index:2;
+    color:rgba(255,255,255,.72);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    text-transform:uppercase;
+}
+
+.forecast-copy {
+    max-width:860px;
+    margin:2rem auto;
+}
+
+.forecast-copy p {
+    font-family:"Josefin Sans", sans-serif;
+    font-size:clamp(1.16rem, 1.7vw, 1.38rem);
+    line-height:1.68;
+    font-weight:350;
+}
+
+.best-move {
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    padding:1.25rem 0;
+    margin:2.1rem 0;
+    display:grid;
+    grid-template-columns:10rem 1fr;
+    gap:1.2rem;
+}
+
+.best-move-label {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.7rem;
+    text-transform:uppercase;
+}
+
+.best-move-copy {
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:1.55rem;
+    line-height:1.25;
+}
+
+.question-list {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    border-top:1px solid var(--black);
+    border-left:1px solid var(--black);
+}
+
+.question-item {
+    border-right:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    padding:1.2rem;
+    min-height:8.5rem;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:1.33rem;
+    line-height:1.25;
+}
+
+.area-strip {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    margin:2.4rem 0;
+}
+
+.area-note {
+    border-right:1px solid var(--black);
+    padding:1.2rem;
+}
+
+.area-note:last-child {
+    border-right:none;
+}
+
+.area-note p {
+    font-size:1rem;
+    line-height:1.5;
+    margin-bottom:0;
+}
+
+.technical-line {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.73rem;
+    line-height:1.65;
+}
+
+@media (max-width: 700px) {
+    .best-move {
+        grid-template-columns:1fr;
+        gap:.45rem;
+    }
+    .question-list {
+        grid-template-columns:1fr;
+    }
+    .area-strip {
+        grid-template-columns:1fr;
+    }
+    .area-note {
+        border-right:none;
+        border-bottom:1px solid var(--black);
+    }
+    .area-note:last-child {
+        border-bottom:none;
+    }
+}
+
 .price {
     font-family:"Josefin Sans", sans-serif;
     font-size:2.8rem;
@@ -957,27 +1086,73 @@ def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> No
     st.markdown(
         f"""
 <div class="reading-card">
-  <div class="eyebrow" >Free daily reading</div>
-  <h3>{escape(reading.sign)} — {reading.reading_date.strftime("%A, %B %d, %Y")}</h3>
-  <p><strong>{escape(reading.daily_theme)}</strong></p>
-  <p class="muted-white">{reading.conclusion}</p>
+  <div class="daily-kicker">Free daily reading / {escape(reading.sign)}</div>
+  <div class="daily-headline">{escape(reading.headline)}</div>
+  <div class="daily-date">{reading.reading_date.strftime("%A, %B %d, %Y")}</div>
 </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("### The wider context")
-    st.markdown(reading.wider_context)
+    paragraphs = "".join(
+        f"<p>{escape(paragraph)}</p>"
+        for paragraph in reading.forecast_paragraphs
+    )
+    st.markdown(
+        f'<div class="forecast-copy">{paragraphs}</div>',
+        unsafe_allow_html=True,
+    )
 
+    st.markdown(
+        f"""
+<div class="best-move">
+  <div class="best-move-label">Your best move</div>
+  <div class="best-move-copy">{escape(reading.best_move)}</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## Questions for today")
+    question_html = "".join(
+        f'<div class="question-item">{escape(question)}</div>'
+        for question in reading.reflection_questions
+    )
+    st.markdown(
+        f'<div class="question-list">{question_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+<div class="area-strip">
+  <div class="area-note">
+    <div class="eyebrow">Love</div>
+    <p>{escape(reading.love_note)}</p>
+  </div>
+  <div class="area-note">
+    <div class="eyebrow">Work</div>
+    <p>{escape(reading.work_note)}</p>
+  </div>
+  <div class="area-note">
+    <div class="eyebrow">Money</div>
+    <p>{escape(reading.money_note)}</p>
+  </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## The active houses")
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown(
             f"""
 <div class="card">
-  <div class="eyebrow">Opportunity</div>
+  <div class="eyebrow">The opening</div>
   <h3>House {reading.sun_house}</h3>
-  <p>{escape(reading.opportunity.capitalize())}.</p>
-  <p><strong>Best move:</strong> {escape(reading.best_move.capitalize())}.</p>
+  <p><strong>{escape(HOUSE_NAMES[reading.sun_house].capitalize())}</strong></p>
+  <p>{escape(reading.opportunity)}</p>
 </div>
             """,
             unsafe_allow_html=True,
@@ -986,28 +1161,50 @@ def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> No
         st.markdown(
             f"""
 <div class="card">
-  <div class="eyebrow">Caution</div>
+  <div class="eyebrow">The sensitivity</div>
   <h3>House {reading.moon_house}</h3>
-  <p>{escape(reading.caution.capitalize())}.</p>
-  <p><strong>Rule:</strong> React after the facts and responsibilities are clear.</p>
+  <p><strong>{escape(HOUSE_NAMES[reading.moon_house].capitalize())}</strong></p>
+  <p>{escape(reading.caution)}</p>
 </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown("### Three dominant aspects")
-    for item in reading.aspects:
-        st.markdown(item)
+    with st.expander("Why this reading — planetary detail"):
+        st.markdown(reading.daily_theme)
+        if reading.anchor_aspect:
+            anchor = reading.anchor_aspect
+            st.markdown(
+                f"""
+<div class="technical-line">
+<strong>Dominant aspect:</strong> {escape(anchor.label)} · orb {anchor.orb:.2f}°<br>
+<strong>{escape(anchor.planet1)}:</strong> {escape(anchor.position1)} · house {anchor.house1}<br>
+<strong>{escape(anchor.planet2)}:</strong> {escape(anchor.position2)} · house {anchor.house2}
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    with st.expander("Open the 12-house reference matrix"):
+        st.markdown("### The wider convergence context")
+        st.markdown(reading.wider_context)
+
+        st.markdown("### Three dominant aspects")
+        for item in reading.aspects:
+            st.markdown(item)
+
+        st.markdown("### House-based conclusion")
+        st.markdown(reading.conclusion)
+
+        st.markdown("### The 12-house reference matrix")
         st.markdown(reading.house_matrix)
 
     st.markdown(
         """
 <div class="callout">
-<strong>What the free reading does:</strong> identifies today's active houses, the main opportunity,
-the immediate caution and the wider convergence context. Paid reports add the full transition map,
-retrograde phases, important dates and strategic chapters.
+<strong>What is grounded beneath the writing:</strong> the headline, forecast, questions and practical
+action are translated from the calculated planetary positions, whole-sign houses, dominant aspects and
+active convergence pattern. The wording remains conditional because a general sign reading cannot know
+the reader's exact personal circumstances.
 </div>
         """,
         unsafe_allow_html=True,
@@ -1051,11 +1248,11 @@ def home_page() -> None:
             st.markdown(
                 f"""
 <div class="reading-card">
-  <div class="eyebrow" >Today's example</div>
-  <h3>{DEFAULT_SIGN}</h3>
-  <p><strong>House {reading.sun_house}</strong>: {escape(reading.opportunity.capitalize())}.</p>
-  <p><strong>House {reading.moon_house}</strong>: watch for {escape(reading.caution)}.</p>
-  <p class="muted-white">{reading.conclusion}</p>
+  <div class="daily-kicker">Today's example / {DEFAULT_SIGN}</div>
+  <div class="daily-headline" style="font-size:clamp(2.2rem,4vw,4.4rem);">
+    {escape(reading.headline)}
+  </div>
+  <p class="muted-white">{escape(reading.forecast_paragraphs[0])}</p>
 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1126,13 +1323,13 @@ def home_page() -> None:
 def daily_page() -> None:
     set_page_metadata(
         "Free Daily Horoscope | Luna Convergence",
-        "Generate a free daily horoscope with active houses, major aspects, opportunity, caution and wider convergence context.",
+        "Read a warm, human daily horoscope grounded in calculated active houses, planetary aspects and the wider convergence context.",
         "/daily-horoscope",
     )
     st.markdown('<div class="eyebrow">Free daily horoscope</div>', unsafe_allow_html=True)
-    st.markdown("# Read today in context")
+    st.markdown("# A personal reading with the astrology underneath")
     st.markdown(
-        "The daily forecast identifies the active houses and places today's trigger inside the wider monthly and yearly pattern."
+        "Begin with the human meaning of the day, then open the planetary detail to see the houses, aspects and convergence pattern beneath it."
     )
     sign, reading_date, timezone_name = daily_controls()
     if st.button("Generate my daily reading", type="primary", use_container_width=True):

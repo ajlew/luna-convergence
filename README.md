@@ -117,3 +117,36 @@ restores normal top spacing.
 Large titles now use a direct editorial-title class plus a strong Bodoni/Didot/
 Georgia fallback stack. This prevents Streamlit's generated heading CSS from
 silently reverting the titles to the sans-serif body font.
+
+
+## Google Analytics and SEO routes
+
+This release adds:
+
+- Google Analytics 4 ID `G-TE5HPKV94D`;
+- tracked page views, daily-reading generation and Stripe clicks;
+- real Streamlit page URLs using `st.Page` and `st.navigation`;
+- twelve sign-specific August 2026 horoscope pages;
+- unique page titles, descriptions and canonical links;
+- a privacy and analytics page;
+- `SEARCH_CONSOLE_URLS.txt` for Google Search Console submission.
+
+Launch prices displayed by the site are A$4.95 monthly and A$14.95 yearly.
+Stripe Payment Link prices must be kept in sync separately.
+
+
+## Daily Reading Version 2
+
+The public daily horoscope now translates the calculated astrology into:
+
+- a human editorial headline;
+- two warm forecast paragraphs;
+- one practical best move;
+- four reflection questions;
+- compact Love, Work and Money notes;
+- an expandable technical section showing the active houses, dominant aspect,
+  wider convergence context and house matrix.
+
+The prose remains deterministic and grounded in the Swiss Ephemeris calculation,
+whole-sign house mapping and detected planetary aspects. It does not claim a
+specific personal event that the calculation cannot support.
