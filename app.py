@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from functools import lru_cache
 import json
 import secrets
@@ -20,6 +20,11 @@ from customer_experience import (
 )
 from synthesis import house_reference_matrix, house_aware_conclusion, period_report
 from interpretation_library import HOUSE_STRATEGY
+from daily_narrative_v3 import (
+    build_daily_narrative,
+    reading_comparison_text,
+    render_daily_narrative_v3,
+)
 from order_capture import (
     build_order_reference,
     build_stripe_checkout_url,
@@ -1428,6 +1433,25 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str]:
     return sign, reading_date, timezone_name
 
 
+@st.cache_data(show_spinner=False, ttl=86400)
+def _previous_daily_texts(
+    sign: str,
+    reading_date_iso: str,
+    timezone_name: str,
+    days: int = 4,
+) -> list[str]:
+    reading_date = date.fromisoformat(reading_date_iso)
+    texts: list[str] = []
+    for offset in range(1, days + 1):
+        prior = free_daily_reading(
+            sign,
+            reading_date - timedelta(days=offset),
+            timezone_name,
+        )
+        texts.append(reading_comparison_text(prior))
+    return texts
+
+
 def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> None:
     cache_key = (sign, reading_date.isoformat(), timezone_name)
     if st.session_state.get("daily_cache_key") != cache_key:
@@ -1440,144 +1464,20 @@ def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> No
             st.session_state.daily_cache_key = cache_key
 
     reading = st.session_state.daily_reading
-
-    st.markdown(
-        f"""
-<div class="reading-card">
-  <div class="daily-kicker">Free daily reading / {escape(reading.sign)}</div>
-  <div class="daily-headline">{escape(reading.headline)}</div>
-  <div class="daily-date">{reading.reading_date.strftime("%A, %B %d, %Y")}</div>
-</div>
-        """,
-        unsafe_allow_html=True,
+    previous_texts = _previous_daily_texts(
+        sign,
+        reading_date.isoformat(),
+        timezone_name,
     )
-
-    paragraphs = "".join(
-        f"<p>{escape(paragraph)}</p>"
-        for paragraph in reading.forecast_paragraphs
+    narrative = build_daily_narrative(
+        reading,
+        sign=sign,
+        reading_date=reading_date,
+        timezone_name=timezone_name,
+        house_voice=HOUSE_VOICE,
+        previous_texts=previous_texts,
     )
-    st.markdown(
-        f'<div class="forecast-copy">{paragraphs}</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
-<div class="relationship-card">
-  <div class="eyebrow">Love & desire</div>
-  <h3>The relationship plot</h3>
-  <p>{escape(reading.love_note)}</p>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
-<div class="best-move">
-  <div class="best-move-label">Your best move</div>
-  <div class="best-move-copy">{escape(reading.best_move)}</div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("## Questions for today")
-    question_html = "".join(
-        f'<div class="question-item">{escape(question)}</div>'
-        for question in reading.reflection_questions
-    )
-    st.markdown(
-        f'<div class="question-list">{question_html}</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
-<div class="area-strip">
-  <div class="area-note">
-    <div class="eyebrow">Emotional weather</div>
-    <p>{escape(HOUSE_VOICE[reading.moon_house]["sensitivity"])}</p>
-  </div>
-  <div class="area-note">
-    <div class="eyebrow">Work</div>
-    <p>{escape(reading.work_note)}</p>
-  </div>
-  <div class="area-note">
-    <div class="eyebrow">Money</div>
-    <p>{escape(reading.money_note)}</p>
-  </div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("## The active houses")
-    c1, c2 = st.columns(2, gap="large")
-    with c1:
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="eyebrow">The opening</div>
-  <h3>House {reading.sun_house}</h3>
-  <p><strong>{escape(HOUSE_NAMES[reading.sun_house].capitalize())}</strong></p>
-  <p>{escape(reading.opportunity)}</p>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="eyebrow">The sensitivity</div>
-  <h3>House {reading.moon_house}</h3>
-  <p><strong>{escape(HOUSE_NAMES[reading.moon_house].capitalize())}</strong></p>
-  <p>{escape(reading.caution)}</p>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with st.expander("Why this reading — planetary detail"):
-        st.markdown(reading.daily_theme)
-        if reading.anchor_aspect:
-            anchor = reading.anchor_aspect
-            st.markdown(
-                f"""
-<div class="technical-line">
-<strong>Dominant aspect:</strong> {escape(anchor.label)} · orb {anchor.orb:.2f}°<br>
-<strong>{escape(anchor.planet1)}:</strong> {escape(anchor.position1)} · house {anchor.house1}<br>
-<strong>{escape(anchor.planet2)}:</strong> {escape(anchor.position2)} · house {anchor.house2}
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        st.markdown("### The wider convergence context")
-        st.markdown(reading.wider_context)
-
-        st.markdown("### Three dominant aspects")
-        for item in reading.aspects:
-            st.markdown(item)
-
-        st.markdown("### House-based conclusion")
-        st.markdown(reading.conclusion)
-
-        st.markdown("### The 12-house reference matrix")
-        st.markdown(reading.house_matrix)
-
-    st.markdown(
-        """
-<div class="callout">
-<strong>What is grounded beneath the writing:</strong> the headline, forecast, questions and practical
-action are translated from the calculated planetary positions, whole-sign houses, dominant aspects and
-active convergence pattern. The wording remains conditional because a general sign reading cannot know
-the reader's exact personal circumstances.
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
+    render_daily_narrative_v3(narrative)
 
 
 def home_page() -> None:
@@ -1657,16 +1557,16 @@ def home_page() -> None:
     c1, c2, c3 = st.columns(3, gap="large")
     items = [
         (
-            "The houses are explained",
-            "The report keeps the house number but also explains the life area: income, career, contracts, creativity, travel or home.",
+            "The story comes first",
+            "The reading begins with the consequence for the customer—not a list of planets, degrees or technical terms.",
         ),
         (
-            "Events are connected",
-            "A convergence point shows why several transitions matter together rather than listing unrelated planetary events.",
+            "The evidence remains visible",
+            "A compact Sky Snapshot shows the active life areas, strongest influence, timing window and signal strength.",
         ),
         (
-            "The conclusion is practical",
-            "Each reading separates opportunity, risk and the action most likely to make the transition useful.",
+            "Weather is separated from climate",
+            "Fast daily influences explain what changes now; slower planetary patterns explain why a theme may continue for months.",
         ),
     ]
     for column, (title, body) in zip((c1, c2, c3), items):
@@ -1692,13 +1592,13 @@ def home_page() -> None:
 def daily_page() -> None:
     set_page_metadata(
         "Free Daily Horoscope | Luna Convergence",
-        "Read a warm, human daily horoscope grounded in calculated active houses, planetary aspects and the wider convergence context.",
+        "Read a consequence-first daily horoscope with a compact evidence panel showing what changed today, what supports it and what belongs to the longer astrological climate.",
         "/daily-horoscope",
     )
     st.markdown('<div class="eyebrow">Free daily horoscope</div>', unsafe_allow_html=True)
     st.markdown("# A personal reading with the astrology underneath")
     st.markdown(
-        "Begin with the human meaning of the day, then open the planetary detail to see the houses, aspects and convergence pattern beneath it."
+        "Begin with today’s story. Then use the Sky Snapshot to see why today differs from yesterday without having to read technical astrology."
     )
     sign, reading_date, timezone_name = daily_controls()
     if st.button("Generate my daily reading", type="primary", use_container_width=True):
@@ -1955,6 +1855,13 @@ def method_page() -> None:
 6. The interpretation library converts the facts into opportunity, risk and strategic action.
 7. An optional local language model can improve prose without changing the calculated facts.
         """
+    )
+
+    st.markdown("## Explainable Astrology")
+    st.markdown(
+        "Luna Convergence presents the human story first, then answers three questions: "
+        "**what changed today, why it differs from yesterday, and what evidence supports it**. "
+        "The public Sky Snapshot stays readable; full positions, houses and orbs remain optional."
     )
 
     st.markdown("## What this is—and is not")

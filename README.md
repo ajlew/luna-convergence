@@ -177,3 +177,17 @@ Romance archetypes such as slow burn, unconventional attraction, mystery,
 intensity, power and age/status difference are used only when supported by
 Saturn, Uranus, Neptune, Pluto, Venus, Mars or the Moon. The language preserves
 autonomy, consent, emotional safety and mutual respect.
+
+
+## Daily Narrative Engine v2 production merge
+
+The current public app now compares each daily reading with the preceding four readings. Repeated slow-moving material is moved into **Long-term current**, while the unique date-sensitive trigger leads **Today’s story**.
+
+The buyer sees a clean narrative first. An expandable evidence section supplies the active planets, aspect, orb, applying/separating status, activated houses, active time window, convergence concentration and Sky Snapshot. The evidence strength score is an astrology concentration/exactness indicator, not an event probability.
+
+
+## Explainable Astrology
+
+The public daily reading now begins with the customer consequence rather than the transit. It presents a three-to-four paragraph story, a plain-English convergence axis, three short evidence points, a weather-versus-climate explanation and a compact Sky Snapshot. Full houses, aspects, orbs and planetary positions remain optional.
+
+The visible strength label describes how clearly one astrological pattern dominates the day. It is not a probability that a predicted event will occur.
