@@ -13,7 +13,11 @@ from PIL import Image
 import streamlit as st
 
 from astrology_engine import SIGNS, HOUSE_NAMES
-from customer_experience import free_daily_reading, prepared_order_email
+from customer_experience import (
+    HOUSE_VOICE,
+    free_daily_reading,
+    prepared_order_email,
+)
 from synthesis import house_reference_matrix, house_aware_conclusion, period_report
 from interpretation_library import HOUSE_STRATEGY
 from order_capture import (
