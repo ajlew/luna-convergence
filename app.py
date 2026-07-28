@@ -338,6 +338,27 @@ a {
     font-weight:350;
 }
 
+.relationship-card {
+    border:1px solid var(--black);
+    padding:1.35rem;
+    margin:2rem 0;
+    background:var(--soft);
+}
+
+.relationship-card h3 {
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:2rem;
+    line-height:1.05;
+    margin:.4rem 0 .8rem;
+}
+
+.relationship-card p {
+    font-family:"Josefin Sans", sans-serif;
+    font-size:1.08rem;
+    line-height:1.62;
+    margin:0;
+}
+
 .best-move {
     border-top:1px solid var(--black);
     border-bottom:1px solid var(--black);
@@ -1438,6 +1459,17 @@ def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> No
 
     st.markdown(
         f"""
+<div class="relationship-card">
+  <div class="eyebrow">Love & desire</div>
+  <h3>The relationship plot</h3>
+  <p>{escape(reading.love_note)}</p>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
 <div class="best-move">
   <div class="best-move-label">Your best move</div>
   <div class="best-move-copy">{escape(reading.best_move)}</div>
@@ -1460,8 +1492,8 @@ def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> No
         f"""
 <div class="area-strip">
   <div class="area-note">
-    <div class="eyebrow">Love</div>
-    <p>{escape(reading.love_note)}</p>
+    <div class="eyebrow">Emotional weather</div>
+    <p>{escape(HOUSE_VOICE[reading.moon_house]["sensitivity"])}</p>
   </div>
   <div class="area-note">
     <div class="eyebrow">Work</div>

@@ -701,6 +701,441 @@ def _area_note(
     return "Money is not the central theme today; avoid spending merely to relieve uncertainty or prove momentum."
 
 
+FAST_PLANETS = {"Sun", "Moon", "Mercury", "Venus", "Mars"}
+SLOW_PLANETS = {"Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "True Node"}
+RELATIONSHIP_HOUSES = {5, 7, 8, 11}
+
+
+DAILY_HEADLINES = {
+    frozenset({"Moon", "Mercury"}): {
+        "hard": "Read between the lines",
+        "flow": "Say what you actually mean",
+        "blend": "The conversation has a second meaning",
+    },
+    frozenset({"Moon", "Venus"}): {
+        "hard": "Do not bargain with your own heart",
+        "flow": "Let yourself receive the affection",
+        "blend": "Your feelings know what feels valuable",
+    },
+    frozenset({"Moon", "Mars"}): {
+        "hard": "Desire does not need a fight",
+        "flow": "Say yes to the honest spark",
+        "blend": "The feeling wants movement",
+    },
+    frozenset({"Moon", "Jupiter"}): {
+        "hard": "Do not promise more than the moment can hold",
+        "flow": "Let hope make the room larger",
+        "blend": "The feeling wants a bigger life",
+    },
+    frozenset({"Moon", "Saturn"}): {
+        "hard": "Do not mistake distance for rejection",
+        "flow": "Let consistency seduce you",
+        "blend": "The heart is asking for proof",
+    },
+    frozenset({"Moon", "Uranus"}): {
+        "hard": "The surprise is the point",
+        "flow": "Follow the unexpected spark",
+        "blend": "Something in you wants freedom",
+    },
+    frozenset({"Moon", "Neptune"}): {
+        "hard": "The mystery is doing half the seduction",
+        "flow": "Trust the feeling, then check the story",
+        "blend": "The dream is emotionally persuasive",
+    },
+    frozenset({"Moon", "Pluto"}): {
+        "hard": "Do not hand your power to the feeling",
+        "flow": "The deeper truth is ready",
+        "blend": "The feeling goes further than expected",
+    },
+    frozenset({"Venus", "Mars"}): {
+        "hard": "Chemistry wants a reaction",
+        "flow": "Desire can move without a chase",
+        "blend": "Attraction is changing the temperature",
+    },
+    frozenset({"Venus", "Saturn"}): {
+        "hard": "The slow burn needs a real future",
+        "flow": "Loyalty is becoming attractive",
+        "blend": "Love is asking for substance",
+    },
+    frozenset({"Venus", "Uranus"}): {
+        "hard": "The rebel is not the whole story",
+        "flow": "Make room for the unconventional",
+        "blend": "Attraction refuses the usual script",
+    },
+    frozenset({"Venus", "Neptune"}): {
+        "hard": "Do not fall in love with the missing pieces",
+        "flow": "Keep the romance and the clear eyes",
+        "blend": "The fantasy is beautifully convincing",
+    },
+    frozenset({"Venus", "Pluto"}): {
+        "hard": "Magnetism is not permission",
+        "flow": "Let intimacy deepen without surrender",
+        "blend": "The attraction has real gravity",
+    },
+    frozenset({"Mercury", "Saturn"}): {
+        "hard": "The silence needs a better question",
+        "flow": "A serious answer is worth waiting for",
+        "blend": "The words need structure",
+    },
+    frozenset({"Mercury", "Pluto"}): {
+        "hard": "Do not interrogate the truth",
+        "flow": "The hidden answer can be named",
+        "blend": "The conversation has power",
+    },
+    frozenset({"Sun", "Uranus"}): {
+        "hard": "Freedom needs more than an escape",
+        "flow": "The unexpected door is open",
+        "blend": "A new version of you is arriving",
+    },
+    frozenset({"Sun", "Jupiter"}): {
+        "hard": "Bigger is not automatically better",
+        "flow": "The bigger life is calling",
+        "blend": "Confidence is taking up more space",
+    },
+    frozenset({"Sun", "Pluto"}): {
+        "hard": "Do not force the transformation",
+        "flow": "Own the power you have earned",
+        "blend": "A deeper identity is taking shape",
+    },
+}
+
+
+def _aspect_key(aspect: Aspect) -> tuple[str, str, str]:
+    p1, p2 = sorted((aspect.planet1, aspect.planet2))
+    return p1, p2, aspect.name
+
+
+def _daily_trigger_aspect(
+    d: date,
+    timezone_name: str,
+    positions: dict[str, Position],
+    houses: dict[str, int],
+) -> DailyAspect | None:
+    """Select a date-sensitive trigger rather than a slow generational aspect."""
+    aspects = detect_aspects(positions, include_moon=True)
+    if not aspects:
+        return None
+
+    previous = {
+        _aspect_key(item): item.orb
+        for item in detect_aspects(
+            positions_for_date(d - timedelta(days=1), timezone_name),
+            include_moon=True,
+        )
+    }
+    following = {
+        _aspect_key(item): item.orb
+        for item in detect_aspects(
+            positions_for_date(d + timedelta(days=1), timezone_name),
+            include_moon=True,
+        )
+    }
+
+    scored: list[tuple[float, Aspect]] = []
+    for aspect in aspects:
+        planets = {aspect.planet1, aspect.planet2}
+        if planets <= SLOW_PLANETS:
+            continue
+
+        score = aspect.strength
+        if "Moon" in planets:
+            score += 3.4
+        if "Venus" in planets:
+            score += 1.5
+        if "Mars" in planets:
+            score += 1.4
+        if "Mercury" in planets:
+            score += 0.9
+        if "Sun" in planets:
+            score += 0.5
+        if aspect.name in {"square", "opposition"}:
+            score += 0.8
+
+        key = _aspect_key(aspect)
+        before_orb = previous.get(key, 99.0)
+        after_orb = following.get(key, 99.0)
+        if aspect.orb <= before_orb and aspect.orb <= after_orb and aspect.orb <= 3.0:
+            score += 2.8
+        if after_orb < aspect.orb:
+            score += 0.7
+        elif before_orb < aspect.orb:
+            score -= 0.6
+
+        score -= max(0.0, aspect.orb - 3.0) * 0.25
+        scored.append((score, aspect))
+
+    if not scored:
+        return _daily_aspect(aspects[0], positions, houses)
+
+    scored.sort(key=lambda item: (-item[0], item[1].orb))
+    return _daily_aspect(scored[0][1], positions, houses)
+
+
+def _tone_bucket(aspect: DailyAspect | None) -> str:
+    if not aspect:
+        return "blend"
+    if aspect.name in {"square", "opposition"}:
+        return "hard"
+    if aspect.name in {"trine", "sextile"}:
+        return "flow"
+    return "blend"
+
+
+def _headline_v3(
+    moon_house: int,
+    anchor: DailyAspect | None,
+) -> str:
+    if anchor:
+        pair = DAILY_HEADLINES.get(anchor.planets)
+        if pair:
+            return pair[_tone_bucket(anchor)]
+
+        if "Moon" in anchor.planets:
+            return HOUSE_VOICE[moon_house]["headline"]
+        if anchor.name in {"square", "opposition"}:
+            return "The tension is telling the truth"
+        if anchor.name in {"trine", "sextile"}:
+            return "The opening feels easier today"
+        return "Two parts of the story are becoming one"
+
+    return HOUSE_VOICE[moon_house]["headline"]
+
+
+def _daily_trigger_sentence(anchor: DailyAspect | None) -> str:
+    if not anchor:
+        return (
+            "The day's meaning comes mainly through the Moon's house and the way "
+            "your emotional response changes the larger monthly story."
+        )
+
+    first = HOUSE_NAMES[anchor.house1]
+    second = HOUSE_NAMES[anchor.house2]
+    if anchor.name in {"square", "opposition"}:
+        return (
+            f"Today's pressure links {first} with {second}. "
+            "The attraction of an immediate answer is strong, but the tension is revealing "
+            "what cannot be solved by force, performance or wishful thinking."
+        )
+    if anchor.name in {"trine", "sextile"}:
+        return (
+            f"A supportive current connects {first} with {second}. "
+            "The opening is real, although it still needs a choice that protects your standards."
+        )
+    return (
+        f"Today blends {first} with {second}. "
+        "What appears to be two separate concerns is really one emotional decision."
+    )
+
+
+def _relationship_archetype(
+    anchor: DailyAspect | None,
+    venus_house: int,
+    moon_house: int,
+) -> str:
+    if not anchor:
+        return (
+            "The relationship story is quieter than the practical story, but it still asks a useful question: "
+            "who makes you feel seen without asking you to become smaller?"
+        )
+
+    planets = anchor.planets
+    tone = _tone_bucket(anchor)
+
+    if planets == frozenset({"Venus", "Mars"}):
+        if tone == "hard":
+            return (
+                "Chemistry is alive, and so is the temptation to chase, provoke or test it. "
+                "The dangerous-looking person may be compelling, but the deeper fantasy is someone bold "
+                "enough to want you and mature enough not to punish your boundaries."
+            )
+        return (
+            "Attraction can move easily today. Let the spark be direct, playful and mutual rather than "
+            "turning it into a contest over who cares less."
+        )
+
+    if planets == frozenset({"Moon", "Saturn"}):
+        if tone == "flow":
+            return (
+                "There is something quietly seductive about steadiness. An older, reserved or highly "
+                "self-controlled person may stand out, but consistency matters more than the age gap "
+                "or the aura of authority."
+            )
+        return (
+            "Emotional distance may look like strength, especially in someone older, controlled or hard to read. "
+            "Do not romanticise withholding; the right person can be composed and still make you feel secure."
+        )
+
+    if planets == frozenset({"Moon", "Mercury"}):
+        return (
+            "A message can stir more than it says. Banter is attractive, but emotional accuracy is more intimate: "
+            "notice who listens closely enough to understand the feeling beneath your words."
+        )
+
+    if planets == frozenset({"Moon", "Neptune"}):
+        return (
+            "Mystery, longing and the unavailable person can feel unusually cinematic. Keep the fantasy, "
+            "but do not write the missing chapters for someone who has not shown up consistently."
+        )
+
+    if planets == frozenset({"Moon", "Pluto"}):
+        return (
+            "A connection may feel intense enough to expose jealousy, control or an old fear of being replaceable. "
+            "Magnetism can be real without giving anyone ownership of your emotional world."
+        )
+
+    if planets == frozenset({"Moon", "Uranus"}):
+        return (
+            "The unconventional person, sudden message or rebellious choice may carry real electricity. "
+            "Enjoy the surprise without abandoning the freedom and respect you will need tomorrow."
+        )
+
+    if "Venus" in planets and "Pluto" in planets:
+        return (
+            "The attraction has a darker gravity: secrecy, power and the wish to be unforgettable. "
+            "Intensity is not proof of safety, and being desired should never require surrendering autonomy."
+        )
+
+    if "Venus" in planets and "Uranus" in planets:
+        return (
+            "Someone unusual, rebellious or outside your normal type may interrupt the script. "
+            "The thrill is useful, but lasting chemistry still needs room for honesty and independence."
+        )
+
+    if "Venus" in planets and "Saturn" in planets:
+        return (
+            "This is slow-burn territory: loyalty, restraint, distance or a difference in age and status. "
+            "The bond is worth taking seriously only when responsibility is mutual rather than one-sided."
+        )
+
+    if "Venus" in planets and "Neptune" in planets:
+        return (
+            "Romance can feel fated, poetic or almost telepathic. Enjoy the softness, then look for ordinary evidence: "
+            "clear words, reliable effort and a person who is available in real life."
+        )
+
+    if "Mars" in planets and "Pluto" in planets:
+        return (
+            "Desire may carry a power struggle beneath it. The compelling person is not necessarily the right person; "
+            "real intimacy can hold intensity without coercion, punishment or games."
+        )
+
+    if "Moon" in planets or "Venus" in planets or "Mars" in planets:
+        return (
+            "Attraction is revealing what you want to feel around another person. Let the desire be honest, "
+            "but ask whether the connection also offers respect, emotional presence and room to remain yourself."
+        )
+
+    if venus_house in RELATIONSHIP_HOUSES or moon_house in RELATIONSHIP_HOUSES:
+        return (
+            "Relationships are part of today's plot even if they are not the loudest event. "
+            "The meaningful connection is the one that combines attraction with emotional safety, mutual respect "
+            "and the freedom to tell the truth."
+        )
+
+    return (
+        "Love is not absent simply because another life area is louder. Notice who adds warmth without creating confusion, "
+        "and who can hold your independence without withdrawing affection."
+    )
+
+
+def _forecast_paragraphs_v3(
+    sun_house: int,
+    moon_house: int,
+    anchor: DailyAspect | None,
+    relationship_story: str,
+) -> tuple[str, str]:
+    wider = HOUSE_VOICE[sun_house]["opening"]
+    emotional = HOUSE_VOICE[moon_house]["sensitivity"]
+    first = " ".join((wider, _daily_trigger_sentence(anchor), emotional))
+    second = f"In love and relationships, {relationship_story[0].lower() + relationship_story[1:]}"
+    return first, second
+
+
+def _questions_v3(
+    sun_house: int,
+    moon_house: int,
+    anchor: DailyAspect | None,
+) -> tuple[str, str, str, str]:
+    questions = [
+        HOUSE_VOICE[moon_house]["questions"][0],
+        HOUSE_VOICE[sun_house]["questions"][0],
+    ]
+
+    if anchor:
+        if anchor.planets == frozenset({"Venus", "Mars"}):
+            questions.append("Is this chemistry asking for honesty, or only a reaction?")
+        elif "Saturn" in anchor.planets:
+            questions.append("Is this person consistent, or merely difficult to reach?")
+        elif "Uranus" in anchor.planets:
+            questions.append("Does the excitement leave room for my freedom tomorrow?")
+        elif "Neptune" in anchor.planets:
+            questions.append("What do I know from evidence, and what am I supplying from fantasy?")
+        elif "Pluto" in anchor.planets:
+            questions.append("Am I drawn to intimacy, or to the feeling of being consumed by it?")
+        else:
+            questions.append(PLANET_QUESTION[anchor.planet2])
+    else:
+        questions.append("Who makes me feel seen without asking me to become smaller?")
+
+    questions.append("What would attraction look like if it also felt emotionally safe?")
+
+    result = []
+    for question in questions:
+        if question not in result:
+            result.append(question)
+    while len(result) < 4:
+        result.append("What truth becomes easier to admit when I stop performing indifference?")
+    return tuple(result[:4])  # type: ignore[return-value]
+
+
+def _best_move_v3(
+    anchor: DailyAspect | None,
+    sun_house: int,
+) -> str:
+    if anchor:
+        if anchor.planets == frozenset({"Moon", "Mercury"}):
+            return "Pause before replying, then answer the feeling as well as the words."
+        if anchor.planets == frozenset({"Venus", "Mars"}):
+            return "Let the attraction breathe without chasing, testing or pretending not to care."
+        if anchor.planets == frozenset({"Moon", "Saturn"}):
+            return "Choose the person or plan that proves itself through calm, repeated effort."
+        if "Neptune" in anchor.planets:
+            return "Keep the romance or inspiration, but verify one important fact."
+        if "Pluto" in anchor.planets:
+            return "Name what you want without trying to control how the other person responds."
+        if "Uranus" in anchor.planets:
+            return "Try the unexpected option while keeping one boundary that protects your freedom."
+        if "Mars" in anchor.planets:
+            return "Use directness instead of pressure and let the response give you information."
+    return HOUSE_VOICE[sun_house]["best_move"]
+
+
+def _technical_aspect_summary(
+    positions: dict[str, Position],
+    houses: dict[str, int],
+    anchor: DailyAspect | None,
+    maximum: int = 3,
+) -> tuple[str, ...]:
+    selected = []
+    if anchor:
+        selected.append(anchor.label)
+
+    lines: list[str] = []
+    for aspect in detect_aspects(positions, include_moon=True):
+        label = f"{aspect.planet1} {aspect.name} {aspect.planet2}"
+        if label in selected or len(lines) < maximum:
+            p1_theme = PLANET_MEANINGS[aspect.planet1]["core"]
+            p2_theme = PLANET_MEANINGS[aspect.planet2]["core"]
+            lines.append(
+                f"**{label}** (orb {aspect.orb:.2f}°) connects house "
+                f"{houses[aspect.planet1]} with house {houses[aspect.planet2]}: "
+                f"{p1_theme} interact with {p2_theme}."
+            )
+        if len(lines) >= maximum:
+            break
+    return tuple(lines)
+
+
 def free_daily_reading(
     sign: str,
     d: date,
@@ -710,30 +1145,47 @@ def free_daily_reading(
     houses = house_map(positions, sign)
     sun_house = houses["Sun"]
     moon_house = houses["Moon"]
+    venus_house = houses["Venus"]
 
-    raw_aspects = detect_aspects(positions, include_moon=True, maximum=6)
-    anchor = (
-        _daily_aspect(raw_aspects[0], positions, houses)
-        if raw_aspects
-        else None
+    anchor = _daily_trigger_aspect(
+        d,
+        timezone_name,
+        positions,
+        houses,
+    )
+    relationship_story = _relationship_archetype(
+        anchor,
+        venus_house,
+        moon_house,
     )
 
-    headline = _headline(sun_house, anchor)
-    forecast_paragraphs = _forecast_paragraphs(
+    headline = _headline_v3(moon_house, anchor)
+    forecast_paragraphs = _forecast_paragraphs_v3(
         sun_house,
         moon_house,
         anchor,
+        relationship_story,
     )
-    questions = _unique_questions(sun_house, moon_house, anchor)
+    questions = _questions_v3(sun_house, moon_house, anchor)
 
-    daily_theme = (
-        f"House {sun_house} opens the day through {HOUSE_NAMES[sun_house]}, "
-        f"while house {moon_house} describes the immediate emotional pressure around "
-        f"{HOUSE_NAMES[moon_house]}."
-    )
+    if anchor:
+        daily_theme = (
+            f"The date-sensitive trigger is **{anchor.label}** at an orb of "
+            f"{anchor.orb:.2f}°. It connects house {anchor.house1} "
+            f"({HOUSE_NAMES[anchor.house1]}) with house {anchor.house2} "
+            f"({HOUSE_NAMES[anchor.house2]}). The Sun remains in house {sun_house}, "
+            f"while the Moon moves through house {moon_house}."
+        )
+    else:
+        daily_theme = (
+            f"The Sun remains in house {sun_house} ({HOUSE_NAMES[sun_house]}), "
+            f"while the Moon moves through house {moon_house} "
+            f"({HOUSE_NAMES[moon_house]})."
+        )
+
     opportunity = HOUSE_VOICE[sun_house]["opportunity"]
     caution = HOUSE_VOICE[moon_house]["caution"]
-    best_move = HOUSE_VOICE[sun_house]["best_move"]
+    best_move = _best_move_v3(anchor, sun_house)
 
     return FreeDailyReading(
         sign=sign,
@@ -750,9 +1202,9 @@ def free_daily_reading(
         best_move=best_move,
         conclusion=house_aware_conclusion(sign, sun_house, moon_house),
         house_matrix=house_reference_matrix(sign, {sun_house, moon_house}),
-        aspects=_aspect_summary(positions, houses),
+        aspects=_technical_aspect_summary(positions, houses, anchor),
         anchor_aspect=anchor,
-        love_note=_area_note("love", sun_house, moon_house, anchor),
+        love_note=relationship_story,
         work_note=_area_note("work", sun_house, moon_house, anchor),
         money_note=_area_note("money", sun_house, moon_house, anchor),
         positions=positions,

@@ -161,3 +161,19 @@ Stripe payment button is shown.
 The app passes a prefilled email and compact Luna order reference to Stripe.
 The same panel appears below the House Guide and is prefilled with the sign
 currently selected there.
+
+
+## Daily Reading Version 3
+
+The daily engine now chooses a genuinely date-sensitive trigger rather than
+allowing a slow outer-planet aspect to dominate consecutive days.
+
+It prioritises the Moon and faster personal planets, recognises the day an
+aspect becomes closest to exact, and moves long-running generational aspects
+into the technical background.
+
+Every public reading now includes a prominent **Love & desire** interpretation.
+Romance archetypes such as slow burn, unconventional attraction, mystery,
+intensity, power and age/status difference are used only when supported by
+Saturn, Uranus, Neptune, Pluto, Venus, Mars or the Moon. The language preserves
+autonomy, consent, emotional safety and mutual respect.
