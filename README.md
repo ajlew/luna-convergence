@@ -220,3 +220,10 @@ rather than retaining an earlier Sagittarius selection.
 Shared aspect questions, relationship archetypes and story bridges now vary
 through the activated house. Convergence windows are explicitly labelled
 current, approaching or recent so an expired cluster is not presented as active.
+
+
+## Fixed-sign editorial refinement
+
+Taurus, Leo, Scorpio and Aquarius now have polished relationship copy and
+non-duplicative questions. The Venus-square-Mars period is calculated to the
+actual configured 6° orb boundaries: July 14–August 15, 2026.

@@ -88,7 +88,7 @@ HOUSE_RELATIONSHIP_OPENINGS = {
     2: "A connection may reveal whether affection, time and effort are being valued equally.",
     3: "Banter, messages or an unfinished conversation may carry more emotional charge than expected.",
     4: "A private feeling may be shaping the atmosphere at home before anyone says it aloud.",
-    5: "The spark may be obvious, but the real question is whether it can become something mutual.",
+    5: "The attraction may be obvious, but the real question is whether it can become something mutual.",
     6: "Chemistry may surface through work, routine or the person who keeps showing up consistently.",
     7: "A partner or significant connection may reveal what the relationship can—and cannot—hold.",
     8: "Intensity may expose a hidden expectation around trust, intimacy, power or shared resources.",
@@ -100,13 +100,13 @@ HOUSE_RELATIONSHIP_OPENINGS = {
 
 VENUS_MARS_ARCHETYPES = {
     1: "bold attraction and the urge to remain fully yourself",
-    2: "desire, reciprocity and proof of value",
+    2: "desire and the need to feel equally valued",
     3: "charged words, banter and the impulse to answer",
     4: "private attraction and the need for emotional safety",
-    5: "the spark, pursuit and the pleasure of being wanted",
+    5: "romantic momentum, pursuit and the pleasure of being wanted",
     6: "an everyday spark that creates an urge to act",
     7: "mutual attraction that needs courage and definition",
-    8: "magnetism, trust and the temptation to surrender control",
+    8: "magnetism and the temptation to surrender control",
     9: "unfamiliar attraction and the promise of a larger world",
     10: "personal attraction entangled with ambition",
     11: "friendship, desire and a shared future possibility",
@@ -118,13 +118,13 @@ VENUS_MARS_QUESTIONS = {
     2: "Is this desire being matched by equal value, effort and respect?",
     3: "Which message needs honesty rather than flirtation, provocation or guesswork?",
     4: "Does this attraction make the private atmosphere safer or more unsettled?",
-    5: "Is the spark becoming mutual, or surviving mainly on tension?",
+    5: "Is the connection becoming mutual, or surviving mainly on tension?",
     6: "Does this connection improve everyday life or only interrupt it?",
     7: "Are both people willing to define what this attraction means?",
     8: "Can this intensity deepen trust without creating secrecy or control?",
     9: "Is this attraction opening my world or distracting me from the larger plan?",
     10: "Would I make the same professional choice if the chemistry were removed?",
-    11: "Are we imagining the same future, or only enjoying the same excitement?",
+    11: "What evidence shows this person can share responsibility as well as excitement?",
     12: "Am I drawn to the person, or to the mystery created by distance and silence?",
 }
 
@@ -190,13 +190,13 @@ STORY_BRIDGE_TEMPLATES = {
 
 HOUSE_RELATIONSHIP_GUIDANCE = {
     1: "Choose the person who can meet your {archetype} without asking you to become smaller.",
-    2: "Let {archetype} prove its value through reciprocity rather than promises or attention alone.",
+    2: "Let {archetype} be tested through consistent effort rather than promises or attention alone.",
     3: "Allow {archetype} to become a real conversation instead of a guessing game.",
     4: "Bring {archetype} into the open gently; emotional safety matters more than preserving appearances.",
     5: "Give {archetype} room to grow, but let the other person's response—not fantasy—show what is possible.",
     6: "Notice whether {archetype} improves daily life or merely makes an already crowded routine more dramatic.",
     7: "Ask whether {archetype} is matched by honesty, mutual respect and a willingness to define the connection.",
-    8: "Keep {archetype} compelling without surrendering autonomy, privacy or the right to set clear terms.",
+    8: "The pull of {archetype} can be powerful, but it should not require surrendering autonomy, privacy or the right to set clear terms.",
     9: "Enjoy {archetype}, but ask whether the connection can travel beyond novelty into a believable future.",
     10: "Separate the attraction from ambition, status, access or professional advantage so each can be judged clearly.",
     11: "Let {archetype} reveal whether both people imagine the same future rather than merely enjoying the same moment.",
@@ -466,6 +466,7 @@ class EvidenceSnapshot:
     aspect_label: str
     aspect_type: str
     orb: float | None
+    configured_orb: float | None
     phase: str
     activated_houses: tuple[int, ...]
     house_meanings: tuple[str, ...]
@@ -592,23 +593,49 @@ def _aspect_phase(reading_date: date, timezone_name: str, anchor) -> str:
 
 
 def _aspect_window(reading_date: date, timezone_name: str, anchor) -> str:
+    """Return the continuous period inside the configured aspect orb."""
     if not anchor:
         return "Today"
+
+    planets = anchor.planets
+    if "Moon" in planets:
+        max_scan = 7
+    elif planets & {"Mercury", "Venus", "Mars"}:
+        max_scan = 60
+    elif "Sun" in planets:
+        max_scan = 90
+    else:
+        max_scan = 180
+
     start = reading_date
     end = reading_date
-    max_scan = 4 if "Moon" in anchor.planets else 14
+
     for offset in range(1, max_scan + 1):
         candidate = reading_date - timedelta(days=offset)
-        if _aspect_match(candidate, timezone_name, anchor.planet1, anchor.planet2, anchor.name):
+        if _aspect_match(
+            candidate,
+            timezone_name,
+            anchor.planet1,
+            anchor.planet2,
+            anchor.name,
+        ):
             start = candidate
         else:
             break
+
     for offset in range(1, max_scan + 1):
         candidate = reading_date + timedelta(days=offset)
-        if _aspect_match(candidate, timezone_name, anchor.planet1, anchor.planet2, anchor.name):
+        if _aspect_match(
+            candidate,
+            timezone_name,
+            anchor.planet1,
+            anchor.planet2,
+            anchor.name,
+        ):
             end = candidate
         else:
             break
+
     if start == end:
         return "Next 24 hours"
     if start.month == end.month:
@@ -719,6 +746,12 @@ def _convergence_window_row_label(convergence_label: str) -> str:
     return "Wider convergence status"
 
 
+def _aspect_window_row_label(evidence: EvidenceSnapshot) -> str:
+    if evidence.configured_orb is None:
+        return "Daily influence window"
+    return f"Within configured {evidence.configured_orb:g}° orb"
+
+
 def _evidence_snapshot(reading, sign: str, reading_date: date, timezone_name: str) -> EvidenceSnapshot:
     anchor = reading.anchor_aspect
     phase = _aspect_phase(reading_date, timezone_name, anchor)
@@ -749,6 +782,11 @@ def _evidence_snapshot(reading, sign: str, reading_date: date, timezone_name: st
         aspect_label=label,
         aspect_type=aspect_type,
         orb=orb,
+        configured_orb=(
+            ASPECTS.get(anchor.name, (0.0, 0.0))[1]
+            if anchor
+            else None
+        ),
         phase=phase,
         activated_houses=houses,
         house_meanings=meanings,
@@ -1238,7 +1276,7 @@ def render_daily_narrative_v3(narrative: DailyNarrative) -> None:
         ("Daily timing", evidence.phase),
         ("Long-term current", narrative.long_term_current),
         ("Convergence strength", f"{evidence.confidence_label} ({evidence.strength_score}/100)"),
-        ("Aspect active window", evidence.active_window),
+        (_aspect_window_row_label(evidence), evidence.active_window),
         (
             _convergence_window_row_label(evidence.convergence_label),
             evidence.convergence_window,
@@ -1276,10 +1314,19 @@ def render_daily_narrative_v3(narrative: DailyNarrative) -> None:
         orb_value = "Not applicable" if evidence.orb is None else f"{evidence.orb:.2f}°"
         st.markdown(f"**Aspect:** {evidence.aspect_label}")
         st.markdown(f"**Type:** {evidence.aspect_type}")
-        st.markdown(f"**Orb:** {orb_value}")
+        st.markdown(f"**Current orb:** {orb_value}")
+        configured_orb = (
+            "Not applicable"
+            if evidence.configured_orb is None
+            else f"{evidence.configured_orb:g}°"
+        )
+        st.markdown(f"**Configured aspect orb:** {configured_orb}")
         st.markdown(f"**Timing:** {evidence.phase}")
         st.markdown(f"**Active planets:** {', '.join(evidence.active_planets)}")
-        st.markdown(f"**Active window:** {evidence.active_window}")
+        st.markdown(
+            f"**Calculated period within configured orb:** "
+            f"{evidence.active_window}"
+        )
         st.markdown("### Activated houses")
         for number, meaning in zip(evidence.activated_houses, evidence.house_meanings):
             st.markdown(f"- **House {number}:** {meaning}")
