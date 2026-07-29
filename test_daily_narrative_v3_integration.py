@@ -16,6 +16,9 @@ def main() -> None:
     assert "Convergence strength" in module
     assert "It is not the probability" in module
     assert "Explainable Astrology" in module
+    assert 'context=f"daily-{sign.lower()}"' in app
+    assert "HOUSE_RELATIONSHIP_OPENINGS" in module
+    assert "_sign_specific_questions" in module
     print("Explainable Astrology integration check passed.")
 
 

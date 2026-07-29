@@ -201,3 +201,15 @@ zodiac, but the public consequence, wording and headline are unique.
 
 A regression test generates all twelve signs across four consecutive dates and
 requires twelve distinct headlines per date.
+
+
+## Full public-narrative uniqueness
+
+The sign-specific layer now extends beyond the headline. Today's Story,
+relationship interpretation, opportunity, caution, action and question set
+all change with the houses activated for the selected sign. Genuine shared
+astronomical evidence remains consistent.
+
+The Daily Horoscope purchase panel also uses a sign-specific Streamlit widget
+namespace so the report selector opens with the sign currently displayed
+rather than retaining an earlier Sagittarius selection.

@@ -1613,7 +1613,10 @@ def daily_page() -> None:
         )
     if st.session_state.get("force_daily"):
         render_free_reading(sign, reading_date, timezone_name)
-        report_cta(context="daily", prefill_sign=sign)
+        report_cta(
+            context=f"daily-{sign.lower()}",
+            prefill_sign=sign,
+        )
 
 
 def reports_page() -> None:

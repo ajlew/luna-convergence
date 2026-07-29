@@ -82,6 +82,145 @@ HOUSE_EXAMPLES = {
     12: "It may emerge through rest, a private conversation, unfinished grief, a dream or the need to step back before deciding.",
 }
 
+
+HOUSE_RELATIONSHIP_OPENINGS = {
+    1: "Attraction may be clarifying who you are no longer willing to shrink for.",
+    2: "A connection may reveal whether affection, time and effort are being valued equally.",
+    3: "Banter, messages or an unfinished conversation may carry more emotional charge than expected.",
+    4: "A private feeling may be shaping the atmosphere at home before anyone says it aloud.",
+    5: "The spark may be obvious, but the real question is whether it can become something mutual.",
+    6: "Chemistry may surface through work, routine or the person who keeps showing up consistently.",
+    7: "A partner or significant connection may reveal what the relationship can—and cannot—hold.",
+    8: "Intensity may expose a hidden expectation around trust, intimacy, power or shared resources.",
+    9: "Someone outside your usual type or world may make a larger possibility feel suddenly personal.",
+    10: "Attraction and ambition may be overlapping, making professional boundaries more important.",
+    11: "A friendship, online connection or shared future plan may begin to feel less casual.",
+    12: "A private longing—or an emotionally unavailable person—may be taking up more space than expected.",
+}
+
+HOUSE_RELATIONSHIP_GUIDANCE = {
+    1: "Choose the person who can meet your {archetype} without asking you to become smaller.",
+    2: "Let {archetype} prove its value through reciprocity rather than promises or attention alone.",
+    3: "Allow {archetype} to become a real conversation instead of a guessing game.",
+    4: "Bring {archetype} into the open gently; emotional safety matters more than preserving appearances.",
+    5: "Give {archetype} room to grow, but let the other person's response—not fantasy—show what is possible.",
+    6: "Notice whether {archetype} improves daily life or merely makes an already crowded routine more dramatic.",
+    7: "Ask whether {archetype} is matched by honesty, mutual respect and a willingness to define the connection.",
+    8: "Keep {archetype} compelling without surrendering autonomy, privacy or the right to set clear terms.",
+    9: "Enjoy {archetype}, but ask whether the connection can travel beyond novelty into a believable future.",
+    10: "Separate {archetype} from status, access or professional advantage so each can be judged clearly.",
+    11: "Let {archetype} reveal whether both people imagine the same future rather than merely enjoying the same moment.",
+    12: "Keep {archetype} in proportion by trusting consistent actions more than mystery, longing or absence.",
+}
+
+HOUSE_ACTIONS = {
+    1: "Make one choice that reflects what you genuinely want, not the reaction or approval you hope to receive.",
+    2: "Put a clear value, price or limit on the issue before agreeing to give it more time, money or emotional energy.",
+    3: "Ask one direct question, then wait long enough to hear the complete answer instead of filling the silence yourself.",
+    4: "Name the private concern calmly before changing your plans or the emotional atmosphere around it.",
+    5: "Show interest in one clear way, then let the response—not the fantasy—tell you what comes next.",
+    6: "Change one practical routine or boundary instead of trying to solve the entire situation through emotion.",
+    7: "Ask what the other person actually wants, and state your own terms just as plainly.",
+    8: "Clarify one hidden expectation, shared cost or trust condition before allowing intensity to decide for you.",
+    9: "Take one concrete step toward the larger possibility: enquire, book, apply, publish or research.",
+    10: "Separate personal chemistry from the professional decision, then judge each one on its own evidence.",
+    11: "Tell one person what future you are genuinely trying to build and notice whether their actions align with it.",
+    12: "Write down the private truth before contacting anyone or making a visible move.",
+}
+
+HOUSE_OPPORTUNITIES = {
+    1: "Use the pressure to define a more authentic personal position.",
+    2: "A clearer value or limit can restore confidence and leverage.",
+    3: "One precise sentence can create understanding and movement.",
+    4: "Honesty can make home, family or private life feel safer rather than heavier.",
+    5: "A creative or romantic risk can become real when it is expressed plainly.",
+    6: "A small systems change can improve energy, health or workload quickly.",
+    7: "A direct conversation can replace uncertainty with workable relationship terms.",
+    8: "Naming the hidden condition can deepen trust or protect shared resources.",
+    9: "A wider world becomes accessible through one practical commitment.",
+    10: "Clear standards can strengthen your professional position and reputation.",
+    11: "The right ally can turn a private ambition into a shared future plan.",
+    12: "Stepping back can reveal the truth that constant activity has concealed.",
+}
+
+HOUSE_WATCH_OUT = {
+    1: "Do not reshape yourself merely to secure attention, approval or a reaction.",
+    2: "Do not mistake desire, turnover or attention for genuine value and security.",
+    3: "Do not let fast words, mixed signals or imagined subtext replace a direct answer.",
+    4: "Do not preserve peace by leaving the most important private issue unspoken.",
+    5: "Do not confuse dramatic chemistry with mutual intention or emotional availability.",
+    6: "Do not turn one problem into more labour, self-criticism or an impossible standard.",
+    7: "Do not accept ambiguity as intimacy when clearer terms are possible.",
+    8: "Do not let secrecy, jealousy, debt or power imbalance masquerade as devotion.",
+    9: "Do not let excitement about the future outrun facts, timing or practical preparation.",
+    10: "Do not allow attraction, pride or fear of judgment to distort a professional decision.",
+    11: "Do not confuse shared enthusiasm with a genuinely shared destination.",
+    12: "Do not let fantasy, silence or emotional unavailability write the missing parts of the story.",
+}
+
+HOUSE_QUESTIONS = {
+    1: (
+        "What choice would still feel right without anyone else's approval?",
+        "Where am I editing myself to keep someone interested?",
+        "What part of my identity wants to be expressed more directly?",
+    ),
+    2: (
+        "What is this really worth in time, money and emotional energy?",
+        "Am I being valued consistently, or only noticed when convenient?",
+        "What would create genuine security rather than temporary reassurance?",
+    ),
+    3: (
+        "What direct question would end the guessing?",
+        "Which words and actions are not matching?",
+        "What information would change my next decision?",
+    ),
+    4: (
+        "What private truth is shaping the atmosphere at home?",
+        "Am I protecting peace, or avoiding an honest conversation?",
+        "What would make this situation feel emotionally safer?",
+    ),
+    5: (
+        "Is this spark being matched by clear interest and effort?",
+        "What would pleasure look like without emotional games?",
+        "Which creative or romantic risk is worth expressing plainly?",
+    ),
+    6: (
+        "Which repeated pattern is draining more energy than it deserves?",
+        "Does this connection support daily life, or continually disrupt it?",
+        "What practical boundary would make the day easier?",
+    ),
+    7: (
+        "What does the other person actually appear willing to build?",
+        "Which relationship term needs to be spoken instead of assumed?",
+        "Do I feel seen, respected and free to be direct here?",
+    ),
+    8: (
+        "What hidden expectation is influencing this connection?",
+        "Where do trust, money, intimacy or power need clearer terms?",
+        "What would intensity look like without loss of autonomy?",
+    ),
+    9: (
+        "Does this possibility have a believable next step?",
+        "What can I learn before committing to the larger plan?",
+        "Is the attraction expanding my world or distracting me from it?",
+    ),
+    10: (
+        "What decision protects both my reputation and my private truth?",
+        "Am I responding to the opportunity, the person or the status around them?",
+        "What result would still matter after the chemistry settles?",
+    ),
+    11: (
+        "Do we genuinely imagine the same future?",
+        "Which connection supports the person I am becoming?",
+        "What shared plan needs evidence rather than enthusiasm?",
+    ),
+    12: (
+        "What am I romanticising because it remains unavailable?",
+        "What truth becomes clearer when I stop chasing an answer?",
+        "Which private feeling needs compassion rather than immediate action?",
+    ),
+}
+
 PLANET_READER_EFFECT = {
     "Sun": "The Sun makes this issue more visible and difficult to ignore.",
     "Moon": "The Moon makes feelings and reactions more immediate.",
@@ -533,7 +672,106 @@ def _phase_sentence(phase: str) -> str:
     return "The pattern is active today and gives this issue more weight than usual."
 
 
+def _relationship_archetype(reading) -> str:
+    anchor = reading.anchor_aspect
+    if not anchor:
+        return "emotional honesty and attraction"
+
+    planets = anchor.planets
+    if planets == frozenset({"Venus", "Mars"}):
+        return "chemistry and direct desire"
+    if planets == frozenset({"Moon", "Mercury"}):
+        return "emotional honesty and charged conversation"
+    if planets == frozenset({"Moon", "Saturn"}):
+        return "slow-burn attraction and emotional restraint"
+    if "Pluto" in planets:
+        return "magnetism and emotional intensity"
+    if "Neptune" in planets:
+        return "mystery, longing and idealised attraction"
+    if "Uranus" in planets:
+        return "unconventional attraction and the need for freedom"
+    if "Saturn" in planets:
+        return "reserve, maturity or an age-and-status difference"
+    if "Mars" in planets:
+        return "pursuit, friction and physical chemistry"
+    if "Venus" in planets:
+        return "attraction, pleasure and relational choice"
+    if "Mercury" in planets:
+        return "banter, messages and intellectual connection"
+    if "Moon" in planets:
+        return "emotional vulnerability and the need to feel understood"
+    return "the connection"
+
+
+def _sign_specific_relationship(reading) -> str:
+    trigger = _trigger_house(reading)
+    opening = HOUSE_RELATIONSHIP_OPENINGS[trigger]
+    guidance = HOUSE_RELATIONSHIP_GUIDANCE[trigger].format(
+        archetype=_relationship_archetype(reading)
+    )
+    return f"{opening} {guidance}"
+
+
+def _sign_specific_action(reading) -> str:
+    return HOUSE_ACTIONS[_trigger_house(reading)]
+
+
+def _sign_specific_opportunity(reading) -> str:
+    return HOUSE_OPPORTUNITIES[_trigger_house(reading)]
+
+
+def _sign_specific_watch(reading) -> str:
+    return HOUSE_WATCH_OUT[_trigger_house(reading)]
+
+
+def _shared_aspect_question(reading) -> str:
+    anchor = reading.anchor_aspect
+    if not anchor:
+        return "What becomes clearer when I respond to the real pattern rather than the first emotion?"
+
+    planets = anchor.planets
+    if planets == frozenset({"Venus", "Mars"}):
+        return "Is this attraction asking for honest action, or only a reaction?"
+    if planets == frozenset({"Moon", "Mercury"}):
+        return "What feeling becomes easier to understand when it is named plainly?"
+    if planets == frozenset({"Moon", "Saturn"}):
+        return "Who is showing consistency rather than asking me to imagine it?"
+    if "Neptune" in planets:
+        return "What part of this connection is real, and what part am I supplying through hope?"
+    if "Pluto" in planets:
+        return "Can this intensity leave room for autonomy, trust and a clear no?"
+    if "Uranus" in planets:
+        return "Does this freedom create honesty, or simply avoid commitment?"
+    if "Saturn" in planets:
+        return "What evidence of reliability matters more than promises or status?"
+    return "What practical evidence supports the story I am telling myself?"
+
+
+def _sign_specific_questions(reading) -> tuple[str, ...]:
+    trigger = _trigger_house(reading)
+    other = _other_house(reading, trigger)
+
+    candidates = [
+        HOUSE_QUESTIONS[trigger][0],
+        HOUSE_QUESTIONS[trigger][1],
+        HOUSE_QUESTIONS[other][2],
+        _shared_aspect_question(reading),
+        HOUSE_QUESTIONS[trigger][2],
+        HOUSE_QUESTIONS[other][0],
+    ]
+
+    result: list[str] = []
+    for question in candidates:
+        cleaned = clean_customer_text(question)
+        if cleaned and cleaned not in result:
+            result.append(cleaned)
+        if len(result) == 4:
+            break
+    return tuple(result)
+
+
 def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[str]) -> tuple[str, ...]:
+    del evidence
     trigger = _trigger_house(reading)
     other = _other_house(reading, trigger)
     tone = reading.anchor_aspect.name if reading.anchor_aspect else "blend"
@@ -542,35 +780,34 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
     if tone in {"trine", "sextile"}:
         bridge = (
             f"An easier current connects {HOUSE_INLINE[trigger]} with "
-            f"{HOUSE_INLINE[other]}, making progress in one area useful to the other."
+            f"{HOUSE_INLINE[other]}, allowing progress in one area to strengthen the other."
         )
     elif tone in {"square", "opposition"}:
         bridge = (
-            f"The tension connects {HOUSE_INLINE[trigger]} with "
-            f"{HOUSE_INLINE[other]}. One honest response can prevent a small issue from becoming a larger one."
+            f"The pressure runs between {HOUSE_INLINE[trigger]} and "
+            f"{HOUSE_INLINE[other]}, so the most useful response is the one that makes the real issue easier to name."
         )
     else:
         bridge = (
-            f"The day brings {HOUSE_INLINE[trigger]} and "
-            f"{HOUSE_INLINE[other]} into the same decision."
+            f"The day places {HOUSE_INLINE[trigger]} beside "
+            f"{HOUSE_INLINE[other]}, making one decision carry meaning in both areas."
         )
-    first = f"{consequence} {bridge}"
 
-    second = HOUSE_EXAMPLES[trigger]
-    relationship = clean_customer_text(reading.love_note)
-    third = relationship
+    paragraphs = [
+        f"{consequence} {bridge}",
+        HOUSE_EXAMPLES[trigger],
+        _sign_specific_relationship(reading),
+    ]
 
-    action = clean_customer_text(reading.best_move)
-    fourth = f"The useful move is specific: {action[0].lower() + action[1:] if action else 'pause long enough to make the next step deliberate.'}"
-
-    paragraphs = [first, second, third, fourth]
+    # The visible story is sign-specific. Shared astronomy remains in the
+    # evidence and Sky Snapshot rather than becoming duplicated public copy.
     result: list[str] = []
     for paragraph in paragraphs:
         if paragraph and _repetition_count(paragraph, previous_texts) < 3:
             result.append(paragraph)
     if len(result) < 3:
-        result = paragraphs[:3]
-    return tuple(result[:4])
+        result = paragraphs
+    return tuple(result[:3])
 
 
 def _why_today_points(reading, evidence: EvidenceSnapshot) -> tuple[str, str, str]:
@@ -709,13 +946,13 @@ def build_daily_narrative(
         why_today_points=_why_today_points(reading, evidence),
         long_term_current=_long_term_current(reading, sign, reading_date, timezone_name),
         emotional_weather=_emotional_weather(reading),
-        hidden_opportunity=clean_customer_text(reading.opportunity),
-        watch_out=clean_customer_text(reading.caution),
-        action_today=clean_customer_text(reading.best_move),
-        reflection_questions=tuple(clean_customer_text(item) for item in reading.reflection_questions),
+        hidden_opportunity=_sign_specific_opportunity(reading),
+        watch_out=_sign_specific_watch(reading),
+        action_today=_sign_specific_action(reading),
+        reflection_questions=_sign_specific_questions(reading),
         work_note=clean_customer_text(reading.work_note),
         money_note=clean_customer_text(reading.money_note),
-        relationship_story=clean_customer_text(reading.love_note),
+        relationship_story=_sign_specific_relationship(reading),
         daily_theme=reading.daily_theme,
         wider_context=reading.wider_context,
         technical_aspects=reading.aspects,
@@ -851,9 +1088,11 @@ def render_daily_narrative_v3(narrative: DailyNarrative) -> None:
         ("Primary theme", narrative.convergence_axis),
         ("Emotional weather", narrative.emotional_weather),
         ("Strongest influence", evidence.aspect_label),
+        ("Daily timing", evidence.phase),
         ("Long-term current", narrative.long_term_current),
         ("Convergence strength", f"{evidence.confidence_label} ({evidence.strength_score}/100)"),
-        ("Window", evidence.active_window),
+        ("Aspect active window", evidence.active_window),
+        ("Wider convergence window", evidence.convergence_window),
     ]
     rows = "".join(
         f'<tr><td>{escape(label)}</td><td class="snapshot-value">{escape(value)}</td></tr>'
