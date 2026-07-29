@@ -120,6 +120,117 @@ PLANET_PRIORITY = {
 }
 
 
+# The same aspect is shared by all signs, but the activated houses are not.
+# These libraries translate one sky pattern into twelve distinct customer stories.
+VENUS_MARS_HEADLINES = {
+    1: "What you want is changing who you are ready to be",
+    2: "Desire is asking what you truly value",
+    3: "A charged conversation reveals what you really want",
+    4: "A private feeling needs an honest response",
+    5: "The spark is asking for a real choice",
+    6: "Attraction is interrupting the usual routine",
+    7: "The relationship needs a clearer answer",
+    8: "Intensity is exposing the hidden bargain",
+    9: "An attraction could widen your world",
+    10: "What you want is changing how you are seen",
+    11: "The future depends on who shares it",
+    12: "A private longing is ready to be named",
+}
+
+MOON_MERCURY_HEADLINES = {
+    1: "Say what is true without explaining yourself away",
+    2: "A money conversation reveals what feels secure",
+    3: "The message has more than one meaning",
+    4: "A family conversation needs a softer answer",
+    5: "Flirtation becomes clearer when someone speaks plainly",
+    6: "One useful question can fix the day",
+    7: "Listen for what the relationship is really saying",
+    8: "The unspoken part of the conversation matters most",
+    9: "One new fact could change the larger plan",
+    10: "The right words can change how your work is received",
+    11: "A friend or contact may say exactly what you need",
+    12: "The answer arrives when the noise becomes quieter",
+}
+
+MOON_SATURN_HEADLINES = {
+    1: "Choose the response that respects your future self",
+    2: "Security grows through one calm decision",
+    3: "A serious answer is worth waiting for",
+    4: "Steadiness matters more than emotional theatre",
+    5: "The slow burn needs something real",
+    6: "A gentler routine can still be disciplined",
+    7: "Consistency is becoming more attractive",
+    8: "Trust needs proof, not pressure",
+    9: "The larger plan needs one dependable step",
+    10: "Quiet authority carries more weight today",
+    11: "The reliable connection is the valuable one",
+    12: "Rest is part of the responsibility",
+}
+
+HOUSE_TONE_HEADLINES = {
+    1: {
+        "hard": "Choose yourself without forcing the answer",
+        "flow": "A personal choice is opening the right door",
+        "blend": "A clearer version of you is stepping forward",
+    },
+    2: {
+        "hard": "Know what is worth the emotional cost",
+        "flow": "Something valuable is becoming easier to recognise",
+        "blend": "Your priorities are revealing their real price",
+    },
+    3: {
+        "hard": "The conversation needs a more honest question",
+        "flow": "The useful answer is ready to be heard",
+        "blend": "A message changes the direction of the day",
+    },
+    4: {
+        "hard": "Protect the peace without avoiding the truth",
+        "flow": "A private matter can settle more gently",
+        "blend": "What happens at home shapes the next decision",
+    },
+    5: {
+        "hard": "The spark needs more than a reaction",
+        "flow": "Pleasure is pointing toward something real",
+        "blend": "The heart is becoming harder to ignore",
+    },
+    6: {
+        "hard": "Do not let pressure design the whole day",
+        "flow": "One small adjustment improves everything around it",
+        "blend": "The routine is showing you what needs to change",
+    },
+    7: {
+        "hard": "Let the relationship reveal its real terms",
+        "flow": "A connection becomes easier to trust",
+        "blend": "Another person is showing you the missing piece",
+    },
+    8: {
+        "hard": "Bring the hidden condition into the open",
+        "flow": "Trust deepens when the terms are clear",
+        "blend": "What is shared needs a more honest name",
+    },
+    9: {
+        "hard": "Go further without leaving the facts behind",
+        "flow": "A wider possibility is becoming believable",
+        "blend": "The larger world is asking for an answer",
+    },
+    10: {
+        "hard": "Let the result speak louder than the pressure",
+        "flow": "A visible opportunity is ready for your attention",
+        "blend": "Your next public move is taking shape",
+    },
+    11: {
+        "hard": "Choose the future without chasing approval",
+        "flow": "The right connection opens a longer path",
+        "blend": "The people around you are changing the plan",
+    },
+    12: {
+        "hard": "Do not let silence make the decision for you",
+        "flow": "The quieter answer is beginning to surface",
+        "blend": "A private truth is ready to be recognised",
+    },
+}
+
+
 @dataclass(frozen=True)
 class EvidenceSnapshot:
     active_planets: tuple[str, ...]
@@ -525,8 +636,37 @@ def _long_term_current(reading, sign: str, reading_date: date, timezone_name: st
     return f"{selected} is {verb} {HOUSE_LABELS[house].lower()}. This is the climate: it lasts longer than today's trigger."
 
 
+def _headline_tone(reading) -> str:
+    anchor = reading.anchor_aspect
+    if not anchor:
+        return "blend"
+    if anchor.name in {"square", "opposition"}:
+        return "hard"
+    if anchor.name in {"trine", "sextile"}:
+        return "flow"
+    return "blend"
+
+
+def _sign_specific_headline(reading) -> str:
+    """Translate a shared sky pattern through this sign's activated houses."""
+    trigger_house = _trigger_house(reading)
+    anchor = reading.anchor_aspect
+    if not anchor:
+        return HOUSE_TONE_HEADLINES[trigger_house]["blend"]
+
+    pair = anchor.planets
+    if pair == frozenset({"Venus", "Mars"}):
+        return VENUS_MARS_HEADLINES[trigger_house]
+    if pair == frozenset({"Moon", "Mercury"}):
+        return MOON_MERCURY_HEADLINES[trigger_house]
+    if pair == frozenset({"Moon", "Saturn"}):
+        return MOON_SATURN_HEADLINES[trigger_house]
+
+    return HOUSE_TONE_HEADLINES[trigger_house][_headline_tone(reading)]
+
+
 def _headline(reading, previous_texts: Iterable[str], evidence: EvidenceSnapshot) -> str:
-    headline = clean_customer_text(reading.headline)
+    headline = clean_customer_text(_sign_specific_headline(reading))
     if _repetition_count(headline, previous_texts) < 2:
         return headline
     if evidence.phase.startswith("Closest"):

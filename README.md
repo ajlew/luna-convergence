@@ -191,3 +191,13 @@ The buyer sees a clean narrative first. An expandable evidence section supplies 
 The public daily reading now begins with the customer consequence rather than the transit. It presents a three-to-four paragraph story, a plain-English convergence axis, three short evidence points, a weather-versus-climate explanation and a compact Sky Snapshot. Full houses, aspects, orbs and planetary positions remain optional.
 
 The visible strength label describes how clearly one astrological pattern dominates the day. It is not a probability that a predicted event will occur.
+
+
+## Sign-specific headline layer
+
+Daily headlines now translate a shared aspect through the activated house pair
+for each selected sign. The same sky evidence can remain consistent across the
+zodiac, but the public consequence, wording and headline are unique.
+
+A regression test generates all twelve signs across four consecutive dates and
+requires twelve distinct headlines per date.
