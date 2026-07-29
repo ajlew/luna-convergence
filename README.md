@@ -227,3 +227,10 @@ current, approaching or recent so an expired cluster is not presented as active.
 Taurus, Leo, Scorpio and Aquarius now have polished relationship copy and
 non-duplicative questions. The Venus-square-Mars period is calculated to the
 actual configured 6° orb boundaries: July 14–August 15, 2026.
+
+
+## Final twelve-sign editorial pass
+
+Daily stories now use natural prose rather than compact house labels, filter
+near-duplicate questions, and include a sign-specific evidence card naming
+the two life areas activated by the shared aspect.

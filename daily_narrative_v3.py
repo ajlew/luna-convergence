@@ -52,18 +52,48 @@ HOUSE_INLINE = {
     12: "rest and private reflection",
 }
 
+HOUSE_PROSE = {
+    1: "your identity and personal direction",
+    2: "money, value and security",
+    3: "communication and everyday decisions",
+    4: "home, family and private life",
+    5: "romance, pleasure and creative expression",
+    6: "work, health and daily routines",
+    7: "relationships, agreements and other people",
+    8: "trust, intimacy and shared finances",
+    9: "travel, learning and the wider world",
+    10: "career, reputation and public direction",
+    11: "friends, communities and future plans",
+    12: "rest, closure and private reflection",
+}
+
+HOUSE_CLIMATE = {
+    1: "your identity and personal direction",
+    2: "money, value and security",
+    3: "communication, learning and local connections",
+    4: "home, family and emotional foundations",
+    5: "romance, creativity and personal joy",
+    6: "work, health and sustainable routines",
+    7: "relationships, agreements and collaboration",
+    8: "trust, intimacy and shared resources",
+    9: "travel, learning and a wider perspective",
+    10: "career, visibility and professional direction",
+    11: "friends, community and long-term plans",
+    12: "rest, closure and inner life",
+}
+
 HOUSE_STORY = {
     1: "A personal decision may ask you to lead instead of waiting for approval.",
     2: "A price, purchase or money conversation may make you reconsider what is genuinely worth your energy.",
     3: "A message, invitation or overlooked detail may change the direction of a conversation.",
     4: "Something at home or within the family may need a calmer response than expected.",
-    5: "A romantic or creative spark may become harder to dismiss.",
+    5: "A romantic or creative possibility may become harder to dismiss.",
     6: "A routine problem may reveal the small adjustment that makes the whole day easier.",
     7: "Another person's honesty may show you where a relationship or agreement really stands.",
     8: "A shared cost, promise or trust issue may need to be named directly.",
     9: "An invitation to learn, travel or think bigger may suddenly feel more realistic.",
     10: "A work opportunity or visible responsibility may put you in a stronger position.",
-    11: "A friend, audience or useful contact may open a future possibility.",
+    11: "A friend, audience or useful contact may open an unexpected possibility.",
     12: "A quiet realisation may help you close a draining chapter.",
 }
 
@@ -78,38 +108,38 @@ HOUSE_EXAMPLES = {
     8: "It may concern debt, tax, shared money, intimacy, trust, insurance or an obligation that has remained partly hidden.",
     9: "It could involve study, publishing, legal matters, travel, another culture or an opportunity beyond your usual world.",
     10: "It may involve a manager, public result, application, promotion, deadline or decision about professional direction.",
-    11: "It could come through a friend, group, community, audience, online network or long-term plan.",
+    11: "It could come through a group, community, audience, online network or long-term plan.",
     12: "It may emerge through rest, a private conversation, unfinished grief, a dream or the need to step back before deciding.",
 }
 
 
 HOUSE_RELATIONSHIP_OPENINGS = {
-    1: "Attraction may be clarifying who you are no longer willing to shrink for.",
-    2: "A connection may reveal whether affection, time and effort are being valued equally.",
-    3: "Banter, messages or an unfinished conversation may carry more emotional charge than expected.",
+    1: "Attraction may be clarifying the version of yourself you are no longer willing to hide.",
+    2: "A connection may reveal whether affection, time and effort are reciprocal.",
+    3: "A message or unfinished exchange may carry more feeling than expected.",
     4: "A private feeling may be shaping the atmosphere at home before anyone says it aloud.",
     5: "The attraction may be obvious, but the real question is whether it can become something mutual.",
-    6: "Chemistry may surface through work, routine or the person who keeps showing up consistently.",
+    6: "A connection may develop through work, routine or the person who keeps showing up consistently.",
     7: "A partner or significant connection may reveal what the relationship can—and cannot—hold.",
     8: "Intensity may expose a hidden expectation around trust, intimacy, power or shared resources.",
-    9: "Someone outside your usual type or world may make a larger possibility feel suddenly personal.",
+    9: "Someone outside your usual type may make expansion feel suddenly personal.",
     10: "Attraction and ambition may be overlapping, making professional boundaries more important.",
-    11: "A friendship, online connection or shared future plan may begin to feel less casual.",
-    12: "A private longing—or an emotionally unavailable person—may be taking up more space than expected.",
+    11: "A friendship or online connection may be becoming less casual.",
+    12: "A private desire—or an emotionally unavailable person—may be taking up more space than expected.",
 }
 
 VENUS_MARS_ARCHETYPES = {
     1: "bold attraction and the urge to remain fully yourself",
-    2: "desire and the need to feel equally valued",
+    2: "desire and mutual investment",
     3: "charged words, banter and the impulse to answer",
     4: "private attraction and the need for emotional safety",
     5: "romantic momentum, pursuit and the pleasure of being wanted",
-    6: "an everyday spark that creates an urge to act",
+    6: "attraction that creates an urge to act",
     7: "mutual attraction that needs courage and definition",
     8: "magnetism and the temptation to surrender control",
-    9: "unfamiliar attraction and the promise of a larger world",
+    9: "unfamiliar attraction and a sense of possibility",
     10: "personal attraction entangled with ambition",
-    11: "friendship, desire and a shared future possibility",
+    11: "desire and the possibility of building something together",
     12: "the pull of secrecy and the fantasy created by absence",
 }
 
@@ -126,6 +156,21 @@ VENUS_MARS_QUESTIONS = {
     10: "Would I make the same professional choice if the chemistry were removed?",
     11: "What evidence shows this person can share responsibility as well as excitement?",
     12: "Am I drawn to the person, or to the mystery created by distance and silence?",
+}
+
+VENUS_MARS_PAIR_QUESTIONS = {
+    (1, 10): "Would this choice still feel right if no one saw or rewarded it?",
+    (2, 11): "Does this connection support the future I am actually building?",
+    (3, 12): "What message needs to be spoken instead of replayed privately?",
+    (4, 1): "Does this attraction allow me to be honest without changing who I am?",
+    (5, 2): "Is this interest being matched by clear effort and practical value?",
+    (6, 3): "Which conversation would turn this disruption into a workable change?",
+    (7, 4): "Can this relationship become clearer without disturbing the safety of home?",
+    (8, 5): "Can this intensity deepen trust without turning pleasure into secrecy or control?",
+    (9, 6): "Does this connection broaden my life without disrupting the routines that support me?",
+    (10, 7): "Would I make the same professional choice if the chemistry were removed?",
+    (11, 8): "What evidence shows this person can share responsibility as well as excitement?",
+    (12, 9): "What practical step would show whether this possibility exists outside my imagination?",
 }
 
 HOUSE_ASPECT_QUESTIONS = {
@@ -147,15 +192,15 @@ STORY_BRIDGE_TEMPLATES = {
     "hard": (
         "The two areas are competing for attention, and the real issue becomes clearer when neither is allowed to hide behind the other.",
         "A decision involving {first} is exposing what has been avoided in {second}.",
-        "What happens in {first} now has consequences for {second}, so a direct response matters more than a fast one.",
-        "Two priorities are pulling against each other: {first} and {second}. One honest priority will help more than two partial answers.",
+        "A change involving {first} now has consequences for {second}, so a direct response matters more than a fast one.",
+        "Two priorities are pulling against each other: {first}; {second}. One honest priority will help more than two partial answers.",
         "These parts of life can no longer be managed separately; the useful move is to name the point of conflict.",
         "Pressure in {first} is revealing an unmet need in {second}.",
         "The day asks you to reconcile {first} with {second} instead of allowing urgency to choose for you.",
         "A small reaction in {first} could become a larger problem in {second} unless the underlying issue is addressed.",
-        "The pressure starts in {first}, but the consequence lands in {second}; sequence the response carefully.",
+        "The issue begins in {first}, but its effects are already reaching {second}; respond in the order that creates clarity.",
         "What looks like a problem in {first} may actually be a boundary issue in {second}.",
-        "The conflict is less about choosing between {first} and {second} than deciding what must come first.",
+        "The real decision is not whether both priorities matter, but what must be organised first: {first} or {second}.",
         "A reaction in {first} is pointing toward a deeper concern in {second}; address the concern, not only the reaction.",
     ),
     "flow": (
@@ -189,18 +234,18 @@ STORY_BRIDGE_TEMPLATES = {
 }
 
 HOUSE_RELATIONSHIP_GUIDANCE = {
-    1: "Choose the person who can meet your {archetype} without asking you to become smaller.",
-    2: "Let {archetype} be tested through consistent effort rather than promises or attention alone.",
-    3: "Allow {archetype} to become a real conversation instead of a guessing game.",
-    4: "Bring {archetype} into the open gently; emotional safety matters more than preserving appearances.",
+    1: "Choose the person who can meet your confidence without asking you to become smaller.",
+    2: "Let desire prove itself through consistent behaviour rather than promises or attention alone.",
+    3: "Slow the response enough to turn the tension into an honest discussion rather than another guessing game.",
+    4: "Bring the attraction into the open gently. Feeling safe enough to be honest matters more than preserving appearances.",
     5: "Give {archetype} room to grow, but let the other person's response—not fantasy—show what is possible.",
-    6: "Notice whether {archetype} improves daily life or merely makes an already crowded routine more dramatic.",
-    7: "Ask whether {archetype} is matched by honesty, mutual respect and a willingness to define the connection.",
-    8: "The pull of {archetype} can be powerful, but it should not require surrendering autonomy, privacy or the right to set clear terms.",
-    9: "Enjoy {archetype}, but ask whether the connection can travel beyond novelty into a believable future.",
+    6: "Notice whether the attraction supports daily life or merely makes an already crowded routine more dramatic.",
+    7: "Ask whether the attraction is matched by honesty, mutual respect and the courage to define the connection.",
+    8: "Magnetism can be powerful, but it should not require surrendering privacy, autonomy or the right to set clear terms.",
+    9: "Enjoy the possibility, but ask whether the connection can move beyond novelty into something sustainable.",
     10: "Separate the attraction from ambition, status, access or professional advantage so each can be judged clearly.",
-    11: "Let {archetype} reveal whether both people imagine the same future rather than merely enjoying the same moment.",
-    12: "Keep {archetype} in proportion by trusting consistent actions more than mystery, longing or absence.",
+    11: "Notice whether both people are prepared to share responsibility, uncertainty and the practical work of building something together.",
+    12: "Keep the fantasy in proportion by trusting consistent actions more than mystery or absence.",
 }
 
 HOUSE_ACTIONS = {
@@ -270,13 +315,13 @@ HOUSE_QUESTIONS = {
         "What would make this situation feel emotionally safer?",
     ),
     5: (
-        "Is this spark being matched by clear interest and effort?",
+        "Is this interest being matched by clear effort?",
         "What would pleasure look like without emotional games?",
         "Which creative or romantic risk is worth expressing plainly?",
     ),
     6: (
         "Which repeated pattern is draining more energy than it deserves?",
-        "Does this connection support daily life, or continually disrupt it?",
+        "What needs to be said before this becomes another repeated problem?",
         "What practical boundary would make the day easier?",
     ),
     7: (
@@ -300,12 +345,12 @@ HOUSE_QUESTIONS = {
         "What result would still matter after the chemistry settles?",
     ),
     11: (
-        "Do we genuinely imagine the same future?",
+        "Do we genuinely want to build the same thing?",
         "Which connection supports the person I am becoming?",
         "What shared plan needs evidence rather than enthusiasm?",
     ),
     12: (
-        "What am I romanticising because it remains unavailable?",
+        "What am I idealising because it remains out of reach?",
         "What truth becomes clearer when I stop chasing an answer?",
         "Which private feeling needs compassion rather than immediate action?",
     ),
@@ -923,13 +968,43 @@ def _aspect_theme(reading) -> str:
 
 def _shared_aspect_question(reading) -> str:
     trigger = _trigger_house(reading)
+    other = _other_house(reading, trigger)
     anchor = reading.anchor_aspect
     if anchor and anchor.planets == frozenset({"Venus", "Mars"}):
-        return VENUS_MARS_QUESTIONS[trigger]
+        return VENUS_MARS_PAIR_QUESTIONS.get(
+            (trigger, other),
+            VENUS_MARS_QUESTIONS[trigger],
+        )
 
     return HOUSE_ASPECT_QUESTIONS[trigger].format(
         theme=_aspect_theme(reading)
     )
+
+
+QUESTION_STOPWORDS = {
+    "a", "am", "an", "and", "are", "as", "at", "be", "being", "but",
+    "can", "do", "does", "for", "from", "how", "i", "if", "in", "is",
+    "it", "me", "my", "of", "on", "or", "that", "the", "this", "to",
+    "what", "when", "where", "which", "who", "with", "would",
+}
+
+
+def _question_terms(question: str) -> set[str]:
+    words = re.findall(r"[a-z]+", question.lower())
+    return {
+        word
+        for word in words
+        if word not in QUESTION_STOPWORDS and len(word) > 2
+    }
+
+
+def _questions_overlap(first: str, second: str) -> bool:
+    left = _question_terms(first)
+    right = _question_terms(second)
+    if not left or not right:
+        return False
+    overlap = len(left & right) / min(len(left), len(right))
+    return overlap >= 0.55
 
 
 def _sign_specific_questions(reading) -> tuple[str, ...]:
@@ -948,8 +1023,11 @@ def _sign_specific_questions(reading) -> tuple[str, ...]:
     result: list[str] = []
     for question in candidates:
         cleaned = clean_customer_text(question)
-        if cleaned and cleaned not in result:
-            result.append(cleaned)
+        if not cleaned or cleaned in result:
+            continue
+        if any(_questions_overlap(cleaned, existing) for existing in result):
+            continue
+        result.append(cleaned)
         if len(result) == 4:
             break
     return tuple(result)
@@ -974,8 +1052,8 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
         trigger - 1 + reading.reading_date.toordinal()
     ) % len(templates)
     bridge = templates[variant].format(
-        first=HOUSE_LABELS[trigger].lower(),
-        second=HOUSE_LABELS[other].lower(),
+        first=HOUSE_PROSE[trigger],
+        second=HOUSE_PROSE[other],
     )
 
     paragraphs = [
@@ -997,10 +1075,21 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
 
 def _why_today_points(reading, evidence: EvidenceSnapshot) -> tuple[str, str, str]:
     planets = list(evidence.active_planets)
-    first = PLANET_READER_EFFECT.get(planets[0], "One planet sharpens the immediate story.")
+    first = PLANET_READER_EFFECT.get(
+        planets[0],
+        "One planet sharpens the immediate story.",
+    )
     second_planet = planets[1] if len(planets) > 1 else "Sun"
-    second = PLANET_READER_EFFECT.get(second_planet, "A second influence connects the story to a practical life area.")
-    third = _phase_sentence(evidence.phase)
+    second = PLANET_READER_EFFECT.get(
+        second_planet,
+        "A second influence connects the story to a practical life area.",
+    )
+    trigger = _trigger_house(reading)
+    other = _other_house(reading, trigger)
+    third = (
+        f"For {reading.sign}, this connects "
+        f"{HOUSE_PROSE[trigger]} with {HOUSE_PROSE[other]}."
+    )
     return first, second, third
 
 
@@ -1055,7 +1144,10 @@ def _long_term_current(reading, sign: str, reading_date: date, timezone_name: st
         selected = "Jupiter"
     house = reading.houses[selected]
     verb = SLOW_CLIMATE_VERBS[selected]
-    return f"{selected} is {verb} {HOUSE_LABELS[house].lower()}. This is the climate: it lasts longer than today's trigger."
+    return (
+        f"{selected} is {verb} {HOUSE_CLIMATE[house]}. "
+        "This is the climate: it lasts longer than today's trigger."
+    )
 
 
 def _headline_tone(reading) -> str:
