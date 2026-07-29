@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
+from functools import lru_cache
 from urllib.parse import quote
 
 from astrology_engine import (
@@ -407,33 +408,66 @@ class FreeDailyReading:
     houses: dict[str, int]
 
 
-def _active_convergence_context(sign: str, d: date, timezone_name: str) -> str:
+@lru_cache(maxsize=256)
+def _year_convergence_clusters(sign: str, year: int, timezone_name: str):
     year_events = period_events(
-        date(d.year, 1, 1),
-        date(d.year, 12, 31),
+        date(year, 1, 1),
+        date(year, 12, 31),
         sign,
         timezone_name,
     )
-    year_clusters = convergence_points(year_events, maximum=9)
-    active = next(
+    return tuple(convergence_points(year_events, maximum=9))
+
+
+def _active_convergence_context(sign: str, d: date, timezone_name: str) -> str:
+    clusters = _year_convergence_clusters(sign, d.year, timezone_name)
+
+    current = next(
         (
             cluster
-            for cluster in year_clusters
-            if cluster.start_date - timedelta(days=14)
-            <= d
-            <= cluster.end_date + timedelta(days=14)
+            for cluster in clusters
+            if cluster.start_date <= d <= cluster.end_date
         ),
         None,
     )
-    if not active:
+    upcoming = next(
+        (
+            cluster
+            for cluster in sorted(clusters, key=lambda item: item.start_date)
+            if d < cluster.start_date <= d + timedelta(days=14)
+        ),
+        None,
+    )
+    recent = next(
+        (
+            cluster
+            for cluster in sorted(
+                clusters,
+                key=lambda item: item.end_date,
+                reverse=True,
+            )
+            if d - timedelta(days=14) <= cluster.end_date < d
+        ),
+        None,
+    )
+
+    cluster = current or upcoming or recent
+    if not cluster:
         return (
-            "No major annual convergence is at its peak today. "
+            "No major annual convergence is currently active or approaching. "
             "The daily house pattern is therefore the clearest guide."
         )
 
-    material = convergence_interpretation(active)
+    if current:
+        timing = "The wider background currently active is"
+    elif upcoming:
+        timing = "The next wider background approaching is"
+    else:
+        timing = "The most recent wider background was"
+
+    material = convergence_interpretation(cluster)
     return (
-        f"The wider background is **{material['title']}**. "
+        f"{timing} **{material['title']}**. "
         f"{material['meaning']} {material['strategy']}"
     )
 

@@ -213,3 +213,10 @@ astronomical evidence remains consistent.
 The Daily Horoscope purchase panel also uses a sign-specific Streamlit widget
 namespace so the report selector opens with the sign currently displayed
 rather than retaining an earlier Sagittarius selection.
+
+
+## Cardinal narrative refinement
+
+Shared aspect questions, relationship archetypes and story bridges now vary
+through the activated house. Convergence windows are explicitly labelled
+current, approaching or recent so an expired cluster is not presented as active.

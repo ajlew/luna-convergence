@@ -98,6 +98,96 @@ HOUSE_RELATIONSHIP_OPENINGS = {
     12: "A private longing—or an emotionally unavailable person—may be taking up more space than expected.",
 }
 
+VENUS_MARS_ARCHETYPES = {
+    1: "bold attraction and the urge to remain fully yourself",
+    2: "desire, reciprocity and proof of value",
+    3: "charged words, banter and the impulse to answer",
+    4: "private attraction and the need for emotional safety",
+    5: "the spark, pursuit and the pleasure of being wanted",
+    6: "an everyday spark that creates an urge to act",
+    7: "mutual attraction that needs courage and definition",
+    8: "magnetism, trust and the temptation to surrender control",
+    9: "unfamiliar attraction and the promise of a larger world",
+    10: "personal attraction entangled with ambition",
+    11: "friendship, desire and a shared future possibility",
+    12: "the pull of secrecy and the fantasy created by absence",
+}
+
+VENUS_MARS_QUESTIONS = {
+    1: "What would honest action look like without editing who I am?",
+    2: "Is this desire being matched by equal value, effort and respect?",
+    3: "Which message needs honesty rather than flirtation, provocation or guesswork?",
+    4: "Does this attraction make the private atmosphere safer or more unsettled?",
+    5: "Is the spark becoming mutual, or surviving mainly on tension?",
+    6: "Does this connection improve everyday life or only interrupt it?",
+    7: "Are both people willing to define what this attraction means?",
+    8: "Can this intensity deepen trust without creating secrecy or control?",
+    9: "Is this attraction opening my world or distracting me from the larger plan?",
+    10: "Would I make the same professional choice if the chemistry were removed?",
+    11: "Are we imagining the same future, or only enjoying the same excitement?",
+    12: "Am I drawn to the person, or to the mystery created by distance and silence?",
+}
+
+HOUSE_ASPECT_QUESTIONS = {
+    1: "How can I respond to {theme} without abandoning my own direction?",
+    2: "What would {theme} look like if value and reciprocity were clear?",
+    3: "Which conversation would make {theme} easier to understand?",
+    4: "How is {theme} affecting the emotional atmosphere in private?",
+    5: "What would allow {theme} to become mutual rather than performative?",
+    6: "Does {theme} support daily life, health and workable routines?",
+    7: "What terms would make {theme} honest and mutually understood?",
+    8: "Can {theme} deepen trust without reducing autonomy?",
+    9: "Does {theme} expand the future or distract from practical preparation?",
+    10: "How would I judge this decision if {theme} were removed from it?",
+    11: "Does {theme} point toward a genuinely shared future?",
+    12: "What part of {theme} is being intensified by silence, distance or fantasy?",
+}
+
+STORY_BRIDGE_TEMPLATES = {
+    "hard": (
+        "The two areas are competing for attention, and the real issue becomes clearer when neither is allowed to hide behind the other.",
+        "A decision involving {first} is exposing what has been avoided in {second}.",
+        "What happens in {first} now has consequences for {second}, so a direct response matters more than a fast one.",
+        "Two priorities are pulling against each other: {first} and {second}. One honest priority will help more than two partial answers.",
+        "These parts of life can no longer be managed separately; the useful move is to name the point of conflict.",
+        "Pressure in {first} is revealing an unmet need in {second}.",
+        "The day asks you to reconcile {first} with {second} instead of allowing urgency to choose for you.",
+        "A small reaction in {first} could become a larger problem in {second} unless the underlying issue is addressed.",
+        "The pressure starts in {first}, but the consequence lands in {second}; sequence the response carefully.",
+        "What looks like a problem in {first} may actually be a boundary issue in {second}.",
+        "The conflict is less about choosing between {first} and {second} than deciding what must come first.",
+        "A reaction in {first} is pointing toward a deeper concern in {second}; address the concern, not only the reaction.",
+    ),
+    "flow": (
+        "Progress in {first} can now strengthen {second}.",
+        "An opening in {first} is making the next step in {second} easier to recognise.",
+        "The cooperation between {first} and {second} rewards a practical move made at the right moment.",
+        "What becomes easier in {first} can restore confidence in {second}.",
+        "The two areas are supporting each other, provided the opportunity is used rather than merely admired.",
+        "A constructive choice in {first} creates movement in {second}.",
+        "The day links {first} with {second} in a way that makes a modest step unusually useful.",
+        "An easier exchange between {first} and {second} can turn possibility into evidence.",
+        "A useful development in {first} gives {second} more room to grow.",
+        "What opens in {first} can now be translated into a practical gain in {second}.",
+        "The support moving through {first} is also improving the outlook for {second}.",
+        "A timely choice in {first} helps the promise inside {second} become more concrete.",
+    ),
+    "blend": (
+        "The day places {first} beside {second}, making one decision carry meaning in both areas.",
+        "A development in {first} is changing how {second} needs to be handled.",
+        "The connection between {first} and {second} is becoming more visible.",
+        "One choice now links {first} with {second}, even if they first appeared unrelated.",
+        "The story begins in {first} but its meaning becomes clearer through {second}.",
+        "The day moves between {first} and {second}, asking for a response that respects both.",
+        "A shift in {first} is bringing a second issue in {second} into focus.",
+        "These two parts of life are meeting inside the same decision.",
+        "What begins in {first} will need to be understood through {second}.",
+        "The meaning of {first} is changing because {second} is now part of the picture.",
+        "A choice involving {first} is also redefining what is possible in {second}.",
+        "The day brings {first} and {second} together without allowing either one to remain theoretical.",
+    ),
+}
+
 HOUSE_RELATIONSHIP_GUIDANCE = {
     1: "Choose the person who can meet your {archetype} without asking you to become smaller.",
     2: "Let {archetype} prove its value through reciprocity rather than promises or attention alone.",
@@ -108,7 +198,7 @@ HOUSE_RELATIONSHIP_GUIDANCE = {
     7: "Ask whether {archetype} is matched by honesty, mutual respect and a willingness to define the connection.",
     8: "Keep {archetype} compelling without surrendering autonomy, privacy or the right to set clear terms.",
     9: "Enjoy {archetype}, but ask whether the connection can travel beyond novelty into a believable future.",
-    10: "Separate {archetype} from status, access or professional advantage so each can be judged clearly.",
+    10: "Separate the attraction from ambition, status, access or professional advantage so each can be judged clearly.",
     11: "Let {archetype} reveal whether both people imagine the same future rather than merely enjoying the same moment.",
     12: "Keep {archetype} in proportion by trusting consistent actions more than mystery, longing or absence.",
 }
@@ -560,31 +650,73 @@ def _year_clusters(sign: str, year: int, timezone_name: str):
     return tuple(convergence_points(events, maximum=9))
 
 
+def _cluster_context(sign: str, reading_date: date, timezone_name: str):
+    clusters = _year_clusters(sign, reading_date.year, timezone_name)
+
+    current = [
+        cluster
+        for cluster in clusters
+        if cluster.start_date <= reading_date <= cluster.end_date
+    ]
+    if current:
+        return "current", max(current, key=lambda item: item.score)
+
+    upcoming = [
+        cluster
+        for cluster in clusters
+        if reading_date < cluster.start_date <= reading_date + timedelta(days=14)
+    ]
+    if upcoming:
+        return "approaching", min(upcoming, key=lambda item: item.start_date)
+
+    recent = [
+        cluster
+        for cluster in clusters
+        if reading_date - timedelta(days=14) <= cluster.end_date < reading_date
+    ]
+    if recent:
+        return "recent", max(recent, key=lambda item: item.end_date)
+
+    return "none", None
+
+
 def _active_cluster(sign: str, reading_date: date, timezone_name: str):
-    return next(
-        (
-            cluster
-            for cluster in _year_clusters(sign, reading_date.year, timezone_name)
-            if cluster.start_date - timedelta(days=14)
-            <= reading_date
-            <= cluster.end_date + timedelta(days=14)
-        ),
-        None,
-    )
+    _status, cluster = _cluster_context(sign, reading_date, timezone_name)
+    return cluster
 
 
 def _convergence_evidence(sign: str, reading_date: date, timezone_name: str):
-    active = _active_cluster(sign, reading_date, timezone_name)
-    if not active:
-        return "Daily trigger", None, "Daily trigger carries more weight"
-    if active.score >= 75:
-        concentration = "High concentration"
-    elif active.score >= 50:
-        concentration = "Moderate concentration"
+    status, cluster = _cluster_context(sign, reading_date, timezone_name)
+    if not cluster:
+        return "No wider convergence active", None, "Daily trigger carries more weight"
+
+    if cluster.score >= 75:
+        concentration = "high concentration"
+    elif cluster.score >= 50:
+        concentration = "moderate concentration"
     else:
-        concentration = "Background concentration"
-    window = f"{active.start_date.strftime('%B %d')}–{active.end_date.strftime('%B %d')}"
-    return concentration, round(active.score, 1), window
+        concentration = "background concentration"
+
+    status_label = {
+        "current": "Current wider convergence",
+        "approaching": "Approaching convergence",
+        "recent": "Recent convergence",
+    }[status]
+    window = (
+        f"{cluster.start_date.strftime('%B %d')}–"
+        f"{cluster.end_date.strftime('%B %d')}"
+    )
+    return f"{status_label} — {concentration}", round(cluster.score, 1), window
+
+
+def _convergence_window_row_label(convergence_label: str) -> str:
+    if convergence_label.startswith("Current"):
+        return "Current wider convergence window"
+    if convergence_label.startswith("Approaching"):
+        return "Approaching convergence window"
+    if convergence_label.startswith("Recent"):
+        return "Recent convergence window"
+    return "Wider convergence status"
 
 
 def _evidence_snapshot(reading, sign: str, reading_date: date, timezone_name: str) -> EvidenceSnapshot:
@@ -679,7 +811,7 @@ def _relationship_archetype(reading) -> str:
 
     planets = anchor.planets
     if planets == frozenset({"Venus", "Mars"}):
-        return "chemistry and direct desire"
+        return VENUS_MARS_ARCHETYPES[_trigger_house(reading)]
     if planets == frozenset({"Moon", "Mercury"}):
         return "emotional honesty and charged conversation"
     if planets == frozenset({"Moon", "Saturn"}):
@@ -724,27 +856,42 @@ def _sign_specific_watch(reading) -> str:
     return HOUSE_WATCH_OUT[_trigger_house(reading)]
 
 
-def _shared_aspect_question(reading) -> str:
+def _aspect_theme(reading) -> str:
     anchor = reading.anchor_aspect
     if not anchor:
-        return "What becomes clearer when I respond to the real pattern rather than the first emotion?"
+        return "the emotional pattern"
 
     planets = anchor.planets
-    if planets == frozenset({"Venus", "Mars"}):
-        return "Is this attraction asking for honest action, or only a reaction?"
     if planets == frozenset({"Moon", "Mercury"}):
-        return "What feeling becomes easier to understand when it is named plainly?"
+        return "charged feelings and conversation"
     if planets == frozenset({"Moon", "Saturn"}):
-        return "Who is showing consistency rather than asking me to imagine it?"
+        return "reserve, consistency and emotional restraint"
     if "Neptune" in planets:
-        return "What part of this connection is real, and what part am I supplying through hope?"
+        return "longing, intuition and uncertainty"
     if "Pluto" in planets:
-        return "Can this intensity leave room for autonomy, trust and a clear no?"
+        return "intensity, truth and power"
     if "Uranus" in planets:
-        return "Does this freedom create honesty, or simply avoid commitment?"
+        return "surprise, freedom and unconventional attraction"
     if "Saturn" in planets:
-        return "What evidence of reliability matters more than promises or status?"
-    return "What practical evidence supports the story I am telling myself?"
+        return "commitment, limits and proof"
+    if "Mars" in planets:
+        return "desire, friction and the urge to act"
+    if "Venus" in planets:
+        return "attraction, pleasure and relational choice"
+    if "Mercury" in planets:
+        return "messages, banter and interpretation"
+    return "the active pattern"
+
+
+def _shared_aspect_question(reading) -> str:
+    trigger = _trigger_house(reading)
+    anchor = reading.anchor_aspect
+    if anchor and anchor.planets == frozenset({"Venus", "Mars"}):
+        return VENUS_MARS_QUESTIONS[trigger]
+
+    return HOUSE_ASPECT_QUESTIONS[trigger].format(
+        theme=_aspect_theme(reading)
+    )
 
 
 def _sign_specific_questions(reading) -> tuple[str, ...]:
@@ -777,21 +924,21 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
     tone = reading.anchor_aspect.name if reading.anchor_aspect else "blend"
 
     consequence = HOUSE_STORY[trigger]
-    if tone in {"trine", "sextile"}:
-        bridge = (
-            f"An easier current connects {HOUSE_INLINE[trigger]} with "
-            f"{HOUSE_INLINE[other]}, allowing progress in one area to strengthen the other."
-        )
-    elif tone in {"square", "opposition"}:
-        bridge = (
-            f"The pressure runs between {HOUSE_INLINE[trigger]} and "
-            f"{HOUSE_INLINE[other]}, so the most useful response is the one that makes the real issue easier to name."
-        )
-    else:
-        bridge = (
-            f"The day places {HOUSE_INLINE[trigger]} beside "
-            f"{HOUSE_INLINE[other]}, making one decision carry meaning in both areas."
-        )
+    bridge_tone = (
+        "flow"
+        if tone in {"trine", "sextile"}
+        else "hard"
+        if tone in {"square", "opposition"}
+        else "blend"
+    )
+    templates = STORY_BRIDGE_TEMPLATES[bridge_tone]
+    variant = (
+        trigger - 1 + reading.reading_date.toordinal()
+    ) % len(templates)
+    bridge = templates[variant].format(
+        first=HOUSE_LABELS[trigger].lower(),
+        second=HOUSE_LABELS[other].lower(),
+    )
 
     paragraphs = [
         f"{consequence} {bridge}",
@@ -1092,7 +1239,10 @@ def render_daily_narrative_v3(narrative: DailyNarrative) -> None:
         ("Long-term current", narrative.long_term_current),
         ("Convergence strength", f"{evidence.confidence_label} ({evidence.strength_score}/100)"),
         ("Aspect active window", evidence.active_window),
-        ("Wider convergence window", evidence.convergence_window),
+        (
+            _convergence_window_row_label(evidence.convergence_label),
+            evidence.convergence_window,
+        ),
     ]
     rows = "".join(
         f'<tr><td>{escape(label)}</td><td class="snapshot-value">{escape(value)}</td></tr>'
