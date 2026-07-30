@@ -234,3 +234,11 @@ actual configured 6° orb boundaries: July 14–August 15, 2026.
 Daily stories now use natural prose rather than compact house labels, filter
 near-duplicate questions, and include a sign-specific evidence card naming
 the two life areas activated by the shared aspect.
+
+
+## Moon–Saturn customer-language refinement
+
+Moon–Saturn reflection questions now translate patience, proof and dependable
+behaviour through each sign's two activated houses. The internal phrase
+“reserve, consistency and emotional restraint” no longer appears in the
+customer question set.

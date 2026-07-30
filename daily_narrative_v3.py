@@ -158,6 +158,21 @@ VENUS_MARS_QUESTIONS = {
     12: "Am I drawn to the person, or to the mystery created by distance and silence?",
 }
 
+MOON_SATURN_PAIR_QUESTIONS = {
+    (1, 3): "How can I respect another person's pace without abandoning my own direction?",
+    (2, 4): "What repeated behaviour would make this arrangement feel secure and reciprocal?",
+    (3, 5): "Which conversation would reveal whether patience and consistent effort are genuinely present?",
+    (4, 6): "Whose steady behaviour is making this situation feel safer—and whose silence is not?",
+    (5, 7): "What consistent action would show that the interest is mutual rather than performative?",
+    (6, 8): "Which steady boundary would make this routine healthier and easier to maintain?",
+    (7, 9): "What would patient, mutual effort look like from both of us?",
+    (8, 10): "Can this person respect my boundaries consistently enough for trust to grow?",
+    (9, 11): "Who or what is proving that this larger possibility can be sustained over time?",
+    (10, 12): "Would I make the same decision without status or approval influencing it?",
+    (11, 1): "Who is showing through their actions that they can build this with me?",
+    (12, 2): "Is there steady interest, or is distance allowing the fantasy to grow?",
+}
+
 VENUS_MARS_PAIR_QUESTIONS = {
     (1, 10): "Would this choice still feel right if no one saw or rewarded it?",
     (2, 11): "Does this connection support the future I am actually building?",
@@ -948,7 +963,7 @@ def _aspect_theme(reading) -> str:
     if planets == frozenset({"Moon", "Mercury"}):
         return "charged feelings and conversation"
     if planets == frozenset({"Moon", "Saturn"}):
-        return "reserve, consistency and emotional restraint"
+        return "patient effort and dependable behaviour"
     if "Neptune" in planets:
         return "longing, intuition and uncertainty"
     if "Pluto" in planets:
@@ -970,10 +985,19 @@ def _shared_aspect_question(reading) -> str:
     trigger = _trigger_house(reading)
     other = _other_house(reading, trigger)
     anchor = reading.anchor_aspect
+
     if anchor and anchor.planets == frozenset({"Venus", "Mars"}):
         return VENUS_MARS_PAIR_QUESTIONS.get(
             (trigger, other),
             VENUS_MARS_QUESTIONS[trigger],
+        )
+
+    if anchor and anchor.planets == frozenset({"Moon", "Saturn"}):
+        return MOON_SATURN_PAIR_QUESTIONS.get(
+            (trigger, other),
+            HOUSE_ASPECT_QUESTIONS[trigger].format(
+                theme="patient effort and dependable behaviour"
+            ),
         )
 
     return HOUSE_ASPECT_QUESTIONS[trigger].format(
