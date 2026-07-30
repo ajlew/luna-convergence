@@ -242,3 +242,11 @@ Moon–Saturn reflection questions now translate patience, proof and dependable
 behaviour through each sign's two activated houses. The internal phrase
 “reserve, consistency and emotional restraint” no longer appears in the
 customer question set.
+
+
+## Paid-order manual fulfilment
+
+The purchase forms now collect a main focus and optional personal question, state the
+24-hour manual PDF delivery promise, and carry fulfilment details through Stripe's
+client reference. The admin console can generate a branded print-ready PDF for manual
+email delivery.

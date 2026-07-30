@@ -26,11 +26,16 @@ from daily_narrative_v3 import (
     render_daily_narrative_v3,
 )
 from order_capture import (
+    MONTHLY_FOCUS_CHOICES,
+    QUESTION_MAX_CHARS,
+    YEARLY_FOCUS_CHOICES,
     build_order_reference,
     build_stripe_checkout_url,
     default_month_label,
     default_year,
     month_choices,
+    order_details_mailto,
+    order_payload_json,
     valid_email,
     year_choices,
 )
@@ -607,6 +612,23 @@ a {
     overflow-wrap:anywhere;
 }
 
+.delivery-notice {
+    border:1px solid var(--black);
+    background:var(--soft);
+    padding:1rem 1.1rem;
+    margin:1rem 0 1.25rem;
+    font-family:"Josefin Sans", sans-serif;
+    font-size:1rem;
+    line-height:1.55;
+}
+
+.delivery-notice strong {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.72rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
 .checkout-note {
     font-family:"IBM Plex Mono", "Courier New", monospace;
     font-size:.68rem;
@@ -1099,8 +1121,11 @@ def _order_summary(
     period: str,
     timezone_name: str,
     delivery_email: str,
+    main_focus: str,
+    personal_question: str,
     reference: str,
 ) -> None:
+    question_value = personal_question or "No optional question supplied"
     st.markdown(
         f"""
 <div class="order-summary">
@@ -1112,8 +1137,14 @@ def _order_summary(
   <div class="order-value">{escape(period)}</div>
   <div class="order-label">Timezone</div>
   <div class="order-value">{escape(timezone_name)}</div>
+  <div class="order-label">Main focus</div>
+  <div class="order-value">{escape(main_focus)}</div>
+  <div class="order-label">Personal question</div>
+  <div class="order-value">{escape(question_value)}</div>
   <div class="order-label">Delivery email</div>
   <div class="order-value">{escape(delivery_email)}</div>
+  <div class="order-label">Delivery</div>
+  <div class="order-value">Personalised PDF by email within 24 hours after payment</div>
   <div class="order-label">Order reference</div>
   <div class="order-value">{escape(reference)}</div>
 </div>
@@ -1136,8 +1167,15 @@ def report_cta(
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Choose and personalise your report")
     st.markdown(
-        "Select the star sign and report period **before payment**. "
+        "Select the star sign, report period, timezone and personal focus **before payment**. "
         "Use your Sun sign unless you know and prefer your rising sign."
+    )
+    st.markdown(
+        '<div class="delivery-notice"><strong>Launch delivery</strong><br>'
+        "Your personalised PDF is currently prepared and emailed manually after payment. "
+        "Please allow up to 24 hours for delivery."
+        "</div>",
+        unsafe_allow_html=True,
     )
 
     left, right = st.columns(2, gap="large")
@@ -1150,7 +1188,8 @@ def report_cta(
   <p>Major transitions, convergence points, retrogrades, work, money, relationships and important dates.</p>
   <span class="pill">One star sign</span>
   <span class="pill">One month</span>
-  <span class="pill">Email delivery</span>
+  <span class="pill">Personalised PDF</span>
+  <span class="pill">Within 24 hours</span>
 </div>
             """,
             unsafe_allow_html=True,
@@ -1164,7 +1203,8 @@ def report_cta(
   <p>Nine strategic chapters, eclipse sequence, full retrograde cycles, convergence windows and a month-by-month map.</p>
   <span class="pill">One star sign</span>
   <span class="pill">Calendar year</span>
-  <span class="pill">Email delivery</span>
+  <span class="pill">Personalised PDF</span>
+  <span class="pill">Within 24 hours</span>
 </div>
             """,
             unsafe_allow_html=True,
@@ -1219,6 +1259,22 @@ def report_cta(
                     index=TIMEZONES.index(DEFAULT_TIMEZONE),
                     key=f"{key_context}-monthly-timezone",
                 )
+            main_focus = st.selectbox(
+                "Main focus",
+                MONTHLY_FOCUS_CHOICES,
+                key=f"{key_context}-monthly-focus",
+                help="This guides which themes receive extra emphasis in the personalised PDF.",
+            )
+            personal_question = st.text_area(
+                "Optional personal question",
+                key=f"{key_context}-monthly-question",
+                max_chars=QUESTION_MAX_CHARS,
+                placeholder="What would you most like clarity about this month?",
+                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters so the question can travel with the Stripe order reference.",
+            )
+            st.caption(
+                "Manual delivery during launch: your personalised PDF is emailed within 24 hours after payment."
+            )
             submitted = st.form_submit_button(
                 f"Prepare monthly checkout — {MONTHLY_PRICE}",
                 type="primary",
@@ -1238,6 +1294,8 @@ def report_cta(
                     period_code,
                     timezone_name,
                     _order_token(key_context, "MONTHLY"),
+                    main_focus=main_focus,
+                    personal_question=personal_question,
                 )
                 checkout_url = build_stripe_checkout_url(
                     MONTHLY_PAYMENT_URL,
@@ -1252,6 +1310,8 @@ def report_cta(
                     "period": month_label,
                     "period_code": period_code,
                     "timezone": timezone_name,
+                    "main_focus": main_focus,
+                    "personal_question": personal_question.strip(),
                     "reference": reference,
                     "checkout_url": checkout_url,
                 }
@@ -1261,6 +1321,7 @@ def report_cta(
                         "zodiac_sign": sign,
                         "report_period": period_code,
                         "timezone": timezone_name,
+                        "main_focus": main_focus,
                     },
                 )
 
@@ -1272,8 +1333,27 @@ def report_cta(
                 order["period"],
                 order["timezone"],
                 order["email"],
+                order["main_focus"],
+                order["personal_question"],
                 order["reference"],
             )
+            record_columns = st.columns(2)
+            with record_columns[0]:
+                st.download_button(
+                    "Download order details",
+                    data=order_payload_json(order),
+                    file_name=f"{order['reference']}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key=f"{key_context}-monthly-order-download",
+                )
+            with record_columns[1]:
+                if CONTACT_EMAIL != "your-email@example.com":
+                    st.link_button(
+                        "Email order details to Luna",
+                        order_details_mailto(CONTACT_EMAIL, order),
+                        use_container_width=True,
+                    )
             payment_button(
                 f"Continue to secure payment — {MONTHLY_PRICE}",
                 order["checkout_url"],
@@ -1287,8 +1367,9 @@ def report_cta(
             )
             st.markdown(
                 '<div class="checkout-note">'
-                "Stripe opens in a new tab. Your sign, period and timezone are attached "
-                "to the checkout through the order reference shown above."
+                "Stripe opens in a new tab. Your sign, period, timezone, focus and the readable "
+                "personal-question fragment are attached through the order reference shown above. "
+                "The PDF is manually prepared and emailed within 24 hours after payment."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -1331,6 +1412,22 @@ def report_cta(
                     index=TIMEZONES.index(DEFAULT_TIMEZONE),
                     key=f"{key_context}-yearly-timezone",
                 )
+            main_focus = st.selectbox(
+                "Main priority for the year",
+                YEARLY_FOCUS_CHOICES,
+                key=f"{key_context}-yearly-focus",
+                help="This guides which themes receive extra emphasis in the personalised PDF.",
+            )
+            personal_question = st.text_area(
+                "Optional decision or transition",
+                key=f"{key_context}-yearly-question",
+                max_chars=QUESTION_MAX_CHARS,
+                placeholder="Is there a major decision, relationship or transition to consider?",
+                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters so the request can travel with the Stripe order reference.",
+            )
+            st.caption(
+                "Manual delivery during launch: your personalised PDF is emailed within 24 hours after payment."
+            )
             submitted = st.form_submit_button(
                 f"Prepare year-ahead checkout — {YEARLY_PRICE}",
                 type="primary",
@@ -1350,6 +1447,8 @@ def report_cta(
                     period_code,
                     timezone_name,
                     _order_token(key_context, "YEAR"),
+                    main_focus=main_focus,
+                    personal_question=personal_question,
                 )
                 checkout_url = build_stripe_checkout_url(
                     YEARLY_PAYMENT_URL,
@@ -1364,6 +1463,8 @@ def report_cta(
                     "period": f"Calendar year {selected_year}",
                     "period_code": period_code,
                     "timezone": timezone_name,
+                    "main_focus": main_focus,
+                    "personal_question": personal_question.strip(),
                     "reference": reference,
                     "checkout_url": checkout_url,
                 }
@@ -1373,6 +1474,7 @@ def report_cta(
                         "zodiac_sign": sign,
                         "report_period": period_code,
                         "timezone": timezone_name,
+                        "main_focus": main_focus,
                     },
                 )
 
@@ -1384,8 +1486,27 @@ def report_cta(
                 order["period"],
                 order["timezone"],
                 order["email"],
+                order["main_focus"],
+                order["personal_question"],
                 order["reference"],
             )
+            record_columns = st.columns(2)
+            with record_columns[0]:
+                st.download_button(
+                    "Download order details",
+                    data=order_payload_json(order),
+                    file_name=f"{order['reference']}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key=f"{key_context}-yearly-order-download",
+                )
+            with record_columns[1]:
+                if CONTACT_EMAIL != "your-email@example.com":
+                    st.link_button(
+                        "Email order details to Luna",
+                        order_details_mailto(CONTACT_EMAIL, order),
+                        use_container_width=True,
+                    )
             payment_button(
                 f"Continue to secure payment — {YEARLY_PRICE}",
                 order["checkout_url"],
@@ -1399,8 +1520,9 @@ def report_cta(
             )
             st.markdown(
                 '<div class="checkout-note">'
-                "Stripe opens in a new tab. Your sign, year and timezone are attached "
-                "to the checkout through the order reference shown above."
+                "Stripe opens in a new tab. Your sign, year, timezone, focus and the readable "
+                "personal-question fragment are attached through the order reference shown above. "
+                "The PDF is manually prepared and emailed within 24 hours after payment."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -1639,7 +1761,7 @@ def reports_page() -> None:
     steps = [
         (
             "1. Choose",
-            "Select the report, star sign, month or calendar year, timezone and delivery email.",
+            "Select the report, sign, period, timezone, main focus, optional question and delivery email.",
         ),
         (
             "2. Pay",
@@ -1647,7 +1769,7 @@ def reports_page() -> None:
         ),
         (
             "3. Receive",
-            "The checked report is delivered to the email used for the order.",
+            "The personalised PDF is checked and emailed manually within 24 hours after payment.",
         ),
     ]
     for column, (title, body) in zip((c1, c2, c3), steps):
@@ -1693,6 +1815,19 @@ def reports_page() -> None:
                     "Stripe payment reference or receipt number",
                     placeholder="Add the reference shown in Stripe or your receipt",
                 )
+            recovery_focus_options = list(
+                dict.fromkeys(MONTHLY_FOCUS_CHOICES + YEARLY_FOCUS_CHOICES)
+            )
+            main_focus = st.selectbox(
+                "Main focus",
+                recovery_focus_options,
+                key="recovery-main-focus",
+            )
+            personal_question = st.text_area(
+                "Optional personal question",
+                max_chars=QUESTION_MAX_CHARS,
+                key="recovery-personal-question",
+            )
             submitted = st.form_submit_button(
                 "Prepare recovery email",
                 type="primary",
@@ -1715,6 +1850,8 @@ def reports_page() -> None:
                     requested_period,
                     timezone_name,
                     payment_reference,
+                    main_focus=main_focus,
+                    personal_question=personal_question,
                 )
                 st.link_button(
                     "Open the prepared recovery email",

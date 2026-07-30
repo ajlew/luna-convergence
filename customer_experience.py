@@ -1255,6 +1255,8 @@ def prepared_order_email(
     requested_period: str,
     timezone_name: str,
     payment_reference: str = "",
+    main_focus: str = "",
+    personal_question: str = "",
 ) -> str:
     subject = quote(f"{product} order details — {sign}")
     body = quote(
@@ -1266,6 +1268,8 @@ def prepared_order_email(
                 f"Zodiac sign: {sign}",
                 f"Requested month/year: {requested_period}",
                 f"Timezone: {timezone_name}",
+                f"Main focus: {main_focus or 'General overview'}",
+                f"Personal question: {personal_question or 'None supplied'}",
                 "",
                 f"Payment reference or receipt: {payment_reference}",
                 "",

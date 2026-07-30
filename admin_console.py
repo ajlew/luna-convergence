@@ -7,6 +7,8 @@ import json
 import streamlit as st
 
 from astrology_engine import SIGNS
+from order_capture import MONTHLY_FOCUS_CHOICES, QUESTION_MAX_CHARS, YEARLY_FOCUS_CHOICES
+from report_pdf import build_report_pdf, report_filename
 from synthesis import daily_report, period_report
 from ephemeris_upload import inspect_ephemeris_pdf, profile_to_dict, source_note
 from ollama_client import list_models, server_status, enhance, DEFAULT_URL
@@ -114,6 +116,30 @@ with st.sidebar:
                 format_func=lambda number: month_name[number],
             )
 
+    st.divider()
+    st.header("Manual fulfilment")
+    delivery_email = st.text_input(
+        "Customer delivery email",
+        placeholder="customer@example.com",
+    )
+    order_reference = st.text_input(
+        "Luna / Stripe order reference",
+        placeholder="LC-MONTHLY-...",
+    )
+    focus_options = (
+        MONTHLY_FOCUS_CHOICES
+        if period == "Monthly"
+        else YEARLY_FOCUS_CHOICES
+        if period == "Yearly"
+        else ["General overview"]
+    )
+    main_focus = st.selectbox("Customer main focus", focus_options)
+    personal_question = st.text_area(
+        "Customer personal question",
+        max_chars=QUESTION_MAX_CHARS,
+        placeholder="Optional question captured before payment",
+    )
+
     generate = st.button("Generate analysis", type="primary", use_container_width=True)
 
 profile = st.session_state.uploaded_profile
@@ -173,6 +199,23 @@ if result:
             file_name=f"{result['sign'].lower()}_{result['period']}_{result.get('date', result.get('label', 'reading'))}.md",
             mime="text/markdown",
         )
+        pdf_bytes = build_report_pdf(
+            result,
+            main_focus=main_focus,
+            personal_question=personal_question,
+            order_reference=order_reference,
+        )
+        st.download_button(
+            "Download print-ready personalised PDF",
+            data=pdf_bytes,
+            file_name=report_filename(result),
+            mime="application/pdf",
+            type="primary",
+        )
+        if delivery_email:
+            st.caption(
+                f"Manual delivery target: {delivery_email}. Attach the downloaded PDF to the delivery email."
+            )
 
     with convergence_tab:
         convergences = result.get("convergences")

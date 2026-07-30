@@ -2,12 +2,46 @@ from __future__ import annotations
 
 from calendar import month_name
 from datetime import date
+import hashlib
+import json
 import re
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REFERENCE_PATTERN = re.compile(r"[^A-Za-z0-9_-]+")
+QUESTION_MAX_CHARS = 80
+
+MONTHLY_FOCUS_CHOICES = [
+    "General overview",
+    "Love and relationships",
+    "Career and work",
+    "Money and security",
+    "Home and family",
+    "Personal growth",
+]
+
+YEARLY_FOCUS_CHOICES = [
+    "General year ahead",
+    "Love and relationships",
+    "Career or business",
+    "Money and security",
+    "Home or relocation",
+    "Personal reinvention",
+]
+
+FOCUS_CODES = {
+    "General overview": "GENERAL",
+    "General year ahead": "GENERAL",
+    "Love and relationships": "LOVE",
+    "Career and work": "CAREER",
+    "Career or business": "CAREER",
+    "Money and security": "MONEY",
+    "Home and family": "HOME",
+    "Home or relocation": "HOME",
+    "Personal growth": "GROWTH",
+    "Personal reinvention": "REINVENTION",
+}
 
 
 def month_choices(
@@ -66,23 +100,157 @@ def safe_reference_fragment(value: str) -> str:
     return cleaned or "NA"
 
 
+def focus_code(label: str) -> str:
+    return FOCUS_CODES.get(label, safe_reference_fragment(label)[:20])
+
+
+def question_reference_fragment(value: str, max_length: int = 72) -> str:
+    """Create a readable Stripe-safe question fragment.
+
+    Customer questions are limited to 80 characters in the public form. The fragment
+    keeps the words readable inside Stripe's client_reference_id. If truncation is
+    required, a short digest is appended so the reference still identifies the exact
+    submitted wording.
+    """
+    raw = value.strip()
+    if not raw:
+        return "NONE"
+    cleaned = safe_reference_fragment(raw)
+    if len(cleaned) <= max_length:
+        return cleaned
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:8].upper()
+    keep = max(8, max_length - len(digest) - 1)
+    return f"{cleaned[:keep].rstrip('-')}-{digest}"
+
+
 def build_order_reference(
     product_code: str,
     sign: str,
     period_code: str,
     timezone_name: str,
     token: str,
+    main_focus: str = "",
+    personal_question: str = "",
 ) -> str:
-    """Build a Stripe-safe reference containing fulfilment essentials."""
+    """Build a Stripe-safe reference containing fulfilment essentials.
+
+    Backwards compatibility: when focus and question are omitted, the historical
+    reference format is preserved. New orders include focus and a readable question
+    fragment while staying within Stripe's 200-character limit.
+    """
     parts = [
         "LC",
         safe_reference_fragment(product_code),
         safe_reference_fragment(sign),
         safe_reference_fragment(period_code),
         safe_reference_fragment(timezone_name),
-        safe_reference_fragment(token),
     ]
-    return "-".join(parts)[:200]
+
+    if main_focus or personal_question:
+        parts.extend(
+            [
+                f"F-{focus_code(main_focus or 'General overview')}",
+                f"Q-{question_reference_fragment(personal_question)}",
+            ]
+        )
+
+    parts.append(safe_reference_fragment(token))
+    reference = "-".join(parts)
+    if len(reference) <= 200:
+        return reference
+
+    # Preserve all structured fields and the final token. Only the question fragment
+    # is shortened further when a long timezone or product label consumes space.
+    if main_focus or personal_question:
+        digest = hashlib.sha256(personal_question.encode("utf-8")).hexdigest()[:8].upper()
+        fixed = "-".join(parts[:6])
+        suffix = f"-Q-{digest}-{parts[-1]}"
+        available = 200 - len(fixed) - len(suffix)
+        question = question_reference_fragment(personal_question, max(8, available))
+        reference = f"{fixed}-Q-{question}-{parts[-1]}"
+    return reference[:200]
+
+
+def parse_order_reference(reference: str) -> dict[str, str]:
+    """Parse fulfilment essentials from a Luna order reference."""
+    parts = reference.split("-")
+    if len(parts) < 7 or parts[0] != "LC":
+        raise ValueError("Not a Luna Convergence order reference")
+
+    focus_index = next((i for i, part in enumerate(parts) if part == "F"), None)
+    question_index = next((i for i, part in enumerate(parts) if part == "Q"), None)
+
+    # Historical references have no F-/Q- sections.
+    if focus_index is None or question_index is None:
+        return {
+            "product_code": parts[1],
+            "sign": parts[2],
+            "period_code": "-".join(parts[3:5]),
+            "timezone_fragment": "-".join(parts[5:-1]),
+            "focus_code": "",
+            "question_fragment": "",
+            "token": parts[-1],
+        }
+
+    product_code = parts[1]
+    if product_code == "MONTHLY":
+        period_code = "-".join(parts[3:5])
+        timezone_start = 5
+    else:
+        period_code = parts[3]
+        timezone_start = 4
+
+    return {
+        "product_code": product_code,
+        "sign": parts[2],
+        "period_code": period_code,
+        "timezone_fragment": "-".join(parts[timezone_start:focus_index]),
+        "focus_code": parts[focus_index + 1] if focus_index + 1 < len(parts) else "",
+        "question_fragment": "-".join(parts[question_index + 1:-1]),
+        "token": parts[-1],
+    }
+
+
+def order_payload_json(order: dict) -> str:
+    """Return a stable, downloadable manual-fulfilment record."""
+    ordered = {
+        "report_name": order.get("report_name", ""),
+        "delivery_email": order.get("email", ""),
+        "star_sign": order.get("sign", ""),
+        "period": order.get("period", ""),
+        "period_code": order.get("period_code", ""),
+        "timezone": order.get("timezone", ""),
+        "main_focus": order.get("main_focus", ""),
+        "personal_question": order.get("personal_question", ""),
+        "order_reference": order.get("reference", ""),
+        "delivery_method": "Personalised PDF by email",
+        "delivery_timeframe": "Within 24 hours after payment",
+    }
+    return json.dumps(ordered, indent=2, ensure_ascii=False)
+
+
+def order_details_mailto(
+    recipient: str,
+    order: dict,
+) -> str:
+    subject = quote(f"Luna order details - {order.get('reference', '')}")
+    body = quote(
+        "\n".join(
+            [
+                f"Report: {order.get('report_name', '')}",
+                f"Delivery email: {order.get('email', '')}",
+                f"Star sign: {order.get('sign', '')}",
+                f"Period: {order.get('period', '')}",
+                f"Timezone: {order.get('timezone', '')}",
+                f"Main focus: {order.get('main_focus', '')}",
+                f"Personal question: {order.get('personal_question', '') or 'None supplied'}",
+                f"Order reference: {order.get('reference', '')}",
+                "",
+                "The personalised PDF will be prepared manually and emailed within 24 hours after payment.",
+            ]
+        )
+    )
+    return f"mailto:{recipient}?subject={subject}&body={body}"
 
 
 def build_stripe_checkout_url(

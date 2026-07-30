@@ -50,12 +50,12 @@ def main() -> None:
     assert taurus.headline == "The spark is asking for a real choice"
     assert " ".join(taurus.today_story).lower().count("spark") <= 1
     assert any(
-        "connection becoming mutual" in question
+        "clear effort" in question
         for question in taurus.reflection_questions
     )
 
     assert "prove its value through reciprocity" not in leo.relationship_story
-    assert "tested through consistent effort" in leo.relationship_story
+    assert "consistent behaviour" in leo.relationship_story
 
     assert len(set(scorpio.reflection_questions)) == 4
     assert any(
@@ -64,8 +64,8 @@ def main() -> None:
     )
 
     assert "Keep magnetism" not in aquarius.relationship_story
-    assert "The pull of magnetism" in aquarius.relationship_story
-    assert "should not require surrendering autonomy" in (
+    assert "Magnetism can be powerful" in aquarius.relationship_story
+    assert "should not require surrendering privacy, autonomy" in (
         aquarius.relationship_story
     )
 
