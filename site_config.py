@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-TAGLINE = "Understand what is changing—and what to do with it."
+TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
     "Daily, monthly and yearly astrology explained through planetary transitions, "
     "whole-sign houses, retrogrades and convergence points."
