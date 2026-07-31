@@ -292,3 +292,10 @@ emotional hook. The previous serious headline remains as the interpretive
 theme directly underneath. Hook tone rotates deterministically through six
 editorial families and is selected from the date, sign, strongest aspect
 and activated house pair.
+
+
+## Windows monthly-report hotfix
+
+Monthly date labels are now platform-independent. The admin Horoscope tab
+previews the same customer-first narrative used by the personalised PDF,
+while the raw technical synthesis remains available in a collapsed section.

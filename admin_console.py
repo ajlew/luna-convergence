@@ -10,6 +10,11 @@ from astrology_engine import SIGNS
 from order_capture import MONTHLY_FOCUS_CHOICES, QUESTION_MAX_CHARS, YEARLY_FOCUS_CHOICES
 from solar_cycle import city_input_help, representative_city_name
 from report_pdf import build_report_pdf, report_filename
+from monthly_narrative_v1 import (
+    build_monthly_narrative,
+    monthly_narrative_markdown,
+    normalise_personal_question,
+)
 from synthesis import daily_report, period_report
 from ephemeris_upload import inspect_ephemeris_pdf, profile_to_dict, source_note
 from ollama_client import list_models, server_status, enhance, DEFAULT_URL
@@ -207,26 +212,71 @@ if result:
     )
 
     with main_tab:
-        st.markdown(result["markdown"])
+        cleaned_question = normalise_personal_question(personal_question)
+        customer_preview = None
+
+        if result.get("period") == "monthly":
+            customer_narrative = build_monthly_narrative(
+                result,
+                main_focus=main_focus,
+                personal_question=cleaned_question,
+                order_reference=order_reference,
+            )
+            customer_preview = monthly_narrative_markdown(
+                customer_narrative
+            ).replace(
+                "[[PAGEBREAK]]",
+                "\n\n---\n\n",
+            )
+
+            st.caption(
+                "Customer-facing monthly preview — this is the narrative used "
+                "to create the personalised PDF."
+            )
+            st.markdown(customer_preview)
+
+            with st.expander(
+                "Raw calculation output",
+                expanded=False,
+            ):
+                st.caption(
+                    "Technical synthesis retained for checking. It is not the "
+                    "customer-facing report format."
+                )
+                st.markdown(result["markdown"])
+        else:
+            st.markdown(result["markdown"])
+
         st.download_button(
             "Download deterministic reading",
-            data=result["markdown"],
+            data=customer_preview or result["markdown"],
             file_name=f"{result['sign'].lower()}_{result['period']}_{result.get('date', result.get('label', 'reading'))}.md",
             mime="text/markdown",
         )
-        pdf_bytes = build_report_pdf(
-            result,
-            main_focus=main_focus,
-            personal_question=personal_question,
-            order_reference=order_reference,
-        )
-        st.download_button(
-            "Download print-ready personalised PDF",
-            data=pdf_bytes,
-            file_name=report_filename(result),
-            mime="application/pdf",
-            type="primary",
-        )
+
+        try:
+            pdf_bytes = build_report_pdf(
+                result,
+                main_focus=main_focus,
+                personal_question=cleaned_question,
+                order_reference=order_reference,
+            )
+        except Exception as exc:
+            st.error(
+                "The customer PDF could not be generated. "
+                f"Details: {exc}"
+            )
+            pdf_bytes = None
+
+        if pdf_bytes:
+            st.download_button(
+                "Download print-ready personalised PDF",
+                data=pdf_bytes,
+                file_name=report_filename(result),
+                mime="application/pdf",
+                type="primary",
+            )
+
         if delivery_email:
             st.caption(
                 f"Manual delivery target: {delivery_email}. Attach the downloaded PDF to the delivery email."

@@ -134,7 +134,9 @@ def _parse_date(value: str) -> date:
 
 
 def _date_label(value: str) -> str:
-    return _parse_date(value).strftime("%B %-d")
+    """Return a platform-independent customer date such as 'August 1'."""
+    parsed = _parse_date(value)
+    return f"{parsed.strftime('%B')} {parsed.day}"
 
 
 def _date_range(start: str, end: str) -> str:
