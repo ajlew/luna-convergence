@@ -4,11 +4,13 @@ from pathlib import Path
 def main() -> None:
     root = Path(__file__).parent
     app = (root / "app.py").read_text(encoding="utf-8")
-    module = (root / "daily_narrative_v3.py").read_text(encoding="utf-8")
+    module = (root / "daily_narrative_v3.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "from daily_narrative_v3 import" in app
-    assert "render_daily_narrative_v3(narrative)" in app
-    assert "Today’s convergence" in module
+    assert "render_daily_narrative_v3(narrative, solar=solar)" in app
+    assert "Today's convergence" in module
     assert "Why this matters today" in module
     assert "Weather / today" in module
     assert "Climate / longer current" in module

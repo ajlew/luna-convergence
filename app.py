@@ -103,21 +103,65 @@ def install_css() -> None:
     --muted: #696963;
 }
 
+*, *::before, *::after {
+    box-sizing:border-box;
+}
+
+html,
+body,
+#root,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden !important;
+}
+
 html, body, [class*="css"] {
     color: var(--ink);
     font-family: "Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
 }
 
 .stApp {
+    min-height:100vh;
+    min-height:100dvh;
     background: var(--white);
 }
 
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="column"] {
+    min-width:0 !important;
+    max-width:100%;
+}
+
+img, svg, canvas, video {
+    max-width:100%;
+    height:auto;
+}
+
+table {
+    max-width:100%;
+}
+
+input, textarea, select {
+    font-size:16px !important;
+}
+
+button, a, summary {
+    touch-action:manipulation;
+}
+
 .block-container {
-    max-width: 1280px;
-    padding-top: 2.2rem;
-    padding-bottom: 5rem;
-    padding-left: clamp(1rem, 4vw, 4.5rem);
-    padding-right: clamp(1rem, 4vw, 4.5rem);
+    width:100%;
+    max-width:1280px;
+    min-height:100vh;
+    min-height:100dvh;
+    padding-top:2.2rem;
+    padding-bottom:calc(5rem + env(safe-area-inset-bottom, 0px));
+    padding-left:max(clamp(1rem,4vw,4.5rem), env(safe-area-inset-left, 0px));
+    padding-right:max(clamp(1rem,4vw,4.5rem), env(safe-area-inset-right, 0px));
 }
 
 header[data-testid="stHeader"] {
@@ -125,7 +169,12 @@ header[data-testid="stHeader"] {
     height:0 !important;
 }
 
-#MainMenu, footer {
+#MainMenu,
+footer,
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+.stDeployButton {
     visibility:hidden !important;
     display:none !important;
 }
@@ -559,6 +608,55 @@ a {
     background:var(--soft);
 }
 
+.mobile-nav {
+    display:none;
+    width:100%;
+    margin:.15rem 0 1.2rem;
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+}
+.mobile-nav summary {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    min-height:2.9rem;
+    list-style:none;
+    cursor:pointer;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.68rem;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+}
+.mobile-nav summary::-webkit-details-marker {
+    display:none;
+}
+.mobile-nav summary::after {
+    content:"+";
+    font-size:1rem;
+}
+.mobile-nav[open] summary::after {
+    content:"−";
+}
+.mobile-nav-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    padding:.45rem 0 .85rem;
+    border-top:1px solid var(--line);
+}
+.mobile-nav-grid a {
+    min-width:0;
+    padding:.7rem .45rem .7rem 0;
+    color:var(--black) !important;
+    text-decoration:none !important;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.66rem;
+    line-height:1.35;
+    text-transform:uppercase;
+}
+.mobile-nav-grid a.active {
+    font-weight:600;
+}
+
 .nav-dot {
     width:.72rem;
     height:.72rem;
@@ -873,9 +971,26 @@ hr {
 
 @media (max-width: 700px) {
     .block-container {
-        padding-left:1rem;
-        padding-right:1rem;
-        padding-top:.65rem;
+        width:100%;
+        max-width:100%;
+        padding-left:max(1rem, env(safe-area-inset-left, 0px));
+        padding-right:max(1rem, env(safe-area-inset-right, 0px));
+        padding-top:.45rem;
+        padding-bottom:calc(3rem + env(safe-area-inset-bottom, 0px));
+    }
+    .top-nav {
+        display:none;
+    }
+    .mobile-nav {
+        display:block;
+    }
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap:wrap !important;
+        gap:.7rem !important;
+    }
+    [data-testid="column"] {
+        width:100% !important;
+        flex:1 1 100% !important;
     }
     h1 {
         font-size:3.45rem !important;
@@ -945,21 +1060,36 @@ def top_navigation(current_path: str) -> None:
         ("solar-year", "Solar year"),
         ("how-it-works", "How it works"),
     ]
-    links = []
+
+    desktop_links: list[str] = []
+    mobile_links: list[str] = []
+    current_label = "Home"
+
     for item_path, label in items:
         active = " active" if path == item_path else ""
+        if path == item_path:
+            current_label = label
         href = "/" if not item_path else f"/{item_path}"
-        links.append(
+
+        desktop_links.append(
             f'<a class="{active.strip()}" href="{href}">'
             f'<span class="nav-dot"></span>{escape(label)}</a>'
         )
+        mobile_links.append(
+            f'<a class="{active.strip()}" href="{href}">{escape(label)}</a>'
+        )
+
     st.markdown(
         '<nav class="top-nav" aria-label="Primary navigation">'
-        + "".join(links)
-        + "</nav>",
+        + "".join(desktop_links)
+        + "</nav>"
+        + '<details class="mobile-nav">'
+        + f"<summary><span>Menu</span><strong>{escape(current_label)}</strong></summary>"
+        + '<nav class="mobile-nav-grid" aria-label="Mobile navigation">'
+        + "".join(mobile_links)
+        + "</nav></details>",
         unsafe_allow_html=True,
     )
-
 
 def set_page_metadata(title: str, description: str, path: str) -> None:
     canonical = PUBLIC_SITE_URL + (path if path.startswith("/") else f"/{path}")
@@ -1573,15 +1703,15 @@ def report_cta(
 
 
 def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
-    c1, c2, c3 = st.columns([1.05, 1, 1.25], gap="medium")
-    with c1:
+    first_row = st.columns(2, gap="medium")
+    with first_row[0]:
         sign = st.selectbox(
             "Your zodiac sign",
             SIGNS,
             index=SIGNS.index(DEFAULT_SIGN),
             key=f"{prefix}-sign",
         )
-    with c2:
+    with first_row[1]:
         reading_date = st.date_input(
             "Date",
             value=date.today(),
@@ -1589,19 +1719,23 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
             max_value=date(2100, 12, 31),
             key=f"{prefix}-date",
         )
-    with c3:
+
+    second_row = st.columns(2, gap="medium")
+    with second_row[0]:
         timezone_name = st.selectbox(
             "Timezone",
             TIMEZONES,
             index=TIMEZONES.index(DEFAULT_TIMEZONE),
             key=f"{prefix}-timezone",
         )
-    nearest_city = st.text_input(
-        "Nearest city (optional)",
-        key=f"{prefix}-city",
-        placeholder=representative_city_name(timezone_name),
-        help=city_input_help(timezone_name),
-    )
+    with second_row[1]:
+        nearest_city = st.text_input(
+            "Nearest city (optional)",
+            key=f"{prefix}-city",
+            placeholder=representative_city_name(timezone_name),
+            help=city_input_help(timezone_name),
+        )
+
     return sign, reading_date, timezone_name, nearest_city
 
 
@@ -1624,13 +1758,28 @@ def _previous_daily_texts(
     return texts
 
 
+@st.cache_data(show_spinner=False, ttl=86400)
+def _daily_solar_snapshot(
+    sign: str,
+    reading_date_iso: str,
+    timezone_name: str,
+    nearest_city: str,
+) -> dict:
+    return daily_solar_convergence(
+        sign,
+        date.fromisoformat(reading_date_iso),
+        timezone_name,
+        nearest_city=nearest_city,
+    ).to_dict()
+
+
 def render_free_reading(
     sign: str,
     reading_date: date,
     timezone_name: str,
     nearest_city: str = "",
 ) -> None:
-    cache_key = (sign, reading_date.isoformat(), timezone_name, nearest_city)
+    cache_key = (sign, reading_date.isoformat(), timezone_name)
     if st.session_state.get("daily_cache_key") != cache_key:
         with st.spinner("Reading the planetary pattern and active houses..."):
             st.session_state.daily_reading = free_daily_reading(
@@ -1654,12 +1803,12 @@ def render_free_reading(
         house_voice=HOUSE_VOICE,
         previous_texts=previous_texts,
     )
-    solar = daily_solar_convergence(
+    solar = _daily_solar_snapshot(
         sign,
-        reading_date,
+        reading_date.isoformat(),
         timezone_name,
-        nearest_city=nearest_city,
-    ).to_dict()
+        nearest_city,
+    )
     render_daily_narrative_v3(narrative, solar=solar)
 
 
@@ -1775,39 +1924,78 @@ def home_page() -> None:
 def daily_page() -> None:
     set_page_metadata(
         "Free Daily Horoscope | Luna Convergence",
-        "Read a consequence-first daily horoscope with a compact evidence panel showing what changed today, what supports it and what belongs to the longer astrological climate.",
+        "Read a consequence-first daily horoscope with the full astrological evidence available in optional sections.",
         "/daily-horoscope",
     )
-    st.markdown('<div class="eyebrow">Free daily horoscope</div>', unsafe_allow_html=True)
-    st.markdown("# A personal reading with the astrology underneath")
-    st.markdown(
-        "Begin with today’s story. Then use the Sky Snapshot to see why today differs from yesterday without having to read technical astrology."
-    )
-    sign, reading_date, timezone_name, nearest_city = daily_controls()
-    if st.button("Generate my daily reading", type="primary", use_container_width=True):
-        st.session_state.force_daily = True
-        track_event(
-            "daily_reading_generated",
-            {
-                "zodiac_sign": sign,
+
+    active_request = st.session_state.get("active_daily_request")
+
+    if not active_request:
+        st.markdown(
+            '<div class="eyebrow">Free daily horoscope</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("# Your day, clearly")
+        st.markdown(
+            "One concise story first. The complete astrology remains available "
+            "when you choose to open it."
+        )
+
+    with st.expander(
+        "Change sign, date or location",
+        expanded=not bool(active_request),
+    ):
+        with st.form(
+            "daily-reading-settings",
+            clear_on_submit=False,
+            border=False,
+        ):
+            sign, reading_date, timezone_name, nearest_city = daily_controls()
+            submitted = st.form_submit_button(
+                "Show my daily reading",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if submitted:
+            st.session_state["active_daily_request"] = {
+                "sign": sign,
                 "reading_date": reading_date.isoformat(),
                 "timezone": timezone_name,
-            },
-        )
-    if st.session_state.get("force_daily"):
+                "nearest_city": nearest_city.strip(),
+            }
+            st.session_state.force_daily = True
+            track_event(
+                "daily_reading_generated",
+                {
+                    "zodiac_sign": sign,
+                    "reading_date": reading_date.isoformat(),
+                    "timezone": timezone_name,
+                },
+            )
+            st.rerun()
+
+    request = st.session_state.get("active_daily_request")
+    if request:
+        sign = request["sign"]
+        reading_date = date.fromisoformat(request["reading_date"])
+        timezone_name = request["timezone"]
+        nearest_city = request.get("nearest_city", "")
+
         render_free_reading(
             sign,
             reading_date,
             timezone_name,
             nearest_city,
         )
-        location, _basis = resolve_location(nearest_city, timezone_name)
-        report_cta(
-            context=f"daily-{sign.lower()}",
-            prefill_sign=sign,
-            prefill_city=location.name,
-        )
 
+        location, _basis = resolve_location(nearest_city, timezone_name)
+        with st.expander("Want the wider monthly story?", expanded=False):
+            report_cta(
+                context=f"daily-{sign.lower()}",
+                prefill_sign=sign,
+                prefill_city=location.name,
+            )
 
 def reports_page() -> None:
     set_page_metadata(

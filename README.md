@@ -274,3 +274,12 @@ activated whole-sign house and the selected report focus.
 
 The feature uses astronomical and symbolic structure only. It does not
 present claims that one religion secretly copied another as historical fact.
+
+
+## Sparse mobile daily experience
+
+The free daily page now defaults to a concise hero, two-paragraph story,
+Do / Don't guidance and one convergence line. All existing evidence,
+Solar Convergence, practical areas, questions and calculations remain
+accessible through collapsed sections. Daily controls use a form and a
+submitted request snapshot to reduce unnecessary reruns.

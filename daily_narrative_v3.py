@@ -1276,64 +1276,280 @@ def _render_css() -> None:
     st.markdown(
         """
 <style>
-.explainable-section { max-width:900px; margin:2.15rem auto; }
-.explainable-copy p {
+.daily-primary {
+    width:100%;
+    max-width:820px;
+    min-height:calc(100vh - 8rem);
+    min-height:calc(100dvh - 8rem);
+    margin:0 auto;
+    padding:clamp(.65rem,2.5vh,1.8rem) 0 clamp(1.2rem,4vh,2.6rem);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:clamp(1.2rem,3vh,2rem);
+}
+.daily-primary .reading-card {
+    width:100%;
+    margin:0;
+    padding:clamp(1.4rem,5vw,3rem);
+}
+.daily-primary .daily-headline {
+    font-size:clamp(3rem,9vw,6rem);
+    max-width:760px;
+}
+.sparse-story {
+    max-width:760px;
+}
+.sparse-story .eyebrow {
+    margin-bottom:.7rem;
+}
+.sparse-story p {
+    margin:.3rem 0 1rem;
     font-family:"Josefin Sans",sans-serif;
-    font-size:clamp(1.12rem,1.65vw,1.34rem);
-    line-height:1.68;
+    font-size:clamp(1.12rem,3.7vw,1.38rem);
+    line-height:1.62;
     font-weight:350;
 }
-.convergence-axis {
+.do-dont-strip {
+    display:grid;
+    grid-template-columns:1fr 1fr;
     border-top:1px solid #050505;
     border-bottom:1px solid #050505;
-    padding:1.15rem 0;
-    margin:1rem 0 2rem;
+}
+.do-dont-item {
+    min-width:0;
+    padding:1rem 1rem 1.05rem 0;
+}
+.do-dont-item + .do-dont-item {
+    border-left:1px solid #050505;
+    padding-left:1rem;
+}
+.do-dont-label {
+    color:#777772;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.68rem;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    margin-bottom:.4rem;
+}
+.do-dont-copy {
     font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
-    font-size:clamp(1.8rem,3vw,3rem);
-    line-height:1.05;
+    font-size:clamp(1.3rem,4vw,1.75rem);
+    line-height:1.16;
+    overflow-wrap:anywhere;
 }
-.why-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid #050505; border-left:1px solid #050505; }
-.why-item { border-right:1px solid #050505; border-bottom:1px solid #050505; padding:1.1rem; min-height:8rem; }
-.why-number { font-family:"IBM Plex Mono","Courier New",monospace; font-size:.67rem; text-transform:uppercase; }
-.signal-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:2rem 0; }
-.signal-card { border:1px solid #050505; padding:1.2rem; min-height:10rem; }
-.signal-card p { margin-bottom:0; }
-.sky-snapshot { width:100%; border-collapse:collapse; margin-top:1rem; }
-.sky-snapshot td { border-bottom:1px solid #d8d8d3; padding:.85rem .5rem; vertical-align:top; }
-.sky-snapshot td:first-child { width:13rem; font-family:"IBM Plex Mono","Courier New",monospace; font-size:.68rem; text-transform:uppercase; }
-.snapshot-value { font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif; font-size:1.25rem; }
-.weather-climate { display:grid; grid-template-columns:1fr 1fr; border:1px solid #050505; margin:2rem 0; }
-.weather-climate > div { padding:1.1rem; }
-.weather-climate > div:first-child { border-right:1px solid #050505; }
-.solar-convergence-panel {
-    border: 1px solid #cfcfc8;
-    background: #f7f7f3;
-    padding: 1.1rem 1.2rem;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .85rem 1.2rem;
-    margin: .8rem 0 1.6rem;
+.sparse-convergence {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:1rem;
+    padding:.15rem 0;
 }
-.solar-convergence-panel div span {
-    display: block;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: .72rem;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: #6b6b66;
-    margin-bottom: .25rem;
+.sparse-convergence-label {
+    color:#777772;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.68rem;
+    letter-spacing:.07em;
+    text-transform:uppercase;
 }
-.solar-convergence-panel div strong { font-size: .95rem; line-height: 1.35; }
-.solar-convergence-panel p { grid-column: 1 / -1; margin: .2rem 0 0; }
-.solar-convergence-panel small { grid-column: 1 / -1; color: #6b6b66; }
-.confidence-note { font-family:"IBM Plex Mono","Courier New",monospace; font-size:.68rem; line-height:1.5; color:#696963; }
-.technical-table { width:100%; border-collapse:collapse; }
-.technical-table th,.technical-table td { border-bottom:1px solid #d8d8d3; padding:.7rem .55rem; text-align:left; vertical-align:top; }
-.technical-table th { font-family:"IBM Plex Mono","Courier New",monospace; font-size:.68rem; text-transform:uppercase; }
+.sparse-convergence-value {
+    max-width:70%;
+    text-align:right;
+    font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
+    font-size:clamp(1.2rem,3.7vw,1.75rem);
+    line-height:1.16;
+}
+.compact-evidence-list {
+    border-top:1px solid #050505;
+    margin:.35rem 0 1.5rem;
+}
+.compact-evidence-row {
+    display:grid;
+    grid-template-columns:8.5rem 1fr;
+    gap:1rem;
+    padding:.85rem 0;
+    border-bottom:1px solid #d8d8d3;
+}
+.compact-evidence-label {
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.66rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+.compact-evidence-value {
+    font-family:"Josefin Sans",sans-serif;
+    font-size:1rem;
+    line-height:1.5;
+}
+.weather-climate {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    border-top:1px solid #050505;
+    border-bottom:1px solid #050505;
+    margin:1rem 0 1.5rem;
+}
+.weather-climate > div {
+    min-width:0;
+    padding:1rem 1rem 1rem 0;
+}
+.weather-climate > div + div {
+    border-left:1px solid #050505;
+    padding-left:1rem;
+}
+.weather-climate h3 {
+    margin:.35rem 0 .5rem !important;
+    font-size:clamp(1.25rem,3.4vw,1.75rem) !important;
+}
+.solar-inline-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.8rem 1.1rem;
+    padding:1rem 0;
+    border-top:1px solid #d8d8d3;
+    border-bottom:1px solid #d8d8d3;
+}
+.solar-inline-grid span {
+    display:block;
+    color:#777772;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.64rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    margin-bottom:.25rem;
+}
+.solar-inline-grid strong {
+    display:block;
+    font-family:"Josefin Sans",sans-serif;
+    font-size:.95rem;
+    line-height:1.42;
+}
+.sky-snapshot {
+    width:100%;
+    border-collapse:collapse;
+    margin-top:.7rem;
+}
+.sky-snapshot td {
+    border-bottom:1px solid #d8d8d3;
+    padding:.75rem .2rem;
+    vertical-align:top;
+}
+.sky-snapshot td:first-child {
+    width:10.5rem;
+    padding-right:1rem;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.65rem;
+    text-transform:uppercase;
+}
+.snapshot-value {
+    font-family:"Josefin Sans",sans-serif;
+    font-size:1rem;
+    line-height:1.45;
+}
+.confidence-note {
+    color:#696963;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.65rem;
+    line-height:1.5;
+    margin-top:.75rem;
+}
+.question-list {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    border-top:1px solid #050505;
+    border-left:1px solid #050505;
+}
+.question-item {
+    border-right:1px solid #050505;
+    border-bottom:1px solid #050505;
+    min-height:7rem;
+    padding:1rem;
+    font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
+    font-size:clamp(1.15rem,3vw,1.4rem);
+    line-height:1.25;
+}
+.technical-table {
+    width:100%;
+    border-collapse:collapse;
+}
+.technical-table th,
+.technical-table td {
+    border-bottom:1px solid #d8d8d3;
+    padding:.65rem .4rem;
+    text-align:left;
+    vertical-align:top;
+}
+.technical-table th {
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.65rem;
+    text-transform:uppercase;
+}
+[data-testid="stExpander"] {
+    border:none !important;
+    border-top:1px solid #050505 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+}
+[data-testid="stExpander"] details {
+    border:none !important;
+}
+[data-testid="stExpander"] summary {
+    min-height:3.6rem;
+    padding:.75rem 0 !important;
+}
+[data-testid="stExpander"] summary p {
+    font-family:"IBM Plex Mono","Courier New",monospace !important;
+    font-size:.72rem !important;
+    letter-spacing:.035em;
+    text-transform:uppercase;
+}
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+    padding:.25rem 0 1.25rem !important;
+}
 @media (max-width:700px) {
-    .why-grid,.signal-grid,.weather-climate { grid-template-columns:1fr; }
-    .weather-climate > div:first-child { border-right:none; border-bottom:1px solid #050505; }
-    .sky-snapshot td:first-child { width:8.5rem; }
+    .daily-primary {
+        min-height:calc(100vh - 6.5rem);
+        min-height:calc(100dvh - 6.5rem);
+        justify-content:flex-start;
+        padding-top:.4rem;
+        gap:1.15rem;
+    }
+    .daily-primary .reading-card {
+        padding:1.35rem 1.2rem;
+    }
+    .daily-primary .daily-headline {
+        font-size:clamp(2.85rem,13vw,4.8rem);
+    }
+    .do-dont-strip,
+    .weather-climate,
+    .solar-inline-grid,
+    .question-list {
+        grid-template-columns:1fr;
+    }
+    .do-dont-item + .do-dont-item,
+    .weather-climate > div + div {
+        border-left:none;
+        border-top:1px solid #050505;
+        padding-left:0;
+    }
+    .sparse-convergence {
+        align-items:flex-start;
+        flex-direction:column;
+        gap:.35rem;
+    }
+    .sparse-convergence-value {
+        max-width:100%;
+        text-align:left;
+    }
+    .compact-evidence-row {
+        grid-template-columns:1fr;
+        gap:.25rem;
+    }
+    .sky-snapshot td:first-child {
+        width:7.4rem;
+    }
+    .question-item {
+        min-height:auto;
+    }
 }
 </style>
         """,
@@ -1348,123 +1564,154 @@ def render_daily_narrative_v3(
     import streamlit as st
 
     _render_css()
+
+    visible_story = tuple(narrative.today_story[:2])
+    remaining_story = tuple(narrative.today_story[2:])
+
     st.markdown(
         f"""
-<div class="reading-card">
-  <div class="daily-kicker">Free daily reading / {escape(narrative.sign)}</div>
-  <div class="daily-headline">{escape(narrative.headline)}</div>
-  <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
-</div>
+<section class="daily-primary" aria-label="Today's daily reading">
+  <div class="reading-card">
+    <div class="daily-kicker">Free daily reading / {escape(narrative.sign)}</div>
+    <div class="daily-headline">{escape(narrative.headline)}</div>
+    <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
+  </div>
+
+  <div class="sparse-story">
+    <div class="eyebrow">Your day at a glance</div>
+    {_paragraph_html(visible_story)}
+  </div>
+
+  <div class="do-dont-strip">
+    <div class="do-dont-item">
+      <div class="do-dont-label">Do</div>
+      <div class="do-dont-copy">{escape(narrative.action_today)}</div>
+    </div>
+    <div class="do-dont-item">
+      <div class="do-dont-label">Don't</div>
+      <div class="do-dont-copy">{escape(narrative.watch_out)}</div>
+    </div>
+  </div>
+
+  <div class="sparse-convergence">
+    <div class="sparse-convergence-label">Today's convergence</div>
+    <div class="sparse-convergence-value">{escape(narrative.convergence_axis)}</div>
+  </div>
+</section>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="explainable-section"><div class="eyebrow">Today\'s story</div></div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="explainable-section explainable-copy">{_paragraph_html(narrative.today_story)}</div>',
-        unsafe_allow_html=True,
-    )
+    evidence = narrative.evidence
 
-    st.markdown("## Today’s convergence")
-    st.markdown(
-        f'<div class="convergence-axis">{escape(narrative.convergence_axis)}</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("## Why this matters today")
-    why_html = "".join(
-        f'<div class="why-item"><div class="why-number">Evidence {index}</div><p>{escape(point)}</p></div>'
-        for index, point in enumerate(narrative.why_today_points, 1)
-    )
-    st.markdown(f'<div class="why-grid">{why_html}</div>', unsafe_allow_html=True)
-
-    if solar:
-        direction = str(solar.get("light_direction", "Unavailable"))
-        change = float(solar.get("daylight_change", 0.0))
-        change_text = (
-            f"{abs(change):.1f} min/day"
-            if abs(change) >= 0.05
-            else "near the turning point"
+    with st.expander("Why today feels different"):
+        st.markdown("### Why this matters today")
+        evidence_rows = "".join(
+            (
+                '<div class="compact-evidence-row">'
+                f'<div class="compact-evidence-label">Evidence {index}</div>'
+                f'<div class="compact-evidence-value">{escape(point)}</div>'
+                "</div>"
+            )
+            for index, point in enumerate(narrative.why_today_points, 1)
         )
-        st.markdown("## Solar position")
+        st.markdown(
+            f'<div class="compact-evidence-list">{evidence_rows}</div>',
+            unsafe_allow_html=True,
+        )
+
         st.markdown(
             f"""
-<div class="solar-convergence-panel">
-  <div><span>Solar phase</span><strong>{escape(str(solar.get("solar_quarter", "Unavailable")))}</strong></div>
-  <div><span>Light movement</span><strong>{escape(direction)} / {escape(change_text)}</strong></div>
-  <div><span>Next solar gate</span><strong>{escape(str(solar.get("next_solar_gate", "Unavailable")))} / {escape(str(solar.get("days_to_next_gate", "?")))} days</strong></div>
-  <div><span>Activated house</span><strong>House {escape(str(solar.get("activated_house", "?")))} / {escape(str(solar.get("activated_house_name", "")))}</strong></div>
-  <p>{escape(str(solar.get("focus_meaning", "")))}</p>
-  <small>{escape(str(solar.get("city", "Timezone estimate")))} - {escape(str(solar.get("location_basis", "timezone estimate")))}</small>
+<div class="weather-climate">
+  <div>
+    <div class="eyebrow">Weather / today</div>
+    <h3>{escape(narrative.emotional_weather)}</h3>
+    <p>The faster pattern describes the next day or two.</p>
+  </div>
+  <div>
+    <div class="eyebrow">Climate / longer current</div>
+    <h3>{escape(narrative.long_term_current)}</h3>
+  </div>
 </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown(
-        f"""
-<div class="weather-climate">
-  <div><div class="eyebrow">Weather / today</div><h3>{escape(narrative.emotional_weather)}</h3><p>The faster pattern describes the next day or two.</p></div>
-  <div><div class="eyebrow">Climate / longer current</div><h3>{escape(narrative.long_term_current)}</h3></div>
+        st.markdown("### Hidden opportunity")
+        st.markdown(narrative.hidden_opportunity)
+
+        if solar:
+            direction = str(solar.get("light_direction", "Unavailable"))
+            change = float(solar.get("daylight_change", 0.0))
+            change_text = (
+                f"{abs(change):.1f} min/day"
+                if abs(change) >= 0.05
+                else "Near the turning point"
+            )
+            st.markdown("### Solar position")
+            st.markdown(
+                f"""
+<div class="solar-inline-grid">
+  <div><span>Solar phase</span><strong>{escape(str(solar.get("solar_quarter", "Unavailable")))}</strong></div>
+  <div><span>Light movement</span><strong>{escape(direction)} / {escape(change_text)}</strong></div>
+  <div><span>Next solar gate</span><strong>{escape(str(solar.get("next_solar_gate", "Unavailable")))} / {escape(str(solar.get("days_to_next_gate", "?")))} days</strong></div>
+  <div><span>Activated house</span><strong>House {escape(str(solar.get("activated_house", "?")))} / {escape(str(solar.get("activated_house_name", "")))}</strong></div>
+  <div><span>Location</span><strong>{escape(str(solar.get("city", "Timezone estimate")))}</strong></div>
+  <div><span>Basis</span><strong>{escape(str(solar.get("location_basis", "timezone estimate")))}</strong></div>
 </div>
-        """,
-        unsafe_allow_html=True,
-    )
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown(str(solar.get("focus_meaning", "")))
 
-    st.markdown('<div class="signal-grid">', unsafe_allow_html=True)
-    opportunity, watch, action = st.columns(3, gap="large")
-    with opportunity:
+        st.markdown("### Sky Snapshot")
+        snapshot_rows = [
+            ("Primary theme", narrative.convergence_axis),
+            ("Emotional weather", narrative.emotional_weather),
+            ("Strongest influence", evidence.aspect_label),
+            ("Daily timing", evidence.phase),
+            ("Long-term current", narrative.long_term_current),
+            (
+                "Convergence strength",
+                f"{evidence.confidence_label} ({evidence.strength_score}/100)",
+            ),
+            (_aspect_window_row_label(evidence), evidence.active_window),
+            (
+                _convergence_window_row_label(evidence.convergence_label),
+                evidence.convergence_window,
+            ),
+        ]
+        rows = "".join(
+            (
+                "<tr>"
+                f"<td>{escape(label)}</td>"
+                f'<td class="snapshot-value">{escape(value)}</td>'
+                "</tr>"
+            )
+            for label, value in snapshot_rows
+        )
         st.markdown(
-            f'<div class="signal-card"><div class="eyebrow">Hidden opportunity</div><p>{escape(narrative.hidden_opportunity)}</p></div>',
+            f'<table class="sky-snapshot"><tbody>{rows}</tbody></table>',
             unsafe_allow_html=True,
         )
-    with watch:
         st.markdown(
-            f'<div class="signal-card"><div class="eyebrow">Watch out</div><p>{escape(narrative.watch_out)}</p></div>',
+            '<div class="confidence-note">'
+            "The strength score measures how clearly one astrological pattern "
+            "dominates today. It is not the probability that a predicted event "
+            "will occur."
+            "</div>",
             unsafe_allow_html=True,
         )
-    with action:
-        st.markdown(
-            f'<div class="signal-card"><div class="eyebrow">Action today</div><p>{escape(narrative.action_today)}</p></div>',
-            unsafe_allow_html=True,
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    evidence = narrative.evidence
-    st.markdown("## Sky Snapshot")
-    snapshot_rows = [
-        ("Primary theme", narrative.convergence_axis),
-        ("Emotional weather", narrative.emotional_weather),
-        ("Strongest influence", evidence.aspect_label),
-        ("Daily timing", evidence.phase),
-        ("Long-term current", narrative.long_term_current),
-        ("Convergence strength", f"{evidence.confidence_label} ({evidence.strength_score}/100)"),
-        (_aspect_window_row_label(evidence), evidence.active_window),
-        (
-            _convergence_window_row_label(evidence.convergence_label),
-            evidence.convergence_window,
-        ),
-    ]
-    rows = "".join(
-        f'<tr><td>{escape(label)}</td><td class="snapshot-value">{escape(value)}</td></tr>'
-        for label, value in snapshot_rows
-    )
-    st.markdown(f'<table class="sky-snapshot"><tbody>{rows}</tbody></table>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="confidence-note">The strength score measures how clearly one astrological pattern dominates today. It is not the probability that a predicted event will occur.</div>',
-        unsafe_allow_html=True,
-    )
+    with st.expander("More context — relationships, work and money"):
+        if remaining_story:
+            st.markdown("### Continue today’s story")
+            for paragraph in remaining_story:
+                st.markdown(paragraph)
 
-    st.markdown("## Questions for today")
-    question_html = "".join(
-        f'<div class="question-item">{escape(question)}</div>'
-        for question in narrative.reflection_questions
-    )
-    st.markdown(f'<div class="question-list">{question_html}</div>', unsafe_allow_html=True)
-
-    with st.expander("Practical areas — relationships, work and money"):
         st.markdown("### Relationships")
         st.markdown(narrative.relationship_story)
+
         left, right = st.columns(2, gap="large")
         with left:
             st.markdown("### Work")
@@ -1473,60 +1720,88 @@ def render_daily_narrative_v3(
             st.markdown("### Money")
             st.markdown(narrative.money_note)
 
-    with st.expander("See the calculations behind this reading"):
-        orb_value = "Not applicable" if evidence.orb is None else f"{evidence.orb:.2f}°"
-        st.markdown(f"**Aspect:** {evidence.aspect_label}")
-        st.markdown(f"**Type:** {evidence.aspect_type}")
-        st.markdown(f"**Current orb:** {orb_value}")
+    with st.expander("Questions to consider"):
+        question_html = "".join(
+            f'<div class="question-item">{escape(question)}</div>'
+            for question in narrative.reflection_questions
+        )
+        st.markdown(
+            f'<div class="question-list">{question_html}</div>',
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("Detailed astrological evidence"):
+        st.markdown(
+            "**Explainable Astrology:** the story appears first. The evidence "
+            "below preserves the full calculation without interrupting the "
+            "customer reading."
+        )
+
+        orb_value = (
+            "Not applicable"
+            if evidence.orb is None
+            else f"{evidence.orb:.2f}°"
+        )
         configured_orb = (
             "Not applicable"
             if evidence.configured_orb is None
             else f"{evidence.configured_orb:g}°"
         )
+
+        st.markdown("### Dominant aspect")
+        st.markdown(f"**Aspect:** {evidence.aspect_label}")
+        st.markdown(f"**Type:** {evidence.aspect_type}")
+        st.markdown(f"**Current orb:** {orb_value}")
         st.markdown(f"**Configured aspect orb:** {configured_orb}")
         st.markdown(f"**Timing:** {evidence.phase}")
-        st.markdown(f"**Active planets:** {', '.join(evidence.active_planets)}")
         st.markdown(
-            f"**Calculated period within configured orb:** "
+            f"**Active planets:** {', '.join(evidence.active_planets)}"
+        )
+        st.markdown(
+            "**Calculated period within configured orb:** "
             f"{evidence.active_window}"
         )
+
         st.markdown("### Activated houses")
-        for number, meaning in zip(evidence.activated_houses, evidence.house_meanings):
+        for number, meaning in zip(
+            evidence.activated_houses,
+            evidence.house_meanings,
+        ):
             st.markdown(f"- **House {number}:** {meaning}")
+
         st.markdown("### Calculated daily theme")
         st.markdown(narrative.daily_theme)
+
         st.markdown("### Wider convergence context")
         st.markdown(narrative.wider_context)
+
         st.markdown("### Dominant aspects")
         for item in narrative.technical_aspects:
             st.markdown(item)
+
         st.markdown("### House-based conclusion")
         st.markdown(narrative.house_conclusion)
 
-    with st.expander("Advanced Sky Snapshot — planetary positions"):
-        rows = "".join(
-            "<tr>"
-            f"<td>{escape(planet)}</td>"
-            f"<td>{escape(position)}</td>"
-            f"<td>{house}</td>"
-            f"<td>{escape(meaning)}</td>"
-            "</tr>"
+        st.markdown("### Planetary positions")
+        position_rows = "".join(
+            (
+                "<tr>"
+                f"<td>{escape(planet)}</td>"
+                f"<td>{escape(position)}</td>"
+                f"<td>{house}</td>"
+                f"<td>{escape(meaning)}</td>"
+                "</tr>"
+            )
             for planet, position, house, meaning in narrative.sky_rows
         )
         st.markdown(
-            '<table class="technical-table"><thead><tr><th>Body</th><th>Position</th><th>House</th><th>Life area</th></tr></thead>'
-            f'<tbody>{rows}</tbody></table>',
+            '<div style="overflow-x:auto;">'
+            '<table class="technical-table">'
+            "<thead><tr><th>Body</th><th>Position</th>"
+            "<th>House</th><th>Life area</th></tr></thead>"
+            f"<tbody>{position_rows}</tbody></table></div>",
             unsafe_allow_html=True,
         )
 
-    with st.expander("The 12-house reference matrix"):
+        st.markdown("### The 12-house reference matrix")
         st.markdown(narrative.house_matrix)
-
-    st.markdown(
-        """
-<div class="callout">
-<strong>Explainable Astrology:</strong> the story appears first. The compact evidence below shows what changed today, what supports it and what belongs to the longer background. The detailed calculations remain available without interrupting the reading.
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
