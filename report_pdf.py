@@ -5,6 +5,13 @@ from io import BytesIO
 import re
 from typing import Iterable
 
+from monthly_narrative_v1 import (
+    build_monthly_narrative,
+    monthly_narrative_markdown,
+    normalise_personal_question,
+)
+from monthly_report_pdf_v2 import build_monthly_editorial_pdf
+
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
@@ -251,6 +258,75 @@ def _cover_block(result: dict, main_focus: str, personal_question: str, order_re
     ), PageBreak()]
 
 
+
+def _monthly_cover_block(narrative, styles: dict):
+    meta_lines = [
+        "<b>Monthly Strategic Report</b>",
+        f"{_inline_markup(narrative.sign)} / {_inline_markup(narrative.label)}",
+        f"Main focus: {_inline_markup(narrative.main_focus)}",
+    ]
+    cover = Table(
+        [[[
+            Paragraph(BRAND.upper(), styles["cover_brand"]),
+            Spacer(1, 14 * mm),
+            Paragraph(_inline_markup(narrative.headline), styles["cover_title"]),
+            Paragraph(_inline_markup(narrative.subtitle), styles["cover_meta"]),
+            Spacer(1, 7 * mm),
+            Paragraph("<br/>".join(meta_lines), styles["cover_meta"]),
+        ]]],
+        colWidths=[PAGE_WIDTH - 2 * MARGIN_X],
+    )
+    cover.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.black),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 16 * mm),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 16 * mm),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+
+    focus_rows = [
+        [Paragraph("YOUR MONTH", styles["label"])],
+        [Paragraph(
+            _inline_markup(
+                f"{narrative.sign} - {narrative.label}. "
+                f"The story comes first; the evidence remains available in the appendix."
+            ),
+            styles["focus"],
+        )],
+        [Paragraph("PERSONALISED FOCUS", styles["label"])],
+        [Paragraph(_inline_markup(narrative.main_focus), styles["focus"])],
+    ]
+    if narrative.personal_question:
+        focus_rows.extend([
+            [Paragraph("YOUR QUESTION", styles["label"])],
+            [Paragraph(_inline_markup(narrative.personal_question), styles["focus"])],
+        ])
+
+    focus_table = Table(focus_rows, colWidths=[PAGE_WIDTH - 2 * MARGIN_X])
+    focus_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f3f3ef")),
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.black),
+        ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#cfcfca")),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5 * mm),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5 * mm),
+    ]))
+
+    return [
+        cover,
+        Spacer(1, 10 * mm),
+        focus_table,
+        Spacer(1, 7 * mm),
+        Paragraph(
+            "This report follows the same consequence-first method as the Luna daily reading: monthly story, practical chapters and clear actions first; calculation evidence second.",
+            styles["body"],
+        ),
+        PageBreak(),
+    ]
+
 def _markdown_table(lines: list[str], styles: dict, available_width: float):
     rows = []
     for line in lines:
@@ -336,6 +412,12 @@ def _markdown_flowables(markdown: str, styles: dict, available_width: float):
             index += 1
             continue
 
+        if stripped == "[[PAGEBREAK]]":
+            flush_paragraph(); flush_list()
+            story.append(PageBreak())
+            index += 1
+            continue
+
         if stripped in {"---", "***"}:
             flush_paragraph(); flush_list()
             story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#999999"), spaceBefore=2 * mm, spaceAfter=3 * mm))
@@ -356,6 +438,15 @@ def build_report_pdf(
     order_reference: str = "",
 ) -> bytes:
     """Generate a print-ready A4 PDF from a deterministic report result."""
+    cleaned_question = normalise_personal_question(personal_question)
+    if result.get("period") == "monthly":
+        return build_monthly_editorial_pdf(
+            result,
+            main_focus=main_focus,
+            personal_question=cleaned_question,
+            order_reference=order_reference,
+        )
+
     output = BytesIO()
     styles = _styles()
     frame = Frame(
@@ -383,8 +474,22 @@ def build_report_pdf(
     doc.addPageTemplates([template])
 
     story = []
-    story.extend(_cover_block(result, main_focus, personal_question, order_reference, styles))
-    story.extend(_markdown_flowables(str(result.get("markdown", "")), styles, PAGE_WIDTH - 2 * MARGIN_X))
+    story.extend(
+        _cover_block(
+            result,
+            main_focus,
+            cleaned_question,
+            order_reference,
+            styles,
+        )
+    )
+    story.extend(
+        _markdown_flowables(
+            str(result.get("markdown", "")),
+            styles,
+            PAGE_WIDTH - 2 * MARGIN_X,
+        )
+    )
     story.append(Spacer(1, 5 * mm))
     story.append(HRFlowable(width="100%", thickness=0.7, color=colors.black))
     story.append(Spacer(1, 3 * mm))

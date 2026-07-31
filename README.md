@@ -299,3 +299,8 @@ and activated house pair.
 Monthly date labels are now platform-independent. The admin Horoscope tab
 previews the same customer-first narrative used by the personalised PDF,
 while the raw technical synthesis remains available in a collapsed section.
+
+
+## Monthly Editorial PDF v2
+
+Monthly customer PDFs now use a dedicated magazine-style renderer. The emotional hook appears first, practical pages use cards and timelines, and tables are concentrated in the Explainable Evidence appendix.

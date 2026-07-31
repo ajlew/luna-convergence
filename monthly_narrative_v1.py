@@ -48,6 +48,82 @@ HOUSE_PROSE = {
     12: "rest, closure, private feelings and unfinished matters",
 }
 
+HOUSE_NATURAL = {
+    1: "who you are becoming",
+    2: "money, value and security",
+    3: "messages, decisions and everyday movement",
+    4: "home and private life",
+    5: "love, creativity and what brings you alive",
+    6: "work, wellbeing and daily rhythm",
+    7: "relationships and agreements",
+    8: "trust, intimacy and shared money",
+    9: "new horizons, learning and expansion",
+    10: "work, reputation and visible results",
+    11: "your circle and future plans",
+    12: "rest, closure and private feelings",
+}
+
+HOUSE_DO = {
+    1: "Choose the version of you that can last.",
+    2: "Put a real number on the decision.",
+    3: "Ask the direct question.",
+    4: "Name the private issue calmly.",
+    5: "Let one promising opening become real.",
+    6: "Fix the routine before adding more.",
+    7: "Make the terms mutual and clear.",
+    8: "Put every shared expectation in view.",
+    9: "Take one proven idea further.",
+    10: "Finish one result others can see.",
+    11: "Choose the people who support the future.",
+    12: "Pause before turning a feeling into a decision.",
+}
+
+HOUSE_DONT = {
+    1: "Perform for approval.",
+    2: "Confuse attention with value.",
+    3: "Write the imaginary sequel.",
+    4: "Call avoidance keeping the peace.",
+    5: "Mistake excitement for evidence.",
+    6: "Turn care into unpaid overtime.",
+    7: "Accept hints instead of terms.",
+    8: "Let chemistry cancel the fine print.",
+    9: "Expand before checking the facts.",
+    10: "Chase visibility without a result.",
+    11: "Give everyone backstage access.",
+    12: "Give fantasy unlimited screen time.",
+}
+
+MONTHLY_PAIR_HOOKS = {
+    frozenset({5, 9}): "Your spark wants a passport - and a plan",
+    frozenset({4, 7}): "The elephant in the living room wants a date",
+    frozenset({3, 5}): "The message is cute. The follow-through matters more",
+    frozenset({7, 10}): "Chemistry is not a career strategy",
+    frozenset({2, 4}): "Love is priceless. The household budget is not",
+    frozenset({8, 11}): "Not everyone cheering belongs in the inner circle",
+    frozenset({2, 12}): "Your coping mechanism has sent another invoice",
+    frozenset({1, 3}): "The personal press conference is officially cancelled",
+    frozenset({5, 7}): "The slow burn still needs actual fire",
+    frozenset({8, 10}): "Keep the receipts - emotional and otherwise",
+    frozenset({6, 9}): "The escape plan needs annual leave",
+    frozenset({4, 10}): "Success still has to live somewhere",
+    frozenset({2, 7}): "Attention is flattering. Effort is evidence",
+}
+
+MONTHLY_HOUSE_HOOKS = {
+    1: "The main character has stopped asking permission",
+    2: "Your standards just found a price tag",
+    3: "The message arrives before the full story",
+    4: "The private issue wants daylight",
+    5: "The spark arrives before the plan",
+    6: "The routine is exposing what actually works",
+    7: "Mixed signals are losing their charm",
+    8: "The fine print is part of the chemistry",
+    9: "A bigger world is flirting with you",
+    10: "The spotlight wants an actual result",
+    11: "The right people make the future feel possible",
+    12: "The answer starts in the quiet",
+}
+
 HOUSE_ACTION = {
     1: "Make one decision that reflects who you are becoming, not the approval you hope to receive.",
     2: "Put a clear value, price or limit on the issue before giving it more time or money.",
@@ -77,6 +153,7 @@ FOCUS_TITLES = {
 class MonthlyChapter:
     label: str
     date_range: str
+    hook: str
     title: str
     paragraphs: tuple[str, ...]
     action: str
@@ -97,6 +174,8 @@ class MonthlyNarrative:
     label: str
     main_focus: str
     personal_question: str
+    hook_headline: str
+    convergence_axis: str
     headline: str
     subtitle: str
     at_glance: tuple[str, ...]
@@ -106,6 +185,11 @@ class MonthlyNarrative:
     love_story: tuple[str, ...]
     work_story: tuple[str, ...]
     money_story: tuple[str, ...]
+    do_line: str
+    dont_line: str
+    love_hook: str
+    work_hook: str
+    money_hook: str
     hidden_opportunity: str
     watch_out: str
     action_plan: tuple[str, ...]
@@ -267,6 +351,63 @@ def _select_chapter_evidence(events: Iterable[dict], maximum: int = 4) -> tuple[
     )
 
 
+
+def _natural_house(house: int) -> str:
+    return HOUSE_NATURAL.get(house, HOUSE_PROSE.get(house, "the active area of life"))
+
+
+def _monthly_hook(focus: str, primary_house: int, secondary_house: int) -> str:
+    pair = frozenset({primary_house, secondary_house})
+    if pair == frozenset({5, 9}) and focus == "Love and relationships":
+        return "Your love life wants a passport - and a plan"
+    return MONTHLY_PAIR_HOOKS.get(pair, MONTHLY_HOUSE_HOOKS[primary_house])
+
+
+def _chapter_hook(segment: str, main_house: int, second_house: int) -> str:
+    pair = frozenset({main_house, second_house})
+    if segment == "early":
+        if 11 in pair:
+            return "The right people make the month feel bigger"
+        if 5 in pair:
+            return "The invitation is real. The future is not decided"
+        if 9 in pair:
+            return "The door opens before the itinerary is finished"
+        return MONTHLY_HOUSE_HOOKS.get(main_house, "The month opens with a useful clue")
+    if segment == "middle":
+        if 9 in pair:
+            return "Adventure now needs supporting documents"
+        if 7 in pair:
+            return "The connection now needs clear terms"
+        if 8 in pair:
+            return "The chemistry has reached the fine print"
+        return "The exciting part now needs proof"
+    if 4 in pair or 10 in pair:
+        return "Success still has to live somewhere"
+    if 9 in pair:
+        return "The idea is ready for an audience"
+    return "The ending decides what deserves another month"
+
+
+def _life_area_hooks(primary_house: int, secondary_house: int) -> tuple[str, str, str]:
+    pair = frozenset({primary_house, secondary_house})
+    love = (
+        "A spark is easy. Shared direction is the test"
+        if 5 in pair or 9 in pair
+        else "Attention is flattering. Consistency is evidence"
+    )
+    work = (
+        "The idea is ready to leave the group chat"
+        if 9 in pair or 10 in pair
+        else "Busy is not the same as visible"
+    )
+    money = (
+        "The opportunity looks exciting. Ask who is paying"
+        if 5 in pair or 9 in pair
+        else "The numbers deserve their own conversation"
+    )
+    return love, work, money
+
+
 def _chapter_title(events: list[dict], primary_house: int, segment: str) -> str:
     titles = " ".join(str(item.get("title", "")) for item in events)
     houses = {_event_house(item) for item in events}
@@ -302,6 +443,7 @@ def _build_chapter(
     main_house = max(set(houses), key=houses.count) if houses else primary_house
     second_house = next((house for house in houses if house != main_house), secondary_house)
     title = _chapter_title(events, primary_house, segment)
+    hook = _chapter_hook(segment, main_house, second_house)
 
     if events:
         first = events[0]
@@ -314,23 +456,24 @@ def _build_chapter(
 
     if segment == "early":
         paragraphs = (
-            f"The opening part of the month begins with {first_story[0].lower() + first_story[1:]} This is the point to notice which people, ideas or opportunities create genuine movement rather than simply more activity.",
-            f"{strongest_story} Keep the response measured: the first opening is information, not yet a final outcome.",
+            f"The month opens through {_natural_house(main_house)}. Notice which person, idea or invitation creates genuine movement rather than simply more noise.",
+            f"{strongest_story} Treat the first opening as useful information, not a final promise.",
         )
     elif segment == "middle":
         paragraphs = (
-            f"The middle of the month carries the greatest concentration of events. {strongest_story} What appears exciting may also expose a cost, obligation or missing fact that needs to be made visible.",
-            f"The practical test is whether progress in {HOUSE_PROSE[main_house]} can be sustained without destabilising {HOUSE_PROSE[second_house]}. Use the strongest days to make one credible move, not several speculative ones.",
+            f"The middle of the month carries the strongest concentration. {strongest_story} Excitement may reveal a cost, obligation or missing fact that needs daylight.",
+            f"The test is whether progress in {_natural_house(main_house)} can grow without destabilising {_natural_house(second_house)}. Make one credible move, not several speculative ones.",
         )
     else:
         paragraphs = (
-            f"Late in the month, {first_story[0].lower() + first_story[1:]} The focus shifts from possibility toward consequences, ownership and what can actually be maintained.",
-            f"The month closes by asking you to reconcile {HOUSE_PROSE[main_house]} with {HOUSE_PROSE[second_house]}. A visible result matters, but so does the private structure supporting it.",
+            f"Late in the month, {first_story[0].lower() + first_story[1:]} Possibility gives way to consequences, ownership and what can actually be maintained.",
+            f"The closing question is how to reconcile {_natural_house(main_house)} with {_natural_house(second_house)}. A visible result matters, but so does the life supporting it.",
         )
 
     return MonthlyChapter(
         label=label,
         date_range=f"{start_day}-{end_day}",
+        hook=hook,
         title=title,
         paragraphs=paragraphs,
         action=HOUSE_ACTION[main_house],
@@ -476,8 +619,8 @@ def _headline(focus: str, primary_house: int, secondary_house: int) -> tuple[str
             "Growth becomes real when the new direction changes what you do consistently.",
         )
     return (
-        f"{HOUSE_DISPLAY[primary_house]} leads the month",
-        f"Progress depends on how well it is integrated with {HOUSE_DISPLAY[secondary_house].lower()}.",
+        f"{HOUSE_DISPLAY[primary_house]} sets the month's direction",
+        f"{HOUSE_DISPLAY[secondary_house]} tests what can become real.",
     )
 
 
@@ -617,6 +760,9 @@ def build_monthly_narrative(
     primary_house = _dominant_house(result, 0, 1)
     secondary_house = _dominant_house(result, 1, primary_house)
     headline, subtitle = _headline(main_focus, primary_house, secondary_house)
+    hook_headline = _monthly_hook(main_focus, primary_house, secondary_house)
+    convergence_axis = f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}"
+    love_hook, work_hook, money_hook = _life_area_hooks(primary_house, secondary_house)
     convergences = _convergences(result)
     first_convergence = convergences[0] if convergences else None
     second_convergence = convergences[1] if len(convergences) > 1 else None
@@ -625,10 +771,9 @@ def build_monthly_narrative(
     second_window = _date_range(second_convergence["start_date"], second_convergence["end_date"]) if second_convergence else "the final week"
 
     at_glance = (
-        f"{result['label']} is led by {HOUSE_PROSE[primary_house]}, while {HOUSE_PROSE[secondary_house]} supplies the second major pressure point. The opportunity is not simply to experience more; it is to turn one desire, idea or opening into something credible and repeatable.",
-        f"The first major concentration runs through {first_window}. Connections, information and possibility can gather quickly, but the strongest choice is the one that remains useful after the excitement settles.",
-        f"A second turning point develops in {second_window}. Career, home, relationships or obligations may compete for attention, making clear ownership and sequence more important than speed.",
-        f"The month's rule is simple: {HOUSE_ACTION[primary_house]} Protect the month from the main distortion of {HOUSE_PROSE[secondary_house]} by checking facts, capacity and consequences before expansion.",
+        f"Something in {result['label'].split()[0]} wants to feel bigger - more alive, more visible or more emotionally honest. The temptation is to say yes before the opening has somewhere practical to go.",
+        f"From {first_window}, people, ideas and invitations can gather quickly. Choose the one that still makes sense after the excitement settles. Around {second_window}, the month asks for proof, sequence and clear ownership.",
+        f"The central story links {_natural_house(primary_house)} with {_natural_house(secondary_house)}. Make one promising possibility real, then let behaviour, cost and consequences tell you what deserves to continue.",
     )
 
     chapters = (
@@ -679,6 +824,8 @@ def build_monthly_narrative(
         label=str(result.get("label", "Monthly Report")),
         main_focus=main_focus,
         personal_question=question,
+        hook_headline=hook_headline,
+        convergence_axis=convergence_axis,
         headline=headline,
         subtitle=subtitle,
         at_glance=at_glance,
@@ -688,6 +835,11 @@ def build_monthly_narrative(
         love_story=_love_story(result, primary_house, secondary_house),
         work_story=_work_story(result, primary_house, secondary_house),
         money_story=_money_story(result, primary_house, secondary_house),
+        do_line=HOUSE_DO[primary_house],
+        dont_line=HOUSE_DONT[secondary_house],
+        love_hook=love_hook,
+        work_hook=work_hook,
+        money_hook=money_hook,
         hidden_opportunity=f"Use the strongest opening in {first_window} to make one relationship, creative or strategic possibility more concrete.",
         watch_out=f"Do not let excitement around {HOUSE_PROSE[secondary_house]} outrun facts, cost, timing or operational capacity.",
         action_plan=(
@@ -712,9 +864,17 @@ def build_monthly_narrative(
 def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
     lines: list[str] = []
     lines.extend([
-        f"# {narrative.headline}",
+        f"# {narrative.hook_headline}",
+        "",
+        f"**Monthly convergence:** {narrative.convergence_axis}",
+        "",
+        f"**Serious theme:** {narrative.headline}",
         "",
         narrative.subtitle,
+        "",
+        f"**Do:** {narrative.do_line}",
+        "",
+        f"**Don't:** {narrative.dont_line}",
         "",
         "# Your month at a glance",
         "",
@@ -768,8 +928,8 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
         if chapter_index == 3:
             lines.extend(["[[PAGEBREAK]]", ""])
         lines.extend([
-            f"## {chapter.label}: {chapter.title}",
-            f"**Window:** {chapter.date_range}",
+            f"## {chapter.hook}",
+            f"**{chapter.label} / {chapter.date_range}:** {chapter.title}",
             "",
         ])
         for paragraph in chapter.paragraphs:
@@ -785,12 +945,12 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
 
     lines.extend(["[[PAGEBREAK]]", ""])
     sections = [
-        ("Love and relationships", narrative.love_story),
-        ("Work and direction", narrative.work_story),
-        ("Money and security", narrative.money_story),
+        ("Love and relationships", narrative.love_hook, narrative.love_story),
+        ("Work and direction", narrative.work_hook, narrative.work_story),
+        ("Money and security", narrative.money_hook, narrative.money_story),
     ]
-    for title, paragraphs in sections:
-        lines.extend([f"# {title}", ""])
+    for title, hook, paragraphs in sections:
+        lines.extend([f"# {title}", "", f"## {hook}", ""])
         for paragraph in paragraphs:
             lines.extend([paragraph, ""])
 
