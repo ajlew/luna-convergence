@@ -283,3 +283,12 @@ Do / Don't guidance and one convergence line. All existing evidence,
 Solar Convergence, practical areas, questions and calculations remain
 accessible through collapsed sections. Daily controls use a form and a
 submitted request snapshot to reduce unnecessary reruns.
+
+
+## Emotional Hook Engine v1
+
+The daily hero now leads with a short, witty and evidence-grounded
+emotional hook. The previous serious headline remains as the interpretive
+theme directly underneath. Hook tone rotates deterministically through six
+editorial families and is selected from the date, sign, strongest aspect
+and activated house pair.

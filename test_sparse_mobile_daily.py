@@ -15,6 +15,10 @@ def main() -> None:
     assert ">Do<" in daily
     assert ">Don't<" in daily
     assert "Today's convergence" in daily
+    assert 'class="daily-hook-headline"' in daily
+    assert "narrative.hook_headline" in daily
+    assert "Today's theme" in daily
+    assert "narrative.hook_subline" in daily
     assert "visible_story = tuple(narrative.today_story[:2])" in daily
 
     # All prior work remains available.

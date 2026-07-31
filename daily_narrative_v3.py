@@ -520,6 +520,328 @@ HOUSE_TONE_HEADLINES = {
 }
 
 
+HOOK_TONE_FAMILIES = (
+    "tongue-in-cheek",
+    "romantic tension",
+    "self-aware",
+    "boundary-led",
+    "dry practical humour",
+    "tender but direct",
+)
+
+HOUSE_HOOKS = {
+    1: {
+        "tongue-in-cheek": "The main character has stopped asking permission",
+        "romantic tension": "Being chosen should not require becoming smaller",
+        "self-aware": "You know which version of you is exhausted",
+        "boundary-led": "Approval is not a personality requirement",
+        "dry practical humour": "The personal rebrand has entered the chat",
+        "tender but direct": "Choose the self you can live with tomorrow",
+    },
+    2: {
+        "tongue-in-cheek": "Your standards just sent a payment reminder",
+        "romantic tension": "Attention is flattering. Effort is evidence.",
+        "self-aware": "You know what this is actually costing you",
+        "boundary-led": "Access is not the same as investment",
+        "dry practical humour": "Love is priceless. Rent is not.",
+        "tender but direct": "Choose what feels secure after the excitement fades",
+    },
+    3: {
+        "tongue-in-cheek": "Read the message—not the imaginary sequel",
+        "romantic tension": "The typing bubble is not a love language",
+        "self-aware": "You already know which question needs asking",
+        "boundary-led": "Clarity deserves more than a cryptic reply",
+        "dry practical humour": "Overthinking has requested another meeting",
+        "tender but direct": "Say the honest thing without making it cruel",
+    },
+    4: {
+        "tongue-in-cheek": "The elephant in the living room would like a word",
+        "romantic tension": "Keeping the peace is starting to look suspicious",
+        "self-aware": "You already know what everyone is avoiding",
+        "boundary-led": "Harmony without honesty has an expiry date",
+        "dry practical humour": "The house meeting has entered the chat",
+        "tender but direct": "Say the kind truth before silence says it for you",
+    },
+    5: {
+        "tongue-in-cheek": "The slow burn still needs actual fire",
+        "romantic tension": "A crush is not a full project plan",
+        "self-aware": "You know whether this is joy or performance",
+        "boundary-led": "Chemistry does not get unlimited access",
+        "dry practical humour": "The plot needs more than good lighting",
+        "tender but direct": "Let pleasure be honest, not performative",
+    },
+    6: {
+        "tongue-in-cheek": "The routine is exposing the real relationship",
+        "romantic tension": "Consistency is hotter than another grand gesture",
+        "self-aware": "You know which habit is quietly running the show",
+        "boundary-led": "Care without boundaries becomes unpaid overtime",
+        "dry practical humour": "The spreadsheet has feelings now",
+        "tender but direct": "Choose the rhythm that can still hold you",
+    },
+    7: {
+        "tongue-in-cheek": "Mixed signals are losing their charm",
+        "romantic tension": "The relationship needs fewer hints and better sentences",
+        "self-aware": "You already know what the silence is saying",
+        "boundary-led": "Mutual means both people actually show up",
+        "dry practical humour": "The terms and conditions are suddenly romantic",
+        "tender but direct": "Choose the connection that can hold an honest answer",
+    },
+    8: {
+        "tongue-in-cheek": "Keep the receipts—emotional and otherwise",
+        "romantic tension": "Intensity is not the same as intimacy",
+        "self-aware": "You know which promise needs proof",
+        "boundary-led": "Chemistry does not cancel the fine print",
+        "dry practical humour": "The trust fall needs a safety check",
+        "tender but direct": "Let closeness deepen without costing your autonomy",
+    },
+    9: {
+        "tongue-in-cheek": "The escape plan needs a calendar",
+        "romantic tension": "A bigger world is flirting with you",
+        "self-aware": "You know which horizon keeps calling",
+        "boundary-led": "Expansion still needs a return ticket",
+        "dry practical humour": "The adventure has requested supporting documents",
+        "tender but direct": "Go further without leaving yourself behind",
+    },
+    10: {
+        "tongue-in-cheek": "Chemistry is not a business plan",
+        "romantic tension": "Ambition just developed a personal life",
+        "self-aware": "You know which result deserves the spotlight",
+        "boundary-led": "Visibility is not permission to overperform",
+        "dry practical humour": "The promotion has feelings attached",
+        "tender but direct": "Let the work speak without making you disappear",
+    },
+    11: {
+        "tongue-in-cheek": "Not everyone cheering belongs backstage",
+        "romantic tension": "The future looks better with reliable company",
+        "self-aware": "You know who supports the plan—not just the mood",
+        "boundary-led": "Access to your future is earned",
+        "dry practical humour": "The group chat is not a board of directors",
+        "tender but direct": "Choose the people who can build after the excitement",
+    },
+    12: {
+        "tongue-in-cheek": "Your fantasy has exceeded its screen time",
+        "romantic tension": "Distance is doing too much of the flirting",
+        "self-aware": "You know which answer silence keeps avoiding",
+        "boundary-led": "Mystery does not deserve unlimited access",
+        "dry practical humour": "The coping mechanism has a subscription fee",
+        "tender but direct": "Rest long enough to hear the honest answer",
+    },
+}
+
+PAIR_HOOK_OVERRIDES = {
+    frozenset({4, 7}): {
+        "tongue-in-cheek": "The elephant in the living room would like a word",
+        "romantic tension": "Keeping the peace is starting to look suspicious",
+        "self-aware": "You already know what everyone is avoiding",
+        "boundary-led": "Harmony without honesty has an expiry date",
+        "dry practical humour": "The house meeting has entered the chat",
+        "tender but direct": "Say the kind truth before silence says it for you",
+    },
+    frozenset({3, 5}): {
+        "tongue-in-cheek": "Read the message—not the imaginary sequel",
+        "romantic tension": "The typing bubble is not a love language",
+        "self-aware": "You know why you keep rereading that message",
+        "boundary-led": "A flirtation still needs a clear sentence",
+        "dry practical humour": "The group chat cannot edit this ending",
+        "tender but direct": "Ask the honest question without scripting the answer",
+    },
+    frozenset({7, 10}): {
+        "tongue-in-cheek": "Chemistry is not a business plan",
+        "romantic tension": "The office crush needs actual boundaries",
+        "self-aware": "You know which decision is getting personal",
+        "boundary-led": "Attraction cannot sign the contract",
+        "dry practical humour": "Professionalism has entered the love triangle",
+        "tender but direct": "Keep the heart open and the terms clear",
+    },
+    frozenset({2, 4}): {
+        "tongue-in-cheek": "Love is priceless. Rent is not.",
+        "romantic tension": "Security is becoming part of the chemistry",
+        "self-aware": "You know which comfort is costing too much",
+        "boundary-led": "Care still needs a budget",
+        "dry practical humour": "The household spreadsheet would like a word",
+        "tender but direct": "Build the kind of safety both people can sustain",
+    },
+    frozenset({8, 11}): {
+        "tongue-in-cheek": "Not everyone cheering belongs backstage",
+        "romantic tension": "A friendship is asking for deeper proof",
+        "self-aware": "You know who can handle the real story",
+        "boundary-led": "Access to your inner circle is earned",
+        "dry practical humour": "The group chat failed the trust exercise",
+        "tender but direct": "Choose the people who can hold both truth and responsibility",
+    },
+    frozenset({2, 12}): {
+        "tongue-in-cheek": "Your bank account is not a coping mechanism",
+        "romantic tension": "Distance is making reassurance feel expensive",
+        "self-aware": "You know which fantasy keeps sending invoices",
+        "boundary-led": "Silence does not get unlimited credit",
+        "dry practical humour": "The coping mechanism has a subscription fee",
+        "tender but direct": "Rest before spending money or emotion on an answer",
+    },
+    frozenset({1, 3}): {
+        "tongue-in-cheek": "Stop auditioning for approval",
+        "romantic tension": "Being understood should not require a performance",
+        "self-aware": "You know which explanation is becoming an apology",
+        "boundary-led": "Your voice does not need permission",
+        "dry practical humour": "The personal press conference is cancelled",
+        "tender but direct": "Say what is true without abandoning your direction",
+    },
+    frozenset({5, 7}): {
+        "tongue-in-cheek": "The slow burn still needs actual fire",
+        "romantic tension": "Mixed signals are losing their charm",
+        "self-aware": "You know whether the chemistry is becoming mutual",
+        "boundary-led": "Attraction still needs equal effort",
+        "dry practical humour": "The romance plot needs a second participant",
+        "tender but direct": "Let interest become visible through consistent action",
+    },
+    frozenset({8, 10}): {
+        "tongue-in-cheek": "Keep the receipts—emotional and otherwise",
+        "romantic tension": "Power and chemistry are sharing a desk",
+        "self-aware": "You know which promise needs professional proof",
+        "boundary-led": "Intensity cannot replace clear terms",
+        "dry practical humour": "The fine print just joined the meeting",
+        "tender but direct": "Let trust grow without surrendering your position",
+    },
+    frozenset({6, 9}): {
+        "tongue-in-cheek": "The escape plan needs a calendar",
+        "romantic tension": "A bigger world is flirting with your routine",
+        "self-aware": "You know which horizon needs practical preparation",
+        "boundary-led": "Freedom still needs a workable system",
+        "dry practical humour": "The adventure has requested annual leave",
+        "tender but direct": "Make room for expansion without abandoning your wellbeing",
+    },
+    frozenset({4, 10}): {
+        "tongue-in-cheek": "Success still has to live somewhere",
+        "romantic tension": "Ambition is bringing its feelings home",
+        "self-aware": "You know which achievement is disturbing the foundation",
+        "boundary-led": "Visibility cannot cost you your private life",
+        "dry practical humour": "The career plan forgot to check the kitchen calendar",
+        "tender but direct": "Let success strengthen the life that supports it",
+    },
+    frozenset({2, 7}): {
+        "tongue-in-cheek": "Attention is flattering. Effort is evidence.",
+        "romantic tension": "Affection is asking for a practical follow-through",
+        "self-aware": "You know whether this connection is reciprocal",
+        "boundary-led": "Interest without investment is still incomplete",
+        "dry practical humour": "The chemistry has not paid its deposit",
+        "tender but direct": "Choose the connection that values your time as well as your heart",
+    },
+}
+
+HOOK_FORBIDDEN_PHRASES = (
+    "they love you",
+    "they secretly love",
+    "will definitely",
+    "guaranteed",
+)
+
+HOOK_TECHNICAL_WORDS = {
+    "aspect",
+    "orb",
+    "sextile",
+    "trine",
+    "square",
+    "opposition",
+    "conjunction",
+    "retrograde",
+    "house",
+}
+
+
+def _hook_seed(sign: str, reading_date: date, trigger: int, other: int) -> int:
+    sign_weight = sum(
+        (index + 1) * ord(character)
+        for index, character in enumerate(sign.lower())
+    )
+    return reading_date.toordinal() + sign_weight + trigger * 17 + other * 29
+
+
+def _hook_tone_family(
+    reading,
+    sign: str,
+    reading_date: date,
+    trigger: int,
+    other: int,
+) -> str:
+    anchor = reading.anchor_aspect
+    if anchor and anchor.planets == frozenset({"Venus", "Mars"}):
+        candidates = (
+            "romantic tension",
+            "tongue-in-cheek",
+            "boundary-led",
+            "self-aware",
+        )
+    elif anchor and anchor.planets == frozenset({"Moon", "Mercury"}):
+        candidates = (
+            "tongue-in-cheek",
+            "self-aware",
+            "dry practical humour",
+            "tender but direct",
+        )
+    elif anchor and anchor.planets == frozenset({"Moon", "Saturn"}):
+        candidates = (
+            "dry practical humour",
+            "tender but direct",
+            "boundary-led",
+            "self-aware",
+        )
+    elif anchor and anchor.name in {"square", "opposition"}:
+        candidates = (
+            "boundary-led",
+            "self-aware",
+            "tongue-in-cheek",
+            "dry practical humour",
+        )
+    elif anchor and anchor.name in {"trine", "sextile"}:
+        candidates = (
+            "tender but direct",
+            "romantic tension",
+            "dry practical humour",
+            "self-aware",
+        )
+    else:
+        candidates = HOOK_TONE_FAMILIES
+
+    return candidates[
+        _hook_seed(sign, reading_date, trigger, other) % len(candidates)
+    ]
+
+
+def _validate_hook(value: str) -> str:
+    hook = clean_customer_text(value)
+    lowered = hook.lower()
+    if any(phrase in lowered for phrase in HOOK_FORBIDDEN_PHRASES):
+        raise ValueError(f"Unsupported emotional-hook claim: {hook}")
+    words = re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", hook)
+    if not 4 <= len(words) <= 14:
+        raise ValueError(
+            f"Emotional hook must contain 4–14 words, received {len(words)}: {hook}"
+        )
+    if set(word.lower() for word in words) & HOOK_TECHNICAL_WORDS:
+        raise ValueError(f"Technical astrology leaked into emotional hook: {hook}")
+    return hook
+
+
+def _emotional_hook(
+    reading,
+    sign: str,
+    reading_date: date,
+) -> tuple[str, str]:
+    trigger = _trigger_house(reading)
+    other = _other_house(reading, trigger)
+    tone = _hook_tone_family(
+        reading,
+        sign,
+        reading_date,
+        trigger,
+        other,
+    )
+    pair_bank = PAIR_HOOK_OVERRIDES.get(frozenset({trigger, other}))
+    if pair_bank and tone in pair_bank:
+        hook = pair_bank[tone]
+    else:
+        hook = HOUSE_HOOKS[trigger][tone]
+    return _validate_hook(hook), tone
+
 @dataclass(frozen=True)
 class EvidenceSnapshot:
     active_planets: tuple[str, ...]
@@ -544,6 +866,9 @@ class DailyNarrative:
     sign: str
     reading_date: date
     headline: str
+    hook_headline: str
+    hook_subline: str
+    tone_family: str
     today_story: tuple[str, ...]
     convergence_axis: str
     why_today_points: tuple[str, str, str]
@@ -1228,6 +1553,12 @@ def build_daily_narrative(
     del house_voice  # Kept in the signature for stable app integration.
     previous = previous_texts or []
     evidence = _evidence_snapshot(reading, sign, reading_date, timezone_name)
+    interpretive_headline = _headline(reading, previous, evidence)
+    hook_headline, tone_family = _emotional_hook(
+        reading,
+        sign,
+        reading_date,
+    )
     story = _story_paragraphs(reading, evidence, previous)
     sky_rows = tuple(
         (
@@ -1241,7 +1572,10 @@ def build_daily_narrative(
     return DailyNarrative(
         sign=sign,
         reading_date=reading_date,
-        headline=_headline(reading, previous, evidence),
+        headline=interpretive_headline,
+        hook_headline=hook_headline,
+        hook_subline=interpretive_headline,
+        tone_family=tone_family,
         today_story=story,
         convergence_axis=_convergence_axis(reading),
         why_today_points=_why_today_points(reading, evidence),
@@ -1293,9 +1627,63 @@ def _render_css() -> None:
     margin:0;
     padding:clamp(1.4rem,5vw,3rem);
 }
-.daily-primary .daily-headline {
+.daily-primary .daily-hook-headline {
+    position:relative;
+    z-index:2;
+    color:#fff;
+    font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
     font-size:clamp(3rem,9vw,6rem);
+    line-height:.94;
+    letter-spacing:-.045em;
     max-width:760px;
+    margin:.75rem 0 .9rem;
+}
+.daily-convergence-top {
+    position:relative;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    padding-bottom:.75rem;
+    border-bottom:1px solid rgba(255,255,255,.28);
+}
+.daily-convergence-top span {
+    color:rgba(255,255,255,.65);
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.64rem;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.daily-convergence-top strong {
+    color:#fff;
+    font-family:"Josefin Sans",sans-serif;
+    font-size:.84rem;
+    font-weight:500;
+    text-align:right;
+}
+.daily-theme-line {
+    position:relative;
+    z-index:2;
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:.65rem;
+    align-items:baseline;
+    margin:.15rem 0 .8rem;
+    color:rgba(255,255,255,.82);
+}
+.daily-theme-line span {
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.61rem;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.55);
+}
+.daily-theme-line strong {
+    font-family:"Josefin Sans",sans-serif;
+    font-size:.92rem;
+    font-weight:400;
+    line-height:1.35;
 }
 .sparse-story {
     max-width:760px;
@@ -1516,8 +1904,20 @@ def _render_css() -> None:
     .daily-primary .reading-card {
         padding:1.35rem 1.2rem;
     }
-    .daily-primary .daily-headline {
+    .daily-primary .daily-hook-headline {
         font-size:clamp(2.85rem,13vw,4.8rem);
+    }
+    .daily-convergence-top {
+        align-items:flex-start;
+        flex-direction:column;
+        gap:.3rem;
+    }
+    .daily-convergence-top strong {
+        text-align:left;
+    }
+    .daily-theme-line {
+        grid-template-columns:1fr;
+        gap:.25rem;
     }
     .do-dont-strip,
     .weather-climate,
@@ -1571,9 +1971,17 @@ def render_daily_narrative_v3(
     st.markdown(
         f"""
 <section class="daily-primary" aria-label="Today's daily reading">
-  <div class="reading-card">
+  <div class="reading-card" data-hook-tone="{escape(narrative.tone_family)}">
     <div class="daily-kicker">Free daily reading / {escape(narrative.sign)}</div>
-    <div class="daily-headline">{escape(narrative.headline)}</div>
+    <div class="daily-convergence-top">
+      <span>Today's convergence</span>
+      <strong>{escape(narrative.convergence_axis)}</strong>
+    </div>
+    <div class="daily-hook-headline">{escape(narrative.hook_headline)}</div>
+    <div class="daily-theme-line">
+      <span>Today's theme</span>
+      <strong>{escape(narrative.hook_subline)}</strong>
+    </div>
     <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
   </div>
 
@@ -1591,11 +1999,6 @@ def render_daily_narrative_v3(
       <div class="do-dont-label">Don't</div>
       <div class="do-dont-copy">{escape(narrative.watch_out)}</div>
     </div>
-  </div>
-
-  <div class="sparse-convergence">
-    <div class="sparse-convergence-label">Today's convergence</div>
-    <div class="sparse-convergence-value">{escape(narrative.convergence_axis)}</div>
   </div>
 </section>
         """,
@@ -1747,6 +2150,11 @@ def render_daily_narrative_v3(
             if evidence.configured_orb is None
             else f"{evidence.configured_orb:g}°"
         )
+
+        st.markdown("### Editorial translation")
+        st.markdown(f"**Emotional hook:** {narrative.hook_headline}")
+        st.markdown(f"**Interpretive theme:** {narrative.headline}")
+        st.markdown(f"**Tone family:** {narrative.tone_family}")
 
         st.markdown("### Dominant aspect")
         st.markdown(f"**Aspect:** {evidence.aspect_label}")
