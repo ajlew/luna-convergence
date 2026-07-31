@@ -25,6 +25,12 @@ from daily_narrative_v3 import (
     reading_comparison_text,
     render_daily_narrative_v3,
 )
+from solar_cycle import (
+    city_input_help,
+    daily_solar_convergence,
+    representative_city_name,
+    resolve_location,
+)
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -936,6 +942,7 @@ def top_navigation(current_path: str) -> None:
         ("reports", "Reports"),
         ("house-guide", "House guide"),
         ("sample-report", "Sample report"),
+        ("solar-year", "Solar year"),
         ("how-it-works", "How it works"),
     ]
     links = []
@@ -1120,6 +1127,8 @@ def _order_summary(
     sign: str,
     period: str,
     timezone_name: str,
+    nearest_city: str,
+    location_basis: str,
     delivery_email: str,
     main_focus: str,
     personal_question: str,
@@ -1137,6 +1146,8 @@ def _order_summary(
   <div class="order-value">{escape(period)}</div>
   <div class="order-label">Timezone</div>
   <div class="order-value">{escape(timezone_name)}</div>
+  <div class="order-label">Nearest city</div>
+  <div class="order-value">{escape(nearest_city)} ({escape(location_basis)})</div>
   <div class="order-label">Main focus</div>
   <div class="order-value">{escape(main_focus)}</div>
   <div class="order-label">Personal question</div>
@@ -1158,6 +1169,7 @@ def report_cta(
     prefill_sign: str | None = None,
     prefill_month: str | None = None,
     prefill_year: int | None = None,
+    prefill_city: str | None = None,
 ) -> None:
     key_context = "".join(
         character if character.isalnum() else "-"
@@ -1259,6 +1271,13 @@ def report_cta(
                     index=TIMEZONES.index(DEFAULT_TIMEZONE),
                     key=f"{key_context}-monthly-timezone",
                 )
+            nearest_city = st.text_input(
+                "Nearest city (optional)",
+                value=prefill_city or "",
+                key=f"{key_context}-monthly-city",
+                placeholder=representative_city_name(timezone_name),
+                help=city_input_help(timezone_name),
+            )
             main_focus = st.selectbox(
                 "Main focus",
                 MONTHLY_FOCUS_CHOICES,
@@ -1296,12 +1315,17 @@ def report_cta(
                     _order_token(key_context, "MONTHLY"),
                     main_focus=main_focus,
                     personal_question=personal_question,
+                    nearest_city=nearest_city,
                 )
                 checkout_url = build_stripe_checkout_url(
                     MONTHLY_PAYMENT_URL,
                     delivery_email,
                     reference,
                     f"monthly-{period_code}-{sign}",
+                )
+                location, location_basis = resolve_location(
+                    nearest_city,
+                    timezone_name,
                 )
                 st.session_state[state_key] = {
                     "report_name": "Monthly Strategic Report",
@@ -1310,6 +1334,8 @@ def report_cta(
                     "period": month_label,
                     "period_code": period_code,
                     "timezone": timezone_name,
+                    "nearest_city": location.name,
+                    "location_basis": location_basis,
                     "main_focus": main_focus,
                     "personal_question": personal_question.strip(),
                     "reference": reference,
@@ -1332,6 +1358,8 @@ def report_cta(
                 order["sign"],
                 order["period"],
                 order["timezone"],
+                order["nearest_city"],
+                order["location_basis"],
                 order["email"],
                 order["main_focus"],
                 order["personal_question"],
@@ -1412,6 +1440,13 @@ def report_cta(
                     index=TIMEZONES.index(DEFAULT_TIMEZONE),
                     key=f"{key_context}-yearly-timezone",
                 )
+            nearest_city = st.text_input(
+                "Nearest city (optional)",
+                value=prefill_city or "",
+                key=f"{key_context}-yearly-city",
+                placeholder=representative_city_name(timezone_name),
+                help=city_input_help(timezone_name),
+            )
             main_focus = st.selectbox(
                 "Main priority for the year",
                 YEARLY_FOCUS_CHOICES,
@@ -1449,12 +1484,17 @@ def report_cta(
                     _order_token(key_context, "YEAR"),
                     main_focus=main_focus,
                     personal_question=personal_question,
+                    nearest_city=nearest_city,
                 )
                 checkout_url = build_stripe_checkout_url(
                     YEARLY_PAYMENT_URL,
                     delivery_email,
                     reference,
                     f"year-{period_code}-{sign}",
+                )
+                location, location_basis = resolve_location(
+                    nearest_city,
+                    timezone_name,
                 )
                 st.session_state[state_key] = {
                     "report_name": "Year-Ahead Strategic Report",
@@ -1463,6 +1503,8 @@ def report_cta(
                     "period": f"Calendar year {selected_year}",
                     "period_code": period_code,
                     "timezone": timezone_name,
+                    "nearest_city": location.name,
+                    "location_basis": location_basis,
                     "main_focus": main_focus,
                     "personal_question": personal_question.strip(),
                     "reference": reference,
@@ -1485,6 +1527,8 @@ def report_cta(
                 order["sign"],
                 order["period"],
                 order["timezone"],
+                order["nearest_city"],
+                order["location_basis"],
                 order["email"],
                 order["main_focus"],
                 order["personal_question"],
@@ -1528,7 +1572,7 @@ def report_cta(
             )
 
 
-def daily_controls(prefix: str = "daily") -> tuple[str, date, str]:
+def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
     c1, c2, c3 = st.columns([1.05, 1, 1.25], gap="medium")
     with c1:
         sign = st.selectbox(
@@ -1552,7 +1596,13 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str]:
             index=TIMEZONES.index(DEFAULT_TIMEZONE),
             key=f"{prefix}-timezone",
         )
-    return sign, reading_date, timezone_name
+    nearest_city = st.text_input(
+        "Nearest city (optional)",
+        key=f"{prefix}-city",
+        placeholder=representative_city_name(timezone_name),
+        help=city_input_help(timezone_name),
+    )
+    return sign, reading_date, timezone_name, nearest_city
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -1574,8 +1624,13 @@ def _previous_daily_texts(
     return texts
 
 
-def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> None:
-    cache_key = (sign, reading_date.isoformat(), timezone_name)
+def render_free_reading(
+    sign: str,
+    reading_date: date,
+    timezone_name: str,
+    nearest_city: str = "",
+) -> None:
+    cache_key = (sign, reading_date.isoformat(), timezone_name, nearest_city)
     if st.session_state.get("daily_cache_key") != cache_key:
         with st.spinner("Reading the planetary pattern and active houses..."):
             st.session_state.daily_reading = free_daily_reading(
@@ -1599,7 +1654,13 @@ def render_free_reading(sign: str, reading_date: date, timezone_name: str) -> No
         house_voice=HOUSE_VOICE,
         previous_texts=previous_texts,
     )
-    render_daily_narrative_v3(narrative)
+    solar = daily_solar_convergence(
+        sign,
+        reading_date,
+        timezone_name,
+        nearest_city=nearest_city,
+    ).to_dict()
+    render_daily_narrative_v3(narrative, solar=solar)
 
 
 def home_page() -> None:
@@ -1722,7 +1783,7 @@ def daily_page() -> None:
     st.markdown(
         "Begin with today’s story. Then use the Sky Snapshot to see why today differs from yesterday without having to read technical astrology."
     )
-    sign, reading_date, timezone_name = daily_controls()
+    sign, reading_date, timezone_name, nearest_city = daily_controls()
     if st.button("Generate my daily reading", type="primary", use_container_width=True):
         st.session_state.force_daily = True
         track_event(
@@ -1734,10 +1795,17 @@ def daily_page() -> None:
             },
         )
     if st.session_state.get("force_daily"):
-        render_free_reading(sign, reading_date, timezone_name)
+        render_free_reading(
+            sign,
+            reading_date,
+            timezone_name,
+            nearest_city,
+        )
+        location, _basis = resolve_location(nearest_city, timezone_name)
         report_cta(
             context=f"daily-{sign.lower()}",
             prefill_sign=sign,
+            prefill_city=location.name,
         )
 
 
@@ -1815,6 +1883,12 @@ def reports_page() -> None:
                     "Stripe payment reference or receipt number",
                     placeholder="Add the reference shown in Stripe or your receipt",
                 )
+            nearest_city = st.text_input(
+                "Nearest city (optional)",
+                placeholder=representative_city_name(timezone_name),
+                help=city_input_help(timezone_name),
+                key="recovery-nearest-city",
+            )
             recovery_focus_options = list(
                 dict.fromkeys(MONTHLY_FOCUS_CHOICES + YEARLY_FOCUS_CHOICES)
             )
@@ -1852,6 +1926,7 @@ def reports_page() -> None:
                     payment_reference,
                     main_focus=main_focus,
                     personal_question=personal_question,
+                    nearest_city=nearest_city,
                 )
                 st.link_button(
                     "Open the prepared recovery email",
@@ -2251,6 +2326,105 @@ def make_monthly_page(sign: str):
     return page
 
 
+def solar_year_page() -> None:
+    set_page_metadata(
+        "The Solar Year | Luna Convergence",
+        "Explore the twelve tropical solar phases, four equinox and solstice gates, local daylight movement and the activated whole-sign house.",
+        "/solar-year",
+    )
+    st.markdown('<div class="eyebrow">Explainable astrology / solar structure</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">The Solar<br>Convergence</div>', unsafe_allow_html=True)
+    st.markdown(
+        "The tropical zodiac describes the Sun's symbolic twelve-phase cycle. "
+        "The local-light layer separately measures the customer's actual hemisphere and daylight trend. "
+        "Luna does not assume that a Sydney customer is experiencing a Northern Hemisphere season."
+    )
+
+    st.markdown("## The Luna Solar Wheel")
+    st.markdown(
+        """
+| Solar quarter | Signs | Process | Strategic use |
+|---|---|---|---|
+| Emergence | Aries, Taurus, Gemini | Initiate -> stabilise -> communicate | Begin and make the direction viable |
+| Expression | Cancer, Leo, Virgo | Protect -> create -> refine | Develop and bring the result into view |
+| Rebalancing | Libra, Scorpio, Sagittarius | Relate -> transform -> understand | Test the result through reciprocity and truth |
+| Gestation | Capricorn, Aquarius, Pisces | Structure -> renew -> release | Consolidate, redesign and clear the cycle |
+        """
+    )
+
+    st.markdown("## The four solar gates")
+    st.markdown(
+        """
+| Gate | Tropical ingress | Strategic question |
+|---|---|---|
+| March Equinox | Sun enters Aries | What must begin? |
+| June Solstice | Sun enters Cancer | What must be protected and sustained? |
+| September Equinox | Sun enters Libra | What must be corrected or reciprocated? |
+| December Solstice | Sun enters Capricorn | What must survive the next cycle? |
+        """
+    )
+
+    st.markdown("## Calculate your current Solar Convergence")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        sign = st.selectbox(
+            "Star sign",
+            SIGNS,
+            index=SIGNS.index(DEFAULT_SIGN),
+            key="solar-year-sign",
+        )
+    with c2:
+        selected_date = st.date_input(
+            "Date",
+            value=date.today(),
+            min_value=date(1900, 1, 1),
+            max_value=date(2100, 12, 31),
+            key="solar-year-date",
+        )
+    with c3:
+        timezone_name = st.selectbox(
+            "Timezone",
+            TIMEZONES,
+            index=TIMEZONES.index(DEFAULT_TIMEZONE),
+            key="solar-year-timezone",
+        )
+    nearest_city = st.text_input(
+        "Nearest city (optional)",
+        key="solar-year-city",
+        placeholder=representative_city_name(timezone_name),
+        help=city_input_help(timezone_name),
+    )
+
+    solar = daily_solar_convergence(
+        sign,
+        selected_date,
+        timezone_name,
+        nearest_city=nearest_city,
+    )
+    st.markdown(
+        f"""
+<div class="card">
+  <div class="eyebrow">Solar Convergence</div>
+  <h3>{escape(solar.headline)}</h3>
+  <p><strong>Solar phase:</strong> {escape(solar.solar_quarter)} / {escape(solar.solar_process)}</p>
+  <p><strong>Local light:</strong> {escape(solar.light_direction)} from {escape(solar.city)} ({escape(solar.local_season)})</p>
+  <p><strong>Next gate:</strong> {escape(solar.next_solar_gate)} in {solar.days_to_next_gate} days</p>
+  <p><strong>Activated house:</strong> House {solar.activated_house} - {escape(solar.activated_house_name)}</p>
+  <p><strong>Meaning:</strong> {escape(solar.focus_meaning)}</p>
+  <p><strong>Solar rule:</strong> {escape(solar.solar_rule)}</p>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## Historical symbolism and factual boundary")
+    st.markdown(
+        "Many cultures organised calendars, symbols and stories around the Sun, seasonal decline and return. "
+        "Luna uses the astronomical structure - twelve solar phases, four gates and local light - without claiming "
+        "that culturally distinct religions are secretly identical or that symbolic resemblance proves direct historical copying."
+    )
+
+
 def privacy_page() -> None:
     set_page_metadata(
         "Privacy and Analytics | Luna Convergence",
@@ -2274,8 +2448,9 @@ store complete card details. Stripe supplies the payment status, customer
 email and any checkout information the customer submits.
 
 Paid reports are currently fulfilled manually. Information such as name,
-email, zodiac sign, requested period and timezone is used only to prepare,
-deliver and support the purchased report.
+email, zodiac sign, requested period, timezone and optional nearest city is used
+only to prepare, deliver and support the purchased report. A city is used to
+estimate latitude, hemisphere and daylight; a street address is not requested.
 
 To request correction or deletion of order information, use the contact
 email displayed during checkout or in the report-delivery message.
@@ -2301,6 +2476,7 @@ def footer() -> None:
 <strong>{escape(BRAND_NAME)}</strong> — tropical geocentric astrology using whole-sign houses.
 Astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 <br><a href="/privacy">Privacy and analytics</a> ·
+<a href="/solar-year">The Solar Year</a> ·
 <a href="/august-2026-horoscopes">August 2026 horoscopes</a>
 </div>
         """,
@@ -2340,6 +2516,11 @@ SAMPLE_PAGE_REF = st.Page(
     title="Sample Report",
     url_path="sample-report",
 )
+SOLAR_YEAR_PAGE_REF = st.Page(
+    solar_year_page,
+    title="Solar Year",
+    url_path="solar-year",
+)
 METHOD_PAGE_REF = st.Page(
     method_page,
     title="How It Works",
@@ -2369,6 +2550,7 @@ ALL_PAGES = [
     REPORTS_PAGE_REF,
     HOUSES_PAGE_REF,
     SAMPLE_PAGE_REF,
+    SOLAR_YEAR_PAGE_REF,
     METHOD_PAGE_REF,
     PRIVACY_PAGE_REF,
     *MONTHLY_PAGE_REFS.values(),

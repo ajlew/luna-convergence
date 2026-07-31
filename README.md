@@ -250,3 +250,27 @@ The purchase forms now collect a main focus and optional personal question, stat
 24-hour manual PDF delivery promise, and carry fulfilment details through Stripe's
 client reference. The admin console can generate a branded print-ready PDF for manual
 email delivery.
+
+## Monthly Narrative Engine v1
+
+Monthly PDFs now use the same consequence-first editorial method as the public daily reading. The customer sees a monthly headline, month-at-a-glance story, three practical chapters, focused love/work/money interpretation, key dates and a Monthly Sky Snapshot before the technical appendix.
+
+Administrative placeholder values such as `No optional question supplied` are normalised to blank and omitted from the customer PDF. The Stripe order reference remains available in the technical/order appendix for fulfilment reconciliation.
+
+
+## Solar Convergence v1
+
+Luna now combines the tropical Sun's twelve-phase cycle with four equinox
+and solstice gates, the customer's actual local daylight trend, the
+activated whole-sign house and the selected report focus.
+
+- Daily readings display a compact Solar Position panel.
+- Monthly PDFs include a full Solar Convergence page.
+- Yearly reports include four solar chapters: Emergence, Expression,
+  Rebalancing and Gestation.
+- Paid-order forms accept an optional nearest city; no address is required.
+- Blank or unsupported cities use a representative city for the timezone
+  and disclose that the result is an estimate.
+
+The feature uses astronomical and symbolic structure only. It does not
+present claims that one religion secretly copied another as historical fact.

@@ -31,5 +31,6 @@ NAV_ITEMS = [
     "Reports",
     "House Guide",
     "Sample Report",
+    "Solar Year",
     "How It Works",
 ]

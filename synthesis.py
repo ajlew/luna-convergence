@@ -14,6 +14,11 @@ from astrology_engine import (
 from interpretation_library import (
     PLANET_MEANINGS, HOUSE_STRATEGY, RETROGRADE_MEANINGS, COMBINATION_MEANINGS,
 )
+from solar_cycle import (
+    monthly_solar_convergence,
+    yearly_solar_chapters,
+    yearly_solar_markdown,
+)
 
 
 HOUSE_LABELS = {
@@ -763,6 +768,8 @@ def period_report(
     period_name: str,
     source_note: str | None = None,
     transition_count: int = 9,
+    nearest_city: str = "",
+    main_focus: str = "General overview",
 ) -> dict:
     events = period_events(start, end, sign, timezone_name)
     cycles = retrograde_cycles(start, end, sign, timezone_name)
@@ -771,7 +778,29 @@ def period_report(
 
     strategic_chapter_markdown = ""
     strategic_chapters = []
-    if (end - start).days >= 300:
+    solar_convergence = None
+    solar_year_chapters = []
+    solar_year_section = ""
+
+    if (end - start).days < 50:
+        solar_convergence = monthly_solar_convergence(
+            sign,
+            start.year,
+            start.month,
+            timezone_name,
+            nearest_city=nearest_city,
+            main_focus=main_focus,
+        ).to_dict()
+    else:
+        year_chapters = yearly_solar_chapters(
+            sign,
+            start.year,
+            timezone_name,
+            nearest_city=nearest_city,
+            main_focus=main_focus,
+        )
+        solar_year_chapters = [item.to_dict() for item in year_chapters]
+        solar_year_section = yearly_solar_markdown(year_chapters)
         strategic_chapter_markdown, strategic_chapters = _yearly_strategic_chapters(
             sign, start, end, timezone_name, events, cycles, convergences
         )
@@ -835,6 +864,8 @@ The selected sign becomes house 1 under the whole-sign method. The dominant and 
 
 {chr(10).join(house_rows)}
 
+{solar_year_section}
+
 {strategic_chapters_section}
 
 # Major transitions
@@ -879,4 +910,8 @@ The winning sequence is:
             {"house": house, "topic": HOUSE_NAMES[house], "weight": weight}
             for house, weight in houses
         ],
+        "solar_convergence": solar_convergence,
+        "solar_year_chapters": solar_year_chapters,
+        "nearest_city": nearest_city,
+        "main_focus": main_focus,
     }

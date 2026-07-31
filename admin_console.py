@@ -8,6 +8,7 @@ import streamlit as st
 
 from astrology_engine import SIGNS
 from order_capture import MONTHLY_FOCUS_CHOICES, QUESTION_MAX_CHARS, YEARLY_FOCUS_CHOICES
+from solar_cycle import city_input_help, representative_city_name
 from report_pdf import build_report_pdf, report_filename
 from synthesis import daily_report, period_report
 from ephemeris_upload import inspect_ephemeris_pdf, profile_to_dict, source_note
@@ -89,6 +90,12 @@ with st.sidebar:
         index=0,
     )
 
+    nearest_city = st.text_input(
+        "Nearest city",
+        value=representative_city_name(timezone_name),
+        help=city_input_help(timezone_name),
+    )
+
     selected_date = None
     selected_month = None
 
@@ -139,6 +146,10 @@ with st.sidebar:
         max_chars=QUESTION_MAX_CHARS,
         placeholder="Optional question captured before payment",
     )
+    st.caption(
+        "If the order summary says 'No optional question supplied', leave this field blank. "
+        "The phrase will not appear in the customer PDF."
+    )
 
     generate = st.button("Generate analysis", type="primary", use_container_width=True)
 
@@ -163,6 +174,8 @@ if generate:
                 f"{month_name[selected_month]} {int(st.session_state.forecast_year)}",
                 reference_note,
                 transition_count=9,
+                nearest_city=nearest_city,
+                main_focus=main_focus,
             )
         else:
             year = int(st.session_state.forecast_year)
@@ -174,6 +187,8 @@ if generate:
                 str(year),
                 reference_note,
                 transition_count=9,
+                nearest_city=nearest_city,
+                main_focus=main_focus,
             )
     st.session_state.result = result
 

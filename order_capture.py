@@ -131,6 +131,7 @@ def build_order_reference(
     token: str,
     main_focus: str = "",
     personal_question: str = "",
+    nearest_city: str = "",
 ) -> str:
     """Build a Stripe-safe reference containing fulfilment essentials.
 
@@ -146,11 +147,16 @@ def build_order_reference(
         safe_reference_fragment(timezone_name),
     ]
 
+    if nearest_city:
+        parts.extend(["C", safe_reference_fragment(nearest_city)[:24]])
+
     if main_focus or personal_question:
         parts.extend(
             [
-                f"F-{focus_code(main_focus or 'General overview')}",
-                f"Q-{question_reference_fragment(personal_question)}",
+                "F",
+                focus_code(main_focus or "General overview"),
+                "Q",
+                question_reference_fragment(personal_question),
             ]
         )
 
@@ -159,15 +165,18 @@ def build_order_reference(
     if len(reference) <= 200:
         return reference
 
-    # Preserve all structured fields and the final token. Only the question fragment
-    # is shortened further when a long timezone or product label consumes space.
     if main_focus or personal_question:
         digest = hashlib.sha256(personal_question.encode("utf-8")).hexdigest()[:8].upper()
-        fixed = "-".join(parts[:6])
-        suffix = f"-Q-{digest}-{parts[-1]}"
-        available = 200 - len(fixed) - len(suffix)
-        question = question_reference_fragment(personal_question, max(8, available))
-        reference = f"{fixed}-Q-{question}-{parts[-1]}"
+        if "Q" in parts:
+            q_index = parts.index("Q")
+            parts[q_index + 1] = digest
+        reference = "-".join(parts)
+
+    if len(reference) > 200 and "C" in parts:
+        city_index = parts.index("C")
+        parts[city_index + 1] = parts[city_index + 1][:10]
+        reference = "-".join(parts)
+
     return reference[:200]
 
 
@@ -177,21 +186,6 @@ def parse_order_reference(reference: str) -> dict[str, str]:
     if len(parts) < 7 or parts[0] != "LC":
         raise ValueError("Not a Luna Convergence order reference")
 
-    focus_index = next((i for i, part in enumerate(parts) if part == "F"), None)
-    question_index = next((i for i, part in enumerate(parts) if part == "Q"), None)
-
-    # Historical references have no F-/Q- sections.
-    if focus_index is None or question_index is None:
-        return {
-            "product_code": parts[1],
-            "sign": parts[2],
-            "period_code": "-".join(parts[3:5]),
-            "timezone_fragment": "-".join(parts[5:-1]),
-            "focus_code": "",
-            "question_fragment": "",
-            "token": parts[-1],
-        }
-
     product_code = parts[1]
     if product_code == "MONTHLY":
         period_code = "-".join(parts[3:5])
@@ -200,13 +194,41 @@ def parse_order_reference(reference: str) -> dict[str, str]:
         period_code = parts[3]
         timezone_start = 4
 
+    markers = {
+        marker: parts.index(marker)
+        for marker in ("C", "F", "Q")
+        if marker in parts
+    }
+    first_marker = min(markers.values(), default=len(parts) - 1)
+    timezone_fragment = "-".join(parts[timezone_start:first_marker])
+
+    city_fragment = ""
+    if "C" in markers:
+        city_index = markers["C"]
+        city_end = min(
+            [index for marker, index in markers.items() if marker != "C" and index > city_index]
+            or [len(parts) - 1]
+        )
+        city_fragment = "-".join(parts[city_index + 1:city_end])
+
+    focus_fragment = ""
+    if "F" in markers:
+        focus_index = markers["F"]
+        focus_fragment = parts[focus_index + 1] if focus_index + 1 < len(parts) else ""
+
+    question_fragment = ""
+    if "Q" in markers:
+        question_index = markers["Q"]
+        question_fragment = "-".join(parts[question_index + 1:-1])
+
     return {
         "product_code": product_code,
         "sign": parts[2],
         "period_code": period_code,
-        "timezone_fragment": "-".join(parts[timezone_start:focus_index]),
-        "focus_code": parts[focus_index + 1] if focus_index + 1 < len(parts) else "",
-        "question_fragment": "-".join(parts[question_index + 1:-1]),
+        "timezone_fragment": timezone_fragment,
+        "city_fragment": city_fragment,
+        "focus_code": focus_fragment,
+        "question_fragment": question_fragment,
         "token": parts[-1],
     }
 
@@ -220,6 +242,8 @@ def order_payload_json(order: dict) -> str:
         "period": order.get("period", ""),
         "period_code": order.get("period_code", ""),
         "timezone": order.get("timezone", ""),
+        "nearest_city": order.get("nearest_city", ""),
+        "location_basis": order.get("location_basis", ""),
         "main_focus": order.get("main_focus", ""),
         "personal_question": order.get("personal_question", ""),
         "order_reference": order.get("reference", ""),
@@ -242,6 +266,8 @@ def order_details_mailto(
                 f"Star sign: {order.get('sign', '')}",
                 f"Period: {order.get('period', '')}",
                 f"Timezone: {order.get('timezone', '')}",
+                f"Nearest city: {order.get('nearest_city', '') or 'Timezone estimate'}",
+                f"Location basis: {order.get('location_basis', '') or 'Timezone estimate'}",
                 f"Main focus: {order.get('main_focus', '')}",
                 f"Personal question: {order.get('personal_question', '') or 'None supplied'}",
                 f"Order reference: {order.get('reference', '')}",

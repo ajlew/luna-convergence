@@ -1305,6 +1305,27 @@ def _render_css() -> None:
 .weather-climate { display:grid; grid-template-columns:1fr 1fr; border:1px solid #050505; margin:2rem 0; }
 .weather-climate > div { padding:1.1rem; }
 .weather-climate > div:first-child { border-right:1px solid #050505; }
+.solar-convergence-panel {
+    border: 1px solid #cfcfc8;
+    background: #f7f7f3;
+    padding: 1.1rem 1.2rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .85rem 1.2rem;
+    margin: .8rem 0 1.6rem;
+}
+.solar-convergence-panel div span {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: #6b6b66;
+    margin-bottom: .25rem;
+}
+.solar-convergence-panel div strong { font-size: .95rem; line-height: 1.35; }
+.solar-convergence-panel p { grid-column: 1 / -1; margin: .2rem 0 0; }
+.solar-convergence-panel small { grid-column: 1 / -1; color: #6b6b66; }
 .confidence-note { font-family:"IBM Plex Mono","Courier New",monospace; font-size:.68rem; line-height:1.5; color:#696963; }
 .technical-table { width:100%; border-collapse:collapse; }
 .technical-table th,.technical-table td { border-bottom:1px solid #d8d8d3; padding:.7rem .55rem; text-align:left; vertical-align:top; }
@@ -1320,7 +1341,10 @@ def _render_css() -> None:
     )
 
 
-def render_daily_narrative_v3(narrative: DailyNarrative) -> None:
+def render_daily_narrative_v3(
+    narrative: DailyNarrative,
+    solar: dict | None = None,
+) -> None:
     import streamlit as st
 
     _render_css()
@@ -1353,6 +1377,29 @@ def render_daily_narrative_v3(narrative: DailyNarrative) -> None:
         for index, point in enumerate(narrative.why_today_points, 1)
     )
     st.markdown(f'<div class="why-grid">{why_html}</div>', unsafe_allow_html=True)
+
+    if solar:
+        direction = str(solar.get("light_direction", "Unavailable"))
+        change = float(solar.get("daylight_change", 0.0))
+        change_text = (
+            f"{abs(change):.1f} min/day"
+            if abs(change) >= 0.05
+            else "near the turning point"
+        )
+        st.markdown("## Solar position")
+        st.markdown(
+            f"""
+<div class="solar-convergence-panel">
+  <div><span>Solar phase</span><strong>{escape(str(solar.get("solar_quarter", "Unavailable")))}</strong></div>
+  <div><span>Light movement</span><strong>{escape(direction)} / {escape(change_text)}</strong></div>
+  <div><span>Next solar gate</span><strong>{escape(str(solar.get("next_solar_gate", "Unavailable")))} / {escape(str(solar.get("days_to_next_gate", "?")))} days</strong></div>
+  <div><span>Activated house</span><strong>House {escape(str(solar.get("activated_house", "?")))} / {escape(str(solar.get("activated_house_name", "")))}</strong></div>
+  <p>{escape(str(solar.get("focus_meaning", "")))}</p>
+  <small>{escape(str(solar.get("city", "Timezone estimate")))} - {escape(str(solar.get("location_basis", "timezone estimate")))}</small>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown(
         f"""
