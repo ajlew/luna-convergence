@@ -304,3 +304,7 @@ while the raw technical synthesis remains available in a collapsed section.
 ## Monthly Editorial PDF v2
 
 Monthly customer PDFs now use a dedicated magazine-style renderer. The emotional hook appears first, practical pages use cards and timelines, and tables are concentrated in the Explainable Evidence appendix.
+
+## Monthly Homepage PDF v3
+
+The monthly PDF now prints the same visual system as the Luna homepage: Bodoni Moda headings, Josefin Sans body copy, IBM Plex Mono labels, the homepage brand/navigation rows, editorial two-column heroes, black reading cards and thin bordered trust strips. Chrome or Edge renders the print file; the stable Editorial v2 report remains an automatic fallback.

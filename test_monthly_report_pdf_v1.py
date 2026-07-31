@@ -33,21 +33,20 @@ def main() -> None:
     assert len(pdf) > 10_000
 
     reader = PdfReader(BytesIO(pdf))
-    assert len(reader.pages) >= 8
+    assert len(reader.pages) == 9
     page_texts = [(page.extract_text() or "") for page in reader.pages]
     full_text = "\n".join(page_texts)
+    compact = "".join(full_text.lower().split())
+    first_compact = "".join(page_texts[0].lower().split())
 
-    assert "Your love life wants a" in page_texts[0]
-    assert "passport - and a plan" in page_texts[0]
-    assert "Love wants a wider horizon" in page_texts[0]
+    assert "lovelifewantsapassport" in first_compact
     assert ORDER_REFERENCE not in page_texts[0]
-    assert "Your month at a glance" in full_text
-    assert "The month in three chapters" in full_text
-    assert "Why this month feels different" in full_text
-    assert "Monthly Sky Snapshot" in full_text
-    assert "Technical appendix" in full_text
-    assert ORDER_REFERENCE in full_text
-    assert "No optional question supplied" not in full_text
+    assert "augustwantsmorethanaspark" in compact
+    assert "themonthmovesinthreeacts" in compact
+    assert "whythismonthfeelsdifferent" in compact
+    assert "technicalappendix" in compact
+    assert ORDER_REFERENCE.lower().replace("-", "") in compact.replace("-", "")
+    assert "nooptionalquestionsupplied" not in compact
 
     print(f"Monthly customer PDF tests passed ({len(reader.pages)} pages).")
 

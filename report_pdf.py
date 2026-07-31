@@ -11,6 +11,7 @@ from monthly_narrative_v1 import (
     normalise_personal_question,
 )
 from monthly_report_pdf_v2 import build_monthly_editorial_pdf
+from monthly_report_pdf_home_v3 import build_monthly_homepage_pdf
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -440,7 +441,7 @@ def build_report_pdf(
     """Generate a print-ready A4 PDF from a deterministic report result."""
     cleaned_question = normalise_personal_question(personal_question)
     if result.get("period") == "monthly":
-        return build_monthly_editorial_pdf(
+        return build_monthly_homepage_pdf(
             result,
             main_focus=main_focus,
             personal_question=cleaned_question,
