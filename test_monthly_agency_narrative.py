@@ -1,5 +1,9 @@
 from datetime import date
 
+from luna_editorial_system import (
+    GATEKEEPER_LINE,
+    VALIDATION_LINE,
+)
 from monthly_narrative_v1 import build_monthly_narrative
 from synthesis import period_report
 
@@ -24,25 +28,21 @@ def main() -> None:
         "Your spark wants a passport—and proof"
     )
     assert narrative.central_storyline == (
-        "Something exciting expands your world, but August tests "
+        "Something exciting expands your world. August tests "
         "whether it earns a place in your life."
     )
-    assert narrative.agency_rule == (
-        "You are not waiting to be selected. "
-        "You are deciding what deserves access."
-    )
-    assert narrative.validation_rule == (
-        "Attention gets your notice. Effort earns your interest. "
-        "Consistency earns a place in your life."
-    )
-    assert "relationship" in narrative.luna_says[0].lower()
-    assert "flirtation" in narrative.luna_says[0].lower()
-    assert "desired" in narrative.luna_says[0].lower()
-    assert "who follows through" in narrative.luna_says[1].lower()
-    assert "when romance is quiet" not in narrative.romance_quiet.lower()
-    assert len(narrative.scenario_examples) >= 5
-    assert "Confuse being noticed with being valued" in narrative.dont_line
-    assert "shows real effort" in narrative.do_line
+    assert narrative.agency_rule == GATEKEEPER_LINE
+    assert narrative.validation_rule == VALIDATION_LINE
+    assert len(narrative.luna_says) == 1
+    assert "romance" in narrative.luna_says[0].lower()
+    assert "follow" in narrative.luna_says[0].lower()
+    assert narrative.do_line == "Follow effort."
+    assert narrative.dont_line == "Mistake attention for value."
+    assert "not waiting to be selected" not in (
+        " ".join(narrative.luna_says)
+        + narrative.agency_rule
+        + " ".join(narrative.love_story)
+    ).lower()
 
     print("Monthly agency narrative tests passed.")
 

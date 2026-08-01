@@ -22,31 +22,41 @@ def main() -> None:
         result,
         show_print=True,
         preview=False,
-        order_reference="LC-TEST-AGENCY",
+        order_reference="LC-TEST",
     )
 
     for required in (
         "Luna says",
         "Your spark wants a passport—and proof",
-        "You are not waiting to be selected",
-        "Romance, flirting and validation",
-        "When romance is active",
-        "When romance is quiet",
+        "Shift from applicant to gatekeeper.",
+        "Romance and validation",
         "Why Luna sees this",
         "Solar Convergence",
         "Key dates and planetary timing",
         "Full technical evidence",
         "Print or save report",
-        "Include evidence in print",
+        "Include evidence",
+        "A4",
+        "A3",
+        "Portrait",
+        "Landscape",
         "window.print()",
         "@media print",
     ):
         assert required in html, required
 
-    assert 'class="luna-monthly-report"' in html
-    assert "Bodoni Moda" in html
-    assert "Josefin Sans" in html
-    assert "IBM Plex Mono" in html
+    for removed in (
+        "Concrete possibilities",
+        "You remain the main character",
+        "The month in three acts",
+        "Your move</span>",
+        "You are not waiting to be selected",
+    ):
+        assert removed not in html, removed
+
+    assert html.count("Your move") == 1
+    assert 'data-print-orientation="portrait"' in html
+    assert "FOOTER" not in html
 
     print("Monthly agency webpage tests passed.")
 

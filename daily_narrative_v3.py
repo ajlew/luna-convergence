@@ -16,6 +16,13 @@ from astrology_engine import (
     period_events,
     positions_for_date,
 )
+from luna_editorial_system import (
+    DO_LABEL,
+    DONT_LABEL,
+    LUNA_SAYS_LABEL,
+    TECHNICAL_LABEL,
+    WHY_LUNA_LABEL,
+)
 
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -531,7 +538,7 @@ HOOK_TONE_FAMILIES = (
 
 HOUSE_HOOKS = {
     1: {
-        "tongue-in-cheek": "The main character has stopped asking permission",
+        "tongue-in-cheek": "Your next move has stopped asking permission",
         "romantic tension": "Being chosen should not require becoming smaller",
         "self-aware": "You know which version of you is exhausted",
         "boundary-led": "Approval is not a personality requirement",
@@ -1986,17 +1993,17 @@ def render_daily_narrative_v3(
   </div>
 
   <div class="sparse-story">
-    <div class="eyebrow">Your day at a glance</div>
+    <div class="eyebrow">{escape(LUNA_SAYS_LABEL)}</div>
     {_paragraph_html(visible_story)}
   </div>
 
   <div class="do-dont-strip">
     <div class="do-dont-item">
-      <div class="do-dont-label">Do</div>
+      <div class="do-dont-label">{escape(DO_LABEL)}</div>
       <div class="do-dont-copy">{escape(narrative.action_today)}</div>
     </div>
     <div class="do-dont-item">
-      <div class="do-dont-label">Don't</div>
+      <div class="do-dont-label">{escape(DONT_LABEL)}</div>
       <div class="do-dont-copy">{escape(narrative.watch_out)}</div>
     </div>
   </div>
@@ -2007,7 +2014,7 @@ def render_daily_narrative_v3(
 
     evidence = narrative.evidence
 
-    with st.expander("Why today feels different"):
+    with st.expander(WHY_LUNA_LABEL):
         st.markdown("### Why this matters today")
         evidence_rows = "".join(
             (
@@ -2133,7 +2140,7 @@ def render_daily_narrative_v3(
             unsafe_allow_html=True,
         )
 
-    with st.expander("Detailed astrological evidence"):
+    with st.expander(TECHNICAL_LABEL):
         st.markdown(
             "**Explainable Astrology:** the story appears first. The evidence "
             "below preserves the full calculation without interrupting the "

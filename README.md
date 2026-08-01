@@ -316,3 +316,16 @@ The monthly customer product now renders as a responsive Luna webpage
 with native browser Print/Save as PDF. Luna narrates one agency-first
 storyline, concrete scenarios and relationship/validation meaning, while
 evidence remains in four closed disclosures.
+
+
+## Unified Luna voice and print v2
+
+The daily page is now the language and presentation master for daily,
+monthly and yearly readings. All three use Luna says, Do, Don't, Your
+move and the same evidence language. Monthly and yearly webpages include
+A4/A3 and portrait/landscape print controls.
+
+The visible monthly page no longer contains scenario chips, the phrase
+"You remain the main character", repeated chapter-level Your Move blocks
+or an explanatory disclaimer near the opening. Examples are integrated
+into the story and the disclaimer appears in the footer.

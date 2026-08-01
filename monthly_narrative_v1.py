@@ -5,6 +5,11 @@ from datetime import date, datetime
 import re
 from typing import Iterable
 
+from luna_editorial_system import (
+    GATEKEEPER_LINE,
+    VALIDATION_LINE,
+)
+
 
 NO_QUESTION_VALUES = {
     "",
@@ -177,7 +182,7 @@ MONTHLY_PAIR_HOOKS = {
 }
 
 MONTHLY_HOUSE_HOOKS = {
-    1: "The main character has stopped asking permission",
+    1: "Your next move has stopped asking permission",
     2: "Your standards just found a price tag",
     3: "The message arrives before the full story",
     4: "The private issue wants daylight",
@@ -500,8 +505,8 @@ def _central_storyline(
     pair = frozenset({primary_house, secondary_house})
     if pair == frozenset({5, 9}):
         return (
-            f"Something exciting expands your world, but {month} tests "
-            "whether it earns a place in your life."
+            f"Something exciting expands your world. {month} tests whether "
+            "it earns a place in your life."
         )
     return (
         f"{month} brings a person, choice or opportunity closer, then asks "
@@ -516,28 +521,21 @@ def _luna_voice(
 ) -> tuple[str, ...]:
     month = str(result.get("label", "This month")).split()[0]
     scenarios = _scenario_examples(primary_house, secondary_house)
-    first_examples = ", ".join(scenarios[:3])
-    second_examples = ", ".join(scenarios[3:])
 
     if frozenset({primary_house, secondary_house}) == frozenset({5, 9}):
         return (
-            f"{month} brings a bigger world closer. A relationship, flirtation, "
-            "trip, course, creative project or visible opportunity could make "
-            "you feel more desired, noticed and alive.",
-            "Enjoy the attention—but notice who follows through, what the "
-            "opportunity asks of you and whether it fits the life you actually "
-            "want. You are not waiting to be selected. You are deciding what "
-            "deserves access.",
+            f"{month} widens your world through romance, travel, creativity or "
+            "a visible opportunity. Enjoy the attention. Then check who follows "
+            "through, what it costs and whether it fits the life you want. "
+            "Flirting can start the story; effort decides whether it continues.",
         )
 
+    examples = ", ".join(scenarios[:3])
     return (
-        f"{month} may bring {first_examples}. Any of these can make you feel "
-        "more visible, wanted or certain that change is beginning.",
-        f"Luna's question is what happens next. Watch the evidence around "
-        f"{second_examples}: effort, clarity and practical follow-through decide "
-        "what earns more of your time.",
+        f"{month} may bring {examples}. Notice the attention, then judge the "
+        "follow-through. Choose the person, plan or opportunity that supports "
+        "the life you want rather than the one that simply creates noise.",
     )
-
 
 def _romance_copy(
     primary_house: int,
@@ -550,25 +548,21 @@ def _romance_copy(
 
     if houses & ROMANCE_HOUSES:
         active = (
-            "If romance or flirting is active, interest may become more visible. "
-            "Enjoy the chemistry, but let consistency, intention and effort show "
-            "whether the connection deserves more access to your life."
+            "If romance or flirting is active, enjoy the chemistry. Then watch "
+            "for clear intention, consistent effort and a believable next step."
         )
     else:
         active = (
-            "If someone is showing interest, the real question is not whether "
-            "you can attract attention. It is whether their behaviour matches "
-            "the future and standards you are choosing."
+            "If someone shows interest, judge the behaviour—not the attention. "
+            "Choose what matches your standards and future."
         )
 
     quiet = (
-        "If romance is quiet, the same validation can arrive through "
-        f"{validation_area}: being invited, trusted, praised, chosen for an "
-        "opportunity or recognised for what you bring. Let the attention remind "
-        "you of your range without allowing it to make the decision for you."
+        "If romance is quiet, validation may arrive through creative work, "
+        "friendship, travel or visible recognition. Let it confirm your range, "
+        "not make the decision for you."
     )
     return active, quiet
-
 
 def _chapter_title(events: list[dict], primary_house: int, segment: str) -> str:
     titles = " ".join(str(item.get("title", "")) for item in events)
@@ -618,18 +612,21 @@ def _build_chapter(
 
     if segment == "early":
         paragraphs = (
-            f"The month opens through {_natural_house(main_house)}. A person, message or invitation may make you feel noticed, but you decide what deserves access to your time.",
-            f"{strongest_story} Treat the first opening as information. Interest may begin the story; effort decides whether you continue it.",
+            "A message, introduction or invitation may make you feel noticed. "
+            "Let effort decide what earns more of your time.",
+            f"{strongest_story} Treat the opening as information, not a promise.",
         )
     elif segment == "middle":
         paragraphs = (
-            f"The middle of the month carries the strongest concentration. {strongest_story} Attention, chemistry or possibility may increase, but so should your standards.",
-            f"The test is whether progress in {_natural_house(main_house)} supports {_natural_house(second_house)}. Choose the person or opportunity that matches your energy with practical follow-through.",
+            "Attention, chemistry or possibility may increase. Raise your "
+            "standards with it.",
+            f"{strongest_story} Choose the option that follows through.",
         )
     else:
         paragraphs = (
-            f"Late in the month, {first_story[0].lower() + first_story[1:]} The fantasy meets the calendar, the cost and the amount of effort each person is willing to make.",
-            f"The closing question is how to reconcile {_natural_house(main_house)} with {_natural_house(second_house)}. You keep what strengthens your life; the rest does not earn another month.",
+            "The fantasy meets the calendar, the cost and the follow-through. "
+            "Keep what fits your life.",
+            f"{first_story} Let consequences finish the evaluation.",
         )
 
     return MonthlyChapter(
@@ -711,16 +708,11 @@ def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple
     ]
     evidence = _select_chapter_evidence(relevant, maximum=3)
     evidence_text = "; ".join(evidence) if evidence else "the month's relationship-sensitive transitions"
-    active, quiet = _romance_copy(primary_house, secondary_house)
     return (
-        active,
-        quiet,
-        f"The relationship evidence concentrates around {evidence_text}. "
-        "Attention gets your notice. Effort earns your interest. Consistency "
-        "earns a place in your life.",
-        "Best relationship move: observe what the person does after the exciting "
-        "moment. You are not waiting to be selected; you are deciding whether "
-        "their behaviour deserves your time.",
+        "A spark can open the door. Clear intention, consistent effort and a "
+        "believable next step decide whether it stays open.",
+        f"The relationship evidence concentrates around {evidence_text}.",
+        "Shift from applicant to gatekeeper. Judge the behaviour after the exciting moment.",
     )
 
 def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
@@ -732,11 +724,11 @@ def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple
     evidence = _select_chapter_evidence(career_events, maximum=3)
     evidence_text = "; ".join(evidence) if evidence else "the month's work-sensitive transitions"
     return (
-        f"Work gains momentum when {HOUSE_PROSE[primary_house]} produces something visible, teachable or repeatable. The secondary pressure from {HOUSE_PROSE[secondary_house]} means expansion must be matched by facts, capacity and a clear owner.",
-        f"Important work evidence includes {evidence_text}. Use the later part of the month to finish one result that can be seen and evaluated rather than trying to look busy in several directions.",
-        "Best work move: define the deliverable, the deadline and who is responsible before enthusiasm creates additional work.",
+        "A creative or professional idea can become visible. Define the result, "
+        "deadline and owner before expanding it.",
+        f"Important work evidence includes {evidence_text}.",
+        "Finish one result before opening three more directions.",
     )
-
 
 def _money_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
     money_events = [
@@ -747,11 +739,11 @@ def _money_story(result: dict, primary_house: int, secondary_house: int) -> tupl
     evidence = _select_chapter_evidence(money_events, maximum=3)
     evidence_text = "; ".join(evidence) if evidence else "the month's money-sensitive transitions"
     return (
-        f"Money needs to be separated into what is earned, what is received, what is owed and what is merely expected. The interaction between {HOUSE_PROSE[primary_house]} and {HOUSE_PROSE[secondary_house]} can make an exciting opportunity look more secure than it is.",
-        f"Important financial evidence includes {evidence_text}. Shared costs, tax, debt, pricing or obligations should be written down before a commitment is enlarged.",
-        "Best money move: make every cost and responsibility visible, then decide from available cash and proven demand rather than hope.",
+        "An exciting offer can hide costs. Write down the price, ownership and "
+        "obligations before committing.",
+        f"Important financial evidence includes {evidence_text}.",
+        "Decide from available cash and proven demand—not hope.",
     )
-
 
 def _headline(focus: str, primary_house: int, secondary_house: int) -> tuple[str, str]:
     if focus == "Love and relationships":
@@ -937,13 +929,8 @@ def build_monthly_narrative(
     luna_says = _luna_voice(result, primary_house, secondary_house)
     scenario_examples = _scenario_examples(primary_house, secondary_house)
     romance_active, romance_quiet = _romance_copy(primary_house, secondary_house)
-    agency_rule = (
-        "You are not waiting to be selected. You are deciding what deserves access."
-    )
-    validation_rule = (
-        "Attention gets your notice. Effort earns your interest. "
-        "Consistency earns a place in your life."
-    )
+    agency_rule = GATEKEEPER_LINE
+    validation_rule = VALIDATION_LINE
     love_hook, work_hook, money_hook = _life_area_hooks(primary_house, secondary_house)
     convergences = _convergences(result)
     first_convergence = convergences[0] if convergences else None
@@ -1029,12 +1016,12 @@ def build_monthly_narrative(
         work_story=_work_story(result, primary_house, secondary_house),
         money_story=_money_story(result, primary_house, secondary_house),
         do_line=(
-            "Follow the person or opportunity that shows real effort."
+            "Follow effort."
             if frozenset({primary_house, secondary_house}) == frozenset({5, 9})
             else HOUSE_DO[primary_house]
         ),
         dont_line=(
-            "Confuse being noticed with being valued."
+            "Mistake attention for value."
             if frozenset({primary_house, secondary_house}) == frozenset({5, 9})
             else HOUSE_DONT[secondary_house]
         ),
@@ -1044,9 +1031,9 @@ def build_monthly_narrative(
         hidden_opportunity=f"Use the strongest opening in {first_window} to make one relationship, creative or strategic possibility more concrete.",
         watch_out=f"Do not let excitement around {HOUSE_PROSE[secondary_house]} outrun facts, cost, timing or operational capacity.",
         action_plan=(
-            HOUSE_ACTION[primary_house],
-            HOUSE_ACTION[secondary_house],
-            "Review the result after the second turning point and keep only what can be sustained.",
+            "State the interest or idea. Let the response provide evidence.",
+            "Expand one proven option.",
+            "Keep only what survives the reality check.",
         ),
         key_dates=_key_dates(result),
         snapshot_rows=snapshot_rows,

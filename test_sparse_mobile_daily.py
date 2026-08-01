@@ -10,10 +10,10 @@ def main() -> None:
 
     # Sparse default view.
     assert 'class="daily-primary"' in daily
-    assert "Your day at a glance" in daily
+    assert "LUNA_SAYS_LABEL" in daily
     assert 'class="do-dont-strip"' in daily
-    assert ">Do<" in daily
-    assert ">Don't<" in daily
+    assert "DO_LABEL" in daily
+    assert "DONT_LABEL" in daily
     assert "Today's convergence" in daily
     assert 'class="daily-hook-headline"' in daily
     assert "narrative.hook_headline" in daily
@@ -22,7 +22,7 @@ def main() -> None:
     assert "visible_story = tuple(narrative.today_story[:2])" in daily
 
     # All prior work remains available.
-    assert 'st.expander("Why today feels different")' in daily
+    assert "st.expander(WHY_LUNA_LABEL)" in daily
     assert "Why this matters today" in daily
     assert "Weather / today" in daily
     assert "Climate / longer current" in daily
@@ -30,7 +30,7 @@ def main() -> None:
     assert "Solar position" in daily
     assert "Sky Snapshot" in daily
     assert 'st.expander("Questions to consider")' in daily
-    assert 'st.expander("Detailed astrological evidence")' in daily
+    assert "st.expander(TECHNICAL_LABEL)" in daily
     assert "The 12-house reference matrix" in daily
     assert "Explainable Astrology" in daily
 

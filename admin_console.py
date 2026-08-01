@@ -19,6 +19,10 @@ from monthly_experience_v1 import (
     build_monthly_experience_html,
     render_monthly_experience,
 )
+from yearly_experience_v1 import (
+    build_yearly_experience_html,
+    render_yearly_experience,
+)
 from synthesis import daily_report, period_report
 from ephemeris_upload import inspect_ephemeris_pdf, profile_to_dict, source_note
 from ollama_client import list_models, server_status, enhance, DEFAULT_URL
@@ -311,6 +315,62 @@ if result:
                     f"Manual delivery target: {delivery_email}. Use the browser's "
                     "Print / Save as PDF command, inspect the saved file, then attach it."
                 )
+        elif result.get("period") == "yearly":
+            yearly_html = build_yearly_experience_html(
+                result,
+                show_print=True,
+                order_reference=order_reference,
+            )
+            standalone_yearly = (
+                "<!doctype html><html><head><meta charset='utf-8'>"
+                "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                "<title>Luna Convergence Year-Ahead Report</title></head><body>"
+                + yearly_html
+                + "</body></html>"
+            )
+
+            st.caption(
+                "Customer year-ahead webpage — the language, hierarchy and "
+                "print controls match the daily and monthly experiences."
+            )
+            render_yearly_experience(
+                result,
+                show_print=True,
+                order_reference=order_reference,
+            )
+            st.download_button(
+                "Download customer webpage",
+                data=standalone_yearly,
+                file_name=(
+                    f"luna_{result['sign'].lower()}_"
+                    f"{result.get('label', 'year_ahead').lower().replace(' ', '_')}.html"
+                ),
+                mime="text/html",
+                use_container_width=True,
+            )
+
+            with st.expander(
+                "Internal backup and calculation output",
+                expanded=False,
+            ):
+                st.markdown(result["markdown"])
+                try:
+                    legacy_pdf = build_report_pdf(
+                        result,
+                        main_focus=main_focus,
+                        personal_question=cleaned_question,
+                        order_reference=order_reference,
+                    )
+                except Exception as exc:
+                    st.warning(f"Legacy backup PDF was unavailable: {exc}")
+                    legacy_pdf = None
+                if legacy_pdf:
+                    st.download_button(
+                        "Download legacy backup PDF",
+                        data=legacy_pdf,
+                        file_name=report_filename(result),
+                        mime="application/pdf",
+                    )
         else:
             st.markdown(result["markdown"])
             st.download_button(
