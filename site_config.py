@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
+BUILD_LABEL = "Unified Voice + Editorial Preview v2.1"
+EDITOR_PREVIEW_ENABLED = True  # Set False before the paid public launch.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
     "Daily, monthly and yearly astrology explained through planetary transitions, "

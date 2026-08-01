@@ -26,6 +26,7 @@ from yearly_experience_v1 import (
 from synthesis import daily_report, period_report
 from ephemeris_upload import inspect_ephemeris_pdf, profile_to_dict, source_note
 from ollama_client import list_models, server_status, enhance, DEFAULT_URL
+from site_config import BUILD_LABEL, EDITOR_PREVIEW_ENABLED
 
 
 st.set_page_config(
@@ -37,6 +38,10 @@ st.set_page_config(
 st.title("Hybrid Swiss Ephemeris Horoscope Engine")
 st.caption(
     "Deterministic planetary calculations + convergence analysis + optional Ollama prose synthesis"
+)
+st.info(
+    f"Build: {BUILD_LABEL} • "
+    + ("Editorial preview enabled" if EDITOR_PREVIEW_ENABLED else "Paid mode")
 )
 
 if "forecast_year" not in st.session_state:

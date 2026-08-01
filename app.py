@@ -27,6 +27,7 @@ from daily_narrative_v3 import (
 )
 from monthly_narrative_v1 import build_monthly_narrative
 from monthly_experience_v1 import render_monthly_experience
+from yearly_experience_v1 import render_yearly_experience
 from solar_cycle import (
     city_input_help,
     daily_solar_convergence,
@@ -49,6 +50,8 @@ from order_capture import (
 )
 from site_config import (
     BRAND_NAME,
+    BUILD_LABEL,
+    EDITOR_PREVIEW_ENABLED,
     TAGLINE,
     SUBTITLE,
     MONTHLY_PRICE,
@@ -1062,6 +1065,8 @@ def top_navigation(current_path: str) -> None:
         ("solar-year", "Solar year"),
         ("how-it-works", "How it works"),
     ]
+    if EDITOR_PREVIEW_ENABLED:
+        items.insert(3, ("editorial-preview", "Editorial preview"))
 
     desktop_links: list[str] = []
     mobile_links: list[str] = []
@@ -1999,6 +2004,166 @@ def daily_page() -> None:
                 prefill_city=location.name,
             )
 
+
+def editorial_preview_page() -> None:
+    if not EDITOR_PREVIEW_ENABLED:
+        st.error("Editorial preview is disabled.")
+        return
+
+    set_page_metadata(
+        "Editorial Preview | Luna Convergence",
+        "Generate and print complete Luna monthly and year-ahead reports without checkout while the product is being edited.",
+        "/editorial-preview",
+    )
+
+    st.markdown(
+        '<div class="eyebrow">Temporary editorial workspace</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("# Preview before payment")
+    st.warning(
+        f"{BUILD_LABEL} is running with Stripe bypassed. "
+        "Set EDITOR_PREVIEW_ENABLED to False before the paid public launch."
+    )
+    st.markdown(
+        "Generate the complete customer webpage, open the evidence only when "
+        "needed, and use **Print or save report** inside the reading."
+    )
+
+    previous_type = st.session_state.get("editor-preview-report-type", "Monthly")
+    report_type = st.radio(
+        "Report type",
+        ["Monthly", "Year ahead"],
+        horizontal=True,
+        key="editor-preview-report-type",
+    )
+
+    with st.form("editorial-preview-form", clear_on_submit=False):
+        first_row = st.columns(3, gap="medium")
+        with first_row[0]:
+            sign = st.selectbox(
+                "Star sign",
+                SIGNS,
+                index=SIGNS.index(DEFAULT_SIGN),
+                key="editor-preview-sign",
+            )
+        with first_row[1]:
+            forecast_year = st.number_input(
+                "Year",
+                min_value=1950,
+                max_value=2100,
+                value=2026 if report_type == "Monthly" else 2027,
+                step=1,
+                key=f"editor-preview-year-{report_type}",
+            )
+        with first_row[2]:
+            selected_month = st.selectbox(
+                "Month",
+                list(range(1, 13)),
+                index=7,
+                format_func=lambda value: month_name[value],
+                disabled=report_type != "Monthly",
+                key="editor-preview-month",
+            )
+
+        second_row = st.columns(2, gap="medium")
+        with second_row[0]:
+            timezone_name = st.selectbox(
+                "Timezone",
+                TIMEZONES,
+                index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                key="editor-preview-timezone",
+            )
+        with second_row[1]:
+            nearest_city = st.text_input(
+                "Nearest city",
+                value=representative_city_name(timezone_name),
+                help=city_input_help(timezone_name),
+                key="editor-preview-city",
+            )
+
+        focus_choices = (
+            MONTHLY_FOCUS_CHOICES
+            if report_type == "Monthly"
+            else YEARLY_FOCUS_CHOICES
+        )
+        main_focus = st.selectbox(
+            "Main focus",
+            focus_choices,
+            key=f"editor-preview-focus-{report_type}",
+        )
+
+        submitted = st.form_submit_button(
+            "Generate customer preview",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if submitted:
+        year = int(forecast_year)
+        if report_type == "Monthly":
+            start = date(year, selected_month, 1)
+            if selected_month == 12:
+                end = date(year, 12, 31)
+            else:
+                end = date(year, selected_month + 1, 1) - timedelta(days=1)
+            result = period_report(
+                sign,
+                start,
+                end,
+                timezone_name,
+                f"{month_name[selected_month]} {year}",
+                transition_count=9,
+                nearest_city=nearest_city,
+                main_focus=main_focus,
+            )
+        else:
+            result = period_report(
+                sign,
+                date(year, 1, 1),
+                date(year, 12, 31),
+                timezone_name,
+                str(year),
+                transition_count=9,
+                nearest_city=nearest_city,
+                main_focus=main_focus,
+            )
+
+        st.session_state["editorial-preview-result"] = result
+        st.session_state["editorial-preview-focus"] = main_focus
+        st.session_state["editorial-preview-city"] = nearest_city
+        st.rerun()
+
+    result = st.session_state.get("editorial-preview-result")
+    if not result:
+        return
+
+    st.caption(
+        f"Build: {BUILD_LABEL} • Checkout bypassed • "
+        f"{result.get('sign')} / {result.get('label')}"
+    )
+
+    if result.get("period") == "monthly":
+        narrative = build_monthly_narrative(
+            result,
+            main_focus=st.session_state.get(
+                "editorial-preview-focus",
+                "General overview",
+            ),
+        )
+        render_monthly_experience(
+            narrative,
+            result,
+            show_print=True,
+            preview=False,
+        )
+    elif result.get("period") == "yearly":
+        render_yearly_experience(
+            result,
+            show_print=True,
+        )
+
+
 def reports_page() -> None:
     set_page_metadata(
         "Monthly and Year-Ahead Astrology Reports | Luna Convergence",
@@ -2011,6 +2176,16 @@ def reports_page() -> None:
         "Choose your star sign and report period before entering Stripe. "
         "Reports are generated with the calculation engine and checked before manual delivery."
     )
+    if EDITOR_PREVIEW_ENABLED:
+        st.warning(
+            f"Editorial preview is enabled for {BUILD_LABEL}. "
+            "Stripe is bypassed while Luna is being edited."
+        )
+        st.page_link(
+            EDITORIAL_PREVIEW_REF,
+            label="Open the full printable editorial preview",
+            use_container_width=True,
+        )
     report_cta(context="reports")
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
@@ -2402,12 +2577,24 @@ def monthly_sign_page(sign: str) -> None:
     path = f"/august-2026-{sign_slug(sign)}"
     set_page_metadata(title, description, path)
 
-    render_monthly_experience(
-        narrative,
-        data,
-        show_print=False,
-        preview=True,
-    )
+    if EDITOR_PREVIEW_ENABLED:
+        st.warning(
+            f"Editorial preview mode — {BUILD_LABEL}. "
+            "The full report and browser print controls are visible without Stripe."
+        )
+        render_monthly_experience(
+            narrative,
+            data,
+            show_print=True,
+            preview=False,
+        )
+    else:
+        render_monthly_experience(
+            narrative,
+            data,
+            show_print=False,
+            preview=True,
+        )
 
     st.markdown("## Read another August 2026 sign")
     links = [
@@ -2419,17 +2606,22 @@ def monthly_sign_page(sign: str) -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("## Get the complete personalised month")
-    st.markdown(
-        "The paid report adds the three-act timeline, love/work/money guidance, "
-        "your selected focus, Solar Convergence, key dates and full evidence "
-        "dropdowns while keeping the main page sparse."
-    )
-    report_cta(
-        context=f"august-2026-{sign_slug(sign)}",
-        prefill_sign=sign,
-        prefill_month=f"{SEO_MONTH_NAME} {SEO_YEAR}",
-    )
+    if not EDITOR_PREVIEW_ENABLED:
+        st.markdown("## Get the complete personalised month")
+        st.markdown(
+            "The paid report adds the three-act timeline, love/work/money guidance, "
+            "your selected focus, Solar Convergence, key dates and full evidence "
+            "dropdowns while keeping the main page sparse."
+        )
+        report_cta(
+            context=f"august-2026-{sign_slug(sign)}",
+            prefill_sign=sign,
+            prefill_month=f"{SEO_MONTH_NAME} {SEO_YEAR}",
+        )
+    else:
+        st.caption(
+            "Checkout is temporarily hidden on this page while editorial preview mode is active."
+        )
 
 
 def make_monthly_page(sign: str):
@@ -2589,6 +2781,7 @@ def footer() -> None:
 <div class="small-note">
 <strong>{escape(BRAND_NAME)}</strong> — tropical geocentric astrology using whole-sign houses.
 Astrology is a symbolic interpretive framework and is not a substitute for professional advice.
+{"<br><strong>Preview build:</strong> " + escape(BUILD_LABEL) if EDITOR_PREVIEW_ENABLED else ""}
 <br><a href="/privacy">Privacy and analytics</a> ·
 <a href="/solar-year">The Solar Year</a> ·
 <a href="/august-2026-horoscopes">August 2026 horoscopes</a>
@@ -2614,6 +2807,12 @@ MONTHLY_INDEX_REF = st.Page(
     monthly_index_page,
     title="August 2026 Horoscopes",
     url_path="august-2026-horoscopes",
+)
+EDITORIAL_PREVIEW_REF = st.Page(
+    editorial_preview_page,
+    title="Editorial Preview",
+    url_path="editorial-preview",
+    visibility="hidden",
 )
 REPORTS_PAGE_REF = st.Page(
     reports_page,
@@ -2661,6 +2860,7 @@ ALL_PAGES = [
     HOME_PAGE_REF,
     DAILY_PAGE_REF,
     MONTHLY_INDEX_REF,
+    EDITORIAL_PREVIEW_REF,
     REPORTS_PAGE_REF,
     HOUSES_PAGE_REF,
     SAMPLE_PAGE_REF,

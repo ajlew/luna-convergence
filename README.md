@@ -329,3 +329,11 @@ The visible monthly page no longer contains scenario chips, the phrase
 "You remain the main character", repeated chapter-level Your Move blocks
 or an explanatory disclaimer near the opening. Examples are integrated
 into the story and the disclaimer appears in the footer.
+
+
+## Editorial preview bypass v2.1
+
+While the product is being edited, `/editorial-preview` generates complete
+monthly and year-ahead webpages without Stripe and includes native browser
+print controls. Windows launchers now use separate ports and identify the
+running build and folder. Set `EDITOR_PREVIEW_ENABLED = False` before launch.

@@ -24,7 +24,13 @@ if errorlevel 1 goto :error
 pip install -r requirements.txt
 if errorlevel 1 goto :error
 
-streamlit run app.py
+echo.
+echo Starting Luna Customer Website
+echo Build: Unified Voice + Editorial Preview v2.1
+echo Folder: %CD%
+echo URL: http://localhost:8512
+echo.
+streamlit run app.py --server.port 8512
 goto :end
 
 :error

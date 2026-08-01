@@ -25,12 +25,13 @@ pip install -r requirements.txt
 if errorlevel 1 goto :error
 
 echo.
-echo Starting Luna Customer Website
+echo Starting Luna Editorial Preview
 echo Build: Unified Voice + Editorial Preview v2.1
 echo Folder: %CD%
-echo URL: http://localhost:8512
+echo Open: http://localhost:8513/editorial-preview
 echo.
-streamlit run app.py --server.port 8512
+
+streamlit run app.py --server.port 8513
 goto :end
 
 :error

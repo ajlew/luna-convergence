@@ -24,7 +24,13 @@ if errorlevel 1 goto :error
 pip install -r requirements.txt
 if errorlevel 1 goto :error
 
-streamlit run admin_console.py
+echo.
+echo Starting Luna Admin
+echo Build: Unified Voice + Editorial Preview v2.1
+echo Folder: %CD%
+echo URL: http://localhost:8511
+echo.
+streamlit run admin_console.py --server.port 8511
 goto :end
 
 :error
