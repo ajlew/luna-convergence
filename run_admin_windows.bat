@@ -25,12 +25,14 @@ pip install -r requirements.txt
 if errorlevel 1 goto :error
 
 echo.
-echo Starting Luna Admin
-echo Build: Unified Voice + Editorial Preview v2.1
+echo Starting Luna Reports
+echo Build: Unified Luna Reports v2.2
 echo Folder: %CD%
-echo URL: http://localhost:8511
+echo Open: http://localhost:8511/reports
 echo.
-streamlit run admin_console.py --server.port 8511
+
+start "" /B cmd /c "timeout /t 3 /nobreak >nul & start \"\" http://localhost:8511/reports"
+streamlit run app.py --server.port 8511
 goto :end
 
 :error

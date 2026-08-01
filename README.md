@@ -337,3 +337,12 @@ While the product is being edited, `/editorial-preview` generates complete
 monthly and year-ahead webpages without Stripe and includes native browser
 print controls. Windows launchers now use separate ports and identify the
 running build and folder. Set `EDITOR_PREVIEW_ENABLED = False` before launch.
+
+
+## Unified Luna Reports v2.2
+
+The normal Windows admin launcher now opens the same Luna `/reports`
+interface used by the website. The old engineering dashboard is available
+separately through `run_engine_windows.bat`. While editorial preview mode
+is enabled, `/reports` generates complete monthly and year-ahead reports
+without Stripe.

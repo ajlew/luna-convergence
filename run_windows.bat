@@ -26,10 +26,12 @@ if errorlevel 1 goto :error
 
 echo.
 echo Starting Luna Customer Website
-echo Build: Unified Voice + Editorial Preview v2.1
+echo Build: Unified Luna Reports v2.2
 echo Folder: %CD%
-echo URL: http://localhost:8512
+echo Open: http://localhost:8512/
 echo.
+
+start "" /B cmd /c "timeout /t 3 /nobreak >nul & start \"\" http://localhost:8512/"
 streamlit run app.py --server.port 8512
 goto :end
 

@@ -8,7 +8,7 @@ def main() -> None:
     admin = (root / "admin_console.py").read_text(encoding="utf-8")
 
     assert 'EDITOR_PREVIEW_ENABLED = True' in config
-    assert 'BUILD_LABEL = "Unified Voice + Editorial Preview v2.1"' in config
+    assert 'BUILD_LABEL = "Unified Luna Reports v2.2"' in config
 
     assert "def editorial_preview_page()" in app
     assert '"editorial-preview"' in app
@@ -23,7 +23,7 @@ def main() -> None:
     assert "Build: {BUILD_LABEL}" in admin
 
     bat_expectations = {
-        "run_admin_windows.bat": ("8511", "admin_console.py"),
+        "run_admin_windows.bat": ("8511", "app.py"),
         "run_customer_windows.bat": ("8512", "app.py"),
         "run_editor_preview_windows.bat": ("8513", "app.py"),
     }
@@ -31,7 +31,7 @@ def main() -> None:
         content = (root / filename).read_text(encoding="utf-8")
         assert f"--server.port {port}" in content
         assert script in content
-        assert "Unified Voice + Editorial Preview v2.1" in content
+        assert "Unified Luna Reports v2.2" in content
 
     print("Editorial preview bypass tests passed.")
 

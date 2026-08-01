@@ -2005,47 +2005,22 @@ def daily_page() -> None:
             )
 
 
-def editorial_preview_page() -> None:
-    if not EDITOR_PREVIEW_ENABLED:
-        st.error("Editorial preview is disabled.")
-        return
-
-    set_page_metadata(
-        "Editorial Preview | Luna Convergence",
-        "Generate and print complete Luna monthly and year-ahead reports without checkout while the product is being edited.",
-        "/editorial-preview",
-    )
-
-    st.markdown(
-        '<div class="eyebrow">Temporary editorial workspace</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("# Preview before payment")
-    st.warning(
-        f"{BUILD_LABEL} is running with Stripe bypassed. "
-        "Set EDITOR_PREVIEW_ENABLED to False before the paid public launch."
-    )
-    st.markdown(
-        "Generate the complete customer webpage, open the evidence only when "
-        "needed, and use **Print or save report** inside the reading."
-    )
-
-    previous_type = st.session_state.get("editor-preview-report-type", "Monthly")
+def render_report_generator_workspace() -> None:
     report_type = st.radio(
         "Report type",
         ["Monthly", "Year ahead"],
         horizontal=True,
-        key="editor-preview-report-type",
+        key="report-generator-type",
     )
 
-    with st.form("editorial-preview-form", clear_on_submit=False):
+    with st.form("report-generator-form", clear_on_submit=False):
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
                 "Star sign",
                 SIGNS,
                 index=SIGNS.index(DEFAULT_SIGN),
-                key="editor-preview-sign",
+                key="report-generator-sign",
             )
         with first_row[1]:
             forecast_year = st.number_input(
@@ -2054,7 +2029,7 @@ def editorial_preview_page() -> None:
                 max_value=2100,
                 value=2026 if report_type == "Monthly" else 2027,
                 step=1,
-                key=f"editor-preview-year-{report_type}",
+                key=f"report-generator-year-{report_type}",
             )
         with first_row[2]:
             selected_month = st.selectbox(
@@ -2063,7 +2038,7 @@ def editorial_preview_page() -> None:
                 index=7,
                 format_func=lambda value: month_name[value],
                 disabled=report_type != "Monthly",
-                key="editor-preview-month",
+                key="report-generator-month",
             )
 
         second_row = st.columns(2, gap="medium")
@@ -2072,14 +2047,14 @@ def editorial_preview_page() -> None:
                 "Timezone",
                 TIMEZONES,
                 index=TIMEZONES.index(DEFAULT_TIMEZONE),
-                key="editor-preview-timezone",
+                key="report-generator-timezone",
             )
         with second_row[1]:
             nearest_city = st.text_input(
                 "Nearest city",
                 value=representative_city_name(timezone_name),
                 help=city_input_help(timezone_name),
-                key="editor-preview-city",
+                key="report-generator-city",
             )
 
         focus_choices = (
@@ -2090,11 +2065,11 @@ def editorial_preview_page() -> None:
         main_focus = st.selectbox(
             "Main focus",
             focus_choices,
-            key=f"editor-preview-focus-{report_type}",
+            key=f"report-generator-focus-{report_type}",
         )
 
         submitted = st.form_submit_button(
-            "Generate customer preview",
+            "Generate customer report",
             type="primary",
             use_container_width=True,
         )
@@ -2102,15 +2077,18 @@ def editorial_preview_page() -> None:
     if submitted:
         year = int(forecast_year)
         if report_type == "Monthly":
-            start = date(year, selected_month, 1)
+            start_date = date(year, selected_month, 1)
             if selected_month == 12:
-                end = date(year, 12, 31)
+                end_date = date(year, 12, 31)
             else:
-                end = date(year, selected_month + 1, 1) - timedelta(days=1)
+                end_date = (
+                    date(year, selected_month + 1, 1)
+                    - timedelta(days=1)
+                )
             result = period_report(
                 sign,
-                start,
-                end,
+                start_date,
+                end_date,
                 timezone_name,
                 f"{month_name[selected_month]} {year}",
                 transition_count=9,
@@ -2129,25 +2107,24 @@ def editorial_preview_page() -> None:
                 main_focus=main_focus,
             )
 
-        st.session_state["editorial-preview-result"] = result
-        st.session_state["editorial-preview-focus"] = main_focus
-        st.session_state["editorial-preview-city"] = nearest_city
+        st.session_state["report-generator-result"] = result
+        st.session_state["report-generator-focus"] = main_focus
         st.rerun()
 
-    result = st.session_state.get("editorial-preview-result")
+    result = st.session_state.get("report-generator-result")
     if not result:
         return
 
     st.caption(
-        f"Build: {BUILD_LABEL} • Checkout bypassed • "
-        f"{result.get('sign')} / {result.get('label')}"
+        f"{result.get('sign')} / {result.get('label')} • "
+        f"{BUILD_LABEL} • Checkout bypassed"
     )
 
     if result.get("period") == "monthly":
         narrative = build_monthly_narrative(
             result,
             main_focus=st.session_state.get(
-                "editorial-preview-focus",
+                "report-generator-focus",
                 "General overview",
             ),
         )
@@ -2164,12 +2141,48 @@ def editorial_preview_page() -> None:
         )
 
 
+def editorial_preview_page() -> None:
+    if not EDITOR_PREVIEW_ENABLED:
+        st.error("Editorial preview is disabled.")
+        return
+
+    set_page_metadata(
+        "Editorial Preview | Luna Convergence",
+        "Generate and print complete Luna monthly and year-ahead reports without checkout while the product is being edited.",
+        "/editorial-preview",
+    )
+    st.markdown(
+        '<div class="eyebrow">Temporary editorial workspace</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("# Preview before payment")
+    st.warning(
+        f"{BUILD_LABEL} is running with Stripe bypassed. "
+        "Set EDITOR_PREVIEW_ENABLED to False before the paid public launch."
+    )
+    render_report_generator_workspace()
+
+
 def reports_page() -> None:
     set_page_metadata(
         "Monthly and Year-Ahead Astrology Reports | Luna Convergence",
         "Order a monthly strategic astrology report or a detailed year-ahead forecast delivered electronically.",
         "/reports",
     )
+    if EDITOR_PREVIEW_ENABLED:
+        st.markdown(
+            '<div class="eyebrow">Monthly and year-ahead reports</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("# Generate the complete report")
+        st.markdown(
+            "Use the same Luna customer interface locally or on the website. "
+            "Choose the period, generate the reading and print it directly from "
+            "the page. Stripe is temporarily bypassed while editing."
+        )
+        render_report_generator_workspace()
+        return
+
     st.markdown('<div class="eyebrow">Paid reports</div>', unsafe_allow_html=True)
     st.markdown("# Choose the depth you need")
     st.markdown(

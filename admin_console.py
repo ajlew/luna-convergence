@@ -30,18 +30,19 @@ from site_config import BUILD_LABEL, EDITOR_PREVIEW_ENABLED
 
 
 st.set_page_config(
-    page_title="Hybrid Horoscope Engine",
+    page_title="Luna Engine Diagnostics",
     page_icon="✦",
     layout="wide",
 )
 
-st.title("Hybrid Swiss Ephemeris Horoscope Engine")
+st.title("Luna Engine Diagnostics")
 st.caption(
-    "Deterministic planetary calculations + convergence analysis + optional Ollama prose synthesis"
+    "Developer-only calculation, ephemeris and fulfilment diagnostics. "
+    "Use run_admin_windows.bat or /reports for normal report generation."
 )
 st.info(
     f"Build: {BUILD_LABEL} • "
-    + ("Editorial preview enabled" if EDITOR_PREVIEW_ENABLED else "Paid mode")
+    + ("Developer diagnostics" if EDITOR_PREVIEW_ENABLED else "Developer diagnostics")
 )
 
 if "forecast_year" not in st.session_state:
