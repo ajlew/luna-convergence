@@ -14,6 +14,7 @@ from luna_editorial_system import (
     VALIDATION_LINE,
     WHY_LUNA_LABEL,
     YOUR_MOVE_LABEL,
+    luna_do_dont,
 )
 from monthly_experience_v1 import PRINT_ORIENTATIONS, PRINT_PAPERS
 from monthly_narrative_v1 import HOUSE_DISPLAY, HOUSE_NATURAL
@@ -161,7 +162,6 @@ def _print_controls(default_paper: str, default_orientation: str) -> str:
 <div class="luna-print-controls">
   <div><label>Paper</label><select id="luna-print-paper">{paper_options}</select></div>
   <div><label>Orientation</label><select id="luna-print-orientation">{orientation_options}</select></div>
-  <label class="luna-print-check"><input id="luna-include-evidence" type="checkbox"> Include evidence</label>
   <button id="luna-print-report" type="button">Print or save report</button>
 </div>
     """
@@ -187,6 +187,7 @@ def build_yearly_experience_html(
     first, second = _top_houses(result)
     active, quiet = _romance(result)
     moves = _moves(result)
+    do_line, dont_line = luna_do_dont(first, second)
 
     controls = _print_controls(default_paper, default_orientation) if show_print else ""
 
@@ -277,7 +278,10 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   .luna-yearly-report[data-print-orientation="portrait"] .luna-romance-grid,
   .luna-yearly-report[data-print-orientation="portrait"] .luna-date-grid,
   .luna-yearly-report[data-print-orientation="portrait"] .luna-next-move {{ grid-template-columns:1fr; }}
-  details:not([open])>*:not(summary) {{ display:none!important; }}
+  .luna-evidence {{ break-before:page; page-break-before:always; }}
+  .luna-evidence details>*:not(summary) {{ display:block!important; }}
+  .luna-evidence details summary span {{ display:none!important; }}
+  .luna-evidence details summary {{ break-after:avoid; page-break-after:avoid; }}
 }}
 </style>
 
@@ -287,8 +291,8 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
     <h1>{_safe(_hook(result))}</h1>
     <div class="luna-says"><span>{_safe(LUNA_SAYS_LABEL)}</span><p>{_luna_says(result)}</p></div>
     <div class="luna-do-dont">
-      <div><span>{_safe(DO_LABEL)}</span><strong>Back what proves itself.</strong></div>
-      <div><span>{_safe(DONT_LABEL)}</span><strong>Chase attention without follow-through.</strong></div>
+      <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(do_line)}</strong></div>
+      <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(dont_line)}</strong></div>
     </div>
   </section>
 
@@ -326,7 +330,6 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   const report=document.getElementById("luna-yearly-report");
   const paper=document.getElementById("luna-print-paper");
   const orientation=document.getElementById("luna-print-orientation");
-  const includeEvidence=document.getElementById("luna-include-evidence");
   const printButton=document.getElementById("luna-print-report");
   const pageStyle=document.getElementById("luna-print-page-size");
   let states=[];
@@ -341,14 +344,14 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
     if(printPrepared)return;
     printPrepared=true;
     settings(); states=[];
-    report.querySelectorAll("details").forEach(d=>{{states.push(d.open); if(includeEvidence&&includeEvidence.checked)d.open=true;}});
+    report.querySelectorAll("details").forEach(d=>{{states.push(d.open);d.open=true;}});
   }}
   function restore() {{report.querySelectorAll("details").forEach((d,i)=>d.open=states[i]||false);printPrepared=false;}}
   if(paper)paper.addEventListener("change",settings);
   if(orientation)orientation.addEventListener("change",settings);
   window.addEventListener("beforeprint",prepare);
   window.addEventListener("afterprint",restore);
-  if(printButton)printButton.addEventListener("click",()=>{{prepare();window.print();}});
+  if(printButton)printButton.addEventListener("click",async()=>{{prepare();if(document.fonts&&document.fonts.ready){{await document.fonts.ready;}}window.setTimeout(()=>window.print(),120);}});
   settings();
 }})();
 </script>

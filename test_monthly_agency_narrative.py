@@ -36,8 +36,12 @@ def main() -> None:
     assert len(narrative.luna_says) == 1
     assert "romance" in narrative.luna_says[0].lower()
     assert "follow" in narrative.luna_says[0].lower()
-    assert narrative.do_line == "Follow effort."
-    assert narrative.dont_line == "Mistake attention for value."
+    assert narrative.do_line == (
+        "Follow the effort. Chemistry can book its own flight."
+    )
+    assert narrative.dont_line == (
+        "Mistake attention for value. A boarding pass is not commitment."
+    )
     assert "not waiting to be selected" not in (
         " ".join(narrative.luna_says)
         + narrative.agency_rule

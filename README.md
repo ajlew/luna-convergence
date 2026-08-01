@@ -346,3 +346,8 @@ interface used by the website. The old engineering dashboard is available
 separately through `run_engine_windows.bat`. While editorial preview mode
 is enabled, `/reports` generates complete monthly and year-ahead reports
 without Stripe.
+
+
+## Automatic References and Luna Wit v2.3
+
+All reference disclosures now open automatically for browser printing. Daily, monthly and yearly readings share one concise house-pair Do/Don't engine with dry Luna humour.

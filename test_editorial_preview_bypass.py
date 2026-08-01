@@ -8,7 +8,7 @@ def main() -> None:
     admin = (root / "admin_console.py").read_text(encoding="utf-8")
 
     assert 'EDITOR_PREVIEW_ENABLED = True' in config
-    assert 'BUILD_LABEL = "Unified Luna Reports v2.2"' in config
+    assert 'BUILD_LABEL = "Automatic References + Luna Wit v2.3"' in config
 
     assert "def editorial_preview_page()" in app
     assert '"editorial-preview"' in app
@@ -31,7 +31,7 @@ def main() -> None:
         content = (root / filename).read_text(encoding="utf-8")
         assert f"--server.port {port}" in content
         assert script in content
-        assert "Unified Luna Reports v2.2" in content
+        assert "Automatic References + Luna Wit v2.3" in content
 
     print("Editorial preview bypass tests passed.")
 

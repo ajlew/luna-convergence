@@ -35,13 +35,14 @@ def main() -> None:
         "Key dates and planetary timing",
         "Full technical evidence",
         "Print or save report",
-        "Include evidence",
         "A4",
         "A3",
         "Portrait",
         "Landscape",
         "window.print()",
         "@media print",
+        "Chemistry can book its own flight",
+        "A boarding pass is not commitment",
     ):
         assert required in html, required
 
@@ -55,6 +56,10 @@ def main() -> None:
         assert removed not in html, removed
 
     assert html.count("Your move") == 1
+    assert "Include evidence" not in html
+    assert "detail.open = true" in html
+    assert ".luna-evidence-stack details > *:not(summary)" in html
+    assert "display:block !important" in html
     assert 'data-print-orientation="portrait"' in html
     assert "FOOTER" not in html
 

@@ -22,6 +22,7 @@ from luna_editorial_system import (
     LUNA_SAYS_LABEL,
     TECHNICAL_LABEL,
     WHY_LUNA_LABEL,
+    luna_do_dont,
 )
 
 
@@ -1567,6 +1568,9 @@ def build_daily_narrative(
         reading_date,
     )
     story = _story_paragraphs(reading, evidence, previous)
+    trigger_house = _trigger_house(reading)
+    secondary_house = _other_house(reading, trigger_house)
+    do_line, dont_line = luna_do_dont(trigger_house, secondary_house)
     sky_rows = tuple(
         (
             planet,
@@ -1589,8 +1593,8 @@ def build_daily_narrative(
         long_term_current=_long_term_current(reading, sign, reading_date, timezone_name),
         emotional_weather=_emotional_weather(reading),
         hidden_opportunity=_sign_specific_opportunity(reading),
-        watch_out=_sign_specific_watch(reading),
-        action_today=_sign_specific_action(reading),
+        watch_out=dont_line,
+        action_today=do_line,
         reflection_questions=_sign_specific_questions(reading),
         work_note=clean_customer_text(reading.work_note),
         money_note=clean_customer_text(reading.money_note),

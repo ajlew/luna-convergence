@@ -8,6 +8,7 @@ from luna_editorial_system import (
     LUNA_SAYS_LABEL,
     TECHNICAL_LABEL,
     WHY_LUNA_LABEL,
+    luna_do_dont,
 )
 from monthly_experience_v1 import build_monthly_experience_html
 from monthly_narrative_v1 import build_monthly_narrative
@@ -63,6 +64,13 @@ def main() -> None:
         assert "luna-print-paper" in html
         assert "luna-print-orientation" in html
         assert "@page" in html
+        assert "Include evidence" not in html
+        assert "open=true" in html or "open = true" in html
+
+    assert luna_do_dont(5, 9) == (
+        "Follow the effort. Chemistry can book its own flight.",
+        "Mistake attention for value. A boarding pass is not commitment.",
+    )
 
     print("Unified Luna voice and print tests passed.")
 

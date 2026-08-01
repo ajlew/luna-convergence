@@ -148,10 +148,6 @@ def _print_controls(
     <label for="luna-print-orientation">Orientation</label>
     <select id="luna-print-orientation">{orientation_options}</select>
   </div>
-  <label class="luna-print-check">
-    <input id="luna-include-evidence" type="checkbox">
-    Include evidence
-  </label>
   <button id="luna-print-report" type="button">Print or save report</button>
 </div>
     """
@@ -709,8 +705,19 @@ def build_monthly_experience_html(
   .luna-monthly-report[data-print-orientation="landscape"] .luna-date-grid {{
     grid-template-columns:repeat(2,1fr);
   }}
-  details:not([open]) > *:not(summary) {{
+  .luna-evidence-stack {{
+    break-before:page;
+    page-break-before:always;
+  }}
+  .luna-evidence-stack details > *:not(summary) {{
+    display:block !important;
+  }}
+  .luna-evidence-stack details summary span {{
     display:none !important;
+  }}
+  .luna-evidence-stack details summary {{
+    break-after:avoid;
+    page-break-after:avoid;
   }}
 }}
 </style>
@@ -752,7 +759,6 @@ def build_monthly_experience_html(
   const report = document.getElementById("luna-monthly-report");
   const paper = document.getElementById("luna-print-paper");
   const orientation = document.getElementById("luna-print-orientation");
-  const includeEvidence = document.getElementById("luna-include-evidence");
   const printButton = document.getElementById("luna-print-report");
   const pageStyle = document.getElementById("luna-print-page-size");
   let previousStates = [];
@@ -774,7 +780,7 @@ def build_monthly_experience_html(
     previousStates = [];
     report.querySelectorAll("details").forEach((detail) => {{
       previousStates.push(detail.open);
-      if (includeEvidence && includeEvidence.checked) detail.open = true;
+      detail.open = true;
     }});
   }}
 
@@ -790,9 +796,12 @@ def build_monthly_experience_html(
   window.addEventListener("beforeprint", preparePrint);
   window.addEventListener("afterprint", restorePrint);
   if (printButton) {{
-    printButton.addEventListener("click", () => {{
+    printButton.addEventListener("click", async () => {{
       preparePrint();
-      window.print();
+      if (document.fonts && document.fonts.ready) {{
+        await document.fonts.ready;
+      }}
+      window.setTimeout(() => window.print(), 120);
     }});
   }}
   applyPrintSettings();

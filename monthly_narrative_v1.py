@@ -8,6 +8,7 @@ from typing import Iterable
 from luna_editorial_system import (
     GATEKEEPER_LINE,
     VALIDATION_LINE,
+    luna_do_dont,
 )
 
 
@@ -992,6 +993,8 @@ def build_monthly_narrative(
         ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {solar.get('next_gate_date', '')}"),
     )
 
+    do_line, dont_line = luna_do_dont(primary_house, secondary_house)
+
     return MonthlyNarrative(
         sign=str(result.get("sign", "")),
         label=str(result.get("label", "Monthly Report")),
@@ -1015,16 +1018,8 @@ def build_monthly_narrative(
         love_story=_love_story(result, primary_house, secondary_house),
         work_story=_work_story(result, primary_house, secondary_house),
         money_story=_money_story(result, primary_house, secondary_house),
-        do_line=(
-            "Follow effort."
-            if frozenset({primary_house, secondary_house}) == frozenset({5, 9})
-            else HOUSE_DO[primary_house]
-        ),
-        dont_line=(
-            "Mistake attention for value."
-            if frozenset({primary_house, secondary_house}) == frozenset({5, 9})
-            else HOUSE_DONT[secondary_house]
-        ),
+        do_line=do_line,
+        dont_line=dont_line,
         love_hook=love_hook,
         work_hook=work_hook,
         money_hook=money_hook,
