@@ -48,6 +48,30 @@ def _key_date_cards(narrative: MonthlyNarrative) -> str:
     )
 
 
+def _story_date_cards(narrative: MonthlyNarrative) -> str:
+    dates = list(narrative.key_dates)
+    if not dates:
+        return ""
+
+    indexes = (0, len(dates) // 2, max(len(dates) - 2, 0), len(dates) - 1)
+    selected = []
+    for index in indexes:
+        item = dates[index]
+        if item not in selected:
+            selected.append(item)
+
+    return "".join(
+        f"""
+<article class="luna-story-date-card">
+  <span>{_safe(item.date_label)}</span>
+  <strong>{_safe(item.consequence)}</strong>
+  <p>{_safe(item.response)}</p>
+</article>
+        """
+        for item in selected
+    )
+
+
 def _technical_rows(result: dict) -> str:
     rows = []
     for item in (result.get("dominant_houses") or [])[:6]:
@@ -89,19 +113,23 @@ def _retrograde_rows(result: dict) -> str:
 
 
 def _chapter_cards(narrative: MonthlyNarrative) -> str:
-    cards = []
+    acts = []
     for chapter in narrative.chapters:
-        paragraph = chapter.paragraphs[0] if chapter.paragraphs else ""
-        cards.append(
+        acts.append(
             f"""
-<article class="luna-act">
-  <div class="luna-mono">{_safe(chapter.date_range)}</div>
-  <h3>{_safe(chapter.hook)}</h3>
-  <p>{_safe(paragraph)}</p>
+<article class="luna-story-act">
+  <div class="luna-story-date">
+    <span>{_safe(chapter.date_range)}</span>
+    <small>{_safe(chapter.title)}</small>
+  </div>
+  <div class="luna-story-copy">
+    <h3>{_safe(chapter.hook)}</h3>
+    {_paragraphs(chapter.paragraphs)}
+  </div>
 </article>
             """
         )
-    return "".join(cards)
+    return "".join(acts)
 
 
 def _life_rows(narrative: MonthlyNarrative) -> str:
@@ -170,6 +198,25 @@ def build_monthly_experience_html(
 
     chapters = _chapter_cards(narrative)
     life_rows = _life_rows(narrative)
+    story_dates = _story_date_cards(narrative)
+
+    focus_section = ""
+    if (
+        narrative.main_focus != "General overview"
+        or narrative.personal_question
+    ):
+        question_html = (
+            f'<blockquote class="luna-question">{_safe(narrative.personal_question)}</blockquote>'
+            if narrative.personal_question
+            else ""
+        )
+        focus_section = f"""
+<section class="luna-monthly-section luna-focus-section">
+  <div class="luna-eyebrow">{_safe(narrative.focus_title)}</div>
+  {question_html}
+  {_paragraphs(narrative.focus_answer, maximum=2)}
+</section>
+        """
 
     evidence = f"""
 <section class="luna-evidence-stack">
@@ -240,13 +287,34 @@ def build_monthly_experience_html(
     body = ""
     if not preview:
         body = f"""
+<section class="luna-monthly-section luna-opening-story">
+  <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
+  <h2>{_safe(narrative.central_storyline)}</h2>
+  <div class="luna-story-prose">
+    {_paragraphs(narrative.luna_says)}
+  </div>
+  <div class="luna-do-dont luna-do-dont-light">
+    <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
+    <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
+  </div>
+</section>
+
+{focus_section}
+
 <section class="luna-monthly-section">
   <div class="luna-eyebrow">How {_safe(narrative.label.split()[0])} unfolds</div>
-  <div class="luna-act-grid">{chapters}</div>
+  <div class="luna-story-timeline">{chapters}</div>
+</section>
+
+<section class="luna-monthly-section luna-story-dates-section">
+  <div class="luna-eyebrow">Dates worth circling</div>
+  <h2>The moments that move the story</h2>
+  <div class="luna-story-date-grid">{story_dates}</div>
 </section>
 
 <section class="luna-monthly-section luna-romance-section">
   <div class="luna-eyebrow">Romance and validation</div>
+  <h2>Whether the spark arrives—or the room stays quiet</h2>
   <div class="luna-romance-grid">
     <article>
       <span>When romance is active</span>
@@ -260,13 +328,15 @@ def build_monthly_experience_html(
 </section>
 
 <section class="luna-monthly-section">
-  <div class="luna-eyebrow">Love / work / money</div>
+  <div class="luna-eyebrow">Where the story lands</div>
   <div class="luna-life-list">{life_rows}</div>
 </section>
 
 <section class="luna-monthly-section luna-next-move">
-  <div class="luna-eyebrow">{_safe(YOUR_MOVE_LABEL)}</div>
-  <h2>{_safe(GATEKEEPER_LINE)}</h2>
+  <div>
+    <div class="luna-eyebrow">{_safe(YOUR_MOVE_LABEL)}</div>
+    <h2>{_safe(GATEKEEPER_LINE)}</h2>
+  </div>
   <ol>
     {''.join(f'<li>{_safe(action)}</li>' for action in narrative.action_plan)}
   </ol>
@@ -276,10 +346,10 @@ def build_monthly_experience_html(
         """
     else:
         body = f"""
-<section class="luna-monthly-section luna-romance-section">
-  <div class="luna-eyebrow">Romance and validation</div>
-  <p>{_safe(narrative.romance_active)}</p>
-  <p>{_safe(narrative.romance_quiet)}</p>
+<section class="luna-monthly-section luna-opening-story">
+  <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
+  <h2>{_safe(narrative.central_storyline)}</h2>
+  {_paragraphs(narrative.luna_says, maximum=2)}
 </section>
         """
 
@@ -323,34 +393,50 @@ def build_monthly_experience_html(
   margin:.4rem 0 .9rem;
 }}
 .luna-monthly-hero {{
-  padding:clamp(1.4rem,4vw,3.2rem);
-  color:var(--white);
-  background:var(--black);
+  display:grid;
+  gap:.85rem;
+  min-height:0 !important;
+  height:auto !important;
+  max-height:none !important;
+  padding:clamp(1.15rem,2.8vw,2rem);
+  color:#fff !important;
+  background:#050505 !important;
 }}
 .luna-monthly-meta {{
   display:flex;
   justify-content:space-between;
   gap:1rem;
-  padding-bottom:.8rem;
+  padding-bottom:.7rem;
   border-bottom:1px solid rgba(255,255,255,.28);
+  color:#fff !important;
   font-family:"IBM Plex Mono",monospace;
   font-size:.65rem;
   letter-spacing:.045em;
   text-transform:uppercase;
 }}
 .luna-monthly-hero h1 {{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  position:relative;
+  z-index:2;
   max-width:760px;
-  margin:1.2rem 0 1rem;
-  color:var(--white);
-  font-size:clamp(2.9rem,7vw,5.8rem);
-  line-height:.94;
+  margin:.45rem 0 .3rem;
+  color:#fff !important;
+  font-size:clamp(2.45rem,5.5vw,4.45rem);
+  line-height:.95;
 }}
-.luna-says {{
-  max-width:720px;
+.luna-hero-theme {{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:.7rem;
+  align-items:baseline;
+  color:rgba(255,255,255,.78);
 }}
+.luna-hero-theme span,
 .luna-says span,
 .luna-eyebrow,
-.luna-act span,
+.luna-story-date span,
 .luna-romance-grid span,
 .luna-life-row > span {{
   font-family:"IBM Plex Mono",monospace;
@@ -358,58 +444,142 @@ def build_monthly_experience_html(
   letter-spacing:.05em;
   text-transform:uppercase;
 }}
-.luna-says p {{
-  color:rgba(255,255,255,.88);
-  font-size:clamp(1.02rem,1.7vw,1.22rem);
-  line-height:1.5;
+.luna-hero-theme strong {{
+  font-size:.95rem;
+  font-weight:400;
+  line-height:1.35;
+}}
+.luna-monthly-section {{
+  padding:clamp(2.25rem,5vw,4.3rem) clamp(1rem,4vw,3.2rem);
+  border-bottom:1px solid var(--black);
+}}
+.luna-opening-story h2 {{
+  max-width:780px;
+  margin:.45rem 0 1.35rem;
+  font-size:clamp(2.25rem,5vw,4.45rem);
+  line-height:.98;
+}}
+.luna-story-prose {{
+  max-width:760px;
+}}
+.luna-story-prose p {{
+  font-size:clamp(1.03rem,1.5vw,1.18rem);
+  line-height:1.68;
 }}
 .luna-do-dont {{
   display:grid;
   grid-template-columns:1fr 1fr;
-  border-top:1px solid rgba(255,255,255,.3);
-  margin-top:1rem;
+  margin-top:1.35rem;
 }}
 .luna-do-dont div {{
-  padding:.8rem .8rem 0 0;
+  padding:.9rem .9rem .15rem 0;
 }}
 .luna-do-dont div + div {{
-  border-left:1px solid rgba(255,255,255,.3);
-  padding-left:.8rem;
+  padding-left:.9rem;
 }}
 .luna-do-dont span {{
   display:block;
-  color:rgba(255,255,255,.58);
   font-family:"IBM Plex Mono",monospace;
   font-size:.63rem;
   text-transform:uppercase;
-  margin-bottom:.25rem;
+  margin-bottom:.28rem;
 }}
 .luna-do-dont strong {{
   font-family:"Bodoni Moda",Georgia,serif;
-  font-size:clamp(1.15rem,2vw,1.55rem);
-  line-height:1.16;
+  font-size:clamp(1.18rem,2vw,1.55rem);
+  line-height:1.18;
 }}
-.luna-monthly-section {{
-  padding:clamp(2.4rem,6vw,5rem) clamp(1rem,4vw,3.2rem);
+.luna-do-dont-light {{
+  border-top:1px solid var(--black);
   border-bottom:1px solid var(--black);
 }}
-.luna-act-grid {{
+.luna-do-dont-light div + div {{
+  border-left:1px solid var(--black);
+}}
+.luna-do-dont-light span {{
+  color:var(--muted);
+}}
+.luna-story-timeline {{
+  border-top:1px solid var(--black);
+}}
+.luna-story-act {{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:minmax(7rem,.34fr) minmax(0,1fr);
+  gap:clamp(1rem,4vw,3rem);
+  padding:clamp(1.35rem,3vw,2.3rem) 0;
+  border-bottom:1px solid var(--black);
+}}
+.luna-story-date {{
+  display:flex;
+  flex-direction:column;
+  gap:.45rem;
+}}
+.luna-story-date small {{
+  color:var(--muted);
+  font-size:.85rem;
+  line-height:1.4;
+}}
+.luna-story-copy {{
+  max-width:700px;
+}}
+.luna-story-copy h3,
+.luna-life-row h3 {{
+  margin:0 0 .65rem;
+  font-size:clamp(1.7rem,3vw,2.55rem);
+  line-height:1.02;
+}}
+.luna-story-copy p {{
+  margin:.35rem 0 .8rem;
+  line-height:1.62;
+}}
+.luna-story-dates-section h2 {{
+  max-width:680px;
+  margin:.45rem 0 1.35rem;
+  font-size:clamp(2.1rem,4.5vw,3.8rem);
+  line-height:.98;
+}}
+.luna-story-date-grid {{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
   border-top:1px solid var(--black);
   border-left:1px solid var(--black);
 }}
-.luna-act {{
-  min-width:0;
+.luna-story-date-card {{
   padding:1rem;
   border-right:1px solid var(--black);
   border-bottom:1px solid var(--black);
 }}
-.luna-act h3,
-.luna-life-row h3 {{
-  margin:.5rem 0;
-  font-size:clamp(1.5rem,2.5vw,2.15rem);
-  line-height:1.02;
+.luna-story-date-card span {{
+  display:block;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.65rem;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  margin-bottom:.55rem;
+}}
+.luna-story-date-card strong {{
+  display:block;
+  font-size:1.02rem;
+  line-height:1.38;
+}}
+.luna-story-date-card p {{
+  margin:.65rem 0 0;
+  color:var(--muted);
+}}
+.luna-focus-section {{
+  background:var(--soft);
+}}
+.luna-focus-section p {{
+  max-width:760px;
+}}
+.luna-question {{
+  max-width:760px;
+  margin:1rem 0 1.4rem;
+  padding-left:1rem;
+  border-left:3px solid var(--black);
+  font-family:"Bodoni Moda",Georgia,serif;
+  font-size:clamp(1.35rem,2.4vw,2rem);
+  line-height:1.22;
 }}
 .luna-romance-grid {{
   display:grid;
@@ -525,9 +695,8 @@ def build_monthly_experience_html(
   border-top:1px solid var(--line);
 }}
 .luna-print-controls {{
-  position:sticky;
-  bottom:0;
-  z-index:50;
+  position:static;
+  z-index:1;
   display:flex;
   align-items:end;
   gap:.75rem;
@@ -567,19 +736,36 @@ def build_monthly_experience_html(
 }}
 @media (max-width:720px) {{
   .luna-monthly-meta,
+  .luna-hero-theme,
   .luna-do-dont,
-  .luna-act-grid,
   .luna-romance-grid,
   .luna-next-move,
   .luna-evidence-grid,
-  .luna-date-grid {{
+  .luna-date-grid,
+  .luna-story-date-grid,
+  .luna-story-act {{
     grid-template-columns:1fr;
     flex-direction:column;
   }}
+  .luna-monthly-hero h1 {{
+    font-size:clamp(2.35rem,11vw,3.75rem);
+  }}
+  .luna-hero-theme {{
+    gap:.25rem;
+  }}
   .luna-do-dont div + div {{
     border-left:none;
-    border-top:1px solid rgba(255,255,255,.3);
+    border-top:1px solid var(--black);
     padding-left:0;
+  }}
+  .luna-story-act {{
+    gap:.8rem;
+  }}
+  .luna-story-date {{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:.7rem;
+    align-items:baseline;
   }}
   .luna-life-row {{
     grid-template-columns:1fr;
@@ -588,10 +774,6 @@ def build_monthly_experience_html(
   .luna-print-controls {{
     align-items:stretch;
     flex-wrap:wrap;
-  }}
-  .luna-print-check {{
-    width:100%;
-    margin-left:0;
   }}
   .luna-print-controls button {{
     width:100%;
@@ -611,7 +793,7 @@ def build_monthly_experience_html(
   }}
   .luna-print-controls {{ display:none !important; }}
   .luna-monthly-hero {{
-    padding:8mm 0 7mm;
+    padding:7mm 0 6mm;
     color:#050505 !important;
     background:#fff !important;
     border-top:3mm solid #050505;
@@ -620,36 +802,31 @@ def build_monthly_experience_html(
     page-break-inside:avoid;
   }}
   .luna-monthly-meta {{
+    color:#050505 !important;
     border-bottom-color:#050505 !important;
   }}
-  .luna-monthly-hero h1,
-  .luna-says p,
-  .luna-do-dont strong {{
-    color:#050505 !important;
-  }}
-  .luna-says span,
-  .luna-do-dont span {{
-    color:#696963 !important;
-  }}
-  .luna-do-dont {{
-    border-top-color:#050505 !important;
-  }}
-  .luna-do-dont div + div {{
-    border-left-color:#050505 !important;
-  }}
   .luna-monthly-hero h1 {{
-    font-size:38pt;
+    color:#050505 !important;
+    font-size:34pt;
   }}
-  .luna-says p {{
-    font-size:11pt;
+  .luna-hero-theme {{
+    color:#050505 !important;
   }}
   .luna-monthly-section {{
     padding:6mm 0;
   }}
+  .luna-opening-story h2 {{
+    font-size:27pt;
+  }}
+  .luna-story-prose p {{
+    font-size:10.5pt;
+    line-height:1.5;
+  }}
   .luna-report-footer {{
     padding:3mm 0 0;
   }}
-  .luna-act,
+  .luna-story-act,
+  .luna-story-date-card,
   .luna-romance-grid article,
   .luna-life-row,
   .luna-date-card,
@@ -657,12 +834,11 @@ def build_monthly_experience_html(
     break-inside:avoid;
     page-break-inside:avoid;
   }}
-  .luna-monthly-report[data-print-orientation="portrait"] .luna-act-grid,
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-story-act,
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-story-date-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-romance-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-evidence-grid,
-  .luna-monthly-report[data-print-orientation="portrait"] .luna-date-grid {{
-    grid-template-columns:1fr;
-  }}
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-date-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-life-row,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-next-move {{
     grid-template-columns:1fr;
@@ -671,23 +847,20 @@ def build_monthly_experience_html(
     padding:2.5mm 0;
   }}
   .luna-monthly-report[data-print-orientation="portrait"] .luna-next-move h2 {{
-    font-size:26pt;
+    font-size:25pt;
   }}
   .luna-monthly-report[data-print-orientation="portrait"] .luna-romance-section {{
     break-before:page;
     page-break-before:always;
   }}
   .luna-monthly-report[data-print-orientation="landscape"] .luna-monthly-hero h1 {{
-    font-size:32pt;
-  }}
-  .luna-monthly-report[data-print-orientation="landscape"] .luna-says p {{
-    font-size:9.5pt;
+    font-size:30pt;
   }}
   .luna-monthly-report[data-print-orientation="landscape"] .luna-monthly-section {{
     padding:4mm 0;
   }}
-  .luna-monthly-report[data-print-orientation="landscape"] .luna-act-grid {{
-    grid-template-columns:repeat(3,1fr);
+  .luna-monthly-report[data-print-orientation="landscape"] .luna-story-act {{
+    grid-template-columns:30mm 1fr;
   }}
   .luna-monthly-report[data-print-orientation="landscape"] .luna-life-list {{
     display:grid;
@@ -700,6 +873,7 @@ def build_monthly_experience_html(
     border-right:1px solid #050505;
     border-bottom:1px solid #050505;
   }}
+  .luna-monthly-report[data-print-orientation="landscape"] .luna-story-date-grid,
   .luna-monthly-report[data-print-orientation="landscape"] .luna-romance-grid,
   .luna-monthly-report[data-print-orientation="landscape"] .luna-evidence-grid,
   .luna-monthly-report[data-print-orientation="landscape"] .luna-date-grid {{
@@ -734,13 +908,9 @@ def build_monthly_experience_html(
       <span>{_safe(narrative.label)}</span>
     </div>
     <h1>{_safe(narrative.hook_headline)}</h1>
-    <div class="luna-says">
-      <span>{_safe(LUNA_SAYS_LABEL)}</span>
-      {_paragraphs(narrative.luna_says, maximum=1)}
-    </div>
-    <div class="luna-do-dont">
-      <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
-      <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
+    <div class="luna-hero-theme">
+      <span>Monthly theme</span>
+      <strong>{_safe(narrative.headline)}</strong>
     </div>
   </section>
 

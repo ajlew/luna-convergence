@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Automatic References + Luna Wit v2.3"
+BUILD_LABEL = "Monthly Story + Compact Hero v2.4"
 EDITOR_PREVIEW_ENABLED = True  # Set False before the paid public launch.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (

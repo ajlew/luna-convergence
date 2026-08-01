@@ -506,8 +506,8 @@ def _central_storyline(
     pair = frozenset({primary_house, secondary_house})
     if pair == frozenset({5, 9}):
         return (
-            f"Something exciting expands your world. {month} tests whether "
-            "it earns a place in your life."
+            f"{month} opens a larger door. The rest of the month decides "
+            "what can walk through it."
         )
     return (
         f"{month} brings a person, choice or opportunity closer, then asks "
@@ -521,22 +521,59 @@ def _luna_voice(
     secondary_house: int,
 ) -> tuple[str, ...]:
     month = str(result.get("label", "This month")).split()[0]
-    scenarios = _scenario_examples(primary_house, secondary_house)
+    pair = frozenset({primary_house, secondary_house})
+    key_dates = _key_dates(result)
+    first_date = key_dates[0].date_label if key_dates else f"early {month}"
+    middle_date = (
+        key_dates[len(key_dates) // 2].date_label
+        if key_dates
+        else f"the middle of {month}"
+    )
+    final_date = key_dates[-1].date_label if key_dates else f"late {month}"
 
-    if frozenset({primary_house, secondary_house}) == frozenset({5, 9}):
+    if pair == frozenset({5, 9}):
         return (
-            f"{month} widens your world through romance, travel, creativity or "
-            "a visible opportunity. Enjoy the attention. Then check who follows "
-            "through, what it costs and whether it fits the life you want. "
-            "Flirting can start the story; effort decides whether it continues.",
+            f"{month} opens with a larger world knocking at the door. A message, "
+            "invitation, flirtation, trip, course, creative launch or publishing "
+            "opportunity may make you feel more desired, more curious or more "
+            "certain that life is moving again. The opening matters, but it is "
+            "not the whole story.",
+            f"Around {first_date}, people and possibilities begin to gather. A "
+            "friend may introduce someone interesting, an audience may respond to "
+            "your work, or an invitation may connect romance with travel, study "
+            "or a different social world. Enjoy being noticed. Then watch whether "
+            "the interest becomes a plan.",
+            f"Near {middle_date}, the month reaches its loudest turning point. "
+            "Chemistry, confidence or demand can rise quickly, but a shared cost, "
+            "distance, deadline or private responsibility may also appear. This "
+            "does not cancel the opportunity. It shows what the opportunity needs "
+            "in order to become real.",
+            f"By {final_date}, the story moves from possibility to placement. "
+            "Career, visibility, home and emotional security ask where this person "
+            "or opportunity actually fits. A real connection can discuss timing, "
+            "money and expectations without losing warmth. What continues has "
+            "earned its place; what fades has still given you useful information.",
         )
 
-    examples = ", ".join(scenarios[:3])
+    scenarios = _scenario_examples(primary_house, secondary_house)
+    first_examples = ", ".join(scenarios[:3])
+    later_examples = ", ".join(scenarios[3:6])
     return (
-        f"{month} may bring {examples}. Notice the attention, then judge the "
-        "follow-through. Choose the person, plan or opportunity that supports "
-        "the life you want rather than the one that simply creates noise.",
+        f"{month} opens through {_natural_house(primary_house)}. This may arrive "
+        f"as {first_examples}. The first movement shows where your confidence, "
+        "desire or practical momentum is returning.",
+        f"Around {first_date}, attention gathers around the strongest opening. "
+        "Enjoy the response, but notice who follows through and what the next "
+        "step actually requires.",
+        f"Near {middle_date}, {_natural_house(secondary_house)} enters the story "
+        f"through {later_examples}. Timing, cost or responsibility turns a vague "
+        "possibility into a decision you can evaluate.",
+        f"By {final_date}, the month becomes selective. Keep the person, plan or "
+        "opportunity that strengthens the life you want. Let everything else "
+        "become information rather than unfinished emotional business.",
     )
+
+
 
 def _romance_copy(
     primary_house: int,
@@ -613,21 +650,29 @@ def _build_chapter(
 
     if segment == "early":
         paragraphs = (
-            "A message, introduction or invitation may make you feel noticed. "
-            "Let effort decide what earns more of your time.",
-            f"{strongest_story} Treat the opening as information, not a promise.",
+            f"The month opens through {_natural_house(main_house)}. A message, "
+            "introduction or invitation may create lift. In romance, someone may "
+            "become more curious or available; elsewhere, a plan, application or "
+            "creative idea may finally receive a response.",
+            f"{strongest_story} Do not force the ending from the first scene. "
+            "Notice what happens after the initial enthusiasm.",
         )
     elif segment == "middle":
         paragraphs = (
-            "Attention, chemistry or possibility may increase. Raise your "
-            "standards with it.",
-            f"{strongest_story} Choose the option that follows through.",
+            f"This is the strongest stretch for {_natural_house(main_house)}. "
+            "Attention, chemistry, visibility or demand can rise. The opportunity "
+            "may look larger because it is larger—but it may also reveal a price, "
+            "distance or responsibility.",
+            f"{strongest_story} Ask one clear question. Specific answers build "
+            "trust; vagueness is also an answer.",
         )
     else:
         paragraphs = (
-            "The fantasy meets the calendar, the cost and the follow-through. "
-            "Keep what fits your life.",
-            f"{first_story} Let consequences finish the evaluation.",
+            f"Late in the month, {_natural_house(second_house)} becomes the "
+            "reality check. Work, money, timing, home or shared obligations expose "
+            "what can continue.",
+            f"{first_story} A real connection can survive practical conversation. "
+            "A viable opportunity can name the cost and next step.",
         )
 
     return MonthlyChapter(

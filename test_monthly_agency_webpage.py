@@ -28,8 +28,12 @@ def main() -> None:
     for required in (
         "Luna says",
         "Your spark wants a passport—and proof",
+        "August opens a larger door",
+        "How August unfolds",
+        "Dates worth circling",
+        "The moments that move the story",
+        "Whether the spark arrives—or the room stays quiet",
         "Shift from applicant to gatekeeper.",
-        "Romance and validation",
         "Why Luna sees this",
         "Solar Convergence",
         "Key dates and planetary timing",
@@ -56,14 +60,18 @@ def main() -> None:
         assert removed not in html, removed
 
     assert html.count("Your move") == 1
+    assert html.count('class="luna-story-act"') == 3
+    assert html.count('class="luna-story-date-card"') >= 3
     assert "Include evidence" not in html
     assert "detail.open = true" in html
     assert ".luna-evidence-stack details > *:not(summary)" in html
     assert "display:block !important" in html
     assert 'data-print-orientation="portrait"' in html
+    assert "position:sticky" not in html
+    assert "min-height:0 !important" in html
     assert "FOOTER" not in html
 
-    print("Monthly agency webpage tests passed.")
+    print("Monthly story webpage tests passed.")
 
 
 if __name__ == "__main__":

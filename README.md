@@ -351,3 +351,12 @@ without Stripe.
 ## Automatic References and Luna Wit v2.3
 
 All reference disclosures now open automatically for browser printing. Daily, monthly and yearly readings share one concise house-pair Do/Don't engine with dry Luna humour.
+
+
+## Monthly Story + Compact Hero v2.4
+
+Monthly reports now use a compact black hook followed by a fuller,
+chronological Luna story. The paid page includes four narrative
+paragraphs, three detailed acts, visible dates worth circling,
+romance-active/quiet guidance, Love/Work/Money outcomes and expandable
+evidence. The print toolbar is static and no longer covers report content.

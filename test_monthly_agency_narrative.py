@@ -28,14 +28,23 @@ def main() -> None:
         "Your spark wants a passport—and proof"
     )
     assert narrative.central_storyline == (
-        "Something exciting expands your world. August tests "
-        "whether it earns a place in your life."
+        "August opens a larger door. The rest of the month decides "
+        "what can walk through it."
     )
     assert narrative.agency_rule == GATEKEEPER_LINE
     assert narrative.validation_rule == VALIDATION_LINE
-    assert len(narrative.luna_says) == 1
-    assert "romance" in narrative.luna_says[0].lower()
-    assert "follow" in narrative.luna_says[0].lower()
+    assert len(narrative.luna_says) == 4
+    assert sum(len(item.split()) for item in narrative.luna_says) >= 170
+    assert "flirtation" in narrative.luna_says[0].lower()
+    assert "around august" in narrative.luna_says[1].lower()
+    assert "shared cost" in narrative.luna_says[2].lower()
+    assert "emotional security" in narrative.luna_says[3].lower()
+    assert all(len(chapter.paragraphs) == 2 for chapter in narrative.chapters)
+    assert sum(
+        len(paragraph.split())
+        for chapter in narrative.chapters
+        for paragraph in chapter.paragraphs
+    ) >= 180
     assert narrative.do_line == (
         "Follow the effort. Chemistry can book its own flight."
     )
@@ -48,7 +57,7 @@ def main() -> None:
         + " ".join(narrative.love_story)
     ).lower()
 
-    print("Monthly agency narrative tests passed.")
+    print("Monthly story narrative tests passed.")
 
 
 if __name__ == "__main__":
