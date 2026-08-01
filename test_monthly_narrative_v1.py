@@ -41,7 +41,7 @@ def main() -> None:
     assert narrative.headline == "Love wants a wider horizon - but the future needs proof"
     assert narrative.personal_question == ""
     assert len(narrative.at_glance) == 3
-    assert narrative.hook_headline == "Your love life wants a passport - and a plan"
+    assert narrative.hook_headline == "Your spark wants a passport—and proof"
     assert narrative.convergence_axis == "Romance & creativity x Travel & learning"
     assert narrative.do_line
     assert narrative.dont_line

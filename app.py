@@ -25,6 +25,8 @@ from daily_narrative_v3 import (
     reading_comparison_text,
     render_daily_narrative_v3,
 )
+from monthly_narrative_v1 import build_monthly_narrative
+from monthly_experience_v1 import render_monthly_experience
 from solar_cycle import (
     city_input_help,
     daily_solar_convergence,
@@ -2388,106 +2390,23 @@ def monthly_index_page() -> None:
 
 def monthly_sign_page(sign: str) -> None:
     data = monthly_seo_data(sign)
-    primary = data["dominant_houses"][0]
-    secondary = data["dominant_houses"][1]
+    narrative = build_monthly_narrative(
+        data,
+        main_focus="General overview",
+    )
     title = f"{sign} August 2026 Horoscope | Luna Convergence"
     description = (
-        f"{sign} August 2026 horoscope covering active houses, major transitions, "
-        "important dates, work, money, relationships, opportunities and cautions."
+        f"{sign} August 2026 horoscope with a concise Luna narrative, "
+        "relationship meaning, concrete scenarios and evidence available on demand."
     )
     path = f"/august-2026-{sign_slug(sign)}"
     set_page_metadata(title, description, path)
 
-    st.markdown('<div class="eyebrow">Free monthly horoscope</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="editorial-title">{escape(sign)}<br>August 2026</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"For **{sign}**, August 2026 is led by house {primary['house']}: "
-        f"**{primary['topic']}**. The secondary pressure point is house "
-        f"{secondary['house']}: **{secondary['topic']}**. The month works best "
-        "when expansion, timing and responsibility are treated as one connected system."
-    )
-
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="eyebrow">Opportunity</div>
-  <h3>Build through house {primary['house']}</h3>
-  <p>{escape(HOUSE_STRATEGY[primary['house']]['opportunity'].capitalize())}.</p>
-  <p><strong>Best move:</strong> {escape(HOUSE_STRATEGY[primary['house']]['action'].capitalize())}.</p>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="eyebrow">Caution</div>
-  <h3>Protect house {secondary['house']}</h3>
-  <p>{escape(HOUSE_STRATEGY[secondary['house']]['risk'].capitalize())}.</p>
-  <p><strong>Rule:</strong> do not mistake urgency for a complete decision.</p>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("## Important dates and transitions")
-    rows = []
-    for event in data["major_transitions"][:7]:
-        event_date = date.fromisoformat(event["event_date"]).strftime("%B %d")
-        rows.append(
-            f"""
-<div class="date-row">
-  <div class="date-label">{escape(event_date)}</div>
-  <div class="date-line"><strong>{escape(event['title'])}</strong><br>{escape(event['detail'])}</div>
-</div>
-            """
-        )
-    st.markdown(
-        '<div class="date-list">' + "".join(rows) + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("## Work and direction")
-    st.markdown(focus_paragraph(data, {6, 10}, "work and career"))
-
-    st.markdown("## Money and obligations")
-    st.markdown(focus_paragraph(data, {2, 8}, "money and financial commitments"))
-
-    st.markdown("## Relationships and alliances")
-    st.markdown(focus_paragraph(data, {5, 7, 11}, "relationships and alliances"))
-
-    st.markdown("## The leading convergence point")
-    if data["convergences"]:
-        convergence = data["convergences"][0]
-        start = date.fromisoformat(convergence["start_date"]).strftime("%B %d")
-        end = date.fromisoformat(convergence["end_date"]).strftime("%B %d")
-        house_list = ", ".join(str(house) for house in convergence["houses"])
-        st.markdown(
-            f"**{convergence['title']} — {start} to {end}.** "
-            f"This cluster connects houses {house_list} through "
-            f"{len(convergence['events'])} overlapping events. Its value comes from "
-            "reading the events together: opportunity is strongest when contracts, "
-            "money, communication and operational capacity support the same decision."
-        )
-    else:
-        st.markdown(
-            "No high-density convergence met the engine's threshold. "
-            "The dominant-house pattern is therefore the clearest guide."
-        )
-
-    st.markdown("## Practical conclusion")
-    st.info(
-        house_aware_conclusion(
-            sign,
-            primary["house"],
-            secondary["house"],
-        )
+    render_monthly_experience(
+        narrative,
+        data,
+        show_print=False,
+        preview=True,
     )
 
     st.markdown("## Read another August 2026 sign")
@@ -2498,6 +2417,13 @@ def monthly_sign_page(sign: str) -> None:
     st.markdown(
         '<div class="related-signs">' + "".join(links) + "</div>",
         unsafe_allow_html=True,
+    )
+
+    st.markdown("## Get the complete personalised month")
+    st.markdown(
+        "The paid report adds the three-act timeline, love/work/money guidance, "
+        "your selected focus, Solar Convergence, key dates and full evidence "
+        "dropdowns while keeping the main page sparse."
     )
     report_cta(
         context=f"august-2026-{sign_slug(sign)}",

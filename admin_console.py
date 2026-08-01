@@ -15,6 +15,10 @@ from monthly_narrative_v1 import (
     monthly_narrative_markdown,
     normalise_personal_question,
 )
+from monthly_experience_v1 import (
+    build_monthly_experience_html,
+    render_monthly_experience,
+)
 from synthesis import daily_report, period_report
 from ephemeris_upload import inspect_ephemeris_pdf, profile_to_dict, source_note
 from ollama_client import list_models, server_status, enhance, DEFAULT_URL
@@ -153,7 +157,7 @@ with st.sidebar:
     )
     st.caption(
         "If the order summary says 'No optional question supplied', leave this field blank. "
-        "The phrase will not appear in the customer PDF."
+        "The phrase will not appear in the customer webpage or printed report."
     )
 
     generate = st.button("Generate analysis", type="primary", use_container_width=True)
@@ -213,7 +217,6 @@ if result:
 
     with main_tab:
         cleaned_question = normalise_personal_question(personal_question)
-        customer_preview = None
 
         if result.get("period") == "monthly":
             customer_narrative = build_monthly_narrative(
@@ -222,65 +225,123 @@ if result:
                 personal_question=cleaned_question,
                 order_reference=order_reference,
             )
-            customer_preview = monthly_narrative_markdown(
+            customer_markdown = monthly_narrative_markdown(
                 customer_narrative
-            ).replace(
-                "[[PAGEBREAK]]",
-                "\n\n---\n\n",
+            )
+            customer_html = build_monthly_experience_html(
+                customer_narrative,
+                result,
+                show_print=True,
+                preview=False,
+                order_reference=order_reference,
+            )
+            standalone_html = (
+                "<!doctype html><html><head><meta charset='utf-8'>"
+                "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                "<title>Luna Convergence Monthly Report</title></head><body>"
+                + customer_html
+                + "</body></html>"
             )
 
             st.caption(
-                "Customer-facing monthly preview — this is the narrative used "
-                "to create the personalised PDF."
+                "Customer webpage preview — read it here, then use "
+                "'Print or save report' inside the page. The browser creates the "
+                "PDF from the same Luna layout and fonts."
             )
-            st.markdown(customer_preview)
+            render_monthly_experience(
+                customer_narrative,
+                result,
+                show_print=True,
+                preview=False,
+                order_reference=order_reference,
+            )
+
+            st.download_button(
+                "Download customer webpage",
+                data=standalone_html,
+                file_name=(
+                    f"luna_{result['sign'].lower()}_"
+                    f"{result.get('label', 'monthly').lower().replace(' ', '_')}.html"
+                ),
+                mime="text/html",
+                use_container_width=True,
+            )
 
             with st.expander(
-                "Raw calculation output",
+                "Internal backup and calculation output",
                 expanded=False,
             ):
                 st.caption(
-                    "Technical synthesis retained for checking. It is not the "
-                    "customer-facing report format."
+                    "These files are internal backups. They are not the primary "
+                    "customer design."
                 )
+                st.download_button(
+                    "Download narrative source",
+                    data=customer_markdown,
+                    file_name=(
+                        f"{result['sign'].lower()}_monthly_"
+                        f"{result.get('label', 'reading').lower().replace(' ', '_')}.md"
+                    ),
+                    mime="text/markdown",
+                )
+                st.markdown("### Raw calculation output")
                 st.markdown(result["markdown"])
+
+                try:
+                    legacy_pdf = build_report_pdf(
+                        result,
+                        main_focus=main_focus,
+                        personal_question=cleaned_question,
+                        order_reference=order_reference,
+                    )
+                except Exception as exc:
+                    st.warning(f"Legacy backup PDF was unavailable: {exc}")
+                    legacy_pdf = None
+
+                if legacy_pdf:
+                    st.download_button(
+                        "Download legacy backup PDF",
+                        data=legacy_pdf,
+                        file_name=report_filename(result),
+                        mime="application/pdf",
+                    )
+
+            if delivery_email:
+                st.caption(
+                    f"Manual delivery target: {delivery_email}. Use the browser's "
+                    "Print / Save as PDF command, inspect the saved file, then attach it."
+                )
         else:
             st.markdown(result["markdown"])
-
-        st.download_button(
-            "Download deterministic reading",
-            data=customer_preview or result["markdown"],
-            file_name=f"{result['sign'].lower()}_{result['period']}_{result.get('date', result.get('label', 'reading'))}.md",
-            mime="text/markdown",
-        )
-
-        try:
-            pdf_bytes = build_report_pdf(
-                result,
-                main_focus=main_focus,
-                personal_question=cleaned_question,
-                order_reference=order_reference,
-            )
-        except Exception as exc:
-            st.error(
-                "The customer PDF could not be generated. "
-                f"Details: {exc}"
-            )
-            pdf_bytes = None
-
-        if pdf_bytes:
             st.download_button(
-                "Download print-ready personalised PDF",
-                data=pdf_bytes,
-                file_name=report_filename(result),
-                mime="application/pdf",
-                type="primary",
+                "Download deterministic reading",
+                data=result["markdown"],
+                file_name=f"{result['sign'].lower()}_{result['period']}_{result.get('date', result.get('label', 'reading'))}.md",
+                mime="text/markdown",
             )
 
-        if delivery_email:
-            st.caption(
-                f"Manual delivery target: {delivery_email}. Attach the downloaded PDF to the delivery email."
-            )
+            try:
+                pdf_bytes = build_report_pdf(
+                    result,
+                    main_focus=main_focus,
+                    personal_question=cleaned_question,
+                    order_reference=order_reference,
+                )
+            except Exception as exc:
+                st.error(
+                    "The customer PDF could not be generated. "
+                    f"Details: {exc}"
+                )
+                pdf_bytes = None
+
+            if pdf_bytes:
+                st.download_button(
+                    "Download print-ready personalised PDF",
+                    data=pdf_bytes,
+                    file_name=report_filename(result),
+                    mime="application/pdf",
+                    type="primary",
+                )
 
     with convergence_tab:
         convergences = result.get("convergences")

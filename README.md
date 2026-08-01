@@ -308,3 +308,11 @@ Monthly customer PDFs now use a dedicated magazine-style renderer. The emotional
 ## Monthly Homepage PDF v3
 
 The monthly PDF now prints the same visual system as the Luna homepage: Bodoni Moda headings, Josefin Sans body copy, IBM Plex Mono labels, the homepage brand/navigation rows, editorial two-column heroes, black reading cards and thin bordered trust strips. Chrome or Edge renders the print file; the stable Editorial v2 report remains an automatic fallback.
+
+
+## Monthly Agency Webpage v1
+
+The monthly customer product now renders as a responsive Luna webpage
+with native browser Print/Save as PDF. Luna narrates one agency-first
+storyline, concrete scenarios and relationship/validation meaning, while
+evidence remains in four closed disclosures.
