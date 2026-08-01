@@ -18,6 +18,7 @@ from luna_editorial_system import (
     YOUR_MOVE_LABEL,
 )
 from monthly_narrative_v1 import MonthlyNarrative
+from luna_voice import narrator_cue
 
 
 PRINT_PAPERS = ("A4", "A3")
@@ -125,6 +126,7 @@ def _arc_evidence_path(result: dict) -> str:
 
     beginning = beats.get("inherited state") or beats.get("inciting event")
     middle = beats.get("complication") or beats.get("pivot")
+    relationship = beats.get("relationship test")
     ending_items = [
         item
         for key in ("pivot", "climax", "resolution")
@@ -149,6 +151,15 @@ def _arc_evidence_path(result: dict) -> str:
                 middle.get("end_date", middle.get("start_date")),
             ),
             str(middle.get("title", "Turning point")),
+        ))
+    if relationship:
+        anchors.append((
+            "Relationship test",
+            human_date_range(
+                relationship.get("start_date"),
+                relationship.get("end_date", relationship.get("start_date")),
+            ),
+            str(relationship.get("title", "Attention meets standards")),
         ))
     if ending_items:
         first = ending_items[0]
@@ -298,6 +309,16 @@ def build_monthly_experience_html(
     scenario_rows = _scenario_rows_html(result)
     carryover_rows = _carryover_rows_html(result)
 
+    relationship_test_section = ""
+    if narrative.relationship_test:
+        relationship_test_section = f"""
+<section class="luna-monthly-section luna-relationship-test">
+  <div class="luna-eyebrow">{_safe(narrator_cue("monthly", 1))}</div>
+  <h2>{_safe(narrative.relationship_test[0])}</h2>
+  {_paragraphs(narrative.relationship_test[1:])}
+</section>
+        """
+
     focus_section = ""
     if (
         narrative.main_focus != "General overview"
@@ -420,6 +441,8 @@ def build_monthly_experience_html(
   <div class="luna-eyebrow">How {_safe(narrative.label.split()[0])} unfolds</div>
   <div class="luna-story-timeline">{chapters}</div>
 </section>
+
+{relationship_test_section}
 
 <section class="luna-monthly-section luna-story-dates-section">
   <div class="luna-eyebrow">Dates worth circling</div>
@@ -647,6 +670,21 @@ def build_monthly_experience_html(
   margin:.35rem 0 .8rem;
   line-height:1.62;
 }}
+.luna-relationship-test {{
+  background:var(--soft);
+}}
+.luna-relationship-test h2 {{
+  max-width:760px;
+  margin:.45rem 0 1rem;
+  font-size:clamp(2.1rem,4.8vw,4rem);
+  line-height:1;
+}}
+.luna-relationship-test p {{
+  max-width:720px;
+  font-size:clamp(1.02rem,1.45vw,1.16rem);
+  line-height:1.62;
+}}
+
 .luna-story-dates-section h2 {{
   max-width:680px;
   margin:.45rem 0 1.35rem;

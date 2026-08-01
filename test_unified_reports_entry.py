@@ -7,7 +7,7 @@ def main() -> None:
     admin = (root / "admin_console.py").read_text(encoding="utf-8")
     config = (root / "site_config.py").read_text(encoding="utf-8")
 
-    assert 'BUILD_LABEL = "Monthly Arc Evidence Cleanup v2.7"' in config
+    assert 'BUILD_LABEL = "Luna Narrator + Forecast Inventory v2.8"' in config
     assert "def render_report_generator_workspace()" in app
     assert "def reports_page()" in app
     assert "Generate the complete report" in app

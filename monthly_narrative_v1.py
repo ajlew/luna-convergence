@@ -259,6 +259,7 @@ class MonthlyNarrative:
     scenario_examples: tuple[str, ...]
     romance_active: str
     romance_quiet: str
+    relationship_test: tuple[str, ...]
     at_glance: tuple[str, ...]
     focus_title: str
     focus_answer: tuple[str, ...]
@@ -892,24 +893,32 @@ def _arc_scenario_examples(arc: dict, maximum: int = 6) -> tuple[str, ...]:
 
 def _arc_key_dates(arc: dict, maximum: int = 6) -> tuple[KeyDate, ...]:
     selected: list[KeyDate] = []
+    deferred_inciting: list[KeyDate] = []
     for beat in _arc_beats(arc):
-        if beat.get("role") in {"inherited state", "inciting event"}:
+        role = beat.get("role")
+        if role in {"inherited state", "relationship test"}:
             continue
         start = str(beat.get("start_date", ""))
         end = str(beat.get("end_date", start))
         if not start:
             continue
-        selected.append(
-            KeyDate(
-                date_label=_date_range(start, end),
-                consequence=str(beat.get("summary", "A turning point develops.")),
-                response=str(beat.get("response", "Use the new information deliberately.")),
-                evidence=str(beat.get("title", "Convergence")),
-            )
+        item = KeyDate(
+            date_label=_date_range(start, end),
+            consequence=str(beat.get("summary", "A turning point develops.")),
+            response=str(beat.get("response", "Use the new information deliberately.")),
+            evidence=str(beat.get("title", "Convergence")),
         )
-        if len(selected) >= maximum:
-            break
-    return tuple(selected)
+        if role == "inciting event":
+            deferred_inciting.append(item)
+        else:
+            selected.append(item)
+
+    # Keep the opening out of a dense month, but use it when the arc would
+    # otherwise provide fewer than four visible dates.
+    if len(selected) < 4:
+        selected = deferred_inciting + selected
+
+    return tuple(selected[:maximum])
 
 
 def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
@@ -1159,6 +1168,9 @@ def build_monthly_narrative(
         opening_text = str((arc.get("opening") or (central_storyline,))[0])
         complication_text = str((arc.get("complication") or (central_storyline,))[0])
         climax_text = str((arc.get("climax") or (central_storyline,))[0])
+        relationship_test = tuple(
+            str(item) for item in (arc.get("relationship_test") or ()) if str(item).strip()
+        )
         at_glance = (
             opening_text,
             complication_text,
@@ -1212,6 +1224,7 @@ def build_monthly_narrative(
         )
         key_dates = _key_dates(result)
         do_line, dont_line = luna_do_dont(primary_house, secondary_house)
+        relationship_test = ()
         action_plan = (
             "State the interest or idea. Let the response provide evidence.",
             "Expand one proven option.",
@@ -1242,9 +1255,13 @@ def build_monthly_narrative(
     scores = [float(item.get("score", 0.0)) for item in convergences]
     top_score = max(scores, default=0.0)
     relationship_current = (
-        "Attraction expands through networks, unfamiliar territory or a creative opening; mutual effort matters more than fantasy."
-        if main_focus == "Love and relationships"
-        else "Relationship decisions need explicit terms and behaviour that matches the promise."
+        relationship_test[0]
+        if relationship_test
+        else (
+            "Attraction expands through networks, unfamiliar territory or a creative opening; mutual effort matters more than fantasy."
+            if main_focus == "Love and relationships"
+            else "Relationship decisions need explicit terms and behaviour that matches the promise."
+        )
     )
     arc_scenarios = list(arc.get("ranked_scenarios") or []) if arc else []
     top_scenario_text = "; ".join(
@@ -1281,6 +1298,7 @@ def build_monthly_narrative(
         scenario_examples=scenario_examples,
         romance_active=romance_active,
         romance_quiet=romance_quiet,
+        relationship_test=relationship_test,
         at_glance=at_glance,
         focus_title=FOCUS_TITLES.get(main_focus, FOCUS_TITLES["General overview"]),
         focus_answer=_focus_answer(result, main_focus, question, primary_house, secondary_house),
@@ -1348,6 +1366,14 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
     ])
     for paragraph in narrative.at_glance:
         lines.extend([paragraph, ""])
+
+    if narrative.relationship_test:
+        lines.extend([
+            "# Luna's relationship test",
+            "",
+            *narrative.relationship_test,
+            "",
+        ])
 
     lines.extend([f"# {narrative.focus_title}", ""])
     if narrative.personal_question:

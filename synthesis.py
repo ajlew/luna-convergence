@@ -20,6 +20,7 @@ from solar_cycle import (
     yearly_solar_markdown,
 )
 from monthly_arc_engine import build_monthly_arc
+from yearly_game_engine import build_yearly_game_map
 
 
 HOUSE_LABELS = {
@@ -783,6 +784,7 @@ def period_report(
     solar_year_chapters = []
     solar_year_section = ""
     monthly_arc = None
+    yearly_game_map = None
     inherited_events = []
 
     if (end - start).days < 50:
@@ -823,6 +825,14 @@ def period_report(
         strategic_chapter_markdown, strategic_chapters = _yearly_strategic_chapters(
             sign, start, end, timezone_name, events, cycles, convergences
         )
+        yearly_game_map = build_yearly_game_map(
+            sign=sign,
+            year=start.year,
+            timezone_name=timezone_name,
+            nearest_city=nearest_city,
+            main_focus=main_focus,
+            annual_events=events,
+        ).to_dict()
 
     ranked_events = sorted(events, key=lambda event: (-_transition_priority(event), event.event_date))
     selected_events = []
@@ -932,6 +942,7 @@ The winning sequence is:
         "solar_convergence": solar_convergence,
         "solar_year_chapters": solar_year_chapters,
         "monthly_arc": monthly_arc,
+        "yearly_game_map": yearly_game_map,
         "inherited_events": serialize(inherited_events),
         "nearest_city": nearest_city,
         "main_focus": main_focus,

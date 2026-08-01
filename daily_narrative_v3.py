@@ -24,6 +24,7 @@ from luna_editorial_system import (
     WHY_LUNA_LABEL,
     luna_do_dont,
 )
+from luna_voice import narrator_cue
 
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -1997,7 +1998,7 @@ def render_daily_narrative_v3(
   </div>
 
   <div class="sparse-story">
-    <div class="eyebrow">{escape(LUNA_SAYS_LABEL)}</div>
+    <div class="eyebrow">{escape(narrator_cue("daily", 0))}</div>
     {_paragraph_html(visible_story)}
   </div>
 

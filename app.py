@@ -28,6 +28,8 @@ from daily_narrative_v3 import (
 from monthly_narrative_v1 import build_monthly_narrative
 from monthly_experience_v1 import render_monthly_experience
 from yearly_experience_v1 import render_yearly_experience
+from forecast_inventory import EDITORIAL_STATUSES, build_inventory, inventory_json
+from luna_voice import narrator_principle, voice_profile
 from solar_cycle import (
     city_input_help,
     daily_solar_convergence,
@@ -1067,6 +1069,7 @@ def top_navigation(current_path: str) -> None:
     ]
     if EDITOR_PREVIEW_ENABLED:
         items.insert(3, ("editorial-preview", "Editorial preview"))
+        items.insert(4, ("forecast-library", "Forecast library"))
 
     desktop_links: list[str] = []
     mobile_links: list[str] = []
@@ -2141,6 +2144,149 @@ def render_report_generator_workspace() -> None:
         )
 
 
+def forecast_library_page() -> None:
+    if not EDITOR_PREVIEW_ENABLED:
+        st.error("Forecast library is disabled.")
+        return
+
+    set_page_metadata(
+        "Forecast Library | Luna Convergence",
+        "Precompute, review and download daily, monthly and yearly Luna forecast inventory.",
+        "/forecast-library",
+    )
+    st.markdown('<div class="eyebrow">Editorial production</div>', unsafe_allow_html=True)
+    st.markdown("# Build the forecast inventory")
+    st.markdown(
+        "Precompute the common astronomical structure and Luna narrative, then "
+        "apply city, focus and customer-question personalisation at delivery."
+    )
+
+    voice_cols = st.columns(3, gap="medium")
+    for column, product in zip(voice_cols, ("daily", "monthly", "yearly")):
+        profile = voice_profile(product)
+        with column:
+            st.markdown(f"### {product.title()}")
+            st.caption(profile.narrator_role)
+            st.write(profile.purpose)
+            st.markdown(f"**Pace:** {profile.pace}")
+    st.caption(narrator_principle())
+
+    report_type = st.radio(
+        "Inventory type",
+        ["daily", "monthly", "yearly"],
+        horizontal=True,
+        format_func=str.title,
+        key="inventory-report-type",
+    )
+
+    with st.form("forecast-inventory-form", clear_on_submit=False):
+        top = st.columns(3, gap="medium")
+        with top[0]:
+            year = int(st.number_input("Year", min_value=1950, max_value=2100, value=2027, step=1))
+        with top[1]:
+            timezone_name = st.selectbox(
+                "Timezone basis",
+                TIMEZONES,
+                index=TIMEZONES.index(DEFAULT_TIMEZONE),
+            )
+        with top[2]:
+            city = st.text_input(
+                "Representative city",
+                value=representative_city_name(timezone_name),
+                help="Used for the local-light layer. Customer delivery can apply a different city.",
+            )
+
+        signs = st.multiselect(
+            "Signs",
+            SIGNS,
+            default=[DEFAULT_SIGN],
+            help="Choose one sign for editorial refinement or several for batch production.",
+        )
+        status = st.selectbox(
+            "Editorial status",
+            EDITORIAL_STATUSES,
+            index=EDITORIAL_STATUSES.index("calculated"),
+        )
+
+        months: list[int] = []
+        start_date = None
+        end_date = None
+        if report_type == "daily":
+            dates = st.columns(2, gap="medium")
+            with dates[0]:
+                start_date = st.date_input("Start date", value=date(year, 1, 1))
+            with dates[1]:
+                end_date = st.date_input("End date", value=date(year, 1, 7))
+            main_focus = "Daily overview"
+            estimate = len(signs) * (((end_date - start_date).days + 1) if end_date >= start_date else 0)
+        elif report_type == "monthly":
+            months = st.multiselect(
+                "Months",
+                list(range(1, 13)),
+                default=[1],
+                format_func=lambda value: month_name[value],
+            )
+            main_focus = st.selectbox("Core focus", MONTHLY_FOCUS_CHOICES)
+            estimate = len(signs) * len(months)
+        else:
+            main_focus = st.selectbox("Core focus", YEARLY_FOCUS_CHOICES)
+            estimate = len(signs)
+
+        st.caption(f"Estimated records: {estimate}")
+        submitted = st.form_submit_button(
+            "Generate inventory",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if submitted:
+        if not signs:
+            st.error("Choose at least one sign.")
+            return
+        try:
+            with st.spinner("Calculating the forecast inventory..."):
+                records = build_inventory(
+                    report_type,
+                    signs,
+                    year=year,
+                    timezone_name=timezone_name,
+                    city=city,
+                    months=months,
+                    start_date=start_date,
+                    end_date=end_date,
+                    main_focus=main_focus,
+                    status=status,
+                )
+                document = inventory_json(records)
+            st.session_state["forecast-inventory-json"] = document
+            st.session_state["forecast-inventory-count"] = len(records)
+            st.session_state["forecast-inventory-name"] = (
+                f"luna_{report_type}_inventory_{year}.json"
+            )
+        except Exception as exc:
+            st.exception(exc)
+            return
+
+    document = st.session_state.get("forecast-inventory-json")
+    if document:
+        count = int(st.session_state.get("forecast-inventory-count", 0))
+        st.success(f"Generated {count} forecast record{'s' if count != 1 else ''}.")
+        st.download_button(
+            "Download forecast inventory",
+            data=document,
+            file_name=st.session_state.get("forecast-inventory-name", "luna_forecast_inventory.json"),
+            mime="application/json",
+            use_container_width=True,
+        )
+        with st.expander("Inventory preview", expanded=False):
+            preview = json.loads(document)
+            st.json({
+                "inventory_version": preview.get("inventory_version"),
+                "record_count": preview.get("record_count"),
+                "first_record": (preview.get("records") or [{}])[0],
+            })
+
+
 def editorial_preview_page() -> None:
     if not EDITOR_PREVIEW_ENABLED:
         st.error("Editorial preview is disabled.")
@@ -2827,6 +2973,12 @@ EDITORIAL_PREVIEW_REF = st.Page(
     url_path="editorial-preview",
     visibility="hidden",
 )
+FORECAST_LIBRARY_REF = st.Page(
+    forecast_library_page,
+    title="Forecast Library",
+    url_path="forecast-library",
+    visibility="hidden",
+)
 REPORTS_PAGE_REF = st.Page(
     reports_page,
     title="Reports",
@@ -2874,6 +3026,7 @@ ALL_PAGES = [
     DAILY_PAGE_REF,
     MONTHLY_INDEX_REF,
     EDITORIAL_PREVIEW_REF,
+    FORECAST_LIBRARY_REF,
     REPORTS_PAGE_REF,
     HOUSES_PAGE_REF,
     SAMPLE_PAGE_REF,

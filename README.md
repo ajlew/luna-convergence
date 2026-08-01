@@ -391,3 +391,14 @@ the customer-facing Why Luna sees this section. A concise three-anchor evidence
 path now supports the story without retelling it. Ranked scenario families remain
 in Full technical evidence. Monthly and yearly customer dates use day-month-year
 format, such as `1 July 2026`.
+
+
+## Luna Narrator + Forecast Inventory v2.8
+
+Luna is now a shared narrator across all products: sharp observer for
+Daily, storyteller for Monthly and game strategist for Yearly. Monthly
+arcs preserve independent relationship tests instead of burying them
+inside dense transit clusters. Year-ahead reports use a top-down game map
+validated against twelve monthly rounds. The preview-only
+`/forecast-library` route can precompute versioned Daily, Monthly and
+Yearly report records for editorial review and later sale.
