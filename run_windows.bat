@@ -26,7 +26,7 @@ if errorlevel 1 goto :error
 
 echo.
 echo Starting Luna Customer Website
-echo Build: Monthly Story + Compact Hero v2.4
+echo Build: Full Report Print Portal v2.5
 echo Folder: %CD%
 echo Open: http://localhost:8512/
 echo.

@@ -254,7 +254,29 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   .luna-print-check {{ width:100%; margin-left:0; }}
   .luna-print-controls button {{ width:100%; }}
 }}
+#luna-year-print-portal {{ display:none; }}
 @media print {{
+  body.luna-year-print-active > *:not(#luna-year-print-portal):not(style):not(script) {{
+    display:none !important;
+  }}
+  #luna-year-print-portal {{
+    display:block !important;
+    position:static !important;
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+  }}
+  #luna-year-print-portal .luna-yearly-report {{
+    display:block !important;
+    position:static !important;
+    width:100% !important;
+    max-width:none !important;
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    margin:0 !important;
+  }}
   html,body {{ margin:0!important; padding:0!important; background:#fff!important; }}
   .luna-yearly-report {{ position:static!important; width:100%; max-width:none; margin:0; }}
   .luna-print-controls {{ display:none!important; }}
@@ -332,26 +354,83 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   const orientation=document.getElementById("luna-print-orientation");
   const printButton=document.getElementById("luna-print-report");
   const pageStyle=document.getElementById("luna-print-page-size");
-  let states=[];
-  let printPrepared=false;
+  let printPortal=null;
+
+  function selectedPaper() {{
+    return paper?paper.value:"{default_paper}";
+  }}
+
+  function selectedOrientation() {{
+    return orientation?orientation.value:"{default_orientation}";
+  }}
+
   function settings() {{
-    const p=paper?paper.value:"{default_paper}";
-    const o=orientation?orientation.value:"{default_orientation}";
-    report.dataset.printPaper=p; report.dataset.printOrientation=o;
+    const p=selectedPaper();
+    const o=selectedOrientation();
+    report.dataset.printPaper=p;
+    report.dataset.printOrientation=o;
     pageStyle.textContent="@page {{ size: "+p+" "+o+"; margin:12mm; }}";
   }}
-  function prepare() {{
-    if(printPrepared)return;
-    printPrepared=true;
-    settings(); states=[];
-    report.querySelectorAll("details").forEach(d=>{{states.push(d.open);d.open=true;}});
+
+  function removePortal() {{
+    if(printPortal&&printPortal.parentNode) {{
+      printPortal.parentNode.removeChild(printPortal);
+    }}
+    printPortal=null;
+    document.body.classList.remove("luna-year-print-active");
   }}
-  function restore() {{report.querySelectorAll("details").forEach((d,i)=>d.open=states[i]||false);printPrepared=false;}}
+
+  function createPortal() {{
+    if(printPortal)return printPortal;
+    settings();
+
+    printPortal=document.createElement("div");
+    printPortal.id="luna-year-print-portal";
+
+    const clone=report.cloneNode(true);
+    clone.id="luna-yearly-report-print";
+    clone.dataset.printPaper=selectedPaper();
+    clone.dataset.printOrientation=selectedOrientation();
+
+    clone.querySelectorAll(".luna-print-controls").forEach(node=>node.remove());
+
+    const expandAllPrintDetails=()=>{{
+      clone.querySelectorAll("details").forEach(detail=>{{
+        detail.open=true;
+        detail.setAttribute("open","");
+      }});
+    }};
+
+    expandAllPrintDetails();
+    window.requestAnimationFrame(expandAllPrintDetails);
+
+    printPortal.appendChild(clone);
+    document.body.appendChild(printPortal);
+    document.body.classList.add("luna-year-print-active");
+    return printPortal;
+  }}
+
+  function prepare() {{
+    createPortal();
+  }}
+
+  function restore() {{
+    window.setTimeout(removePortal,0);
+  }}
+
   if(paper)paper.addEventListener("change",settings);
   if(orientation)orientation.addEventListener("change",settings);
   window.addEventListener("beforeprint",prepare);
   window.addEventListener("afterprint",restore);
-  if(printButton)printButton.addEventListener("click",async()=>{{prepare();if(document.fonts&&document.fonts.ready){{await document.fonts.ready;}}window.setTimeout(()=>window.print(),120);}});
+
+  if(printButton)printButton.addEventListener("click",async()=>{{
+    createPortal();
+    if(document.fonts&&document.fonts.ready){{
+      await document.fonts.ready;
+    }}
+    window.setTimeout(()=>window.print(),180);
+  }});
+
   settings();
 }})();
 </script>

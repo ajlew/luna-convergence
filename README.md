@@ -360,3 +360,11 @@ chronological Luna story. The paid page includes four narrative
 paragraphs, three detailed acts, visible dates worth circling,
 romance-active/quiet guidance, Love/Work/Money outcomes and expandable
 evidence. The print toolbar is static and no longer covers report content.
+
+
+## Full Report Print Portal v2.5
+
+Monthly and year-ahead printing now clones the complete report into a
+temporary top-level print portal. This prevents Streamlit page containers
+from clipping the report to one page. All evidence sections open in the
+print clone and the selected A4/A3 orientation settings are preserved.

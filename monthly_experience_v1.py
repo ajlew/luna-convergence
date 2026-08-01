@@ -301,7 +301,7 @@ def build_monthly_experience_html(
 
 {focus_section}
 
-<section class="luna-monthly-section">
+<section class="luna-monthly-section luna-story-section">
   <div class="luna-eyebrow">How {_safe(narrative.label.split()[0])} unfolds</div>
   <div class="luna-story-timeline">{chapters}</div>
 </section>
@@ -779,7 +779,31 @@ def build_monthly_experience_html(
     width:100%;
   }}
 }}
+#luna-print-portal {{
+  display:none;
+}}
 @media print {{
+  body.luna-print-active > *:not(#luna-print-portal):not(style):not(script) {{
+    display:none !important;
+  }}
+  #luna-print-portal {{
+    display:block !important;
+    position:static !important;
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+  }}
+  #luna-print-portal .luna-monthly-report {{
+    display:block !important;
+    position:static !important;
+    width:100% !important;
+    max-width:none !important;
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    margin:0 !important;
+  }}
   html, body {{
     margin:0 !important;
     padding:0 !important;
@@ -849,7 +873,8 @@ def build_monthly_experience_html(
   .luna-monthly-report[data-print-orientation="portrait"] .luna-next-move h2 {{
     font-size:25pt;
   }}
-  .luna-monthly-report[data-print-orientation="portrait"] .luna-romance-section {{
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-story-section,
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-story-dates-section {{
     break-before:page;
     page-break-before:always;
   }}
@@ -931,49 +956,89 @@ def build_monthly_experience_html(
   const orientation = document.getElementById("luna-print-orientation");
   const printButton = document.getElementById("luna-print-report");
   const pageStyle = document.getElementById("luna-print-page-size");
-  let previousStates = [];
-  let printPrepared = false;
+  let printPortal = null;
+
+  function selectedPaper() {{
+    return paper ? paper.value : "{default_paper}";
+  }}
+
+  function selectedOrientation() {{
+    return orientation ? orientation.value : "{default_orientation}";
+  }}
 
   function applyPrintSettings() {{
-    const selectedPaper = paper ? paper.value : "{default_paper}";
-    const selectedOrientation = orientation ? orientation.value : "{default_orientation}";
-    report.dataset.printPaper = selectedPaper;
-    report.dataset.printOrientation = selectedOrientation;
+    const paperValue = selectedPaper();
+    const orientationValue = selectedOrientation();
+    report.dataset.printPaper = paperValue;
+    report.dataset.printOrientation = orientationValue;
     pageStyle.textContent =
-      "@page {{ size: " + selectedPaper + " " + selectedOrientation + "; margin: 12mm; }}";
+      "@page {{ size: " + paperValue + " " + orientationValue + "; margin: 12mm; }}";
+  }}
+
+  function removePrintPortal() {{
+    if (printPortal && printPortal.parentNode) {{
+      printPortal.parentNode.removeChild(printPortal);
+    }}
+    printPortal = null;
+    document.body.classList.remove("luna-print-active");
+  }}
+
+  function createPrintPortal() {{
+    if (printPortal) return printPortal;
+
+    applyPrintSettings();
+
+    printPortal = document.createElement("div");
+    printPortal.id = "luna-print-portal";
+
+    const clone = report.cloneNode(true);
+    clone.id = "luna-monthly-report-print";
+    clone.dataset.printPaper = selectedPaper();
+    clone.dataset.printOrientation = selectedOrientation();
+
+    clone.querySelectorAll(".luna-print-controls").forEach((node) => node.remove());
+    const expandAllPrintDetails = () => {{
+      clone.querySelectorAll("details").forEach((detail) => {{
+        detail.open = true;
+        detail.setAttribute("open", "");
+      }});
+    }};
+
+    expandAllPrintDetails();
+
+    // Run again after the clone enters the document. This catches nested
+    // disclosures and any browser-created details state before pagination.
+    window.requestAnimationFrame(expandAllPrintDetails);
+
+    printPortal.appendChild(clone);
+    document.body.appendChild(printPortal);
+    document.body.classList.add("luna-print-active");
+    return printPortal;
   }}
 
   function preparePrint() {{
-    if (printPrepared) return;
-    printPrepared = true;
-    applyPrintSettings();
-    previousStates = [];
-    report.querySelectorAll("details").forEach((detail) => {{
-      previousStates.push(detail.open);
-      detail.open = true;
-    }});
+    createPrintPortal();
   }}
 
   function restorePrint() {{
-    report.querySelectorAll("details").forEach((detail, index) => {{
-      detail.open = previousStates[index] || false;
-    }});
-    printPrepared = false;
+    window.setTimeout(removePrintPortal, 0);
   }}
 
   if (paper) paper.addEventListener("change", applyPrintSettings);
   if (orientation) orientation.addEventListener("change", applyPrintSettings);
   window.addEventListener("beforeprint", preparePrint);
   window.addEventListener("afterprint", restorePrint);
+
   if (printButton) {{
     printButton.addEventListener("click", async () => {{
-      preparePrint();
+      createPrintPortal();
       if (document.fonts && document.fonts.ready) {{
         await document.fonts.ready;
       }}
-      window.setTimeout(() => window.print(), 120);
+      window.setTimeout(() => window.print(), 180);
     }});
   }}
+
   applyPrintSettings();
 }})();
 </script>
