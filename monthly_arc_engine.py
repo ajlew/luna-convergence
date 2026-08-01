@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Iterable, Mapping, Sequence
 
+from date_display import human_date, human_date_range
 from scenario_engine import SIGN_RULERS, ScenarioResult, rank_scenarios
 
 
@@ -241,15 +242,11 @@ def _best_cluster(
 
 def _event_label(event: object) -> str:
     d = _date_value(event)
-    return f"{d.strftime('%B')} {d.day}: {str(_value(event, 'title', 'Transition'))}"
+    return f"{human_date(d)}: {str(_value(event, 'title', 'Transition'))}"
 
 
 def _date_range_label(start: date, end: date) -> str:
-    if start == end:
-        return f"{start.strftime('%B')} {start.day}"
-    if start.month == end.month:
-        return f"{start.strftime('%B')} {start.day}-{end.day}"
-    return f"{start.strftime('%B')} {start.day}-{end.strftime('%B')} {end.day}"
+    return human_date_range(start, end)
 
 
 def _top_scenarios(

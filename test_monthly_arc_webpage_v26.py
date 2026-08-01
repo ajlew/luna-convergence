@@ -29,7 +29,7 @@ def main() -> None:
         "The bill arrives before the breakthrough",
         "Paperwork tests the promise",
         "The future finally answers back",
-        "Monthly arc equation",
+        "Evidence path",
         "Ranked scenario families",
         "Carryover evidence",
         "Full Moon in Capricorn",
@@ -37,7 +37,7 @@ def main() -> None:
         "Mercury stations direct",
         "Sun conjunction Jupiter",
         "Full Moon in Aquarius",
-        "luna-arc-grid",
+        "luna-evidence-path",
         "luna-print-portal",
         "cloneNode(true)",
         "requestAnimationFrame(expandAllPrintDetails)",
@@ -47,6 +47,8 @@ def main() -> None:
     assert html.count('class="luna-story-act"') == 3
     assert html.count('class="luna-story-date-card"') == 4
     assert "Include evidence" not in html
+    assert "Monthly arc equation" not in html
+    assert "luna-arc-card" not in html
 
     print("Monthly Arc Engine webpage tests passed.")
 

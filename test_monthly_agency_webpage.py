@@ -34,7 +34,7 @@ def main() -> None:
         "Whether the spark arrives—or the room stays quiet",
         "Shift from applicant to gatekeeper.",
         "Why Luna sees this",
-        "Monthly arc equation",
+        "Evidence path",
         "Ranked scenario families",
         "Carryover evidence",
         "Solar Convergence",
@@ -62,6 +62,8 @@ def main() -> None:
     assert html.count('class="luna-story-act"') == 3
     assert html.count('class="luna-story-date-card"') == 4
     assert "Include evidence" not in html
+    assert "Monthly arc equation" not in html
+    assert "luna-arc-card" not in html
     assert "detail.open = true" in html
     assert "position:sticky" not in html
     assert "min-height:0 !important" in html

@@ -53,7 +53,7 @@ def main() -> None:
     )
     assert len(narrative.chapters) == 3
     assert len(narrative.key_dates) == 4
-    assert "Monthly arc equation" in narrative.technical_appendix_markdown
+    assert "Monthly arc equation" not in narrative.technical_appendix_markdown
     assert "Ranked scenario families" in narrative.technical_appendix_markdown
     assert "Carryover evidence" in narrative.technical_appendix_markdown
     assert "Your month at a glance" in markdown

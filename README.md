@@ -382,3 +382,12 @@ the shared-money New Moon, Mercury's direct station, the Sun-Jupiter climax and
 the Aquarius Full Moon resolution. `Why Luna sees this` displays the equation,
 arc roles and ranked scenario families while the complete evidence remains
 expanded automatically for printing.
+
+
+## Monthly Arc Evidence Cleanup v2.7
+
+The repeated monthly arc equation and six narrative-role cards were removed from
+the customer-facing Why Luna sees this section. A concise three-anchor evidence
+path now supports the story without retelling it. Ranked scenario families remain
+in Full technical evidence. Monthly and yearly customer dates use day-month-year
+format, such as `1 July 2026`.

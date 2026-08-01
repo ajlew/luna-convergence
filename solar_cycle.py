@@ -8,6 +8,7 @@ import re
 from typing import Iterable
 
 from astrology_engine import SIGNS, positions_for_date, whole_sign_house
+from date_display import human_date
 
 
 @dataclass(frozen=True)
@@ -527,7 +528,7 @@ def daily_solar_convergence(
         f"For {native_sign}, this activates house {house}: {HOUSE_NAMES[house]}.",
         f"From {location.name}, daylight is {direction.lower()} at approximately "
         f"{abs(change):.1f} minutes per day. The local season is {_local_season(quarter, hemisphere).lower()}.",
-        f"The next solar gate is the {next_gate[0]} on {next_gate_date.strftime('%B %d')}, "
+        f"The next solar gate is the {next_gate[0]} on {human_date(next_gate_date)}, "
         f"{max(0, (next_gate_date - d).days)} days away.",
     )
     return SolarConvergence(
@@ -635,7 +636,7 @@ def monthly_solar_convergence(
         gate_in_month
         or (
             f"The next solar gate is the {base.next_solar_gate} on "
-            f"{date.fromisoformat(base.next_gate_date).strftime('%B %d')}, "
+            f"{human_date(base.next_gate_date)}, "
             f"{base.days_to_next_gate} days from the middle of the month."
         ),
     )

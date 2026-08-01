@@ -5,6 +5,7 @@ from datetime import date, datetime
 import re
 from typing import Iterable
 
+from date_display import human_date, human_date_range
 from luna_editorial_system import (
     GATEKEEPER_LINE,
     VALIDATION_LINE,
@@ -298,19 +299,12 @@ def _parse_date(value: str) -> date:
 
 
 def _date_label(value: str) -> str:
-    """Return a platform-independent customer date such as 'August 1'."""
-    parsed = _parse_date(value)
-    return f"{parsed.strftime('%B')} {parsed.day}"
+    """Return a Windows-safe customer date such as '1 August 2026'."""
+    return human_date(value)
 
 
 def _date_range(start: str, end: str) -> str:
-    first = _parse_date(start)
-    last = _parse_date(end)
-    if first == last:
-        return f"{first.strftime('%B')} {first.day}"
-    if first.month == last.month:
-        return f"{first.strftime('%B')} {first.day}-{last.day}"
-    return f"{first.strftime('%B')} {first.day}-{last.strftime('%B')} {last.day}"
+    return human_date_range(start, end)
 
 
 def _dominant_house(result: dict, index: int, default: int) -> int:
@@ -1052,20 +1046,11 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
         f"| Solar quarter | {solar.get('solar_quarter', 'n/a')} |",
         f"| Local light | {solar.get('light_direction', 'n/a')} from {solar.get('city', 'timezone estimate')} |",
         f"| Activated house | {solar.get('activated_house', 'n/a')} - {solar.get('activated_house_name', '')} |",
-        f"| Next solar gate | {solar.get('next_solar_gate', 'n/a')} - {solar.get('next_gate_date', '')} |",
+        f"| Next solar gate | {solar.get('next_solar_gate', 'n/a')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'n/a'} |",
         f"| Location basis | {solar.get('location_basis', 'n/a')} |",
     ]
 
     arc = _monthly_arc(result)
-    arc_rows = ["| Narrative role | Window | Selected trigger | Score |", "|---|---|---|---:|"]
-    for beat in _arc_beats(arc):
-        start = str(beat.get("start_date", ""))
-        end = str(beat.get("end_date", start))
-        window = _date_range(start, end) if start else "n/a"
-        arc_rows.append(
-            f"| {str(beat.get('role', '')).title()} | {window} | {beat.get('title', '')} | {float(beat.get('score', 0.0)):.1f} |"
-        )
-
     scenario_rows = ["| Rank | Scenario family | Symbolic support | Examples |", "|---:|---|---|---|"]
     for rank, item in enumerate((arc.get("ranked_scenarios") or [])[:8], 1):
         examples = "; ".join(str(value) for value in (item.get("examples") or [])[:2])
@@ -1085,14 +1070,6 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             "# Technical appendix",
             "",
             "This appendix contains the calculation trail supporting the customer narrative. House numbers and event names are evidence; the main report above translates them into consequences, timing and practical decisions.",
-            "",
-            "## Monthly arc equation",
-            "",
-            str(arc.get("equation", "Planetary sequence + convergence strength + scenario families + temporal roles = monthly arc")),
-            "",
-            "## Selected narrative roles",
-            "",
-            *arc_rows,
             "",
             "## Ranked scenario families",
             "",
@@ -1257,7 +1234,7 @@ def build_monthly_narrative(
         ("Solar phase", f"{solar.get('solar_quarter', 'Unavailable')} / {solar.get('solar_process', '')}"),
         ("Local light movement", f"{solar.get('light_direction', 'Unavailable')} from {solar.get('city', 'timezone estimate')}"),
         ("Local season", str(solar.get("local_season", "Unavailable"))),
-        ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {solar.get('next_gate_date', '')}"),
+        ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
         ("Solar house movement", f"House {solar.get('start_house', '?')} to house {solar.get('end_house', '?')}"),
         ("Customer focus", str(solar.get("focus_meaning", "Unavailable"))),
     )
@@ -1281,12 +1258,11 @@ def build_monthly_narrative(
         ("Ranked scenario families", top_scenario_text),
         ("Complication window", first_window),
         ("Climax window", second_window),
-        ("Narrative equation", str(arc.get("equation", "Convergence sequence becomes the monthly arc")) if arc else "Convergence sequence becomes the monthly arc"),
         ("Monthly concentration", _strength_label(top_score)),
         ("Long-term climate", _retrograde_climate(result)),
         ("Solar phase", f"{solar.get('solar_quarter', 'Unavailable')} / {solar.get('solar_process', '')}"),
         ("Local light", f"{solar.get('light_direction', 'Unavailable')} - {solar.get('city', 'timezone estimate')}"),
-        ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {solar.get('next_gate_date', '')}"),
+        ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
     )
 
     return MonthlyNarrative(

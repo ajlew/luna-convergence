@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from html import escape
 
+from date_display import human_date, human_date_range
 from luna_editorial_system import (
     DO_LABEL,
     DONT_LABEL,
@@ -99,7 +100,7 @@ def _chapter_cards(result: dict) -> str:
   <span>{_safe(chapter.get('name'))}</span>
   <h3>{_safe(chapter.get('strategic_question'))}</h3>
   <p>{_safe(chapter.get('focus_direction'))}</p>
-  <small>{_safe(chapter.get('start_date'))} - {_safe(chapter.get('end_date'))}</small>
+  <small>{_safe(human_date_range(chapter.get('start_date'), chapter.get('end_date')))}</small>
 </article>
             """
         )
@@ -125,7 +126,7 @@ def _timing_cards(result: dict) -> str:
     return "".join(
         f"""
 <article class="luna-date-card">
-  <span>{_safe(item.get('event_date'))}</span>
+  <span>{_safe(human_date(item.get('event_date')))}</span>
   <strong>{_safe(item.get('title'))}</strong>
   <p>{_safe(item.get('detail'))}</p>
 </article>

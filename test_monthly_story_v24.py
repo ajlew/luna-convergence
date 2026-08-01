@@ -44,7 +44,7 @@ def main() -> None:
     assert html.count('class="luna-story-date-card"') >= 4
     assert html.count('class="luna-story-act"') == 3
     assert "detail.open = true" in html
-    assert "Monthly arc equation" in html
+    assert "Evidence path" in html
     assert "Ranked scenario families" in html
 
     print("Monthly Story with Arc Engine tests passed.")
