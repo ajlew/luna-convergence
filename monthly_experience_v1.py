@@ -53,12 +53,15 @@ def _story_date_cards(narrative: MonthlyNarrative) -> str:
     if not dates:
         return ""
 
-    indexes = (0, len(dates) // 2, max(len(dates) - 2, 0), len(dates) - 1)
-    selected = []
-    for index in indexes:
-        item = dates[index]
-        if item not in selected:
-            selected.append(item)
+    if len(dates) <= 4:
+        selected = dates
+    else:
+        indexes = (0, len(dates) // 2, max(len(dates) - 2, 0), len(dates) - 1)
+        selected = []
+        for index in indexes:
+            item = dates[index]
+            if item not in selected:
+                selected.append(item)
 
     return "".join(
         f"""
@@ -106,6 +109,56 @@ def _retrograde_rows(result: dict) -> str:
             f"<td>{_safe(item.get('planet'))}</td>"
             f"<td>{_safe(item.get('retrograde_start'))}</td>"
             f"<td>{_safe(item.get('direct_date'))}</td>"
+            f"<td>{_safe(', '.join(map(str, item.get('houses') or [])))}</td>"
+            "</tr>"
+        )
+    return "".join(rows)
+
+
+def _arc_beat_cards(result: dict) -> str:
+    arc = result.get("monthly_arc") or {}
+    cards = []
+    for beat in arc.get("beats") or []:
+        start = str(beat.get("start_date", ""))
+        end = str(beat.get("end_date", start))
+        window = start if start == end else f"{start} to {end}"
+        cards.append(
+            f"""
+<article class="luna-arc-card">
+  <span>{_safe(beat.get('role', 'Turning point'))}</span>
+  <small>{_safe(window)}</small>
+  <h3>{_safe(beat.get('title', 'Convergence'))}</h3>
+  <p>{_safe(beat.get('summary', ''))}</p>
+  <strong>{_safe(beat.get('response', ''))}</strong>
+</article>
+            """
+        )
+    return "".join(cards)
+
+
+def _scenario_rows_html(result: dict) -> str:
+    arc = result.get("monthly_arc") or {}
+    rows = []
+    for item in (arc.get("ranked_scenarios") or [])[:8]:
+        examples = "; ".join(str(value) for value in (item.get("examples") or [])[:2])
+        rows.append(
+            "<tr>"
+            f"<td>{_safe(item.get('label'))}</td>"
+            f"<td>{_safe(item.get('confidence'))}</td>"
+            f"<td>{_safe(examples)}</td>"
+            "</tr>"
+        )
+    return "".join(rows)
+
+
+def _carryover_rows_html(result: dict) -> str:
+    arc = result.get("monthly_arc") or {}
+    rows = []
+    for item in arc.get("inherited_events") or []:
+        rows.append(
+            "<tr>"
+            f"<td>{_safe(item.get('event_date'))}</td>"
+            f"<td>{_safe(item.get('title'))}</td>"
             f"<td>{_safe(', '.join(map(str, item.get('houses') or [])))}</td>"
             "</tr>"
         )
@@ -199,6 +252,10 @@ def build_monthly_experience_html(
     chapters = _chapter_cards(narrative)
     life_rows = _life_rows(narrative)
     story_dates = _story_date_cards(narrative)
+    arc_cards = _arc_beat_cards(result)
+    scenario_rows = _scenario_rows_html(result)
+    carryover_rows = _carryover_rows_html(result)
+    monthly_arc = result.get("monthly_arc") or {}
 
     focus_section = ""
     if (
@@ -226,6 +283,17 @@ def build_monthly_experience_html(
       <p>{_safe(narrative.central_storyline)}</p>
       <p><strong>Theme:</strong> {_safe(narrative.headline)}</p>
       <p><strong>Convergence:</strong> {_safe(narrative.convergence_axis)}</p>
+      <h3>Monthly arc equation</h3>
+      <p>{_safe(monthly_arc.get('equation', 'Planetary sequence + convergence strength + scenario families + temporal roles = monthly arc'))}</p>
+      <div class="luna-arc-grid">{arc_cards}</div>
+      <h3>Ranked scenario families</h3>
+      <div class="luna-table-wrap">
+        <table>
+          <thead><tr><th>Event family</th><th>Support level</th><th>Possible manifestations</th></tr></thead>
+          <tbody>{scenario_rows}</tbody>
+        </table>
+      </div>
+      <p class="luna-method-note">These are ranked symbolic event families, not measured probabilities or guarantees.</p>
       <p><strong>Rule:</strong> {_safe(VALIDATION_LINE)}</p>
     </div>
   </details>
@@ -257,6 +325,13 @@ def build_monthly_experience_html(
   <details>
     <summary>{_safe(TECHNICAL_LABEL)} <span>+</span></summary>
     <div class="luna-detail-body">
+      <h3>Carryover evidence</h3>
+      <div class="luna-table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Evidence</th><th>Houses</th></tr></thead>
+          <tbody>{carryover_rows}</tbody>
+        </table>
+      </div>
       <h3>Dominant houses</h3>
       <div class="luna-table-wrap">
         <table>
@@ -626,6 +701,44 @@ def build_monthly_experience_html(
   font-size:1.03rem;
   line-height:1.48;
 }}
+.luna-arc-grid {{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  border-top:1px solid var(--black);
+  border-left:1px solid var(--black);
+  margin:1.25rem 0 1.6rem;
+}}
+.luna-arc-card {{
+  padding:1rem;
+  border-right:1px solid var(--black);
+  border-bottom:1px solid var(--black);
+}}
+.luna-arc-card span,
+.luna-arc-card small {{
+  display:block;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.62rem;
+  text-transform:uppercase;
+}}
+.luna-arc-card small {{
+  color:var(--muted);
+  margin:.25rem 0 .55rem;
+}}
+.luna-arc-card h3 {{
+  margin:.35rem 0 .6rem;
+  font-size:clamp(1.3rem,2.2vw,1.9rem);
+  line-height:1.05;
+}}
+.luna-arc-card strong {{
+  display:block;
+  margin-top:.75rem;
+  font-size:.92rem;
+  line-height:1.4;
+}}
+.luna-method-note {{
+  color:var(--muted);
+  font-size:.82rem !important;
+}}
 .luna-evidence-stack details {{
   border-bottom:1px solid var(--black);
 }}
@@ -742,6 +855,7 @@ def build_monthly_experience_html(
   .luna-next-move,
   .luna-evidence-grid,
   .luna-date-grid,
+  .luna-arc-grid,
   .luna-story-date-grid,
   .luna-story-act {{
     grid-template-columns:1fr;
@@ -859,6 +973,7 @@ def build_monthly_experience_html(
     page-break-inside:avoid;
   }}
   .luna-monthly-report[data-print-orientation="portrait"] .luna-story-act,
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-arc-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-story-date-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-romance-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-evidence-grid,
@@ -899,6 +1014,7 @@ def build_monthly_experience_html(
     border-bottom:1px solid #050505;
   }}
   .luna-monthly-report[data-print-orientation="landscape"] .luna-story-date-grid,
+  .luna-monthly-report[data-print-orientation="landscape"] .luna-arc-grid,
   .luna-monthly-report[data-print-orientation="landscape"] .luna-romance-grid,
   .luna-monthly-report[data-print-orientation="landscape"] .luna-evidence-grid,
   .luna-monthly-report[data-print-orientation="landscape"] .luna-date-grid {{

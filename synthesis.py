@@ -19,6 +19,7 @@ from solar_cycle import (
     yearly_solar_chapters,
     yearly_solar_markdown,
 )
+from monthly_arc_engine import build_monthly_arc
 
 
 HOUSE_LABELS = {
@@ -781,6 +782,8 @@ def period_report(
     solar_convergence = None
     solar_year_chapters = []
     solar_year_section = ""
+    monthly_arc = None
+    inherited_events = []
 
     if (end - start).days < 50:
         solar_convergence = monthly_solar_convergence(
@@ -789,6 +792,22 @@ def period_report(
             start.month,
             timezone_name,
             nearest_city=nearest_city,
+            main_focus=main_focus,
+        ).to_dict()
+        inherited_events = period_events(
+            start - timedelta(days=7),
+            start - timedelta(days=1),
+            sign,
+            timezone_name,
+        )
+        monthly_arc = build_monthly_arc(
+            sign=sign,
+            start=start,
+            end=end,
+            label=period_name,
+            events=events,
+            inherited_events=inherited_events,
+            retrograde_cycles=cycles,
             main_focus=main_focus,
         ).to_dict()
     else:
@@ -912,6 +931,8 @@ The winning sequence is:
         ],
         "solar_convergence": solar_convergence,
         "solar_year_chapters": solar_year_chapters,
+        "monthly_arc": monthly_arc,
+        "inherited_events": serialize(inherited_events),
         "nearest_city": nearest_city,
         "main_focus": main_focus,
     }

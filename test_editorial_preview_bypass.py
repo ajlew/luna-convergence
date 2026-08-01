@@ -8,7 +8,7 @@ def main() -> None:
     admin = (root / "admin_console.py").read_text(encoding="utf-8")
 
     assert 'EDITOR_PREVIEW_ENABLED = True' in config
-    assert 'BUILD_LABEL = "Full Report Print Portal v2.5"' in config
+    assert 'BUILD_LABEL = "Monthly Arc Engine v2.6"' in config
 
     assert "def editorial_preview_page()" in app
     assert '"editorial-preview"' in app
@@ -31,7 +31,7 @@ def main() -> None:
         content = (root / filename).read_text(encoding="utf-8")
         assert f"--server.port {port}" in content
         assert script in content
-        assert "Full Report Print Portal v2.5" in content
+        assert "Monthly Arc Engine v2.6" in content
 
     print("Editorial preview bypass tests passed.")
 

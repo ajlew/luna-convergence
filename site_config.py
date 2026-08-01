@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Full Report Print Portal v2.5"
+BUILD_LABEL = "Monthly Arc Engine v2.6"
 EDITOR_PREVIEW_ENABLED = True  # Set False before the paid public launch.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (

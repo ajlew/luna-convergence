@@ -1,0 +1,900 @@
+from __future__ import annotations
+
+from collections import Counter
+from dataclasses import dataclass
+from datetime import date, timedelta
+from typing import Iterable, Mapping, Sequence
+
+from scenario_engine import SIGN_RULERS, ScenarioResult, rank_scenarios
+
+
+TRIGGER_WEIGHTS = {
+    "eclipse": 1.60,
+    "lunation": 1.40,
+    "station": 1.30,
+    "aspect": 1.00,
+    "ingress": 0.90,
+}
+
+HOUSE_SHORT = {
+    1: "identity and direction",
+    2: "income and personal money",
+    3: "messages, contracts and movement",
+    4: "home and private life",
+    5: "romance and creativity",
+    6: "work and wellbeing",
+    7: "relationships and agreements",
+    8: "shared money and obligations",
+    9: "travel, publishing and opportunity",
+    10: "career and visibility",
+    11: "friends, audiences and future plans",
+    12: "rest, closure and private matters",
+}
+
+
+@dataclass(frozen=True)
+class ArcBeat:
+    role: str
+    start_date: str
+    end_date: str
+    title: str
+    summary: str
+    response: str
+    score: float
+    houses: tuple[int, ...]
+    planets: tuple[str, ...]
+    scenarios: tuple[str, ...]
+    evidence: tuple[str, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "role": self.role,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "title": self.title,
+            "summary": self.summary,
+            "response": self.response,
+            "score": round(self.score, 2),
+            "houses": list(self.houses),
+            "planets": list(self.planets),
+            "scenarios": list(self.scenarios),
+            "evidence": list(self.evidence),
+        }
+
+
+@dataclass(frozen=True)
+class MonthlyArc:
+    sign: str
+    label: str
+    headline: str
+    central_storyline: str
+    theme_axis: str
+    primary_house: int
+    secondary_house: int
+    opening: tuple[str, ...]
+    complication: tuple[str, ...]
+    pivot: tuple[str, ...]
+    climax: tuple[str, ...]
+    resolution: tuple[str, ...]
+    do_line: str
+    dont_line: str
+    beats: tuple[ArcBeat, ...]
+    ranked_scenarios: tuple[ScenarioResult, ...]
+    inherited_events: tuple[dict, ...]
+    equation: str
+
+    def to_dict(self) -> dict:
+        return {
+            "sign": self.sign,
+            "label": self.label,
+            "headline": self.headline,
+            "central_storyline": self.central_storyline,
+            "theme_axis": self.theme_axis,
+            "primary_house": self.primary_house,
+            "secondary_house": self.secondary_house,
+            "opening": list(self.opening),
+            "complication": list(self.complication),
+            "pivot": list(self.pivot),
+            "climax": list(self.climax),
+            "resolution": list(self.resolution),
+            "do_line": self.do_line,
+            "dont_line": self.dont_line,
+            "beats": [item.to_dict() for item in self.beats],
+            "ranked_scenarios": [item.to_dict() for item in self.ranked_scenarios],
+            "inherited_events": list(self.inherited_events),
+            "equation": self.equation,
+        }
+
+
+def _value(event: object, key: str, default: object = None) -> object:
+    if isinstance(event, Mapping):
+        return event.get(key, default)
+    return getattr(event, key, default)
+
+
+def _date_value(event: object) -> date:
+    value = _value(event, "event_date")
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value))
+
+
+def _event_dict(event: object) -> dict:
+    return {
+        "event_date": _date_value(event).isoformat(),
+        "kind": str(_value(event, "kind", "")),
+        "title": str(_value(event, "title", "Transition")),
+        "detail": str(_value(event, "detail", "")),
+        "importance": float(_value(event, "importance", 0.0) or 0.0),
+        "planets": list(_value(event, "planets", ()) or ()),
+        "houses": [int(item) for item in (_value(event, "houses", ()) or ())],
+        "polarity": str(_value(event, "polarity", "neutral")),
+    }
+
+
+def _event_weight(event: object, sign: str) -> float:
+    kind = str(_value(event, "kind", ""))
+    importance = float(_value(event, "importance", 0.0) or 0.0)
+    planets = set(_value(event, "planets", ()) or ())
+    polarity = str(_value(event, "polarity", "neutral"))
+
+    if planets == {"Moon"} and kind not in {"lunation", "eclipse"}:
+        return 0.0
+
+    weight = TRIGGER_WEIGHTS.get(kind, 0.72) * max(0.35, importance / 6.5)
+    rulers = set(SIGN_RULERS.get(sign, ()))
+    if planets & rulers:
+        weight *= 1.25
+    if kind == "aspect" and planets <= {"Uranus", "Neptune", "Pluto"}:
+        # Slow-planet contacts define climate, but should not outrank a timed
+        # lunation, station or sign-ruler climax by volume alone.
+        weight *= 0.72
+    if polarity == "pressure":
+        weight *= 1.08
+    elif polarity in {"opportunity", "release", "culmination"}:
+        weight *= 1.05
+    return weight
+
+
+def _meaningful(events: Iterable[object]) -> list[object]:
+    selected = []
+    for event in events:
+        kind = str(_value(event, "kind", ""))
+        importance = float(_value(event, "importance", 0.0) or 0.0)
+        planets = set(_value(event, "planets", ()) or ())
+        if planets == {"Moon"} and kind not in {"lunation", "eclipse"}:
+            continue
+        if importance < 5.0 and kind not in {"lunation", "eclipse", "station"}:
+            continue
+        selected.append(event)
+    return sorted(selected, key=_date_value)
+
+
+def _clusters(events: Sequence[object], sign: str, window_days: int = 2) -> list[dict]:
+    meaningful = _meaningful(events)
+    candidates: list[dict] = []
+    for anchor in meaningful:
+        anchor_date = _date_value(anchor)
+        members = [
+            event
+            for event in meaningful
+            if abs((_date_value(event) - anchor_date).days) <= window_days
+        ]
+        if not members:
+            continue
+        dates = [_date_value(item) for item in members]
+        houses = [int(house) for item in members for house in (_value(item, "houses", ()) or ())]
+        planets = [str(planet) for item in members for planet in (_value(item, "planets", ()) or ())]
+        score = sum(_event_weight(item, sign) for item in members)
+        score += len({str(_value(item, "kind", "")) for item in members}) * 0.35
+        score += len(set(houses)) * 0.12
+        score += len(set(planets)) * 0.08
+        candidates.append(
+            {
+                "start": min(dates),
+                "end": max(dates),
+                "score": score,
+                "events": members,
+                "houses": tuple(house for house, _ in Counter(houses).most_common()),
+                "planets": tuple(planet for planet, _ in Counter(planets).most_common()),
+            }
+        )
+
+    # Deduplicate identical windows and preserve the strongest representation.
+    unique: dict[tuple[date, date, tuple[str, ...]], dict] = {}
+    for item in candidates:
+        fingerprint = (
+            item["start"],
+            item["end"],
+            tuple(sorted(str(_value(event, "title", "")) for event in item["events"])),
+        )
+        previous = unique.get(fingerprint)
+        if previous is None or item["score"] > previous["score"]:
+            unique[fingerprint] = item
+    return sorted(unique.values(), key=lambda item: (item["start"], -item["score"]))
+
+
+def _best_cluster(
+    clusters: Sequence[dict],
+    start: date,
+    end: date,
+    *,
+    polarities: set[str] | None = None,
+    kinds: set[str] | None = None,
+    exclude: set[tuple[date, date]] | None = None,
+) -> dict | None:
+    exclude = exclude or set()
+    candidates = []
+    for cluster in clusters:
+        if cluster["end"] < start or cluster["start"] > end:
+            continue
+        if (cluster["start"], cluster["end"]) in exclude:
+            continue
+        events = cluster["events"]
+        if polarities and not any(str(_value(item, "polarity", "")) in polarities for item in events):
+            continue
+        if kinds and not any(str(_value(item, "kind", "")) in kinds for item in events):
+            continue
+        candidates.append(cluster)
+    return max(candidates, key=lambda item: item["score"], default=None)
+
+
+def _event_label(event: object) -> str:
+    d = _date_value(event)
+    return f"{d.strftime('%B')} {d.day}: {str(_value(event, 'title', 'Transition'))}"
+
+
+def _date_range_label(start: date, end: date) -> str:
+    if start == end:
+        return f"{start.strftime('%B')} {start.day}"
+    if start.month == end.month:
+        return f"{start.strftime('%B')} {start.day}-{end.day}"
+    return f"{start.strftime('%B')} {start.day}-{end.strftime('%B')} {end.day}"
+
+
+def _top_scenarios(
+    events: Sequence[object],
+    sign: str,
+    main_focus: str,
+    maximum: int = 3,
+) -> tuple[ScenarioResult, ...]:
+    return rank_scenarios(events, sign, main_focus, maximum=maximum)
+
+
+def _scenario_keys(results: Sequence[ScenarioResult]) -> set[str]:
+    return {item.key for item in results}
+
+
+def _cluster_scenarios(cluster: dict | None, sign: str, main_focus: str) -> tuple[ScenarioResult, ...]:
+    if not cluster:
+        return ()
+    return _top_scenarios(cluster["events"], sign, main_focus, maximum=3)
+
+
+def _dominant_house(cluster: dict | None, fallback: int) -> int:
+    if cluster and cluster.get("houses"):
+        return int(cluster["houses"][0])
+    return fallback
+
+
+def _event_cluster(event: object, events: Sequence[object], sign: str, window_days: int = 1) -> dict:
+    anchor_date = _date_value(event)
+    members = [
+        item
+        for item in _meaningful(events)
+        if abs((_date_value(item) - anchor_date).days) <= window_days
+    ]
+    houses = [int(house) for item in members for house in (_value(item, "houses", ()) or ())]
+    planets = [str(planet) for item in members for planet in (_value(item, "planets", ()) or ())]
+    return {
+        "start": min((_date_value(item) for item in members), default=anchor_date),
+        "end": max((_date_value(item) for item in members), default=anchor_date),
+        "score": sum(_event_weight(item, sign) for item in members),
+        "events": members or [event],
+        "houses": tuple(house for house, _ in Counter(houses).most_common()),
+        "planets": tuple(planet for planet, _ in Counter(planets).most_common()),
+    }
+
+
+def _select_complication(
+    clusters: Sequence[dict],
+    start: date,
+    end: date,
+    inherited: dict | None,
+    sign: str,
+    main_focus: str,
+) -> dict | None:
+    inherited_houses = set(inherited.get("houses", ())) if inherited else set()
+    candidates: list[tuple[float, dict]] = []
+    for cluster in clusters:
+        midpoint = cluster["start"] + (cluster["end"] - cluster["start"]) / 2
+        if midpoint < start or midpoint > end:
+            continue
+        events = cluster["events"]
+        if not any(str(_value(item, "polarity", "")) in {"pressure", "review", "new cycle"} for item in events):
+            continue
+        score = float(cluster["score"])
+        if any(str(_value(item, "kind", "")) in {"lunation", "eclipse"} for item in events):
+            score += 2.4
+        cluster_houses = set(cluster.get("houses", ()))
+        if cluster_houses & inherited_houses:
+            score += 1.4
+        scenario_keys = _scenario_keys(_cluster_scenarios(cluster, sign, main_focus))
+        if scenario_keys & {"funding_application", "paperwork_verification", "external_money", "financial_shock"}:
+            score += 2.2
+        candidates.append((score, cluster))
+    return max(candidates, key=lambda item: item[0], default=(0.0, None))[1]
+
+
+def _select_climax(
+    clusters: Sequence[dict],
+    start: date,
+    end: date,
+    sign: str,
+) -> dict | None:
+    rulers = set(SIGN_RULERS.get(sign, ()))
+    candidates: list[tuple[float, dict]] = []
+    for cluster in clusters:
+        if cluster["end"] < start or cluster["start"] > end:
+            continue
+        events = cluster["events"]
+        score = float(cluster["score"])
+        if any(
+            "Sun" in set(_value(item, "planets", ()) or ())
+            and set(_value(item, "planets", ()) or ()) & rulers
+            and str(_value(item, "kind", "")) == "aspect"
+            for item in events
+        ):
+            score += 5.0
+        if any(str(_value(item, "kind", "")) in {"lunation", "eclipse"} for item in events):
+            score += 2.5
+        if any(str(_value(item, "polarity", "")) in {"opportunity", "culmination", "release"} for item in events):
+            score += 1.0
+        score += max(0.0, (cluster["end"] - start).days * 0.08)
+        candidates.append((score, cluster))
+    return max(candidates, key=lambda item: item[0], default=(0.0, None))[1]
+
+
+def _beat(
+    role: str,
+    cluster: dict | None,
+    sign: str,
+    main_focus: str,
+    summary: str,
+    response: str,
+    fallback_date: date,
+) -> ArcBeat:
+    if cluster:
+        scenarios = _cluster_scenarios(cluster, sign, main_focus)
+        events = list(cluster["events"])
+        if role == "pivot":
+            strongest = next(
+                (item for item in events if str(_value(item, "polarity", "")) == "release"),
+                max(events, key=lambda item: _event_weight(item, sign)),
+            )
+        elif role == "climax":
+            rulers = set(SIGN_RULERS.get(sign, ()))
+            strongest = next(
+                (
+                    item
+                    for item in events
+                    if "Sun" in set(_value(item, "planets", ()) or ())
+                    and set(_value(item, "planets", ()) or ()) & rulers
+                ),
+                next(
+                    (item for item in events if str(_value(item, "kind", "")) in {"lunation", "eclipse"}),
+                    max(events, key=lambda item: _event_weight(item, sign)),
+                ),
+            )
+        elif role in {"resolution", "inherited state"}:
+            strongest = next(
+                (item for item in events if str(_value(item, "kind", "")) in {"lunation", "eclipse"}),
+                max(events, key=lambda item: _event_weight(item, sign)),
+            )
+        elif role == "complication":
+            strongest = next(
+                (item for item in events if str(_value(item, "kind", "")) in {"lunation", "eclipse"}),
+                next(
+                    (item for item in events if str(_value(item, "polarity", "")) in {"pressure", "review"}),
+                    max(events, key=lambda item: _event_weight(item, sign)),
+                ),
+            )
+        else:
+            strongest = max(events, key=lambda item: _event_weight(item, sign))
+        title = str(_value(strongest, "title", role.title()))
+        evidence = tuple(_event_label(item) for item in sorted(cluster["events"], key=_date_value))
+        return ArcBeat(
+            role=role,
+            start_date=cluster["start"].isoformat(),
+            end_date=cluster["end"].isoformat(),
+            title=title,
+            summary=summary,
+            response=response,
+            score=float(cluster["score"]),
+            houses=tuple(int(item) for item in cluster.get("houses", ())),
+            planets=tuple(str(item) for item in cluster.get("planets", ())),
+            scenarios=tuple(item.label for item in scenarios),
+            evidence=evidence,
+        )
+    return ArcBeat(
+        role=role,
+        start_date=fallback_date.isoformat(),
+        end_date=fallback_date.isoformat(),
+        title=role.title(),
+        summary=summary,
+        response=response,
+        score=0.0,
+        houses=(),
+        planets=(),
+        scenarios=(),
+        evidence=(),
+    )
+
+
+def _headline_and_axis(
+    month: str,
+    opening_scenarios: Sequence[ScenarioResult],
+    climax_scenarios: Sequence[ScenarioResult],
+) -> tuple[str, str, str]:
+    opening = _scenario_keys(opening_scenarios)
+    climax = _scenario_keys(climax_scenarios)
+
+    financial = bool(opening & {"financial_shock", "external_money", "funding_application", "paperwork_verification"})
+    expansion = bool(climax & {"travel", "publishing_media", "visa_legal_study", "career_interview", "contracts_agreements"})
+    romance = bool(opening & {"relationship_opening"})
+    property_close = bool(climax & {"property_home"})
+
+    if financial and expansion:
+        return (
+            f"{month} checks the bank balance before it upgrades the itinerary",
+            "The month starts with the price. It ends with the possibility.",
+            "Money & obligations x Travel, publishing & opportunity",
+        )
+    if romance and property_close:
+        return (
+            "The spark arrives before the address is settled",
+            "Attraction opens the story. Real life decides where it can live.",
+            "Romance & connection x Home & private life",
+        )
+    if romance and expansion:
+        return (
+            "The invitation gets interesting when it leaves the group chat",
+            "A connection widens the future, then asks for a real plan.",
+            "Romance & relationships x Expansion & opportunity",
+        )
+    if expansion:
+        return (
+            "The future opens after the facts catch up",
+            "The month moves from preparation into a larger visible opportunity.",
+            "Preparation & proof x Expansion & visibility",
+        )
+    if financial:
+        return (
+            "The numbers speak before the wish list does",
+            "The month exposes the true cost, then shows what can be rebuilt.",
+            "Money & security x Decisions & structure",
+        )
+    return (
+        "The first clue becomes a decision by month-end",
+        "The month reveals the issue, tests it and leaves you with a clearer choice.",
+        "Opening signal x Practical consequence",
+    )
+
+
+def _july_style_story(
+    month: str,
+    inherited_scenarios: Sequence[ScenarioResult],
+    complication_scenarios: Sequence[ScenarioResult],
+    pivot: dict | None,
+    climax_scenarios: Sequence[ScenarioResult],
+    inherited_date: str,
+    complication_date: str,
+    pivot_date: str,
+    climax_date: str,
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str]:
+    inherited_keys = _scenario_keys(inherited_scenarios)
+    complication_keys = _scenario_keys(complication_scenarios)
+    climax_keys = _scenario_keys(climax_scenarios)
+
+    financial_open = bool(inherited_keys & {"financial_shock", "external_money"})
+    paperwork_mid = bool(complication_keys & {"funding_application", "paperwork_verification", "external_money"})
+    expansion_close = bool(climax_keys & {"travel", "publishing_media", "visa_legal_study", "career_interview", "contracts_agreements"})
+    mercury_release = bool(
+        pivot
+        and any(
+            "Mercury" in (_value(item, "planets", ()) or ())
+            and str(_value(item, "polarity", "")) == "release"
+            for item in pivot["events"]
+        )
+    )
+
+    if financial_open and paperwork_mid and expansion_close:
+        opening = (
+            f"{month} begins inside a financial consequence that formed just before the month opened. "
+            f"Around {inherited_date}, a bill, salary discussion, promised payment or shared expense may "
+            "cost more - or arrive later - than expected. The issue is not necessarily that the money "
+            "does not exist. The amount, timing or conditions may still be unclear.",
+        )
+        complication = (
+            f"Near {complication_date}, another attempt to organise the situation can bring a mortgage, "
+            "loan, grant, insurance matter, investment, business plan or shared-money decision into view. "
+            "The process may require more forms, proof and conservative estimates than anticipated.",
+            "This is where the opportunity meets Saturn's standard: accurate, verifiable and sustainable. "
+            "A delay is not automatically a refusal, but vague numbers and incomplete documents will not carry the story forward.",
+        )
+        pivot_text = (
+            f"Around {pivot_date}, communication begins to clear. Messages resume, stalled applications can move "
+            "and agreements become easier to evaluate. A partner, colleague or useful contact may help connect the missing step."
+            if mercury_release
+            else f"Around {pivot_date}, the month changes direction as information, timing or support becomes easier to use."
+        )
+        climax = (
+            f"By {climax_date}, the story widens dramatically. Travel, publishing, study, legal matters, international "
+            "opportunities, an interview or an important agreement can move from possibility into a visible result.",
+            "What felt delayed at the beginning of the month may not resolve in exactly the original form. "
+            "The larger gain is movement: a future that was blocked begins to answer back.",
+        )
+        resolution = (
+            "The month does not erase the early financial lesson. It uses that lesson to improve the terms of the opportunity that follows.",
+        )
+        return (
+            opening,
+            complication,
+            (pivot_text,),
+            climax,
+            resolution,
+            "Check the paperwork. Fairy dust still needs the correct account number.",
+            "Call a delay a rejection. Mercury was only reorganising the filing cabinet.",
+        )
+
+    return (), (), (), (), (), "", ""
+
+
+def _generic_story(
+    month: str,
+    inherited: dict | None,
+    inciting: dict | None,
+    complication: dict | None,
+    pivot: dict | None,
+    climax: dict | None,
+    resolution: dict | None,
+    sign: str,
+    main_focus: str,
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str]:
+    def scenarios(cluster: dict | None) -> tuple[ScenarioResult, ...]:
+        return _cluster_scenarios(cluster, sign, main_focus)
+
+    inherited_results = scenarios(inherited)
+    inciting_results = scenarios(inciting)
+    complication_results = scenarios(complication)
+    pivot_results = scenarios(pivot)
+    climax_results = scenarios(climax)
+    resolution_results = scenarios(resolution)
+
+    def examples(results: Sequence[ScenarioResult], maximum: int = 3) -> str:
+        values: list[str] = []
+        for item in results:
+            for example in item.examples:
+                if example not in values:
+                    values.append(example)
+                if len(values) >= maximum:
+                    return ", ".join(values)
+        return ", ".join(values) or "a person, choice or opportunity"
+
+    opening = (
+        f"{month} opens through {examples(inherited_results or inciting_results)}. "
+        "The first development establishes the problem or possibility that the rest of the month must answer.",
+    )
+    complication_text = (
+        f"The middle of the month introduces {examples(complication_results)}. "
+        "This is not a separate forecast; it is the condition that reveals what the opening requires.",
+    )
+    pivot_text = (
+        f"The direction changes around {_date_range_label(pivot['start'], pivot['end']) if pivot else 'the middle of the month'}. "
+        f"{examples(pivot_results)} can begin to move once information, timing or cooperation becomes usable.",
+    )
+    climax_text = (
+        f"The strongest late-month convergence concentrates around {examples(climax_results)}. "
+        "This is the point where the month asks for a visible answer rather than more speculation.",
+    )
+    resolution_text = (
+        f"The closing movement brings the result back to {examples(resolution_results, maximum=2)}. "
+        "Keep what supports the life you are building; let the rest become information.",
+    )
+    return (
+        opening,
+        complication_text,
+        pivot_text,
+        climax_text,
+        resolution_text,
+        "Follow the sequence. The first scene is not the whole plot.",
+        "Force a happy ending before the practical terms arrive.",
+    )
+
+
+def _narrative_scenario_ranking(
+    inherited: Sequence[ScenarioResult],
+    complication: Sequence[ScenarioResult],
+    climax: Sequence[ScenarioResult],
+    global_results: Sequence[ScenarioResult],
+    maximum: int = 8,
+) -> tuple[ScenarioResult, ...]:
+    process_keys = {
+        "funding_application",
+        "paperwork_verification",
+        "contracts_agreements",
+        "external_money",
+    }
+    expansion_keys = {
+        "publishing_media",
+        "travel",
+        "visa_legal_study",
+        "career_interview",
+        "property_home",
+        "relationship_opening",
+    }
+    ordered: list[ScenarioResult] = []
+
+    def add(items: Sequence[ScenarioResult], limit: int | None = None) -> None:
+        count = 0
+        for item in items:
+            if any(existing.key == item.key for existing in ordered):
+                continue
+            ordered.append(item)
+            count += 1
+            if limit is not None and count >= limit:
+                break
+
+    inherited_order = {
+        "financial_shock": 0,
+        "external_money": 1,
+        "paperwork_verification": 2,
+        "funding_application": 3,
+    }
+    inherited_priority = sorted(
+        [item for item in inherited if item.key in inherited_order],
+        key=lambda item: (inherited_order[item.key], -item.score),
+    )
+    add(inherited_priority or inherited, 2)
+    add([item for item in complication if item.key in process_keys], 2)
+    add([item for item in climax if item.key in expansion_keys], 3)
+    add(complication, 1)
+    add(climax, 1)
+    add(global_results)
+    return tuple(ordered[:maximum])
+
+
+def build_monthly_arc(
+    sign: str,
+    start: date,
+    end: date,
+    label: str,
+    events: Sequence[object],
+    inherited_events: Sequence[object],
+    retrograde_cycles: Sequence[object] = (),
+    main_focus: str = "General overview",
+) -> MonthlyArc:
+    monthly_events = _meaningful(events)
+    carryover = [
+        event
+        for event in _meaningful(inherited_events)
+        if _date_value(event) >= start - timedelta(days=7)
+        and (
+            str(_value(event, "kind", "")) in {"lunation", "eclipse", "station"}
+            or float(_value(event, "importance", 0.0) or 0.0) >= 6.4
+        )
+    ]
+
+    monthly_clusters = _clusters(monthly_events, sign)
+    inherited_clusters = _clusters(carryover, sign, window_days=3)
+
+    carryover_triggers = [
+        event
+        for event in carryover
+        if str(_value(event, "kind", "")) in {"lunation", "eclipse", "station"}
+    ]
+    if carryover_triggers:
+        latest_date = max(_date_value(item) for item in carryover_triggers)
+        latest = [item for item in carryover_triggers if _date_value(item) == latest_date]
+        anchor = max(latest, key=lambda item: _event_weight(item, sign))
+        inherited = _event_cluster(anchor, carryover, sign, window_days=2)
+    else:
+        inherited = max(inherited_clusters, key=lambda item: item["score"], default=None)
+    used: set[tuple[date, date]] = set()
+    if inherited:
+        used.add((inherited["start"], inherited["end"]))
+
+    inciting = _best_cluster(
+        monthly_clusters,
+        start,
+        min(end, start + timedelta(days=9)),
+        polarities={"opportunity", "new cycle", "neutral", "pressure"},
+    )
+    if inciting:
+        used.add((inciting["start"], inciting["end"]))
+
+    complication = _select_complication(
+        monthly_clusters,
+        start + timedelta(days=8),
+        min(end, start + timedelta(days=17)),
+        inherited,
+        sign,
+        main_focus,
+    )
+    if complication:
+        used.add((complication["start"], complication["end"]))
+
+    direct_events = [
+        event
+        for event in monthly_events
+        if str(_value(event, "kind", "")) == "station"
+        and str(_value(event, "polarity", "")) == "release"
+    ]
+    if direct_events:
+        chosen_direct = max(direct_events, key=lambda item: _event_weight(item, sign))
+        pivot = _event_cluster(chosen_direct, monthly_events, sign, window_days=1)
+    else:
+        pivot = _best_cluster(
+            monthly_clusters,
+            start + timedelta(days=14),
+            min(end, start + timedelta(days=26)),
+            polarities={"release", "opportunity"},
+            kinds={"station", "aspect", "lunation", "ingress"},
+            exclude=used,
+        )
+    if pivot:
+        used.add((pivot["start"], pivot["end"]))
+
+    climax = _select_climax(
+        monthly_clusters,
+        max(start, end - timedelta(days=9)),
+        end,
+        sign,
+    )
+    if climax:
+        used.add((climax["start"], climax["end"]))
+
+    final_triggers = [
+        event
+        for event in monthly_events
+        if _date_value(event) >= max(start, end - timedelta(days=7))
+        and str(_value(event, "kind", "")) in {"lunation", "eclipse"}
+    ]
+    if final_triggers:
+        resolution = _event_cluster(max(final_triggers, key=_date_value), monthly_events, sign, window_days=0)
+    else:
+        resolution = climax
+
+    inherited_scenarios = _top_scenarios(carryover + monthly_events[:3], sign, main_focus, maximum=4)
+    complication_scenarios = _cluster_scenarios(complication, sign, main_focus)
+    climax_scenarios = _cluster_scenarios(climax, sign, main_focus)
+    global_scenarios = rank_scenarios(carryover + monthly_events, sign, main_focus, maximum=12)
+    all_scenarios = _narrative_scenario_ranking(
+        inherited_scenarios,
+        complication_scenarios,
+        climax_scenarios,
+        global_scenarios,
+        maximum=8,
+    )
+
+    month = label.split()[0]
+    headline, central, axis = _headline_and_axis(month, inherited_scenarios, climax_scenarios)
+
+    inherited_date = _date_range_label(inherited["start"], inherited["end"]) if inherited else f"early {month}"
+    complication_date = _date_range_label(complication["start"], complication["end"]) if complication else f"mid-{month}"
+    pivot_date = _date_range_label(pivot["start"], pivot["end"]) if pivot else f"late {month}"
+    climax_date = _date_range_label(climax["start"], climax["end"]) if climax else f"the final week of {month}"
+
+    story = _july_style_story(
+        month,
+        inherited_scenarios,
+        complication_scenarios,
+        pivot,
+        climax_scenarios,
+        inherited_date,
+        complication_date,
+        pivot_date,
+        climax_date,
+    )
+    if not story[0]:
+        story = _generic_story(
+            month,
+            inherited,
+            inciting,
+            complication,
+            pivot,
+            climax,
+            resolution,
+            sign,
+            main_focus,
+        )
+
+    opening, complication_text, pivot_text, climax_text, resolution_text, do_line, dont_line = story
+
+    primary_house = _dominant_house(inherited or complication or inciting, 1)
+    secondary_house = _dominant_house(climax or resolution, primary_house)
+
+    beats = (
+        _beat(
+            "inherited state",
+            inherited,
+            sign,
+            main_focus,
+            opening[0],
+            "Identify the amount, timing or condition before reacting.",
+            start,
+        ),
+        _beat(
+            "inciting event",
+            inciting,
+            sign,
+            main_focus,
+            (
+                "A new opening enters the month and begins to shift the available future."
+                if inciting
+                else "The month reveals the first active choice."
+            ),
+            "Treat the first response as information, not the final result.",
+            start + timedelta(days=3),
+        ),
+        _beat(
+            "complication",
+            complication,
+            sign,
+            main_focus,
+            complication_text[0],
+            "Make the cost, document, expectation or practical condition visible.",
+            start + timedelta(days=13),
+        ),
+        _beat(
+            "pivot",
+            pivot,
+            sign,
+            main_focus,
+            pivot_text[0],
+            "Use the new information to revise the decision rather than repeat the delay.",
+            start + timedelta(days=22),
+        ),
+        _beat(
+            "climax",
+            climax,
+            sign,
+            main_focus,
+            climax_text[0],
+            "Act on the strongest supported opportunity while the evidence is visible.",
+            end - timedelta(days=2),
+        ),
+        _beat(
+            "resolution",
+            resolution,
+            sign,
+            main_focus,
+            resolution_text[0],
+            "Keep the outcome that survives both excitement and practical reality.",
+            end,
+        ),
+    )
+
+    return MonthlyArc(
+        sign=sign,
+        label=label,
+        headline=headline,
+        central_storyline=central,
+        theme_axis=axis,
+        primary_house=primary_house,
+        secondary_house=secondary_house,
+        opening=opening,
+        complication=complication_text,
+        pivot=pivot_text,
+        climax=climax_text,
+        resolution=resolution_text,
+        do_line=do_line,
+        dont_line=dont_line,
+        beats=beats,
+        ranked_scenarios=all_scenarios,
+        inherited_events=tuple(_event_dict(item) for item in carryover),
+        equation=(
+            "Inherited state + trigger hierarchy + house/planet/ruler convergence + "
+            "ranked scenario families + tension curve + temporal roles = monthly arc"
+        ),
+    )

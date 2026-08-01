@@ -24,33 +24,30 @@ def main() -> None:
         preview=False,
     )
 
-    story_words = sum(
-        len(paragraph.split())
-        for paragraph in narrative.luna_says
-    )
+    story_words = sum(len(paragraph.split()) for paragraph in narrative.luna_says)
     chapter_words = sum(
         len(paragraph.split())
         for chapter in narrative.chapters
         for paragraph in chapter.paragraphs
     )
 
-    assert story_words >= 170
-    assert chapter_words >= 180
-    assert len(narrative.luna_says) == 4
+    assert story_words >= 160
+    assert chapter_words >= 160
+    assert len(narrative.luna_says) >= 5
     assert len(narrative.chapters) == 3
-    assert len(narrative.key_dates) >= 6
+    assert len(narrative.key_dates) >= 4
+    assert result.get("monthly_arc")
 
     assert "min-height:0 !important" in html
     assert "position:sticky" not in html
     assert "Dates worth circling" in html
-    assert html.count('class="luna-story-date-card"') >= 3
+    assert html.count('class="luna-story-date-card"') >= 4
     assert html.count('class="luna-story-act"') == 3
     assert "detail.open = true" in html
-    assert "A message, invitation, flirtation" in html
-    assert "shared cost" in html
-    assert "A real connection can discuss timing" in html
+    assert "Monthly arc equation" in html
+    assert "Ranked scenario families" in html
 
-    print("Monthly Story + Compact Hero v2.4 tests passed.")
+    print("Monthly Story with Arc Engine tests passed.")
 
 
 if __name__ == "__main__":

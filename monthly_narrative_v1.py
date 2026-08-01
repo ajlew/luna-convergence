@@ -306,6 +306,8 @@ def _date_label(value: str) -> str:
 def _date_range(start: str, end: str) -> str:
     first = _parse_date(start)
     last = _parse_date(end)
+    if first == last:
+        return f"{first.strftime('%B')} {first.day}"
     if first.month == last.month:
         return f"{first.strftime('%B')} {first.day}-{last.day}"
     return f"{first.strftime('%B')} {first.day}-{last.strftime('%B')} {last.day}"
@@ -860,6 +862,139 @@ def _key_dates(result: dict, maximum: int = 7) -> tuple[KeyDate, ...]:
     )
 
 
+def _monthly_arc(result: dict) -> dict:
+    return dict(result.get("monthly_arc") or {})
+
+
+def _arc_beats(arc: dict) -> list[dict]:
+    return list(arc.get("beats") or [])
+
+
+def _arc_beat(arc: dict, role: str) -> dict | None:
+    return next((item for item in _arc_beats(arc) if item.get("role") == role), None)
+
+
+def _arc_date_label(beat: dict | None, fallback: str) -> str:
+    if not beat:
+        return fallback
+    start = str(beat.get("start_date", ""))
+    end = str(beat.get("end_date", start))
+    if not start:
+        return fallback
+    return _date_range(start, end)
+
+
+def _arc_scenario_examples(arc: dict, maximum: int = 6) -> tuple[str, ...]:
+    values: list[str] = []
+    for scenario in arc.get("ranked_scenarios") or []:
+        for example in scenario.get("examples") or []:
+            text = str(example).strip()
+            if text and text not in values:
+                values.append(text)
+            if len(values) >= maximum:
+                return tuple(values)
+    return tuple(values)
+
+
+def _arc_key_dates(arc: dict, maximum: int = 6) -> tuple[KeyDate, ...]:
+    selected: list[KeyDate] = []
+    for beat in _arc_beats(arc):
+        if beat.get("role") in {"inherited state", "inciting event"}:
+            continue
+        start = str(beat.get("start_date", ""))
+        end = str(beat.get("end_date", start))
+        if not start:
+            continue
+        selected.append(
+            KeyDate(
+                date_label=_date_range(start, end),
+                consequence=str(beat.get("summary", "A turning point develops.")),
+                response=str(beat.get("response", "Use the new information deliberately.")),
+                evidence=str(beat.get("title", "Convergence")),
+            )
+        )
+        if len(selected) >= maximum:
+            break
+    return tuple(selected)
+
+
+def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
+    beats = {item.get("role"): item for item in _arc_beats(arc)}
+    opening = tuple(str(item) for item in (arc.get("opening") or ()))
+    complication = tuple(str(item) for item in (arc.get("complication") or ()))
+    pivot = tuple(str(item) for item in (arc.get("pivot") or ()))
+    climax = tuple(str(item) for item in (arc.get("climax") or ()))
+    resolution = tuple(str(item) for item in (arc.get("resolution") or ()))
+
+    financial_to_expansion = (
+        "Money & obligations" in str(arc.get("theme_axis", ""))
+        and "Travel, publishing" in str(arc.get("theme_axis", ""))
+    )
+
+    if financial_to_expansion:
+        hooks = (
+            "The bill arrives before the breakthrough",
+            "Paperwork tests the promise",
+            "The future finally answers back",
+        )
+        titles = (
+            "The inherited condition",
+            "The terms of the opportunity",
+            "Release, expansion and result",
+        )
+    else:
+        hooks = (
+            "The opening establishes the plot",
+            "The practical condition changes the stakes",
+            "The strongest convergence delivers the answer",
+        )
+        titles = (
+            "Opening and inherited condition",
+            "Complication and pivot",
+            "Climax and resolution",
+        )
+
+    chapter_1_evidence = tuple(beats.get("inherited state", {}).get("evidence") or ()) + tuple(
+        beats.get("inciting event", {}).get("evidence") or ()
+    )
+    chapter_2_evidence = tuple(beats.get("complication", {}).get("evidence") or ()) + tuple(
+        beats.get("pivot", {}).get("evidence") or ()
+    )
+    chapter_3_evidence = tuple(beats.get("climax", {}).get("evidence") or ()) + tuple(
+        beats.get("resolution", {}).get("evidence") or ()
+    )
+
+    return (
+        MonthlyChapter(
+            label="Chapter 1",
+            date_range="1-10",
+            hook=hooks[0],
+            title=titles[0],
+            paragraphs=opening or (str(beats.get("inherited state", {}).get("summary", "The month reveals its starting condition.")),),
+            action=str(beats.get("inherited state", {}).get("response", "Identify the real amount, condition or expectation.")),
+            evidence=tuple(dict.fromkeys(chapter_1_evidence)),
+        ),
+        MonthlyChapter(
+            label="Chapter 2",
+            date_range="11-24",
+            hook=hooks[1],
+            title=titles[1],
+            paragraphs=complication + pivot,
+            action=str(beats.get("pivot", {}).get("response", "Use the new information to revise the decision.")),
+            evidence=tuple(dict.fromkeys(chapter_2_evidence)),
+        ),
+        MonthlyChapter(
+            label="Chapter 3",
+            date_range="25-31",
+            hook=hooks[2],
+            title=titles[2],
+            paragraphs=climax + resolution,
+            action=str(beats.get("climax", {}).get("response", "Act on the strongest supported opportunity.")),
+            evidence=tuple(dict.fromkeys(chapter_3_evidence)),
+        ),
+    )
+
+
 def _strength_label(score: float) -> str:
     if score >= 75:
         return f"High concentration ({score:.0f}/100)"
@@ -921,12 +1056,53 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
         f"| Location basis | {solar.get('location_basis', 'n/a')} |",
     ]
 
+    arc = _monthly_arc(result)
+    arc_rows = ["| Narrative role | Window | Selected trigger | Score |", "|---|---|---|---:|"]
+    for beat in _arc_beats(arc):
+        start = str(beat.get("start_date", ""))
+        end = str(beat.get("end_date", start))
+        window = _date_range(start, end) if start else "n/a"
+        arc_rows.append(
+            f"| {str(beat.get('role', '')).title()} | {window} | {beat.get('title', '')} | {float(beat.get('score', 0.0)):.1f} |"
+        )
+
+    scenario_rows = ["| Rank | Scenario family | Symbolic support | Examples |", "|---:|---|---|---|"]
+    for rank, item in enumerate((arc.get("ranked_scenarios") or [])[:8], 1):
+        examples = "; ".join(str(value) for value in (item.get("examples") or [])[:2])
+        scenario_rows.append(
+            f"| {rank} | {item.get('label', '')} | {item.get('confidence', '')} | {examples} |"
+        )
+
+    inherited_rows = ["| Carryover date | Evidence | Houses |", "|---|---|---|"]
+    for item in arc.get("inherited_events") or []:
+        inherited_rows.append(
+            f"| {_date_label(item['event_date'])} | {item.get('title', '')} | {', '.join(map(str, item.get('houses') or []))} |"
+        )
+
     order_line = f"\n\n**Order reference:** `{order_reference}`" if order_reference else ""
     return "\n".join(
         [
             "# Technical appendix",
             "",
             "This appendix contains the calculation trail supporting the customer narrative. House numbers and event names are evidence; the main report above translates them into consequences, timing and practical decisions.",
+            "",
+            "## Monthly arc equation",
+            "",
+            str(arc.get("equation", "Planetary sequence + convergence strength + scenario families + temporal roles = monthly arc")),
+            "",
+            "## Selected narrative roles",
+            "",
+            *arc_rows,
+            "",
+            "## Ranked scenario families",
+            "",
+            *scenario_rows,
+            "",
+            "## Carryover evidence",
+            "",
+            *inherited_rows,
+            "",
+            "The scenario labels are ranked symbolic event families, not measured probabilities or guaranteed events.",
             "",
             "## Solar Convergence evidence",
             "",
@@ -966,40 +1142,110 @@ def build_monthly_narrative(
         raise ValueError("Monthly Narrative Engine requires a monthly period result")
 
     question = normalise_personal_question(personal_question)
-    primary_house = _dominant_house(result, 0, 1)
-    secondary_house = _dominant_house(result, 1, primary_house)
-    headline, subtitle = _headline(main_focus, primary_house, secondary_house)
-    hook_headline = _monthly_hook(main_focus, primary_house, secondary_house)
-    convergence_axis = f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}"
-    central_storyline = _central_storyline(result, primary_house, secondary_house)
-    luna_says = _luna_voice(result, primary_house, secondary_house)
-    scenario_examples = _scenario_examples(primary_house, secondary_house)
+    arc = _monthly_arc(result)
+
+    if arc:
+        primary_house = int(arc.get("primary_house", _dominant_house(result, 0, 1)))
+        secondary_house = int(arc.get("secondary_house", _dominant_house(result, 1, primary_house)))
+        hook_headline = str(arc.get("headline", _monthly_hook(main_focus, primary_house, secondary_house)))
+        convergence_axis = str(
+            arc.get(
+                "theme_axis",
+                f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}",
+            )
+        )
+        central_storyline = str(
+            arc.get(
+                "central_storyline",
+                _central_storyline(result, primary_house, secondary_house),
+            )
+        )
+        headline = convergence_axis
+        subtitle = central_storyline
+        luna_says = tuple(
+            str(item)
+            for section in ("opening", "complication", "pivot", "climax", "resolution")
+            for item in (arc.get(section) or ())
+            if str(item).strip()
+        )
+        scenario_examples = _arc_scenario_examples(arc) or _scenario_examples(
+            primary_house,
+            secondary_house,
+        )
+        chapters = _arc_chapters(arc)
+        key_dates = _arc_key_dates(arc) or _key_dates(result)
+        complication_beat = _arc_beat(arc, "complication")
+        climax_beat = _arc_beat(arc, "climax")
+        inherited_beat = _arc_beat(arc, "inherited state")
+        first_window = _arc_date_label(complication_beat, "the middle of the month")
+        second_window = _arc_date_label(climax_beat, "the final week")
+        opening_text = str((arc.get("opening") or (central_storyline,))[0])
+        complication_text = str((arc.get("complication") or (central_storyline,))[0])
+        climax_text = str((arc.get("climax") or (central_storyline,))[0])
+        at_glance = (
+            opening_text,
+            complication_text,
+            climax_text,
+        )
+        do_line = str(arc.get("do_line", "Follow the evidence in sequence."))
+        dont_line = str(arc.get("dont_line", "Force the ending before the terms arrive."))
+        action_plan = (
+            str(
+                (inherited_beat or {}).get(
+                    "response",
+                    "Identify the real amount, condition or expectation before reacting.",
+                )
+            ),
+            str(
+                (complication_beat or {}).get(
+                    "response",
+                    "Complete the document, cost or practical requirement that changes the decision.",
+                )
+            ),
+            str(
+                (climax_beat or {}).get(
+                    "response",
+                    "Use the strongest supported opening once the evidence becomes visible.",
+                )
+            ),
+        )
+    else:
+        primary_house = _dominant_house(result, 0, 1)
+        secondary_house = _dominant_house(result, 1, primary_house)
+        headline, subtitle = _headline(main_focus, primary_house, secondary_house)
+        hook_headline = _monthly_hook(main_focus, primary_house, secondary_house)
+        convergence_axis = f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}"
+        central_storyline = _central_storyline(result, primary_house, secondary_house)
+        luna_says = _luna_voice(result, primary_house, secondary_house)
+        scenario_examples = _scenario_examples(primary_house, secondary_house)
+        convergences = _convergences(result)
+        first_convergence = convergences[0] if convergences else None
+        second_convergence = convergences[1] if len(convergences) > 1 else None
+        first_window = _date_range(first_convergence["start_date"], first_convergence["end_date"]) if first_convergence else "the middle of the month"
+        second_window = _date_range(second_convergence["start_date"], second_convergence["end_date"]) if second_convergence else "the final week"
+        at_glance = (
+            central_storyline,
+            f"From {first_window}, a message, invitation, introduction or offer may make life feel larger. Enjoy the opening, but check the timing, cost and who is actually following through.",
+            f"Around {second_window}, the month becomes more selective. Choose what has earned a lasting place in your life.",
+        )
+        chapters = (
+            _build_chapter(result, "Chapter 1", 1, 10, "early", primary_house, secondary_house),
+            _build_chapter(result, "Chapter 2", 11, 20, "middle", primary_house, secondary_house),
+            _build_chapter(result, "Chapter 3", 21, 31, "late", primary_house, secondary_house),
+        )
+        key_dates = _key_dates(result)
+        do_line, dont_line = luna_do_dont(primary_house, secondary_house)
+        action_plan = (
+            "State the interest or idea. Let the response provide evidence.",
+            "Expand one proven option.",
+            "Keep only what survives the reality check.",
+        )
+
     romance_active, romance_quiet = _romance_copy(primary_house, secondary_house)
     agency_rule = GATEKEEPER_LINE
     validation_rule = VALIDATION_LINE
     love_hook, work_hook, money_hook = _life_area_hooks(primary_house, secondary_house)
     convergences = _convergences(result)
-    first_convergence = convergences[0] if convergences else None
-    second_convergence = convergences[1] if len(convergences) > 1 else None
-
-    first_window = _date_range(first_convergence["start_date"], first_convergence["end_date"]) if first_convergence else "the middle of the month"
-    second_window = _date_range(second_convergence["start_date"], second_convergence["end_date"]) if second_convergence else "the final week"
-
-    at_glance = (
-        central_storyline,
-        f"From {first_window}, a message, invitation, introduction or offer may "
-        "make life feel larger. Enjoy the opening, but check the timing, cost and "
-        "who is actually following through.",
-        f"Around {second_window}, the month becomes more selective. You are not "
-        "trying to keep every possibility alive; you are choosing what has earned "
-        "a lasting place in your life.",
-    )
-
-    chapters = (
-        _build_chapter(result, "Chapter 1", 1, 10, "early", primary_house, secondary_house),
-        _build_chapter(result, "Chapter 2", 11, 20, "middle", primary_house, secondary_house),
-        _build_chapter(result, "Chapter 3", 21, 31, "late", primary_house, secondary_house),
-    )
 
     solar = result.get("solar_convergence") or {}
     solar_paragraphs = tuple(
@@ -1023,22 +1269,25 @@ def build_monthly_narrative(
         if main_focus == "Love and relationships"
         else "Relationship decisions need explicit terms and behaviour that matches the promise."
     )
+    arc_scenarios = list(arc.get("ranked_scenarios") or []) if arc else []
+    top_scenario_text = "; ".join(
+        f"{item.get('label', '')} ({item.get('confidence', '')})"
+        for item in arc_scenarios[:3]
+    ) or "No single scenario family dominates."
     snapshot_rows = (
-        ("Primary theme", f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}"),
+        ("Primary story", convergence_axis),
         ("Personal focus", main_focus),
         ("Relationship current", relationship_current),
-        ("Work current", "Visibility and professional decisions strengthen later in the month."),
-        ("Money pressure", "Shared costs, obligations and ownership need to be visible before commitment."),
-        ("Strongest window", first_window),
-        ("Second turning point", second_window),
+        ("Ranked scenario families", top_scenario_text),
+        ("Complication window", first_window),
+        ("Climax window", second_window),
+        ("Narrative equation", str(arc.get("equation", "Convergence sequence becomes the monthly arc")) if arc else "Convergence sequence becomes the monthly arc"),
         ("Monthly concentration", _strength_label(top_score)),
         ("Long-term climate", _retrograde_climate(result)),
         ("Solar phase", f"{solar.get('solar_quarter', 'Unavailable')} / {solar.get('solar_process', '')}"),
         ("Local light", f"{solar.get('light_direction', 'Unavailable')} - {solar.get('city', 'timezone estimate')}"),
         ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {solar.get('next_gate_date', '')}"),
     )
-
-    do_line, dont_line = luna_do_dont(primary_house, secondary_house)
 
     return MonthlyNarrative(
         sign=str(result.get("sign", "")),
@@ -1068,14 +1317,18 @@ def build_monthly_narrative(
         love_hook=love_hook,
         work_hook=work_hook,
         money_hook=money_hook,
-        hidden_opportunity=f"Use the strongest opening in {first_window} to make one relationship, creative or strategic possibility more concrete.",
-        watch_out=f"Do not let excitement around {HOUSE_PROSE[secondary_house]} outrun facts, cost, timing or operational capacity.",
-        action_plan=(
-            "State the interest or idea. Let the response provide evidence.",
-            "Expand one proven option.",
-            "Keep only what survives the reality check.",
+        hidden_opportunity=(
+            str((arc.get("climax") or (f"Use the strongest opening in {second_window} deliberately.",))[0])
+            if arc
+            else f"Use the strongest opening in {first_window} to make one relationship, creative or strategic possibility more concrete."
         ),
-        key_dates=_key_dates(result),
+        watch_out=(
+            str((arc.get("complication") or (f"Do not let the practical terms remain vague around {first_window}.",))[0])
+            if arc
+            else f"Do not let excitement around {HOUSE_PROSE[secondary_house]} outrun facts, cost, timing or operational capacity."
+        ),
+        action_plan=action_plan,
+        key_dates=key_dates,
         snapshot_rows=snapshot_rows,
         solar_title=str(solar.get("headline", "Your Solar Convergence")),
         solar_paragraphs=solar_paragraphs,

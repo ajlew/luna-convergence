@@ -368,3 +368,17 @@ Monthly and year-ahead printing now clones the complete report into a
 temporary top-level print portal. This prevents Streamlit page containers
 from clipping the report to one page. All evidence sections open in the
 print clone and the selected A4/A3 orientation settings are preserved.
+
+## Monthly Arc Engine v2.6
+
+Monthly reports now construct the customer story from a chronological evidence
+path rather than the two largest raw house totals. The engine evaluates the
+seven-day carryover window, trigger hierarchy, native-sign ruler relevance,
+ranked scenario families and six temporal roles: inherited state, inciting
+event, complication, pivot, climax and resolution.
+
+The July 2026 Sagittarius calibration selects the financial Full Moon carryover,
+the shared-money New Moon, Mercury's direct station, the Sun-Jupiter climax and
+the Aquarius Full Moon resolution. `Why Luna sees this` displays the equation,
+arc roles and ranked scenario families while the complete evidence remains
+expanded automatically for printing.

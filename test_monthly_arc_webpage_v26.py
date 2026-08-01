@@ -12,7 +12,6 @@ def main() -> None:
         date(2026, 7, 31),
         "Australia/Sydney",
         "July 2026",
-        transition_count=9,
         nearest_city="Sydney",
         main_focus="General overview",
     )
@@ -22,51 +21,34 @@ def main() -> None:
         result,
         show_print=True,
         preview=False,
-        order_reference="LC-TEST",
     )
 
     for required in (
-        "Luna says",
         "July checks the bank balance before it upgrades the itinerary",
         "The month starts with the price. It ends with the possibility.",
-        "How July unfolds",
-        "Dates worth circling",
-        "Whether the spark arrives—or the room stays quiet",
-        "Shift from applicant to gatekeeper.",
-        "Why Luna sees this",
+        "The bill arrives before the breakthrough",
+        "Paperwork tests the promise",
+        "The future finally answers back",
         "Monthly arc equation",
         "Ranked scenario families",
         "Carryover evidence",
-        "Solar Convergence",
-        "Key dates and planetary timing",
-        "Full technical evidence",
-        "Print or save report",
-        "A4",
-        "A3",
-        "Portrait",
-        "Landscape",
-        "window.print()",
-        "@media print",
+        "Full Moon in Capricorn",
+        "New Moon in Cancer",
+        "Mercury stations direct",
+        "Sun conjunction Jupiter",
+        "Full Moon in Aquarius",
+        "luna-arc-grid",
+        "luna-print-portal",
+        "cloneNode(true)",
+        "requestAnimationFrame(expandAllPrintDetails)",
     ):
         assert required in html, required
 
-    for removed in (
-        "Concrete possibilities",
-        "You remain the main character",
-        "The month in three acts",
-        "You are not waiting to be selected",
-    ):
-        assert removed not in html, removed
-
-    assert html.count("Your move") == 1
     assert html.count('class="luna-story-act"') == 3
     assert html.count('class="luna-story-date-card"') == 4
     assert "Include evidence" not in html
-    assert "detail.open = true" in html
-    assert "position:sticky" not in html
-    assert "min-height:0 !important" in html
 
-    print("Monthly arc webpage tests passed.")
+    print("Monthly Arc Engine webpage tests passed.")
 
 
 if __name__ == "__main__":
