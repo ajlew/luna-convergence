@@ -27,15 +27,15 @@ def main() -> None:
     assert len(pdf) > 20_000
 
     reader = PdfReader(BytesIO(pdf))
-    assert len(reader.pages) == 9
+    assert len(reader.pages) == 10
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
     compact = "".join(text.lower().split())
 
     required_compact = (
-        "yoursparkwantsapassport",
-        "romance&creativityxtravel&learning",
+        "theinvitationgetsseriouswhenitneedsaplaceinyourlife",
+        "expansion&attentionxcost,consistency&privatelife",
         "augustwantsmorethanaspark",
-        "themonthmovesinthreeacts",
+        "attentionmeetstheevidencetest",
         "love,workandmoney",
         "makeoneopeningreal",
         "themonthbeneaththemonth",

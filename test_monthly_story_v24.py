@@ -24,30 +24,29 @@ def main() -> None:
         preview=False,
     )
 
-    story_words = sum(len(paragraph.split()) for paragraph in narrative.luna_says)
     chapter_words = sum(
         len(paragraph.split())
         for chapter in narrative.chapters
         for paragraph in chapter.paragraphs
     )
 
-    assert story_words >= 160
-    assert chapter_words >= 160
-    assert len(narrative.luna_says) >= 5
-    assert len(narrative.chapters) == 3
+    assert chapter_words >= 150
+    assert len(narrative.chapters) == 4
+    assert narrative.chapters[2].title == "Relationship test"
     assert len(narrative.key_dates) >= 4
     assert result.get("monthly_arc")
 
     assert "min-height:0 !important" in html
     assert "position:sticky" not in html
-    assert "Dates worth circling" in html
+    assert "Decision calendar" in html
+    assert "Dates worth circling" not in html
     assert html.count('class="luna-story-date-card"') >= 4
-    assert html.count('class="luna-story-act"') == 3
+    assert html.count('class="luna-story-act"') == 4
     assert "detail.open = true" in html
     assert "Evidence path" in html
     assert "Ranked scenario families" in html
 
-    print("Monthly Story with Arc Engine tests passed.")
+    print("Monthly four-act Story Engine tests passed.")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from synthesis import period_report
 
 ORDER_REFERENCE = (
     "LC-MONTHLY-SAGITTARIUS-2026-07-AUSTRALIA-SYDNEY-"
-    "F-GENERAL-Q-NONE-ARC26"
+    "F-GENERAL-Q-NONE-ARC29"
 )
 
 
@@ -51,7 +51,8 @@ def main() -> None:
     assert narrative.central_storyline == (
         "The month starts with the price. It ends with the possibility."
     )
-    assert len(narrative.chapters) == 3
+    assert len(narrative.chapters) == 4
+    assert narrative.chapters[2].title == "Relationship test"
     assert len(narrative.key_dates) == 4
     assert "Monthly arc equation" not in narrative.technical_appendix_markdown
     assert "Ranked scenario families" in narrative.technical_appendix_markdown
@@ -59,13 +60,14 @@ def main() -> None:
     assert "Your month at a glance" in markdown
     assert "Monthly convergence" in markdown
     assert narrative.hook_headline in markdown
-    assert "The month in three chapters" in markdown
+    assert "The month in four acts" in markdown
+    assert "Luna's relationship test" not in markdown
     assert "Monthly Sky Snapshot" in markdown
     assert "Technical appendix" in markdown
     assert "No optional question supplied" not in markdown
     assert ORDER_REFERENCE in markdown
 
-    print("Monthly Narrative Engine with Arc v2.6 tests passed.")
+    print("Monthly Narrative Engine four-act tests passed.")
 
 
 if __name__ == "__main__":

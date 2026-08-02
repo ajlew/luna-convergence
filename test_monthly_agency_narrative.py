@@ -21,9 +21,11 @@ def main() -> None:
     assert narrative.agency_rule == GATEKEEPER_LINE
     assert narrative.validation_rule == VALIDATION_LINE
     assert result.get("monthly_arc")
-    assert len(narrative.luna_says) >= 5
-    assert sum(len(item.split()) for item in narrative.luna_says) >= 160
-    assert len(narrative.chapters) == 3
+    assert len(narrative.chapters) == 4
+    assert [chapter.label for chapter in narrative.chapters] == [
+        "Act I", "Act II", "Act III", "Act IV"
+    ]
+    assert narrative.chapters[2].title == "Relationship test"
     assert all(chapter.paragraphs for chapter in narrative.chapters)
     assert narrative.do_line
     assert narrative.dont_line
@@ -33,7 +35,7 @@ def main() -> None:
         + " ".join(narrative.love_story)
     ).lower()
 
-    print("Monthly agency and arc narrative tests passed.")
+    print("Monthly four-act agency narrative tests passed.")
 
 
 if __name__ == "__main__":

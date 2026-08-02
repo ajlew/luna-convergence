@@ -7,8 +7,9 @@ def main() -> None:
     config = (root / "site_config.py").read_text(encoding="utf-8")
     admin = (root / "admin_console.py").read_text(encoding="utf-8")
 
-    assert 'EDITOR_PREVIEW_ENABLED = True' in config
-    assert 'BUILD_LABEL = "Luna Narrator + Forecast Inventory v2.8"' in config
+    assert 'EDITOR_PREVIEW_ENABLED = _environment_flag("LUNA_EDITOR_PREVIEW", False)' in config
+    assert 'PUBLIC_YEARLY_ENABLED = _environment_flag("LUNA_PUBLIC_YEARLY", False)' in config
+    assert 'BUILD_LABEL = "Luna Daily + Monthly Production Pass v2.9"' in config
 
     assert "def editorial_preview_page()" in app
     assert '"editorial-preview"' in app
@@ -17,23 +18,23 @@ def main() -> None:
     assert "show_print=True" in app
     assert "preview=False" in app
     assert "Stripe is bypassed" in app
-    assert "Checkout is temporarily hidden" in app
     assert "EDITORIAL_PREVIEW_REF" in app
+    assert "if PUBLIC_YEARLY_ENABLED:" in app
 
     assert "Build: {BUILD_LABEL}" in admin
 
     bat_expectations = {
-        "run_admin_windows.bat": ("8511", "app.py"),
-        "run_customer_windows.bat": ("8512", "app.py"),
-        "run_editor_preview_windows.bat": ("8513", "app.py"),
+        "run_admin_windows.bat": ("8511", "1"),
+        "run_customer_windows.bat": ("8512", "0"),
+        "run_editor_preview_windows.bat": ("8513", "1"),
     }
-    for filename, (port, script) in bat_expectations.items():
+    for filename, (port, flag) in bat_expectations.items():
         content = (root / filename).read_text(encoding="utf-8")
         assert f"--server.port {port}" in content
-        assert script in content
-        assert "Luna Narrator + Forecast Inventory v2.8" in content
+        assert f"set LUNA_EDITOR_PREVIEW={flag}" in content
+        assert "Luna Daily + Monthly Production Pass v2.9" in content
 
-    print("Editorial preview bypass tests passed.")
+    print("Public/editorial environment-gate tests passed.")
 
 
 if __name__ == "__main__":

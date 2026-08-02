@@ -99,8 +99,8 @@ def main() -> None:
     app = (Path(__file__).parent / "app.py").read_text(
         encoding="utf-8"
     )
-    assert 'context=f"daily-{sign.lower()}"' in app
-    assert 'prefill_sign=sign' in app
+    assert 'monthly_url=f"/reports?sign={sign}"' in app
+    assert 'query_sign = st.query_params.get("sign", "")' in app
 
     print("Full narrative uniqueness and purchase-sign sync tests passed.")
     for sign in MUTABLE_SIGNS:

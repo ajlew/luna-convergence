@@ -16,7 +16,8 @@ The public site includes:
 - free daily horoscope;
 - active-house explanations;
 - full twelve-house reference matrix;
-- monthly and year-ahead product cards;
+- monthly report product and checkout;
+- Yearly report kept inside the editorial environment until release;
 - Stripe Payment Link placeholders;
 - manual-fulfilment order-details flow;
 - sample report;
@@ -131,8 +132,8 @@ This release adds:
 - a privacy and analytics page;
 - `SEARCH_CONSOLE_URLS.txt` for Google Search Console submission.
 
-Launch prices displayed by the site are A$4.95 monthly and A$14.95 yearly.
-Stripe Payment Link prices must be kept in sync separately.
+The public launch price displayed by the site is A$4.95 for the Monthly report.
+The Yearly price remains configured for internal testing but is not shown publicly.
 
 
 ## Daily Reading Version 2
@@ -155,8 +156,7 @@ specific personal event that the calculation cannot support.
 ## Pre-payment order capture
 
 The public purchase flow now requires the customer to choose the delivery
-email, star sign, report month or calendar year, and timezone before the
-Stripe payment button is shown.
+email, star sign, report month and timezone before the Stripe payment button is shown.
 
 The app passes a prefilled email and compact Luna order reference to Stripe.
 The same panel appears below the House Guide and is prefilled with the sign
@@ -402,3 +402,44 @@ inside dense transit clusters. Year-ahead reports use a top-down game map
 validated against twelve monthly rounds. The preview-only
 `/forecast-library` route can precompute versioned Daily, Monthly and
 Yearly report records for editorial review and later sale.
+
+
+## Daily + Monthly Production Pass v2.9
+
+The public product now concentrates on **Free Daily + Paid Monthly** while the
+Yearly engine remains available only in the editorial environment.
+
+Public defaults:
+
+```text
+LUNA_EDITOR_PREVIEW=0
+LUNA_PUBLIC_YEARLY=0
+```
+
+The local admin and editorial Windows launchers set
+`LUNA_EDITOR_PREVIEW=1`, preserving Yearly and Forecast Library development
+without exposing them on the customer site.
+
+### Daily changes
+
+- the Monthly purchase invitation now appears immediately after the core Daily
+  reading rather than below the complete technical appendix;
+- duplicated relationship copy is filtered from the secondary story section;
+- Editorial Translation is removed from the public evidence panel;
+- Planetary Positions and the 12-House Reference Matrix remain inside the
+  collapsed Full Technical Evidence section;
+- the existing full-width mobile layout and horizontal-overflow protection are
+  retained.
+
+### Monthly changes
+
+The report now follows one chronological four-act spine:
+
+1. The opening acquires structure.
+2. The opportunity reveals its terms.
+3. Attention meets the evidence test.
+4. The public result must fit private life.
+
+The relationship test is Act III rather than a detached feature card. The
+opening no longer repeats the full month, and the former Dates Worth Circling
+section is now an action-first Decision Calendar.

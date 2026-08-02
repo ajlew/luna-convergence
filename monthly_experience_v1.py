@@ -69,8 +69,8 @@ def _story_date_cards(narrative: MonthlyNarrative) -> str:
         f"""
 <article class="luna-story-date-card">
   <span>{_safe(item.date_label)}</span>
-  <strong>{_safe(item.consequence)}</strong>
-  <p>{_safe(item.response)}</p>
+  <strong>{_safe(item.response)}</strong>
+  <p>{_safe(item.evidence)}</p>
 </article>
         """
         for item in selected
@@ -309,16 +309,6 @@ def build_monthly_experience_html(
     scenario_rows = _scenario_rows_html(result)
     carryover_rows = _carryover_rows_html(result)
 
-    relationship_test_section = ""
-    if narrative.relationship_test:
-        relationship_test_section = f"""
-<section class="luna-monthly-section luna-relationship-test">
-  <div class="luna-eyebrow">{_safe(narrator_cue("monthly", 1))}</div>
-  <h2>{_safe(narrative.relationship_test[0])}</h2>
-  {_paragraphs(narrative.relationship_test[1:])}
-</section>
-        """
-
     focus_section = ""
     if (
         narrative.main_focus != "General overview"
@@ -426,9 +416,7 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-opening-story">
   <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
   <h2>{_safe(narrative.central_storyline)}</h2>
-  <div class="luna-story-prose">
-    {_paragraphs(narrative.luna_says)}
-  </div>
+  <p class="luna-opening-rule">Read the month in sequence. The opening shows possibility; the terms reveal cost; the relationship test shows consistency; the ending decides what can fit your real life.</p>
   <div class="luna-do-dont luna-do-dont-light">
     <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
     <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
@@ -438,15 +426,14 @@ def build_monthly_experience_html(
 {focus_section}
 
 <section class="luna-monthly-section luna-story-section">
-  <div class="luna-eyebrow">How {_safe(narrative.label.split()[0])} unfolds</div>
+  <div class="luna-eyebrow">How {_safe(narrative.label.split()[0])} unfolds — four acts</div>
   <div class="luna-story-timeline">{chapters}</div>
 </section>
 
-{relationship_test_section}
 
 <section class="luna-monthly-section luna-story-dates-section">
-  <div class="luna-eyebrow">Dates worth circling</div>
-  <h2>The moments that move the story</h2>
+  <div class="luna-eyebrow">Decision calendar</div>
+  <h2>What to do when the story moves</h2>
   <div class="luna-story-date-grid">{story_dates}</div>
 </section>
 
@@ -599,6 +586,13 @@ def build_monthly_experience_html(
 }}
 .luna-story-prose {{
   max-width:760px;
+}}
+.luna-opening-rule {{
+  max-width:760px;
+  margin:.25rem 0 1.35rem;
+  color:var(--muted);
+  font-size:clamp(1rem,1.4vw,1.14rem) !important;
+  line-height:1.58 !important;
 }}
 .luna-story-prose p {{
   font-size:clamp(1.03rem,1.5vw,1.18rem);

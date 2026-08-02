@@ -1616,6 +1616,20 @@ def _paragraph_html(paragraphs: Iterable[str]) -> str:
     return "".join(f"<p>{escape(item)}</p>" for item in paragraphs if item)
 
 
+def _story_key(value: str) -> str:
+    return NON_WORD.sub(" ", value.lower()).strip()
+
+
+def _story_is_duplicate(value: str, comparison: str, threshold: float = 0.82) -> bool:
+    left = _story_key(value)
+    right = _story_key(comparison)
+    if not left or not right:
+        return False
+    if left == right or left in right or right in left:
+        return True
+    return SequenceMatcher(None, left, right).ratio() >= threshold
+
+
 def _render_css() -> None:
     import streamlit as st
 
@@ -1737,6 +1751,56 @@ def _render_css() -> None:
     font-size:clamp(1.3rem,4vw,1.75rem);
     line-height:1.16;
     overflow-wrap:anywhere;
+}
+.daily-monthly-offer {
+    width:100%;
+    max-width:820px;
+    margin:.35rem auto 1.1rem;
+    padding:clamp(1rem,3vw,1.45rem);
+    border:1px solid #050505;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:1rem;
+    align-items:center;
+    background:#f5f5f2;
+}
+.daily-monthly-offer span {
+    display:block;
+    margin-bottom:.35rem;
+    color:#696963;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.65rem;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+}
+.daily-monthly-offer strong {
+    display:block;
+    font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
+    font-size:clamp(1.45rem,4vw,2rem);
+    font-weight:500;
+    line-height:1.05;
+}
+.daily-monthly-offer p {
+    margin:.35rem 0 0;
+    color:#3f3f3b;
+    font-size:1rem;
+    line-height:1.45;
+}
+.daily-monthly-offer a {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:44px;
+    padding:.75rem 1rem;
+    border:1px solid #050505;
+    color:#fff !important;
+    background:#050505;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.68rem;
+    letter-spacing:.04em;
+    text-decoration:none !important;
+    text-transform:uppercase;
+    white-space:nowrap;
 }
 .sparse-convergence {
     display:flex;
@@ -1934,8 +1998,12 @@ def _render_css() -> None:
     .do-dont-strip,
     .weather-climate,
     .solar-inline-grid,
-    .question-list {
+    .question-list,
+    .daily-monthly-offer {
         grid-template-columns:1fr;
+    }
+    .daily-monthly-offer a {
+        width:100%;
     }
     .do-dont-item + .do-dont-item,
     .weather-climate > div + div {
@@ -1972,13 +2040,21 @@ def _render_css() -> None:
 def render_daily_narrative_v3(
     narrative: DailyNarrative,
     solar: dict | None = None,
+    *,
+    monthly_price: str = "",
+    monthly_url: str = "/reports",
 ) -> None:
     import streamlit as st
 
     _render_css()
 
     visible_story = tuple(narrative.today_story[:2])
-    remaining_story = tuple(narrative.today_story[2:])
+    remaining_story = tuple(
+        paragraph
+        for paragraph in narrative.today_story[2:]
+        if not _story_is_duplicate(paragraph, narrative.relationship_story)
+        and not any(_story_is_duplicate(paragraph, visible) for visible in visible_story)
+    )
 
     st.markdown(
         f"""
@@ -2017,9 +2093,24 @@ def render_daily_narrative_v3(
         unsafe_allow_html=True,
     )
 
+    if monthly_price:
+        st.markdown(
+            f"""
+<section class="daily-monthly-offer" aria-label="Monthly report invitation">
+  <div>
+    <span>Take the wider view</span>
+    <strong>Your complete monthly story — {escape(monthly_price)}</strong>
+    <p>See the month as one arc: the opening, the terms, the relationship test and the final decision.</p>
+  </div>
+  <a href="{escape(monthly_url, quote=True)}">Choose my monthly report</a>
+</section>
+            """,
+            unsafe_allow_html=True,
+        )
+
     evidence = narrative.evidence
 
-    with st.expander(WHY_LUNA_LABEL):
+    with st.expander(WHY_LUNA_LABEL, expanded=False):
         st.markdown("### Why this matters today")
         evidence_rows = "".join(
             (
@@ -2118,7 +2209,7 @@ def render_daily_narrative_v3(
             unsafe_allow_html=True,
         )
 
-    with st.expander("More context — relationships, work and money"):
+    with st.expander("More context — relationships, work and money", expanded=False):
         if remaining_story:
             st.markdown("### Continue today’s story")
             for paragraph in remaining_story:
@@ -2135,7 +2226,7 @@ def render_daily_narrative_v3(
             st.markdown("### Money")
             st.markdown(narrative.money_note)
 
-    with st.expander("Questions to consider"):
+    with st.expander("Questions to consider", expanded=False):
         question_html = "".join(
             f'<div class="question-item">{escape(question)}</div>'
             for question in narrative.reflection_questions
@@ -2145,7 +2236,7 @@ def render_daily_narrative_v3(
             unsafe_allow_html=True,
         )
 
-    with st.expander(TECHNICAL_LABEL):
+    with st.expander(TECHNICAL_LABEL, expanded=False):
         st.markdown(
             "**Explainable Astrology:** the story appears first. The evidence "
             "below preserves the full calculation without interrupting the "
@@ -2162,11 +2253,6 @@ def render_daily_narrative_v3(
             if evidence.configured_orb is None
             else f"{evidence.configured_orb:g}°"
         )
-
-        st.markdown("### Editorial translation")
-        st.markdown(f"**Emotional hook:** {narrative.hook_headline}")
-        st.markdown(f"**Interpretive theme:** {narrative.headline}")
-        st.markdown(f"**Tone family:** {narrative.tone_family}")
 
         st.markdown("### Dominant aspect")
         st.markdown(f"**Aspect:** {evidence.aspect_label}")

@@ -53,9 +53,13 @@ def main() -> None:
     assert "bill, salary discussion" in narrative.luna_says[0]
     assert "mortgage, loan, grant, insurance" in " ".join(narrative.luna_says)
     assert "Mercury was only reorganising the filing cabinet" in narrative.dont_line
-    assert narrative.chapters[0].hook == "The bill arrives before the breakthrough"
-    assert narrative.chapters[1].hook == "Paperwork tests the promise"
-    assert narrative.chapters[2].hook == "The future finally answers back"
+    assert [chapter.hook for chapter in narrative.chapters] == [
+        "The opening acquires structure",
+        "The opportunity reveals its terms",
+        "Attention meets the evidence test",
+        "The public result must fit private life",
+    ]
+    assert narrative.chapters[2].title == "Relationship test"
     assert [item.evidence for item in narrative.key_dates] == [
         "New Moon in Cancer",
         "Mercury stations direct",

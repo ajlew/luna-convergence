@@ -922,80 +922,123 @@ def _arc_key_dates(arc: dict, maximum: int = 6) -> tuple[KeyDate, ...]:
 
 
 def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
+    """Build one chronological monthly spine.
+
+    The relationship test is an act in the main story, not a detached feature
+    card. Each act owns a distinct narrative job so the report does not tell the
+    same month several times.
+    """
     beats = {item.get("role"): item for item in _arc_beats(arc)}
-    opening = tuple(str(item) for item in (arc.get("opening") or ()))
-    complication = tuple(str(item) for item in (arc.get("complication") or ()))
-    pivot = tuple(str(item) for item in (arc.get("pivot") or ()))
-    climax = tuple(str(item) for item in (arc.get("climax") or ()))
-    resolution = tuple(str(item) for item in (arc.get("resolution") or ()))
 
-    financial_to_expansion = (
-        "Money & obligations" in str(arc.get("theme_axis", ""))
-        and "Travel, publishing" in str(arc.get("theme_axis", ""))
-    )
-
-    if financial_to_expansion:
-        hooks = (
-            "The bill arrives before the breakthrough",
-            "Paperwork tests the promise",
-            "The future finally answers back",
-        )
-        titles = (
-            "The inherited condition",
-            "The terms of the opportunity",
-            "Release, expansion and result",
-        )
-    else:
-        hooks = (
-            "The opening establishes the plot",
-            "The practical condition changes the stakes",
-            "The strongest convergence delivers the answer",
-        )
-        titles = (
-            "Opening and inherited condition",
-            "Complication and pivot",
-            "Climax and resolution",
+    def section(name: str) -> tuple[str, ...]:
+        return tuple(
+            str(item) for item in (arc.get(name) or ()) if str(item).strip()
         )
 
-    chapter_1_evidence = tuple(beats.get("inherited state", {}).get("evidence") or ()) + tuple(
-        beats.get("inciting event", {}).get("evidence") or ()
-    )
-    chapter_2_evidence = tuple(beats.get("complication", {}).get("evidence") or ()) + tuple(
-        beats.get("pivot", {}).get("evidence") or ()
-    )
-    chapter_3_evidence = tuple(beats.get("climax", {}).get("evidence") or ()) + tuple(
-        beats.get("resolution", {}).get("evidence") or ()
-    )
+    def evidence(*roles: str) -> tuple[str, ...]:
+        values: list[str] = []
+        for role in roles:
+            for item in beats.get(role, {}).get("evidence") or ():
+                text = str(item).strip()
+                if text and text not in values:
+                    values.append(text)
+        return tuple(values)
 
-    return (
+    def window(*roles: str, fallback: str) -> str:
+        selected = [beats.get(role) for role in roles if beats.get(role)]
+        if not selected:
+            return fallback
+        start = min(str(item.get("start_date")) for item in selected)
+        end = max(str(item.get("end_date", item.get("start_date"))) for item in selected)
+        return _date_range(start, end)
+
+    opening = section("opening")
+    complication = section("complication")
+    relationship = section("relationship_test")
+    ending = section("pivot") + section("climax") + section("resolution")
+
+    acts: list[MonthlyChapter] = [
         MonthlyChapter(
-            label="Chapter 1",
-            date_range="1-10",
-            hook=hooks[0],
-            title=titles[0],
-            paragraphs=opening or (str(beats.get("inherited state", {}).get("summary", "The month reveals its starting condition.")),),
-            action=str(beats.get("inherited state", {}).get("response", "Identify the real amount, condition or expectation.")),
-            evidence=tuple(dict.fromkeys(chapter_1_evidence)),
+            label="Act I",
+            date_range=window("inherited state", "inciting event", fallback="Opening"),
+            hook="The opening acquires structure",
+            title="Inherited momentum and the first move",
+            paragraphs=opening or (
+                str(beats.get("inherited state", {}).get("summary", "The month reveals its starting condition.")),
+            ),
+            action=str(
+                beats.get("inciting event", {}).get(
+                    "response",
+                    beats.get("inherited state", {}).get(
+                        "response",
+                        "Treat the first response as information, not the final result.",
+                    ),
+                )
+            ),
+            evidence=evidence("inherited state", "inciting event"),
         ),
         MonthlyChapter(
-            label="Chapter 2",
-            date_range="11-24",
-            hook=hooks[1],
-            title=titles[1],
-            paragraphs=complication + pivot,
-            action=str(beats.get("pivot", {}).get("response", "Use the new information to revise the decision.")),
-            evidence=tuple(dict.fromkeys(chapter_2_evidence)),
+            label="Act II",
+            date_range=window("complication", fallback="Middle of the month"),
+            hook="The opportunity reveals its terms",
+            title="Cost, timing and responsibility enter",
+            paragraphs=complication or (
+                str(beats.get("complication", {}).get("summary", "The practical terms become visible.")),
+            ),
+            action=str(
+                beats.get("complication", {}).get(
+                    "response",
+                    "Name the cost, condition or expectation before committing.",
+                )
+            ),
+            evidence=evidence("complication"),
         ),
+    ]
+
+    if relationship:
+        acts.append(
+            MonthlyChapter(
+                label="Act III",
+                date_range=window("relationship test", fallback="Relationship test"),
+                hook="Attention meets the evidence test",
+                title="Relationship test",
+                paragraphs=relationship,
+                action=str(
+                    beats.get("relationship test", {}).get(
+                        "response",
+                        "Let the second move reveal whether interest can become consistent.",
+                    )
+                ),
+                evidence=evidence("relationship test"),
+            )
+        )
+
+    acts.append(
         MonthlyChapter(
-            label="Chapter 3",
-            date_range="25-31",
-            hook=hooks[2],
-            title=titles[2],
-            paragraphs=climax + resolution,
-            action=str(beats.get("climax", {}).get("response", "Act on the strongest supported opportunity.")),
-            evidence=tuple(dict.fromkeys(chapter_3_evidence)),
-        ),
+            label="Act IV" if relationship else "Act III",
+            date_range=window("pivot", "climax", "resolution", fallback="Final week"),
+            hook="The public result must fit private life",
+            title="Decision, placement and resolution",
+            paragraphs=ending or (
+                str(beats.get("climax", {}).get("summary", "The strongest convergence delivers the answer.")),
+            ),
+            action=str(
+                beats.get("resolution", {}).get(
+                    "response",
+                    beats.get("climax", {}).get(
+                        "response",
+                        beats.get("pivot", {}).get(
+                            "response",
+                            "Keep the outcome that survives both ambition and practical reality.",
+                        ),
+                    ),
+                )
+            ),
+            evidence=evidence("pivot", "climax", "resolution"),
+        )
     )
+
+    return tuple(acts)
 
 
 def _strength_label(score: float) -> str:
@@ -1349,8 +1392,6 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
         "",
         "## Luna says",
         "",
-        *narrative.luna_says,
-        "",
         f"> {narrative.central_storyline}",
         "",
         f"**Agency rule:** {narrative.agency_rule}",
@@ -1366,14 +1407,6 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
     ])
     for paragraph in narrative.at_glance:
         lines.extend([paragraph, ""])
-
-    if narrative.relationship_test:
-        lines.extend([
-            "# Luna's relationship test",
-            "",
-            *narrative.relationship_test,
-            "",
-        ])
 
     lines.extend([f"# {narrative.focus_title}", ""])
     if narrative.personal_question:
@@ -1414,7 +1447,7 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
         "",
         "[[PAGEBREAK]]",
         "",
-        "# The month in three chapters",
+        "# The month in four acts",
         "",
     ])
     for chapter_index, chapter in enumerate(narrative.chapters, 1):

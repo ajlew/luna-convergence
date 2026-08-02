@@ -26,9 +26,11 @@ def main() -> None:
     for required in (
         "July checks the bank balance before it upgrades the itinerary",
         "The month starts with the price. It ends with the possibility.",
-        "The bill arrives before the breakthrough",
-        "Paperwork tests the promise",
-        "The future finally answers back",
+        "The opening acquires structure",
+        "The opportunity reveals its terms",
+        "Attention meets the evidence test",
+        "The public result must fit private life",
+        "Decision calendar",
         "Evidence path",
         "Ranked scenario families",
         "Carryover evidence",
@@ -44,7 +46,7 @@ def main() -> None:
     ):
         assert required in html, required
 
-    assert html.count('class="luna-story-act"') == 3
+    assert html.count('class="luna-story-act"') == 4
     assert html.count('class="luna-story-date-card"') == 4
     assert "Include evidence" not in html
     assert "Monthly arc equation" not in html
