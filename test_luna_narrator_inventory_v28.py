@@ -34,10 +34,10 @@ def main() -> None:
     )
     arc = august["monthly_arc"]
     assert arc["headline"] == (
-        "The invitation gets serious when it needs a place in your life"
+        "A possibility becomes real when you choose where it belongs"
     )
-    assert "tests the attention" in arc["central_storyline"]
-    assert "Are they here for you - or just for the fun of it?" in (
+    assert "what earns your trust" in arc["central_storyline"]
+    assert "are they showing up for you" in (
         " ".join(arc["relationship_test"])
     )
 

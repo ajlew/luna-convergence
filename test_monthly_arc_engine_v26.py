@@ -49,17 +49,17 @@ def main() -> None:
     narrative = build_monthly_narrative(result)
     assert narrative.hook_headline == arc["headline"]
     assert narrative.central_storyline == arc["central_storyline"]
-    assert len(narrative.luna_says) >= 7
-    assert "bill, salary discussion" in narrative.luna_says[0]
-    assert "mortgage, loan, grant, insurance" in " ".join(narrative.luna_says)
+    assert len(narrative.luna_says) == 2
+    assert narrative.luna_says[0].startswith("Start with the possibility")
+    assert "life you are creating" in narrative.luna_says[1]
     assert "Mercury was only reorganising the filing cabinet" in narrative.dont_line
     assert [chapter.hook for chapter in narrative.chapters] == [
-        "The opening acquires structure",
-        "The opportunity reveals its terms",
-        "Attention meets the evidence test",
-        "The public result must fit private life",
+        "You turn possibility into momentum",
+        "You bring the details into focus",
+        "You see whether the spark can hold",
+        "You choose what belongs in your life",
     ]
-    assert narrative.chapters[2].title == "Relationship test"
+    assert narrative.chapters[2].title == "Watch what happens next"
     assert [item.evidence for item in narrative.key_dates] == [
         "New Moon in Cancer",
         "Mercury stations direct",

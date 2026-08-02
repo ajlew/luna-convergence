@@ -10,9 +10,9 @@ SOLAR_LABEL = "Solar Convergence"
 TIMING_LABEL = "Key dates and planetary timing"
 TECHNICAL_LABEL = "Full technical evidence"
 
-GATEKEEPER_LINE = "Shift from applicant to gatekeeper."
+GATEKEEPER_LINE = "From reading the future to writing it."
 ACCESS_LINE = "Choose what earns access."
-VALIDATION_LINE = "Attention opens the door. Effort decides what stays."
+VALIDATION_LINE = "Enjoy the attention. Follow the effort. Choose what grows."
 
 FOOTER_DISCLAIMER = (
     "Luna uses concrete examples to help you recognise the pattern in your own "
@@ -26,7 +26,7 @@ DO_HUMOUR_BY_HOUSE = {
     2: "Check the number. Compliments are not legal tender.",
     3: "Ask the question. Telepathy remains understaffed.",
     4: "Name the issue. The walls already know.",
-    5: "Enjoy the spark. Keep one hand on the evidence.",
+    5: "Enjoy the spark. Watch what happens next.",
     6: "Fix the routine. Chaos is not a personality.",
     7: "Ask for clear terms. Mixed signals are not a dialect.",
     8: "Read the fine print. Chemistry has terrible bookkeeping.",
@@ -41,7 +41,7 @@ DONT_HUMOUR_BY_HOUSE = {
     2: "Spend for validation. Attention is not a currency.",
     3: "Write the sequel before they reply.",
     4: "Call silence peace. It has terrible acoustics.",
-    5: "Turn one spark into a five-year plan.",
+    5: "Write the whole future from one spark.",
     6: "Volunteer for emotional overtime.",
     7: "Accept hints as a contract.",
     8: "Let chemistry handle the accounts.",
@@ -54,7 +54,7 @@ DONT_HUMOUR_BY_HOUSE = {
 DO_DONT_PAIR_OVERRIDES = {
     frozenset({5, 9}): (
         "Follow the effort. Chemistry can book its own flight.",
-        "Mistake attention for value. A boarding pass is not commitment.",
+        "Write the ending from one exciting message. A boarding pass is not a relationship.",
     ),
     frozenset({4, 7}): (
         "Name the issue. The living room already knows.",

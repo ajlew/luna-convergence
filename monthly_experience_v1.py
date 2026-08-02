@@ -416,7 +416,7 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-opening-story">
   <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
   <h2>{_safe(narrative.central_storyline)}</h2>
-  <p class="luna-opening-rule">Read the month in sequence. The opening shows possibility; the terms reveal cost; the relationship test shows consistency; the ending decides what can fit your real life.</p>
+  <p class="luna-opening-rule">Read the month in sequence, then write your next move. Follow the opening, bring the details into focus, watch the effort and choose what belongs in the life you are creating.</p>
   <div class="luna-do-dont luna-do-dont-light">
     <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
     <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
@@ -432,8 +432,8 @@ def build_monthly_experience_html(
 
 
 <section class="luna-monthly-section luna-story-dates-section">
-  <div class="luna-eyebrow">Decision calendar</div>
-  <h2>What to do when the story moves</h2>
+  <div class="luna-eyebrow">Moments to notice</div>
+  <h2>Write the next move when the story changes</h2>
   <div class="luna-story-date-grid">{story_dates}</div>
 </section>
 
@@ -453,7 +453,7 @@ def build_monthly_experience_html(
 </section>
 
 <section class="luna-monthly-section">
-  <div class="luna-eyebrow">Where the story lands</div>
+  <div class="luna-eyebrow">Where you take the story</div>
   <div class="luna-life-list">{life_rows}</div>
 </section>
 

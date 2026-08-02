@@ -5,7 +5,7 @@ from typing import Literal
 
 
 ProductType = Literal["daily", "monthly", "yearly"]
-VOICE_VERSION = "Luna Narrator v1.0"
+VOICE_VERSION = "Luna Narrator v1.1 — Active Agency"
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,8 @@ class LunaVoiceProfile:
 
 _SHARED_MUST_DO = (
     "Use active voice and concrete verbs.",
-    "Keep the reader as the decision-maker.",
+    "Give the reader an active verb in every recommendation.",
+    "Keep the reader as the decision-maker and author of the next move.",
     "Translate planetary structure into recognisable human situations.",
     "Connect opportunity and difficulty inside one coherent story.",
     "Treat attention, chemistry and approval as information rather than proof.",
@@ -36,6 +37,7 @@ _SHARED_MUST_NOT = (
     "Promise a guaranteed event or measured probability.",
     "Pretend Luna is a human psychic or speak about Luna's personal life.",
     "Use passive applicant language such as waiting to be selected.",
+    "Frame the reader as waiting, receiving permission or letting the month decide for her.",
     "Repeat technical house descriptions in customer-facing prose.",
     "Use vague spiritual filler or moral judgement.",
     "Let humour interrupt serious financial, health, grief or safety themes.",
@@ -104,6 +106,7 @@ BANNED_PHRASES = (
     "this will definitely happen",
     "a soulmate is coming",
     "your manifestations are arriving",
+    "let the month come toward you",
 )
 
 

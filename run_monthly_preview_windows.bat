@@ -30,7 +30,7 @@ set LUNA_MONTHLY_PREVIEW_BYPASS=1
 
 echo.
 echo Starting Luna Private Monthly Preview
-echo Build: Luna Daily + Monthly Production Pass v2.9.2
+echo Build: Luna Active Agency Monthly v2.9.3
 echo Folder: %CD%
 echo Payment: BYPASSED FOR MONTHLY REVIEW ONLY
 echo Yearly: HIDDEN

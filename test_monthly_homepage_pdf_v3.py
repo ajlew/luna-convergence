@@ -26,7 +26,7 @@ def main() -> None:
         'class="editorial-title"',
         'class="reading-card"',
         'class="trust-strip"',
-        "The invitation gets serious when it needs a place in your life",
+        "A possibility becomes real when you choose where it belongs",
     ):
         assert required in html, required
 

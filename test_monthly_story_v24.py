@@ -38,7 +38,7 @@ def main() -> None:
 
     assert "min-height:0 !important" in html
     assert "position:sticky" not in html
-    assert "Decision calendar" in html
+    assert "Moments to notice" in html
     assert "Dates worth circling" not in html
     assert html.count('class="luna-story-date-card"') >= 4
     assert html.count('class="luna-story-act"') == 4

@@ -9,7 +9,7 @@ def main() -> None:
 
     assert 'EDITOR_PREVIEW_ENABLED = _environment_flag("LUNA_EDITOR_PREVIEW", False)' in config
     assert 'PUBLIC_YEARLY_ENABLED = _environment_flag("LUNA_PUBLIC_YEARLY", False)' in config
-    assert 'BUILD_LABEL = "Luna Daily + Monthly Production Pass v2.9"' in config
+    assert 'BUILD_LABEL = "Luna Active Agency Monthly v2.9.3"' in config
 
     assert "def editorial_preview_page()" in app
     assert '"editorial-preview"' in app
@@ -32,7 +32,7 @@ def main() -> None:
         content = (root / filename).read_text(encoding="utf-8")
         assert f"--server.port {port}" in content
         assert f"set LUNA_EDITOR_PREVIEW={flag}" in content
-        assert "Luna Daily + Monthly Production Pass v2.9" in content
+        assert "Luna Active Agency Monthly v2.9.3" in content
 
     print("Public/editorial environment-gate tests passed.")
 

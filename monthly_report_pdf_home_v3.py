@@ -243,7 +243,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
         )
     page3_body = f"""
 <div class="eyebrow">Timing / three chapters</div>
-<h1 class="section-title">The month moves in three acts</h1>
+<h1 class="section-title">The month moves in four acts</h1>
 <div class="hero-rule"></div>
 <div class="chapter-list">{''.join(chapter_cards)}</div>
 """

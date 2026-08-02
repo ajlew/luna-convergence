@@ -50,6 +50,8 @@ def main() -> None:
         _story_is_duplicate(paragraph, narrative.relationship_story)
         for paragraph in narrative.today_story[2:]
     )
+    assert len(narrative.reflection_questions) == 1
+    assert narrative.reflection_questions[0] == "What private truth is shaping the atmosphere at home?"
 
     # Monthly: one chronological four-act spine with the relationship test inside it.
     result = period_report(
@@ -69,17 +71,17 @@ def main() -> None:
         "Act III",
         "Act IV",
     ]
-    assert monthly.chapters[2].title == "Relationship test"
+    assert monthly.chapters[2].title == "Watch what happens next"
     assert monthly.chapters[2].date_range == "17-21 August 2026"
 
     html = build_monthly_experience_html(monthly, result, show_print=True)
-    relationship_line = "Are they here for you - or just for the fun of it?"
+    relationship_line = "are they showing up for you, or only enjoying the moment?"
     assert html.count('class="luna-story-act"') == 4
     assert html.count(relationship_line) == 1
     assert '<section class="luna-monthly-section luna-relationship-test">' not in html
     assert "How August unfolds — four acts" in html
-    assert "Decision calendar" in html
-    assert "What to do when the story moves" in html
+    assert "Moments to notice" in html
+    assert "Write the next move when the story changes" in html
     assert "Dates worth circling" not in html
 
     print("Luna Daily + Monthly Production Pass v2.9 tests passed.")

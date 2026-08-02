@@ -448,3 +448,9 @@ section is now an action-first Decision Calendar.
 ## Private Monthly preview bypass v2.9.2
 
 Use `run_monthly_preview_windows.bat` to open the complete Monthly customer report at `/monthly-preview` without Stripe. The preview is Monthly-only and Yearly remains hidden. Streamlit Community Cloud can enable the same hidden route with `LUNA_MONTHLY_PREVIEW_BYPASS` and protect it with `LUNA_MONTHLY_PREVIEW_PIN`. See `PRIVATE_MONTHLY_PREVIEW_BYPASS_V292.md`.
+
+## Active Agency Monthly voice v2.9.3
+
+Monthly customer copy now uses active verbs and positions the reader as the
+author of the next move. The signature line is **From reading the future to
+writing it.** See `ACTIVE_AGENCY_MONTHLY_V293.md`.

@@ -2603,8 +2603,8 @@ def sample_page() -> None:
         """
 <div class="card">
   <div class="eyebrow">Luna says</div>
-  <h3>The invitation gets serious when it needs a place in your life</h3>
-  <p>A larger future opens, acquires terms, tests the attention and then asks whether the public result can fit your private life.</p>
+  <h3>A possibility becomes real when you choose where it belongs</h3>
+  <p>A wider possibility opens. You shape it by noticing what supports your joy, what earns your trust and what belongs in the life you are building.</p>
 </div>
         """,
         unsafe_allow_html=True,
@@ -2612,10 +2612,10 @@ def sample_page() -> None:
 
     st.markdown("## The month in four acts")
     acts = [
-        ("Act I — 28 July to 7 August", "The opening acquires structure", "A late-July breakthrough receives a response, contact or audience that makes the possibility discussable."),
-        ("Act II — 11 to 15 August", "The opportunity reveals its terms", "Cost, distance, ownership, paperwork or another person's influence changes the stakes."),
-        ("Act III — 17 to 21 August", "Attention meets the evidence test", "Warmth or approval rises before responsibility asks whether the interest can become a plan."),
-        ("Act IV — 24 to 28 August", "The public result must fit private life", "Career or visibility seeks an answer, then home, location and emotional security decide whether the result belongs."),
+        ("Act I — 28 July to 7 August", "You turn possibility into momentum", "Carry a late-July breakthrough forward and use a response, contact or audience to shape the next move."),
+        ("Act II — 11 to 15 August", "You bring the details into focus", "Ask how timing, money, distance, trust or another person's involvement shapes the choice."),
+        ("Act III — 17 to 21 August", "You see whether the spark can hold", "Enjoy the warmth, then watch whether clear and consistent effort follows it."),
+        ("Act IV — 24 to 28 August", "You choose what belongs in your life", "Move the opportunity toward a result, then choose the version that supports your real life."),
     ]
     for label, title, body in acts:
         st.markdown(f"### {escape(title)}")
@@ -2624,7 +2624,7 @@ def sample_page() -> None:
 
     st.markdown("## The relationship test")
     st.info(
-        "Let the second move answer. Interest becomes valuable when it survives timing, responsibility and the need for an actual plan."
+        "Enjoy the spark, then compare the words with the effort. Clear, consistent action tells you what deserves more of your heart."
     )
 
     report_cta(
