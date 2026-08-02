@@ -443,3 +443,8 @@ The report now follows one chronological four-act spine:
 The relationship test is Act III rather than a detached feature card. The
 opening no longer repeats the full month, and the former Dates Worth Circling
 section is now an action-first Decision Calendar.
+
+
+## Private Monthly preview bypass v2.9.2
+
+Use `run_monthly_preview_windows.bat` to open the complete Monthly customer report at `/monthly-preview` without Stripe. The preview is Monthly-only and Yearly remains hidden. Streamlit Community Cloud can enable the same hidden route with `LUNA_MONTHLY_PREVIEW_BYPASS` and protect it with `LUNA_MONTHLY_PREVIEW_PIN`. See `PRIVATE_MONTHLY_PREVIEW_BYPASS_V292.md`.

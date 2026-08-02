@@ -55,6 +55,7 @@ from site_config import (
     BUILD_LABEL,
     EDITOR_PREVIEW_ENABLED,
     PUBLIC_YEARLY_ENABLED,
+    MONTHLY_PREVIEW_BYPASS_ENABLED,
     TAGLINE,
     SUBTITLE,
     MONTHLY_PRICE,
@@ -92,6 +93,20 @@ REPORT_REQUEST_URL = secret("REPORT_REQUEST_URL")
 NEWSLETTER_URL = secret("NEWSLETTER_URL")
 CONTACT_EMAIL = secret("CONTACT_EMAIL", "your-email@example.com")
 GA_MEASUREMENT_ID = secret("GA_MEASUREMENT_ID", "G-TE5HPKV94D")
+
+
+def _truthy(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# The private Monthly preview can be enabled either by a local environment
+# variable or by Streamlit Community Cloud secrets. It never enables Yearly.
+MONTHLY_PREVIEW_BYPASS_ACTIVE = (
+    MONTHLY_PREVIEW_BYPASS_ENABLED
+    or _truthy(secret("LUNA_MONTHLY_PREVIEW_BYPASS", "0"))
+)
+MONTHLY_PREVIEW_PIN = secret("LUNA_MONTHLY_PREVIEW_PIN", "")
+
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 DAILY_PAGE_REF = None
 
@@ -460,7 +475,7 @@ a {
 
 .question-list {
     display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
+    grid-template-columns:1fr;
     border-top:1px solid var(--black);
     border-left:1px solid var(--black);
 }
@@ -469,7 +484,7 @@ a {
     border-right:1px solid var(--black);
     border-bottom:1px solid var(--black);
     padding:1.2rem;
-    min-height:8.5rem;
+    min-height:auto;
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
     font-size:1.33rem;
     line-height:1.25;
@@ -2011,15 +2026,23 @@ def daily_page() -> None:
 
 
 
-def render_report_generator_workspace() -> None:
-    report_type = st.radio(
-        "Report type",
-        ["Monthly", "Year ahead"],
-        horizontal=True,
-        key="report-generator-type",
-    )
+def render_report_generator_workspace(*, monthly_only: bool = False) -> None:
+    if monthly_only:
+        report_type = "Monthly"
+        prior_result = st.session_state.get("report-generator-result")
+        if prior_result and prior_result.get("period") != "monthly":
+            st.session_state.pop("report-generator-result", None)
+        st.caption("Monthly preview only — Yearly remains hidden.")
+    else:
+        report_type = st.radio(
+            "Report type",
+            ["Monthly", "Year ahead"],
+            horizontal=True,
+            key="report-generator-type",
+        )
 
-    with st.form("report-generator-form", clear_on_submit=False):
+    form_key = "monthly-preview-generator-form" if monthly_only else "report-generator-form"
+    with st.form(form_key, clear_on_submit=False):
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
@@ -2121,9 +2144,10 @@ def render_report_generator_workspace() -> None:
     if not result:
         return
 
+    preview_label = "Private Monthly preview" if monthly_only else "Editorial preview"
     st.caption(
         f"{result.get('sign')} / {result.get('label')} • "
-        f"{BUILD_LABEL} • Checkout bypassed"
+        f"{BUILD_LABEL} • {preview_label} • Checkout bypassed"
     )
 
     if result.get("period") == "monthly":
@@ -2288,6 +2312,53 @@ def forecast_library_page() -> None:
                 "record_count": preview.get("record_count"),
                 "first_record": (preview.get("records") or [{}])[0],
             })
+
+
+
+def monthly_preview_page() -> None:
+    set_page_metadata(
+        "Private Monthly Preview | Luna Convergence",
+        "Privately generate and inspect the complete Luna Monthly report without payment.",
+        "/monthly-preview",
+    )
+
+    if not MONTHLY_PREVIEW_BYPASS_ACTIVE:
+        st.error("The private Monthly preview is disabled.")
+        st.caption(
+            "Enable LUNA_MONTHLY_PREVIEW_BYPASS only while reviewing the Monthly product."
+        )
+        return
+
+    if MONTHLY_PREVIEW_PIN and not st.session_state.get("monthly-preview-authorised"):
+        st.markdown('<div class="eyebrow">Private editorial access</div>', unsafe_allow_html=True)
+        st.markdown("# Open the Monthly preview")
+        with st.form("monthly-preview-pin-form"):
+            entered_pin = st.text_input("Preview PIN", type="password")
+            unlock = st.form_submit_button(
+                "Open Monthly preview",
+                type="primary",
+                use_container_width=True,
+            )
+        if unlock:
+            if secrets.compare_digest(entered_pin, MONTHLY_PREVIEW_PIN):
+                st.session_state["monthly-preview-authorised"] = True
+                st.rerun()
+            else:
+                st.error("Incorrect preview PIN.")
+        return
+
+    st.markdown('<div class="eyebrow">Private Monthly product review</div>', unsafe_allow_html=True)
+    st.markdown("# Generate the complete Monthly report")
+    st.warning(
+        "Payment is bypassed on this private review page. Yearly is hidden. "
+        "Disable the bypass again after the Monthly report has been approved."
+    )
+    st.markdown(
+        "Choose a sign, month, timezone, city and focus. Luna will generate the "
+        "same complete Monthly customer report, including the print/save controls, "
+        "without opening Stripe."
+    )
+    render_report_generator_workspace(monthly_only=True)
 
 
 def editorial_preview_page() -> None:
@@ -2953,6 +3024,12 @@ MONTHLY_INDEX_REF = st.Page(
     title="August 2026 Horoscopes",
     url_path="august-2026-horoscopes",
 )
+MONTHLY_PREVIEW_REF = st.Page(
+    monthly_preview_page,
+    title="Private Monthly Preview",
+    url_path="monthly-preview",
+    visibility="hidden",
+)
 EDITORIAL_PREVIEW_REF = st.Page(
     editorial_preview_page,
     title="Editorial Preview",
@@ -3011,6 +3088,7 @@ ALL_PAGES = [
     HOME_PAGE_REF,
     DAILY_PAGE_REF,
     MONTHLY_INDEX_REF,
+    MONTHLY_PREVIEW_REF,
     EDITORIAL_PREVIEW_REF,
     FORECAST_LIBRARY_REF,
     REPORTS_PAGE_REF,
