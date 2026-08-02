@@ -25,7 +25,7 @@ def main() -> None:
     assert [chapter.label for chapter in narrative.chapters] == [
         "Act I", "Act II", "Act III", "Act IV"
     ]
-    assert narrative.chapters[2].title == "Relationship test"
+    assert narrative.chapters[2].title == "Watch what happens next"
     assert all(chapter.paragraphs for chapter in narrative.chapters)
     assert narrative.do_line
     assert narrative.dont_line

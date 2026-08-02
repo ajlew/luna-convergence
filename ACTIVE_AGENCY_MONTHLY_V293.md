@@ -35,10 +35,10 @@ Every recommendation gives the reader an active verb:
 
 ## Sagittarius August 2026 structure
 
-1. You turn possibility into momentum.
-2. You bring the details into focus.
-3. You see whether the spark can hold.
-4. You choose what belongs in your life.
+1. Shaping possibility into momentum.
+2. Bringing details into focus.
+3. Watching whether the spark holds.
+4. Selecting what remains in life.
 
 The astrology and technical evidence remain unchanged. This release changes
 the customer translation and action language.

@@ -430,8 +430,8 @@ def _relationship_test_copy(cluster: dict | None) -> tuple[str, ...]:
     window = _date_range_label(cluster["start"], cluster["end"])
     if {"Venus", "Jupiter", "Saturn"} <= planets:
         return (
-            f"Around {window}, attention, warmth or approval can rise quickly. Watch what happens next: are they showing up for you, or only enjoying the moment?",
-            "Enjoy the interest. Then compare the warmth with the effort. Consistency tells you what deserves more of your time.",
+            f"Around {window}, attention, warmth or approval can rise quickly. Watch what follows: steady presence or passing interest?",
+            "Enjoy the interest. Then compare warmth with effort. Consistency reveals what deserves more time.",
         )
     if "Venus" in planets and "Saturn" in planets:
         return (
@@ -440,12 +440,12 @@ def _relationship_test_copy(cluster: dict | None) -> tuple[str, ...]:
         )
     if "Venus" in planets and ("Neptune" in planets or "Pluto" in planets):
         return (
-            f"Around {window}, attraction may feel intense, flattering or unusually persuasive. Keep your desire in the story and your standards in the room.",
+            f"Around {window}, attraction may feel intense, flattering or unusually persuasive. Keep desire in the story and standards in the room.",
             "Enjoy the chemistry, then ask what creates clarity, safety and mutuality.",
         )
     return (
         f"Around {window}, behaviour gives attention its meaning. Watch who follows through when the next step becomes real.",
-        "Choose the connection, audience or alliance that meets you with equal energy.",
+        "Choose the connection, audience or alliance that returns equal energy.",
     )
 
 
@@ -604,7 +604,7 @@ def _headline_and_axis(
         )
     return (
         "The first clue becomes a decision by month-end",
-        "The month reveals the issue, tests it and leaves you with a clearer choice.",
+        "The month reveals the issue, tests it and leaves a clearer choice.",
         "Opening signal x Practical consequence",
     )
 
@@ -722,27 +722,27 @@ def _expansion_public_private_story(
     climax_window = _date_range_label(climax["start"], climax["end"]) if climax else f"late {month}"
 
     opening = (
-        f"You carry the breakthrough from around {inherited_window} into {month}. A trip, course, application, publication, international contact or larger plan may already be opening a wider path.",
-        f"Around {inciting_window}, you use support from a friend, audience, organisation or useful contact to give the idea shape. The possibility moves from imagination into conversation.",
+        f"The breakthrough from around {inherited_window} enters {month} with momentum. A trip, course, application, publication, international contact or larger plan may already be opening a wider path.",
+        f"Around {inciting_window}, support from a friend, audience, organisation or useful contact gives the idea shape. Possibility moves from imagination into conversation.",
     )
     complication_text = (
-        f"Around {complication_window}, you bring the important details into focus. Timing, money, distance, trust, paperwork or another person's involvement may shape the choice.",
-        "Keep the excitement and ask the simple question that creates clarity. Once you understand what comes with the opportunity, you can choose your next step with confidence.",
+        f"Around {complication_window}, the important details come into focus. Timing, money, distance, trust, paperwork or another person's involvement may shape the choice.",
+        "Keep the excitement, then ask the simple question that creates clarity. Understanding what comes with the opportunity makes the next step easier to choose.",
     )
     pivot_text: tuple[str, ...] = ()
     relationship_text = _relationship_test_copy(relationship_test)
     climax_text = (
-        f"Around {climax_window}, you move the project, application, trip or relationship toward a visible result. Career, recognition or an official decision brings the story into view.",
-        "Now choose how the result will live inside your real life. Home, family, location and emotional ease help you decide what truly belongs.",
+        f"Around {climax_window}, the project, application, trip or relationship moves toward a visible result. Career, recognition or an official decision brings the story into view.",
+        "Now place the result inside real life. Home, family, location and emotional ease reveal what truly belongs.",
     )
     resolution_text = (
-        "You end the month with a clearer position: choose the future that shows care, supports your priorities and fits the life you want to build.",
+        "The month closes with a clearer position: favour the future that shows care, supports priorities and fits the life already taking shape.",
     )
 
     if {"Venus", "Jupiter", "Saturn"} <= relationship_planets:
         relationship_text = (
-            f"Around {relationship_window}, attention, warmth or approval rises. Watch what happens next: are they showing up for you, or only enjoying the moment?",
-            "Enjoy the spark, then compare the words with the effort. Clear, consistent action tells you what deserves more of your heart.",
+            f"Around {relationship_window}, attention, warmth or approval rises. Watch what follows: steady presence or a passing moment?",
+            "Enjoy the spark, then compare words with effort. Clear, consistent action shows what deserves more of the heart.",
         )
 
     return (
@@ -752,8 +752,8 @@ def _expansion_public_private_story(
         climax_text,
         resolution_text,
         relationship_text,
-        "Explore the possibility, name what matters and choose what supports the life you want.",
-        "Rush the spark into a promise. Give it room to show you what it can become.",
+        "Explore the possibility, name what matters and favour what supports the life already taking shape.",
+        "Rush the spark into a promise. Give the story room to reveal its direction.",
     )
 
 
@@ -791,24 +791,24 @@ def _generic_story(
         return ", ".join(values) or "a person, choice or opportunity"
 
     opening = (
-        f"You open {month} through {examples(inherited_results or inciting_results)}. "
-        "Use the first development to identify the possibility you want to shape.",
+        f"{month} opens through {examples(inherited_results or inciting_results)}. "
+        "Use the first development to identify the possibility worth shaping.",
     )
     complication_text = (
-        f"In the middle of the month, you bring {examples(complication_results)} into focus. "
-        "Ask what this new detail changes and choose your response deliberately.",
+        f"In the middle of the month, {examples(complication_results)} comes into focus. "
+        "Ask what this new detail changes, then choose the response deliberately.",
     )
     pivot_text = (
-        f"Around {_date_range_label(pivot['start'], pivot['end']) if pivot else 'the middle of the month'}, you change direction. "
+        f"Around {_date_range_label(pivot['start'], pivot['end']) if pivot else 'the middle of the month'}, direction changes. "
         f"Use clearer information, better timing or stronger cooperation to move {examples(pivot_results)} forward.",
     )
     climax_text = (
-        f"Late in the month, you focus your strongest energy on {examples(climax_results)}. "
+        f"Late in the month, the strongest energy gathers around {examples(climax_results)}. "
         "Turn the idea into a visible answer instead of extending the uncertainty.",
     )
     resolution_text = (
-        f"As the month closes, you connect the result with {examples(resolution_results, maximum=2)}. "
-        "Choose what supports the life you are building and use the rest as useful information.",
+        f"As the month closes, the result connects with {examples(resolution_results, maximum=2)}. "
+        "Choose what supports the life taking shape and use the rest as useful information.",
     )
     relationship_text = _relationship_test_copy(relationship_test)
     return (
@@ -1036,12 +1036,12 @@ def build_monthly_arc(
     )
     if specialised_story is not None:
         story = specialised_story
-        headline = "A possibility becomes real when you choose where it belongs"
+        headline = "A possibility becomes real through the choices that give it shape"
         central = (
-            "A wider possibility opens. You shape it by noticing what supports your joy, "
-            "what earns your trust and what belongs in the life you are building."
+            "A wider possibility opens. Attention shifts toward what supports joy, "
+            "earns trust and belongs in the life already taking shape."
         )
-        axis = "Possibility & attention x Clarity, care & your chosen life"
+        axis = "Possibility & attention x Clarity, care & a chosen life"
     elif not story[0]:
         story = _generic_story(
             month,
@@ -1071,7 +1071,7 @@ def build_monthly_arc(
             sign,
             main_focus,
             opening[0],
-            "Name what matters before you react.",
+            "Name what matters before reacting.",
             start,
         ),
         _beat(
@@ -1105,7 +1105,7 @@ def build_monthly_arc(
                 sign,
                 main_focus,
                 pivot_text[0],
-                "Use the new information to revise your choice and move forward.",
+                "Use the new information to revise the choice and move forward.",
                 start + timedelta(days=22),
             )
         )

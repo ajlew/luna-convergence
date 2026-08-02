@@ -303,7 +303,7 @@ def _chapter_card(chapter, number: int, styles: dict):
         Spacer(1, 2.5 * mm),
         _p(chapter.paragraphs[0], styles["body_compact"]),
         Spacer(1, 2 * mm),
-        _p(f"**YOUR MOVE** / {chapter.action}", styles["card_action"]),
+        _p(f"**NEXT MOVE** / {chapter.action}", styles["card_action"]),
         Spacer(1, 2 * mm),
         _p(f"EVIDENCE / {evidence}", styles["sans_small"]),
     ]
@@ -322,7 +322,7 @@ def _chapter_card(chapter, number: int, styles: dict):
 
 
 def _chapters(narrative, styles: dict):
-    story = _section_header("Timing", "The month in three chapters", styles)
+    story = _section_header("Timing", "The month in four acts", styles)
     for index, chapter in enumerate(narrative.chapters, 1):
         story.extend([_chapter_card(chapter, index, styles), Spacer(1, 4 * mm)])
     story.append(PageBreak())
@@ -373,7 +373,7 @@ def _key_date_card(item, styles: dict):
         _p(item.evidence, styles["date_title"]),
         _p(item.consequence, styles["sans_small"]),
         Spacer(1, 1.2 * mm),
-        _p(f"**YOUR MOVE** / {item.response}", styles["sans_small"]),
+        _p(f"**NEXT MOVE** / {item.response}", styles["sans_small"]),
     ]
     card = Table([[[*content]]], colWidths=[(CONTENT_WIDTH - 8 * mm) / 3])
     card.setStyle(TableStyle([

@@ -34,7 +34,7 @@ def main() -> None:
     )
     arc = august["monthly_arc"]
     assert arc["headline"] == (
-        "A possibility becomes real when you choose where it belongs"
+        "A possibility becomes real through the choices that give it shape"
     )
     assert "what earns your trust" in arc["central_storyline"]
     assert "are they showing up for you" in (

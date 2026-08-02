@@ -24,18 +24,18 @@ def main() -> None:
     html = build_monthly_experience_html(narrative, result, show_print=True)
 
     assert narrative.hook_headline == (
-        "A possibility becomes real when you choose where it belongs"
+        "A possibility becomes real through the choices that give it shape"
     )
     assert narrative.agency_rule == "From reading the future to writing it."
     assert [chapter.hook for chapter in narrative.chapters] == [
-        "You turn possibility into momentum",
-        "You bring the details into focus",
-        "You see whether the spark can hold",
-        "You choose what belongs in your life",
+        "Shaping possibility into momentum",
+        "Bringing details into focus",
+        "Watching whether the spark holds",
+        "Selecting what remains in life",
     ]
     assert narrative.action_plan == (
         "Choose the possibility that feels both alive and aligned.",
-        "Name the standard that will guide your yes.",
+        "Name the standard guiding the yes.",
         "Write one next move that turns insight into direction.",
     )
     assert not _duplicate_groups(narrative)
@@ -44,7 +44,7 @@ def main() -> None:
         "Moments to notice",
         "Write the next move when the story changes",
         "From reading the future to writing it.",
-        "are they showing up for you, or only enjoying the moment?",
+        "steady presence or a passing moment?",
     ):
         assert required in html, required
 
@@ -59,9 +59,9 @@ def main() -> None:
 
     config = Path("site_config.py").read_text(encoding="utf-8")
     assert 'PUBLIC_YEARLY_ENABLED = _environment_flag("LUNA_PUBLIC_YEARLY", False)' in config
-    assert 'BUILD_LABEL = "Luna Active Agency Monthly v2.9.3"' in config
+    assert 'BUILD_LABEL = "Luna Reflective Agency Monthly v2.9.4"' in config
 
-    print("Active Agency Monthly v2.9.3 tests passed.")
+    print("Reflective Agency Monthly v2.9.4 compatibility tests passed.")
 
 
 if __name__ == "__main__":

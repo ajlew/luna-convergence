@@ -454,3 +454,8 @@ Use `run_monthly_preview_windows.bat` to open the complete Monthly customer repo
 Monthly customer copy now uses active verbs and positions the reader as the
 author of the next move. The signature line is **From reading the future to
 writing it.** See `ACTIVE_AGENCY_MONTHLY_V293.md`.
+
+
+## Reflective Agency Monthly voice v2.9.4
+
+The Monthly narrator now uses reflective active language. Four-act headings use gerunds rather than repetitive “You...” constructions, and customer copy limits second-person address to moments where intimacy or direct action adds value. See `REFLECTIVE_AGENCY_MONTHLY_V294.md`.

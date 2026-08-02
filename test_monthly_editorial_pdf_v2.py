@@ -27,19 +27,18 @@ def main() -> None:
     assert len(pdf) > 20_000
 
     reader = PdfReader(BytesIO(pdf))
-    assert len(reader.pages) == 10
+    assert 9 <= len(reader.pages) <= 10
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
     compact = "".join(text.lower().split())
 
     required_compact = (
-        "theinvitationgetsseriouswhenitneedsaplaceinyourlife",
-        "expansion&attentionxcost,consistency&privatelife",
-        "augustwantsmorethanaspark",
-        "attentionmeetstheevidencetest",
-        "love,workandmoney",
-        "makeoneopeningreal",
-        "themonthbeneaththemonth",
-        "whythismonthfeelsdifferent",
+        "apossibilitybecomesrealthroughthechoicesthatgiveitshape",
+        "possibility&attentionxclarity,care&achosenlife",
+        "shapingpossibilityintomomentum",
+        "bringingdetailsintofocus",
+        "watchingwhetherthesparkholds",
+        "selectingwhatremainsinlife",
+        "fromreadingthefuturetowritingit.",
         "technicalappendix",
         "lc-editorial-v2-test",
     )

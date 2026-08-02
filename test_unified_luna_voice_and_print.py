@@ -69,7 +69,7 @@ def main() -> None:
 
     assert luna_do_dont(5, 9) == (
         "Follow the effort. Chemistry can book its own flight.",
-        "Mistake attention for value. A boarding pass is not commitment.",
+        "Write the ending from one exciting message. A boarding pass is not a relationship.",
     )
 
     print("Unified Luna voice and print tests passed.")

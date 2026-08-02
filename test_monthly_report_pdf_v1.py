@@ -39,10 +39,10 @@ def main() -> None:
     compact = "".join(full_text.lower().split())
     first_compact = "".join(page_texts[0].lower().split())
 
-    assert "lovelifewantsapassport" in first_compact
+    assert "apossibilitybecomesrealthroughthechoicesthatgiveitshape" in first_compact
     assert ORDER_REFERENCE not in page_texts[0]
     assert "augustwantsmorethanaspark" in compact
-    assert "themonthmovesinthreeacts" in compact
+    assert "themonthmovesinfouracts" in compact
     assert "whythismonthfeelsdifferent" in compact
     assert "technicalappendix" in compact
     assert ORDER_REFERENCE.lower().replace("-", "") in compact.replace("-", "")

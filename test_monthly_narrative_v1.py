@@ -52,7 +52,7 @@ def main() -> None:
         "The month starts with the price. It ends with the possibility."
     )
     assert len(narrative.chapters) == 4
-    assert narrative.chapters[2].title == "Relationship test"
+    assert narrative.chapters[2].title == "Watch what happens next"
     assert len(narrative.key_dates) == 4
     assert "Monthly arc equation" not in narrative.technical_appendix_markdown
     assert "Ranked scenario families" in narrative.technical_appendix_markdown

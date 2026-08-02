@@ -960,7 +960,7 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
         MonthlyChapter(
             label="Act I",
             date_range=window("inherited state", "inciting event", fallback="Opening"),
-            hook="You turn possibility into momentum",
+            hook="Shaping possibility into momentum",
             title="Carry the opening forward",
             paragraphs=opening or (
                 str(beats.get("inherited state", {}).get("summary", "The month reveals its starting condition.")),
@@ -979,7 +979,7 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
         MonthlyChapter(
             label="Act II",
             date_range=window("complication", fallback="Middle of the month"),
-            hook="You bring the details into focus",
+            hook="Bringing details into focus",
             title="See what comes with the opportunity",
             paragraphs=complication or (
                 str(beats.get("complication", {}).get("summary", "The practical terms become visible.")),
@@ -999,7 +999,7 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
             MonthlyChapter(
                 label="Act III",
                 date_range=window("relationship test", fallback="Relationship test"),
-                hook="You see whether the spark can hold",
+                hook="Watching whether the spark holds",
                 title="Watch what happens next",
                 paragraphs=relationship,
                 action=str(
@@ -1016,7 +1016,7 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
         MonthlyChapter(
             label="Act IV" if relationship else "Act III",
             date_range=window("pivot", "climax", "resolution", fallback="Final week"),
-            hook="You choose what belongs in your life",
+            hook="Selecting what remains in life",
             title="Write the ending you want to live",
             paragraphs=ending or (
                 str(beats.get("climax", {}).get("summary", "The strongest convergence delivers the answer.")),
@@ -1191,8 +1191,8 @@ def build_monthly_narrative(
         headline = convergence_axis
         subtitle = central_storyline
         luna_says = (
-            "Start with the possibility, then use each new detail to shape your response.",
-            "By month-end, choose the option that matches both your desire and the life you are creating.",
+            "Begin with possibility, then use each new detail to shape the response.",
+            "By month-end, favour the option that matches desire with the life already taking shape.",
         )
         scenario_examples = _arc_scenario_examples(arc) or _scenario_examples(
             primary_house,
@@ -1220,7 +1220,7 @@ def build_monthly_narrative(
         dont_line = str(arc.get("dont_line", "Force the ending before the terms arrive."))
         action_plan = (
             "Choose the possibility that feels both alive and aligned.",
-            "Name the standard that will guide your yes.",
+            "Name the standard guiding the yes.",
             "Write one next move that turns insight into direction.",
         )
     else:

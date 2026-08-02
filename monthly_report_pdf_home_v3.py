@@ -235,14 +235,14 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     <h2>{_safe(chapter.hook)}</h2>
     <div class="theme-line">{_safe(chapter.title)}</div>
     <p>{_safe(chapter.paragraphs[0])}</p>
-    <div class="best-move"><span>Your move</span><strong>{_safe(chapter.action)}</strong></div>
+    <div class="best-move"><span>Next move</span><strong>{_safe(chapter.action)}</strong></div>
     <div class="evidence-line">Evidence / {_safe(evidence)}</div>
   </div>
 </article>
 """
         )
     page3_body = f"""
-<div class="eyebrow">Timing / three chapters</div>
+<div class="eyebrow">Timing / four acts</div>
 <h1 class="section-title">The month moves in four acts</h1>
 <div class="hero-rule"></div>
 <div class="chapter-list">{''.join(chapter_cards)}</div>
@@ -288,7 +288,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
   <div class="mono-label">{_safe(item.date_label)}</div>
   <h3>{_safe(item.evidence)}</h3>
   <p>{_safe(item.consequence)}</p>
-  <div class="best-move"><span>Your move</span><strong>{_safe(item.response)}</strong></div>
+  <div class="best-move"><span>Next move</span><strong>{_safe(item.response)}</strong></div>
 </article>
 """
         for item in narrative.key_dates[:6]
@@ -301,7 +301,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     page5_body = f"""
 <div class="section-hero two-column strategy-hero">
   <section>
-    <div class="eyebrow">Practical direction / your next move</div>
+    <div class="eyebrow">Practical direction / next move</div>
     <h1 class="section-title">Make one opening real</h1>
     <div class="best-move wide"><span>Hidden opportunity</span><strong>{_safe(narrative.hidden_opportunity)}</strong></div>
   </section>

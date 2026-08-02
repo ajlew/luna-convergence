@@ -50,14 +50,14 @@ def main() -> None:
     assert narrative.hook_headline == arc["headline"]
     assert narrative.central_storyline == arc["central_storyline"]
     assert len(narrative.luna_says) == 2
-    assert narrative.luna_says[0].startswith("Start with the possibility")
-    assert "life you are creating" in narrative.luna_says[1]
+    assert narrative.luna_says[0].startswith("Begin with possibility")
+    assert "life already taking shape" in narrative.luna_says[1]
     assert "Mercury was only reorganising the filing cabinet" in narrative.dont_line
     assert [chapter.hook for chapter in narrative.chapters] == [
-        "You turn possibility into momentum",
-        "You bring the details into focus",
-        "You see whether the spark can hold",
-        "You choose what belongs in your life",
+        "Shaping possibility into momentum",
+        "Bringing details into focus",
+        "Watching whether the spark holds",
+        "Selecting what remains in life",
     ]
     assert narrative.chapters[2].title == "Watch what happens next"
     assert [item.evidence for item in narrative.key_dates] == [

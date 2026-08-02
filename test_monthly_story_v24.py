@@ -32,7 +32,7 @@ def main() -> None:
 
     assert chapter_words >= 150
     assert len(narrative.chapters) == 4
-    assert narrative.chapters[2].title == "Relationship test"
+    assert narrative.chapters[2].title == "Watch what happens next"
     assert len(narrative.key_dates) >= 4
     assert result.get("monthly_arc")
 

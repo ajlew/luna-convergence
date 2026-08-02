@@ -75,7 +75,7 @@ def main() -> None:
     assert monthly.chapters[2].date_range == "17-21 August 2026"
 
     html = build_monthly_experience_html(monthly, result, show_print=True)
-    relationship_line = "are they showing up for you, or only enjoying the moment?"
+    relationship_line = "steady presence or a passing moment?"
     assert html.count('class="luna-story-act"') == 4
     assert html.count(relationship_line) == 1
     assert '<section class="luna-monthly-section luna-relationship-test">' not in html

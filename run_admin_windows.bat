@@ -26,7 +26,7 @@ if errorlevel 1 goto :error
 
 echo.
 echo Starting Luna Reports
-echo Build: Luna Active Agency Monthly v2.9.3
+echo Build: Luna Reflective Agency Monthly v2.9.4
 echo Folder: %CD%
 echo Open: http://localhost:8511/reports
 echo.

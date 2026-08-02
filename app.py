@@ -2603,8 +2603,8 @@ def sample_page() -> None:
         """
 <div class="card">
   <div class="eyebrow">Luna says</div>
-  <h3>A possibility becomes real when you choose where it belongs</h3>
-  <p>A wider possibility opens. You shape it by noticing what supports your joy, what earns your trust and what belongs in the life you are building.</p>
+  <h3>A possibility becomes real through the choices that give it shape</h3>
+  <p>A wider possibility opens. Attention shifts toward what supports joy, earns trust and belongs in the life already taking shape.</p>
 </div>
         """,
         unsafe_allow_html=True,
@@ -2612,10 +2612,10 @@ def sample_page() -> None:
 
     st.markdown("## The month in four acts")
     acts = [
-        ("Act I — 28 July to 7 August", "You turn possibility into momentum", "Carry a late-July breakthrough forward and use a response, contact or audience to shape the next move."),
-        ("Act II — 11 to 15 August", "You bring the details into focus", "Ask how timing, money, distance, trust or another person's involvement shapes the choice."),
-        ("Act III — 17 to 21 August", "You see whether the spark can hold", "Enjoy the warmth, then watch whether clear and consistent effort follows it."),
-        ("Act IV — 24 to 28 August", "You choose what belongs in your life", "Move the opportunity toward a result, then choose the version that supports your real life."),
+        ("Act I — 28 July to 7 August", "Shaping possibility into momentum", "Carry a late-July breakthrough forward and use a response, contact or audience to shape the next move."),
+        ("Act II — 11 to 15 August", "Bringing details into focus", "Ask how timing, money, distance, trust or another person's involvement shapes the choice."),
+        ("Act III — 17 to 21 August", "Watching whether the spark holds", "Enjoy the warmth, then watch whether clear and consistent effort follows it."),
+        ("Act IV — 24 to 28 August", "Selecting what remains in life", "Move the opportunity toward a result, then select the version that supports real life."),
     ]
     for label, title, body in acts:
         st.markdown(f"### {escape(title)}")
@@ -2624,7 +2624,7 @@ def sample_page() -> None:
 
     st.markdown("## The relationship test")
     st.info(
-        "Enjoy the spark, then compare the words with the effort. Clear, consistent action tells you what deserves more of your heart."
+        "Enjoy the spark, then compare words with effort. Clear, consistent action shows what deserves more of the heart."
     )
 
     report_cta(
