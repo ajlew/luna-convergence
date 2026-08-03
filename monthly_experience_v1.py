@@ -21,8 +21,8 @@ from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import narrator_cue
 
 
-PRINT_PAPERS = ("A4", "A3")
-PRINT_ORIENTATIONS = ("portrait", "landscape")
+PRINT_PAPERS = ("A4",)
+PRINT_ORIENTATIONS = ("portrait",)
 
 
 def _safe(value: object) -> str:
@@ -204,6 +204,22 @@ def _scenario_rows_html(result: dict) -> str:
     return "".join(rows)
 
 
+def _mapping_audit_rows_html(result: dict) -> str:
+    arc = result.get("monthly_arc") or {}
+    rows = []
+    for item in arc.get("mapping_audit") or []:
+        evidence = "; ".join(str(value) for value in (item.get("evidence") or [])[:4])
+        rows.append(
+            "<tr>"
+            f"<td>{_safe(str(item.get('role', '')).title())}</td>"
+            f"<td>{_safe(item.get('house'))}</td>"
+            f"<td>{_safe(item.get('scenario_label') or item.get('scenario_key'))}</td>"
+            f"<td>{_safe(evidence)}</td>"
+            "</tr>"
+        )
+    return "".join(rows)
+
+
 def _carryover_rows_html(result: dict) -> str:
     arc = result.get("monthly_arc") or {}
     rows = []
@@ -260,27 +276,12 @@ def _print_controls(
     default_paper: str,
     default_orientation: str,
 ) -> str:
-    paper_options = "".join(
-        f'<option value="{paper}"'
-        + (" selected" if paper == default_paper else "")
-        + f">{paper}</option>"
-        for paper in PRINT_PAPERS
-    )
-    orientation_options = "".join(
-        f'<option value="{orientation}"'
-        + (" selected" if orientation == default_orientation else "")
-        + f">{orientation.title()}</option>"
-        for orientation in PRINT_ORIENTATIONS
-    )
-    return f"""
+    del default_paper, default_orientation
+    return """
 <div class="luna-print-controls">
-  <div class="luna-print-field">
-    <label for="luna-print-paper">Paper</label>
-    <select id="luna-print-paper">{paper_options}</select>
-  </div>
-  <div class="luna-print-field">
-    <label for="luna-print-orientation">Orientation</label>
-    <select id="luna-print-orientation">{orientation_options}</select>
+  <div class="luna-print-format">
+    <strong>A4 portrait</strong>
+    <span>All evidence sections open in an isolated print window.</span>
   </div>
   <button id="luna-print-report" type="button">Print or save report</button>
 </div>
@@ -306,6 +307,7 @@ def build_monthly_experience_html(
     life_rows = _life_rows(narrative)
     story_dates = _story_date_cards(narrative)
     arc_evidence_path = _arc_evidence_path(result)
+    mapping_audit_rows = _mapping_audit_rows_html(result)
     scenario_rows = _scenario_rows_html(result)
     carryover_rows = _carryover_rows_html(result)
 
@@ -337,6 +339,13 @@ def build_monthly_experience_html(
       <p><strong>Convergence:</strong> {_safe(narrative.convergence_axis)}</p>
       <h3>Evidence path</h3>
       <div class="luna-evidence-path">{arc_evidence_path}</div>
+      <h3>Evidence-to-scenario trace</h3>
+      <div class="luna-table-wrap">
+        <table class="luna-trace-table">
+          <thead><tr><th>Role</th><th>House</th><th>Scenario</th><th>Supporting events</th></tr></thead>
+          <tbody>{mapping_audit_rows}</tbody>
+        </table>
+      </div>
       <p><strong>Rule:</strong> {_safe(VALIDATION_LINE)}</p>
     </div>
   </details>
@@ -416,7 +425,7 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-opening-story">
   <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
   <h2>{_safe(narrative.central_storyline)}</h2>
-  <p class="luna-opening-rule">Read the month in sequence, then write the next move. Follow the opening, bring the details into focus, watch the effort and select what remains.</p>
+  <p class="luna-opening-rule">The month unfolds in sequence: the opening gathers momentum, the meaning sharpens, consistency becomes visible and the strongest option earns its place.</p>
   <div class="luna-do-dont luna-do-dont-light">
     <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
     <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
@@ -897,9 +906,20 @@ def build_monthly_experience_html(
   background:var(--white);
   padding:.4rem .55rem;
 }}
-.luna-print-check {{
-  margin-left:auto;
-  font-size:.85rem;
+.luna-print-format {{
+  display:flex;
+  flex-direction:column;
+  gap:.15rem;
+  margin-right:auto;
+}}
+.luna-print-format strong {{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.72rem;
+  text-transform:uppercase;
+}}
+.luna-print-format span {{
+  color:var(--muted);
+  font-size:.82rem;
 }}
 .luna-print-controls button {{
   min-height:2.5rem;
@@ -960,85 +980,8 @@ def build_monthly_experience_html(
     width:100%;
   }}
 }}
-#luna-print-portal {{
-  display:none;
-}}
 @media print {{
-  body.luna-print-active > *:not(#luna-print-portal):not(style):not(script) {{
-    display:none !important;
-  }}
-  #luna-print-portal {{
-    display:block !important;
-    position:static !important;
-    width:100% !important;
-    max-width:none !important;
-    margin:0 !important;
-    padding:0 !important;
-  }}
-  #luna-print-portal .luna-monthly-report {{
-    display:block !important;
-    position:static !important;
-    width:100% !important;
-    max-width:none !important;
-    height:auto !important;
-    max-height:none !important;
-    overflow:visible !important;
-    margin:0 !important;
-  }}
-  html, body {{
-    margin:0 !important;
-    padding:0 !important;
-    background:#fff !important;
-  }}
-  .luna-monthly-report {{
-    position:static !important;
-    width:100%;
-    max-width:none;
-    margin:0;
-  }}
   .luna-print-controls {{ display:none !important; }}
-  .luna-monthly-hero {{
-    padding:7mm 0 6mm;
-    color:#050505 !important;
-    background:#fff !important;
-    border-top:3mm solid #050505;
-    border-bottom:1px solid #050505;
-    break-inside:avoid;
-    page-break-inside:avoid;
-  }}
-  .luna-monthly-meta {{
-    color:#050505 !important;
-    border-bottom-color:#050505 !important;
-  }}
-  .luna-monthly-hero h1 {{
-    color:#050505 !important;
-    font-size:34pt;
-  }}
-  .luna-hero-theme {{
-    color:#050505 !important;
-  }}
-  .luna-monthly-section {{
-    padding:6mm 0;
-  }}
-  .luna-opening-story h2 {{
-    font-size:27pt;
-  }}
-  .luna-story-prose p {{
-    font-size:10.5pt;
-    line-height:1.5;
-  }}
-  .luna-report-footer {{
-    padding:3mm 0 0;
-  }}
-  .luna-story-act,
-  .luna-story-date-card,
-  .luna-romance-grid article,
-  .luna-life-row,
-  .luna-date-card,
-  .luna-evidence-grid div {{
-    break-inside:avoid;
-    page-break-inside:avoid;
-  }}
   .luna-monthly-report[data-print-orientation="portrait"] .luna-story-act,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-story-date-grid,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-romance-grid,
@@ -1105,8 +1048,9 @@ def build_monthly_experience_html(
 <div
   class="luna-monthly-report"
   id="luna-monthly-report"
-  data-print-paper="{_safe(default_paper)}"
-  data-print-orientation="{_safe(default_orientation)}"
+  data-print-paper="A4"
+  data-print-orientation="portrait"
+  data-print-filename="{_safe(str(result.get('start', narrative.label[:7]))[:7] + '_' + narrative.sign + '_Monthly')}"
 >
   <section class="luna-monthly-hero">
     <div class="luna-monthly-meta">
@@ -1133,94 +1077,76 @@ def build_monthly_experience_html(
 <script>
 (() => {{
   const report = document.getElementById("luna-monthly-report");
-  const paper = document.getElementById("luna-print-paper");
-  const orientation = document.getElementById("luna-print-orientation");
   const printButton = document.getElementById("luna-print-report");
-  const pageStyle = document.getElementById("luna-print-page-size");
-  let printPortal = null;
 
-  function selectedPaper() {{
-    return paper ? paper.value : "{default_paper}";
-  }}
-
-  function selectedOrientation() {{
-    return orientation ? orientation.value : "{default_orientation}";
-  }}
-
-  function applyPrintSettings() {{
-    const paperValue = selectedPaper();
-    const orientationValue = selectedOrientation();
-    report.dataset.printPaper = paperValue;
-    report.dataset.printOrientation = orientationValue;
-    pageStyle.textContent =
-      "@page {{ size: " + paperValue + " " + orientationValue + "; margin: 12mm; }}";
-  }}
-
-  function removePrintPortal() {{
-    if (printPortal && printPortal.parentNode) {{
-      printPortal.parentNode.removeChild(printPortal);
-    }}
-    printPortal = null;
+  function destroyLegacyPrintArtifacts() {{
+    document.querySelectorAll(".luna-print-portal, #luna-print-portal, iframe[data-luna-print-frame]").forEach((node) => node.remove());
     document.body.classList.remove("luna-print-active");
+    window.__lunaMonthlyPrintFrame = null;
   }}
 
-  function createPrintPortal() {{
-    if (printPortal) return printPortal;
-
-    applyPrintSettings();
-
-    printPortal = document.createElement("div");
-    printPortal.id = "luna-print-portal";
-
+  function isolatedReportClone() {{
     const clone = report.cloneNode(true);
     clone.id = "luna-monthly-report-print";
-    clone.dataset.printPaper = selectedPaper();
-    clone.dataset.printOrientation = selectedOrientation();
-
-    clone.querySelectorAll(".luna-print-controls").forEach((node) => node.remove());
-    const expandAllPrintDetails = () => {{
-      clone.querySelectorAll("details").forEach((detail) => {{
-        detail.open = true;
-        detail.setAttribute("open", "");
-      }});
-    }};
-
-    expandAllPrintDetails();
-
-    // Run again after the clone enters the document. This catches nested
-    // disclosures and any browser-created details state before pagination.
-    window.requestAnimationFrame(expandAllPrintDetails);
-
-    printPortal.appendChild(clone);
-    document.body.appendChild(printPortal);
-    document.body.classList.add("luna-print-active");
-    return printPortal;
-  }}
-
-  function preparePrint() {{
-    createPrintPortal();
-  }}
-
-  function restorePrint() {{
-    window.setTimeout(removePrintPortal, 0);
-  }}
-
-  if (paper) paper.addEventListener("change", applyPrintSettings);
-  if (orientation) orientation.addEventListener("change", applyPrintSettings);
-  window.addEventListener("beforeprint", preparePrint);
-  window.addEventListener("afterprint", restorePrint);
-
-  if (printButton) {{
-    printButton.addEventListener("click", async () => {{
-      createPrintPortal();
-      if (document.fonts && document.fonts.ready) {{
-        await document.fonts.ready;
-      }}
-      window.setTimeout(() => window.print(), 180);
+    clone.dataset.printPaper = "A4";
+    clone.dataset.printOrientation = "portrait";
+    clone.querySelectorAll(".luna-print-controls, script").forEach((node) => node.remove());
+    clone.querySelectorAll("details").forEach((detail) => {{
+      detail.open = true;
+      detail.setAttribute("open", "");
     }});
+    return clone;
   }}
 
-  applyPrintSettings();
+  function styleMarkup() {{
+    return Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((node) => node.outerHTML)
+      .join("\n");
+  }}
+
+  async function printIsolatedReport() {{
+    destroyLegacyPrintArtifacts();
+    const clone = isolatedReportClone();
+    const filename = report.dataset.printFilename || "Luna_Monthly";
+    const frame = document.createElement("iframe");
+    frame.setAttribute("data-luna-print-frame", "monthly");
+    frame.setAttribute("title", "Luna Monthly print document");
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "1px";
+    frame.style.height = "1px";
+    frame.style.border = "0";
+    frame.style.opacity = "0";
+    document.body.appendChild(frame);
+    window.__lunaMonthlyPrintFrame = frame;
+    const target = frame.contentWindow;
+    const targetDocument = frame.contentDocument || target.document;
+    targetDocument.open();
+    targetDocument.write(
+      '<!doctype html><html><head><meta charset="utf-8"><title>' + filename + '</title>' +
+      styleMarkup() +
+      '<style>@page{{size:A4 portrait;margin:12mm}}html,body{{margin:0!important;padding:0!important;background:#fff!important}}' +
+      '.luna-monthly-report{{width:100%!important;max-width:none!important;margin:0!important;font-family:Arial,Helvetica,sans-serif!important;word-spacing:.04em!important}}' +
+      '.luna-monthly-report h1,.luna-monthly-report h2,.luna-monthly-report h3{{font-family:Georgia,"Times New Roman",serif!important;letter-spacing:0!important}}' +
+      '.luna-print-controls{{display:none!important}}details{{display:block!important}}details>*:not(summary){{display:block!important;height:auto!important;max-height:none!important;overflow:visible!important}}' +
+      'summary span{{display:none!important}}tr,article,section,.luna-story-act,.luna-date-card{{break-inside:avoid;page-break-inside:avoid}}</style>' +
+      '</head><body>' + clone.outerHTML + '</body></html>'
+    );
+    targetDocument.close();
+    targetDocument.title = filename;
+    if (targetDocument.fonts && targetDocument.fonts.ready) await targetDocument.fonts.ready;
+    const cleanup = () => {{
+      if (frame.isConnected) frame.remove();
+      window.__lunaMonthlyPrintFrame = null;
+    }};
+    target.addEventListener("afterprint", cleanup, {{once:true}});
+    target.setTimeout(() => {{ target.focus(); target.print(); }}, 220);
+    window.setTimeout(() => {{ if (frame.isConnected) cleanup(); }}, 120000);
+  }}
+
+  destroyLegacyPrintArtifacts();
+  printButton?.addEventListener("click", printIsolatedReport);
 }})();
 </script>
     """
@@ -1245,8 +1171,25 @@ def render_monthly_experience(
             show_print=show_print,
             preview=preview,
             order_reference=order_reference,
-            default_paper=default_paper,
-            default_orientation=default_orientation,
+            default_paper="A4",
+            default_orientation="portrait",
         ),
         unsafe_allow_javascript=True,
     )
+
+    if show_print and not preview:
+        from report_pdf import build_report_pdf, report_filename
+
+        st.download_button(
+            "Download searchable A4 Monthly PDF",
+            data=build_report_pdf(
+                result,
+                main_focus=narrative.main_focus,
+                personal_question=narrative.personal_question,
+                order_reference=order_reference,
+            ),
+            file_name=report_filename(result),
+            mime="application/pdf",
+            key=f"monthly-searchable-pdf-{narrative.sign}-{result.get('start', narrative.label)}-{order_reference or 'preview'}",
+            use_container_width=True,
+        )

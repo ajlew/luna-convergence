@@ -61,11 +61,16 @@ def main() -> None:
         assert WHY_LUNA_LABEL in html
         assert TECHNICAL_LABEL in html
         assert GATEKEEPER_LINE in html
-        assert "luna-print-paper" in html
-        assert "luna-print-orientation" in html
         assert "@page" in html
         assert "Include evidence" not in html
         assert "open=true" in html or "open = true" in html
+
+    assert "A4 portrait" in monthly_html
+    assert "isolatedReportClone" in monthly_html
+    assert 'document.createElement("iframe")' in monthly_html
+    assert "Evidence-to-scenario trace" in monthly_html
+    assert "luna-print-paper" in yearly_html
+    assert "luna-print-orientation" in yearly_html
 
     assert luna_do_dont(5, 9) == (
         "Follow the effort. Chemistry can book its own flight.",

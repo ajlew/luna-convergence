@@ -528,3 +528,17 @@ Validation:
 - isolated nine-page customer PDFs with clean searchable text.
 
 Daily remains unchanged, Yearly remains hidden, and the private Monthly preview remains available.
+
+## v2.9.7.1 - Daily and Monthly Reliability + Evidence Traceability
+
+- Daily emotional-hook validation now fails softly instead of crashing the public page.
+- Capricorn's House 4 hook uses "The family meeting has entered the chat."
+- Same-house aspects use concentration grammar rather than "X connects with X."
+- Daily output exposes exactly one reflection question.
+- Daily browser printing uses isolated A4 customer-only and full-evidence documents.
+- Daily includes searchable A4 PDF downloads with canonical filenames.
+- Monthly printing uses a isolated A4 print frame, destroys legacy clones and opens all evidence sections.
+- Monthly includes a searchable A4 PDF download with a canonical filename.
+- The Monthly "Why Luna sees this" panel now displays role -> house -> scenario -> supporting events.
+- Canonical filenames: `2026-08-03_Aries_Daily.pdf` and `2026-08_Aries_Monthly.pdf`.
+

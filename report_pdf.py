@@ -504,6 +504,12 @@ def build_report_pdf(
 
 
 def report_filename(result: dict) -> str:
-    sign = re.sub(r"[^a-z0-9]+", "-", str(result.get("sign", "report")).lower()).strip("-")
-    label = re.sub(r"[^a-z0-9]+", "-", str(result.get("label", result.get("period", "report"))).lower()).strip("-")
-    return f"luna-convergence-{sign}-{label}.pdf"
+    sign = re.sub(r"[^A-Za-z0-9]+", "", str(result.get("sign", "Report"))) or "Report"
+    period = str(result.get("period", "report")).lower()
+    start = str(result.get("start", ""))
+    if period == "monthly" and len(start) >= 7:
+        return f"{start[:7]}_{sign}_Monthly.pdf"
+    if period == "yearly" and len(start) >= 4:
+        return f"{start[:4]}_{sign}_Yearly.pdf"
+    label = re.sub(r"[^A-Za-z0-9]+", "_", str(result.get("label", "Report"))).strip("_")
+    return f"{label}_{sign}_{period.title()}.pdf"

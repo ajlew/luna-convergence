@@ -32,19 +32,25 @@ def yearly_result() -> dict:
     )
 
 
-def check(html: str) -> None:
+def check_monthly(html: str) -> None:
     assert 'querySelectorAll("details")' in html
     assert "detail.open = true" in html or "detail.open=true" in html
-    assert (
-        'detail.setAttribute("open", "")' in html
-        or 'detail.setAttribute("open","")' in html
-    )
-    assert "requestAnimationFrame(expandAllPrintDetails)" in html
+    assert 'detail.setAttribute("open", "")' in html or 'detail.setAttribute("open","")' in html
+    assert "isolatedReportClone" in html
+    assert 'document.createElement("iframe")' in html
+    assert "destroyLegacyPrintArtifacts" in html
+    assert "document.body.appendChild(printPortal)" not in html
+    assert "<details>" in html
+    assert "<details open" not in html
+
+
+def check_yearly(html: str) -> None:
+    assert 'querySelectorAll("details")' in html
+    assert "detail.open = true" in html or "detail.open=true" in html
+    assert 'detail.setAttribute("open", "")' in html or 'detail.setAttribute("open","")' in html
     assert 'window.addEventListener("beforeprint"' in html
     assert 'window.addEventListener("afterprint"' in html
     assert "cloneNode(true)" in html
-
-    # Screen disclosures remain closed.
     assert "<details>" in html
     assert "<details open" not in html
 
@@ -62,8 +68,8 @@ def main() -> None:
         show_print=True,
     )
 
-    check(monthly_html)
-    check(yearly_html)
+    check_monthly(monthly_html)
+    check_yearly(yearly_html)
 
     print("All Monthly and Yearly print dropdowns expand automatically.")
 

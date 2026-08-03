@@ -499,10 +499,15 @@ def _aspect_summary(
     for aspect in aspects:
         p1_theme = PLANET_MEANINGS[aspect.planet1]["core"]
         p2_theme = PLANET_MEANINGS[aspect.planet2]["core"]
+        first_house = houses[aspect.planet1]
+        second_house = houses[aspect.planet2]
+        if first_house == second_house:
+            house_phrase = f"concentrates both planets in house {first_house}"
+        else:
+            house_phrase = f"connects house {first_house} with house {second_house}"
         lines.append(
             f"**{aspect.planet1} {aspect.name} {aspect.planet2}** "
-            f"(orb {aspect.orb:.2f}°) connects house {houses[aspect.planet1]} "
-            f"with house {houses[aspect.planet2]}: {p1_theme} interact with {p2_theme}."
+            f"(orb {aspect.orb:.2f}°) {house_phrase}: {p1_theme} interact with {p2_theme}."
         )
     return tuple(lines)
 
@@ -546,6 +551,19 @@ def _bridge_sentence(anchor: DailyAspect | None) -> str:
 
     first = HOUSE_NAMES[anchor.house1]
     second = HOUSE_NAMES[anchor.house2]
+    if anchor.house1 == anchor.house2:
+        if anchor.name in {"square", "opposition"}:
+            return (
+                f"The day concentrates pressure in **{first}**. "
+                "The contradiction inside this one life area is harder to ignore."
+            )
+        if anchor.name in {"trine", "sextile"}:
+            return (
+                f"Both influences support **{first}**, making one useful response easier to recognise."
+            )
+        return (
+            f"The day concentrates both influences in **{first}**, turning two signals into one connected question."
+        )
     if anchor.name in {"square", "opposition"}:
         return (
             f"The day places **{first}** in tension with **{second}**. "
@@ -944,6 +962,21 @@ def _daily_trigger_sentence(anchor: DailyAspect | None) -> str:
 
     first = HOUSE_NAMES[anchor.house1]
     second = HOUSE_NAMES[anchor.house2]
+    if anchor.house1 == anchor.house2:
+        if anchor.name in {"square", "opposition"}:
+            return (
+                f"Today's pressure concentrates in {first}. "
+                "The immediate answer is tempting, but the tension is revealing what this one life area still needs."
+            )
+        if anchor.name in {"trine", "sextile"}:
+            return (
+                f"A supportive current strengthens {first}. "
+                "The opening is real, although it still needs a choice that protects your standards."
+            )
+        return (
+            f"Today concentrates both influences in {first}. "
+            "What looks like two separate concerns is one emotional decision."
+        )
     if anchor.name in {"square", "opposition"}:
         return (
             f"Today's pressure links {first} with {second}. "
@@ -1160,9 +1193,14 @@ def _technical_aspect_summary(
         if label in selected or len(lines) < maximum:
             p1_theme = PLANET_MEANINGS[aspect.planet1]["core"]
             p2_theme = PLANET_MEANINGS[aspect.planet2]["core"]
+            first_house = houses[aspect.planet1]
+            second_house = houses[aspect.planet2]
+            if first_house == second_house:
+                house_phrase = f"concentrates both planets in house {first_house}"
+            else:
+                house_phrase = f"connects house {first_house} with house {second_house}"
             lines.append(
-                f"**{label}** (orb {aspect.orb:.2f}°) connects house "
-                f"{houses[aspect.planet1]} with house {houses[aspect.planet2]}: "
+                f"**{label}** (orb {aspect.orb:.2f}°) {house_phrase}: "
                 f"{p1_theme} interact with {p2_theme}."
             )
         if len(lines) >= maximum:
@@ -1203,11 +1241,19 @@ def free_daily_reading(
     questions = _questions_v3(sun_house, moon_house, anchor)
 
     if anchor:
+        if anchor.house1 == anchor.house2:
+            house_sentence = (
+                f"It concentrates both planets in house {anchor.house1} "
+                f"({HOUSE_NAMES[anchor.house1]})."
+            )
+        else:
+            house_sentence = (
+                f"It connects house {anchor.house1} ({HOUSE_NAMES[anchor.house1]}) "
+                f"with house {anchor.house2} ({HOUSE_NAMES[anchor.house2]})."
+            )
         daily_theme = (
             f"The date-sensitive trigger is **{anchor.label}** at an orb of "
-            f"{anchor.orb:.2f}°. It connects house {anchor.house1} "
-            f"({HOUSE_NAMES[anchor.house1]}) with house {anchor.house2} "
-            f"({HOUSE_NAMES[anchor.house2]}). The Sun remains in house {sun_house}, "
+            f"{anchor.orb:.2f}°. {house_sentence} The Sun remains in house {sun_house}, "
             f"while the Moon moves through house {moon_house}."
         )
     else:

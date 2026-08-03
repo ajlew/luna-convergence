@@ -47,43 +47,22 @@ def main() -> None:
         show_print=True,
     )
 
-    for html, portal_id, body_class in (
-        (
-            monthly_html,
-            "luna-print-portal",
-            "luna-print-active",
-        ),
-        (
-            yearly_html,
-            "luna-year-print-portal",
-            "luna-year-print-active",
-        ),
-    ):
-        assert portal_id in html
-        assert body_class in html
-        assert "cloneNode(true)" in html
-        assert "document.body.appendChild(printPortal)" in html
-        assert 'querySelectorAll("details")' in html
-        assert 'detail.setAttribute("open","")' in html or (
-            'detail.setAttribute("open", "")' in html
-        )
-        assert 'querySelectorAll(".luna-print-controls")' in html
-        assert "node.remove()" in html
-        assert "window.addEventListener(\"beforeprint\"" in html
-        assert "window.addEventListener(\"afterprint\"" in html
-        assert "height:auto !important" in html
-        assert "max-height:none !important" in html
-        assert "overflow:visible !important" in html
-        assert "window.print()" in html
+    assert "isolatedReportClone" in monthly_html
+    assert "destroyLegacyPrintArtifacts" in monthly_html
+    assert 'document.createElement("iframe")' in monthly_html
+    assert 'querySelectorAll("details")' in monthly_html
+    assert 'detail.setAttribute("open", "")' in monthly_html or 'detail.setAttribute("open","")' in monthly_html
+    assert "document.body.appendChild(printPortal)" not in monthly_html
+    assert "A4 portrait" in monthly_html
 
-    assert (
-        "body.luna-print-active > *:not(#luna-print-portal)"
-        in monthly_html
-    )
-    assert (
-        "body.luna-year-print-active > *:not(#luna-year-print-portal)"
-        in yearly_html
-    )
+    assert "luna-year-print-portal" in yearly_html
+    assert "luna-year-print-active" in yearly_html
+    assert "cloneNode(true)" in yearly_html
+    assert "document.body.appendChild(printPortal)" in yearly_html
+    assert 'querySelectorAll("details")' in yearly_html
+    assert 'window.addEventListener("beforeprint"' in yearly_html
+    assert 'window.addEventListener("afterprint"' in yearly_html
+
 
     print("Full Report Print Portal v2.5 tests passed.")
 

@@ -98,9 +98,12 @@ def main() -> None:
             evidence_names = [item.evidence.casefold() for item in narrative.key_dates]
             assert len(evidence_names) == len(set(evidence_names)), (sign, month, evidence_names)
 
-            # Existing Luna format and print isolation mechanisms remain present.
-            assert "stalePrintPortals" in html
-            assert 'className = "luna-print-portal"' in html
+            # Existing Luna format remains, while printing uses one isolated A4 window.
+            assert "isolatedReportClone" in html
+            assert "destroyLegacyPrintArtifacts" in html
+            assert 'document.createElement("iframe")' in html
+            assert "Evidence-to-scenario trace" in html
+            assert "document.body.appendChild(printPortal)" not in html
             assert "font-family:Arial,Helvetica,sans-serif" in html
             assert "font-family:Georgia" in html
 
