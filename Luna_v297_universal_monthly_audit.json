@@ -1,0 +1,2303 @@
+{
+  "engine": "Luna Universal Monthly Evidence Engine v2.9.7",
+  "year": 2026,
+  "months": [
+    7,
+    8,
+    9
+  ],
+  "report_count": 36,
+  "highest_cross_sign_similarity": {
+    "month": 9,
+    "first": "Leo",
+    "second": "Aquarius",
+    "similarity": 0.5088
+  },
+  "headline_change_by_sign": {
+    "Aries": 3,
+    "Taurus": 3,
+    "Gemini": 3,
+    "Cancer": 3,
+    "Leo": 3,
+    "Virgo": 3,
+    "Libra": 3,
+    "Scorpio": 3,
+    "Sagittarius": 3,
+    "Capricorn": 3,
+    "Aquarius": 3,
+    "Pisces": 3
+  },
+  "minimum_unique_headlines_per_sign": 3,
+  "failures": [],
+  "status": "PASS",
+  "records": [
+    {
+      "sign": "Aries",
+      "year": 2026,
+      "month": 7,
+      "headline": "The private foundation becomes real when joy, creativity or attraction has room to grow",
+      "theme_axis": "Communication, choices & movement x Romance, creativity & pleasure",
+      "primary_house": 3,
+      "secondary_house": 5,
+      "solar_source_house": 4,
+      "solar_destination_house": 5,
+      "relationship_question": "",
+      "action_plan": [
+        "Choose the option that improves the private foundation, not only the appearance.",
+        "Turn the wider possibility into a dated, workable plan.",
+        "Give the strongest spark one clear next stage."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Taurus",
+      "year": 2026,
+      "month": 7,
+      "headline": "The wider path holds its value when it has somewhere real to land",
+      "theme_axis": "Communication, choices & movement x Home, family & private foundations",
+      "primary_house": 3,
+      "secondary_house": 4,
+      "solar_source_house": 3,
+      "solar_destination_house": 4,
+      "relationship_question": "",
+      "action_plan": [
+        "Turn the wider possibility into a dated, workable plan.",
+        "Put the real number beside the decision before reacting.",
+        "Choose the option that improves the private foundation, not only the appearance."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Gemini",
+      "year": 2026,
+      "month": 7,
+      "headline": "What matters becomes clear when the facts can be spoken and acted on",
+      "theme_axis": "Money, value & security x Communication, choices & movement",
+      "primary_house": 2,
+      "secondary_house": 3,
+      "solar_source_house": 2,
+      "solar_destination_house": 3,
+      "relationship_question": "",
+      "action_plan": [
+        "Put the real number beside the decision before reacting.",
+        "Choose the direction that matches the person now taking the lead.",
+        "Turn the wider possibility into a dated, workable plan."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Cancer",
+      "year": 2026,
+      "month": 7,
+      "headline": "A new direction feels safe enough to grow when its value is clear enough to support",
+      "theme_axis": "Identity, energy & direction x Money, value & security",
+      "primary_house": 1,
+      "secondary_house": 2,
+      "solar_source_house": 1,
+      "solar_destination_house": 2,
+      "relationship_question": "",
+      "action_plan": [
+        "Choose the direction that matches the person now taking the lead.",
+        "Give the unfinished matter a clean ending or a protected period of rest.",
+        "Choose the option that improves the private foundation, not only the appearance."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 2,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Leo",
+      "year": 2026,
+      "month": 7,
+      "headline": "The visible opportunity keeps its fire when it reflects the person now taking the lead",
+      "theme_axis": "Rest, closure & private renewal x Identity, energy & direction",
+      "primary_house": 12,
+      "secondary_house": 1,
+      "solar_source_house": 12,
+      "solar_destination_house": 1,
+      "relationship_question": "",
+      "action_plan": [
+        "Define the visible result before accepting the pressure around it.",
+        "Build with the alliance or audience that adds mutual value.",
+        "Choose the direction that matches the person now taking the lead."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 12,
+          "scenario_key": "career_interview",
+          "scenario_label": "interview, offer or professional visibility",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Virgo",
+      "year": 2026,
+      "month": 7,
+      "headline": "The future becomes workable when what is ending has space to close",
+      "theme_axis": "Friends, audiences & future plans x Rest, closure & private renewal",
+      "primary_house": 11,
+      "secondary_house": 12,
+      "solar_source_house": 11,
+      "solar_destination_house": 12,
+      "relationship_question": "",
+      "action_plan": [
+        "Build with the alliance or audience that adds mutual value.",
+        "Give the idea a finished form and a real audience.",
+        "Give the unfinished matter a clean ending or a protected period of rest."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 10,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Libra",
+      "year": 2026,
+      "month": 7,
+      "headline": "The application finds balance when the right people can help it grow",
+      "theme_axis": "Career, reputation & visible results x Friends, audiences & future plans",
+      "primary_house": 10,
+      "secondary_house": 11,
+      "solar_source_house": 10,
+      "solar_destination_house": 11,
+      "relationship_question": "",
+      "action_plan": [
+        "Make the funding conditions visible before expanding the plan.",
+        "Give the idea a finished form and a real audience.",
+        "Build with the alliance or audience that adds mutual value."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 10,
+          "scenario_key": "funding_application",
+          "scenario_label": "loan, mortgage or formal funding process",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 9,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Scorpio",
+      "year": 2026,
+      "month": 7,
+      "headline": "The wider path deepens when the result can stand in public",
+      "theme_axis": "Trust, shared resources & obligations x Career, reputation & visible results",
+      "primary_house": 8,
+      "secondary_house": 10,
+      "solar_source_house": 9,
+      "solar_destination_house": 10,
+      "relationship_question": "",
+      "action_plan": [
+        "Turn the wider possibility into a dated, workable plan.",
+        "Make the shared stake and boundary clear before moving deeper.",
+        "Define the visible result before accepting the pressure around it."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 10,
+          "scenario_key": "career_interview",
+          "scenario_label": "interview, offer or professional visibility",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Sagittarius",
+      "year": 2026,
+      "month": 7,
+      "headline": "The shared stake moves into view when the next path can be explored with direction",
+      "theme_axis": "Trust, shared resources & obligations x Travel, study & wider horizons",
+      "primary_house": 8,
+      "secondary_house": 9,
+      "solar_source_house": 8,
+      "solar_destination_house": 9,
+      "relationship_question": "",
+      "action_plan": [
+        "Make the shared stake and boundary clear before moving deeper.",
+        "Watch whether warmth becomes a believable next step.",
+        "Turn the wider possibility into a dated, workable plan."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 7,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Capricorn",
+      "year": 2026,
+      "month": 7,
+      "headline": "The connection gains ground when trust and resources are named clearly",
+      "theme_axis": "Relationships, clients & agreements x Trust, shared resources & obligations",
+      "primary_house": 7,
+      "secondary_house": 8,
+      "solar_source_house": 7,
+      "solar_destination_house": 8,
+      "relationship_question": "",
+      "action_plan": [
+        "Put the agreement into language that leaves no hidden job for either side.",
+        "Create the rhythm that makes the promising result easier to continue.",
+        "Choose the option that improves the private foundation, not only the appearance."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 8,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Aquarius",
+      "year": 2026,
+      "month": 7,
+      "headline": "The plan changes the future when effort becomes mutual",
+      "theme_axis": "Romance, creativity & pleasure x Relationships, clients & agreements",
+      "primary_house": 5,
+      "secondary_house": 7,
+      "solar_source_house": 6,
+      "solar_destination_house": 7,
+      "relationship_question": "",
+      "action_plan": [
+        "Create the rhythm that makes the promising result easier to continue.",
+        "Give the strongest spark one clear next stage.",
+        "Put the agreement into language that leaves no hidden job for either side."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Pisces",
+      "year": 2026,
+      "month": 7,
+      "headline": "The spark finds a new shape when the week can carry it",
+      "theme_axis": "Romance, creativity & pleasure x Work, rhythm & wellbeing",
+      "primary_house": 5,
+      "secondary_house": 6,
+      "solar_source_house": 5,
+      "solar_destination_house": 6,
+      "relationship_question": "",
+      "action_plan": [
+        "Give the strongest spark one clear next stage.",
+        "Watch whether warmth becomes a believable next step.",
+        "Create the rhythm that makes the promising result easier to continue."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Mars sextile Jupiter",
+            "Mars enters Gemini",
+            "Mercury stations retrograde",
+            "Full Moon in Capricorn"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 4,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "New Moon in Cancer",
+            "Venus square Uranus",
+            "Uranus sextile Neptune",
+            "Uranus trine Pluto"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Saturn stations retrograde",
+            "True Node enters Aquarius",
+            "Sun opposition Pluto",
+            "Sun trine Neptune"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Aries",
+      "year": 2026,
+      "month": 8,
+      "headline": "The spark becomes real when the week can carry it",
+      "theme_axis": "Romance, creativity & pleasure x Work, rhythm & wellbeing",
+      "primary_house": 5,
+      "secondary_house": 6,
+      "solar_source_house": 5,
+      "solar_destination_house": 6,
+      "relationship_question": "Around 15-21 August 2026, one question matters: Does the excitement keep moving when both people need to act?",
+      "action_plan": [
+        "Give the strongest spark one clear next stage.",
+        "Create the rhythm that makes the promising result easier to continue.",
+        "Name the spark worth developing."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 5,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mercury conjunction Jupiter",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Taurus",
+      "year": 2026,
+      "month": 8,
+      "headline": "The private foundation holds its value when joy, creativity or attraction has room to grow",
+      "theme_axis": "Home, family & private foundations x Romance, creativity & pleasure",
+      "primary_house": 4,
+      "secondary_house": 5,
+      "solar_source_house": 4,
+      "solar_destination_house": 5,
+      "relationship_question": "Around 18-21 August 2026, one question matters: Does the connection create safety without making life smaller?",
+      "action_plan": [
+        "Choose the option that improves the private foundation, not only the appearance.",
+        "Give the idea a finished form and a real audience.",
+        "Clarify the private condition shaping the month."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Venus sextile Jupiter",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 5,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Gemini",
+      "year": 2026,
+      "month": 8,
+      "headline": "The wider path becomes clear when it has somewhere real to land",
+      "theme_axis": "Communication, choices & movement x Home, family & private foundations",
+      "primary_house": 3,
+      "secondary_house": 4,
+      "solar_source_house": 3,
+      "solar_destination_house": 4,
+      "relationship_question": "Around 17-21 August 2026, one question matters: Does the conversation continue when novelty fades?",
+      "action_plan": [
+        "Turn the wider possibility into a dated, workable plan.",
+        "Give the idea a finished form and a real audience.",
+        "Complete the requirement that makes the wider path usable."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 3,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 11,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mars square Neptune",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 4,
+          "scenario_key": "visa_legal_study",
+          "scenario_label": "visa, legal or higher-education progress",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Cancer",
+      "year": 2026,
+      "month": 8,
+      "headline": "The private foundation feels safe enough to grow when the facts can be spoken and acted on",
+      "theme_axis": "Money, value & security x Communication, choices & movement",
+      "primary_house": 2,
+      "secondary_house": 3,
+      "solar_source_house": 2,
+      "solar_destination_house": 3,
+      "relationship_question": "Around 18-21 August 2026, one question matters: Does closeness feel emotionally safe and mutually protective?",
+      "action_plan": [
+        "Choose the option that improves the private foundation, not only the appearance.",
+        "Put the real number beside the decision before reacting.",
+        "Turn the wider possibility into a dated, workable plan."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 2,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Venus sextile Jupiter",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Leo",
+      "year": 2026,
+      "month": 8,
+      "headline": "A new direction keeps its fire when its value is clear enough to support",
+      "theme_axis": "Identity, energy & direction x Money, value & security",
+      "primary_house": 1,
+      "secondary_house": 2,
+      "solar_source_house": 1,
+      "solar_destination_house": 2,
+      "relationship_question": "Around 18-21 August 2026, one question matters: Does admiration stay warm once attention is no longer the only fuel?",
+      "action_plan": [
+        "Choose the direction that matches the person now taking the lead.",
+        "Put the real number beside the decision before reacting.",
+        "Name the direction that deserves real movement."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 3,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Venus sextile Jupiter",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Virgo",
+      "year": 2026,
+      "month": 8,
+      "headline": "The hidden chapter becomes workable when it reflects the person now taking the lead",
+      "theme_axis": "Rest, closure & private renewal x Identity, energy & direction",
+      "primary_house": 12,
+      "secondary_house": 1,
+      "solar_source_house": 12,
+      "solar_destination_house": 1,
+      "relationship_question": "Around 17-21 August 2026, one question matters: Is care visible in the small, reliable details?",
+      "action_plan": [
+        "Give the unfinished matter a clean ending or a protected period of rest.",
+        "Choose the direction that matches the person now taking the lead.",
+        "Name the unfinished matter that needs space, rest or release."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "Mars square Neptune",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Libra",
+      "year": 2026,
+      "month": 8,
+      "headline": "The future finds balance when what is ending has space to close",
+      "theme_axis": "Friends, audiences & future plans x Rest, closure & private renewal",
+      "primary_house": 11,
+      "secondary_house": 12,
+      "solar_source_house": 11,
+      "solar_destination_house": 12,
+      "relationship_question": "Around 15-21 August 2026, one question matters: Is reciprocity real, or is one person carrying the conversation?",
+      "action_plan": [
+        "Build with the alliance or audience that adds mutual value.",
+        "Give the unfinished matter a clean ending or a protected period of rest.",
+        "Identify the alliance, audience or future plan with real momentum."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 11,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mercury conjunction Jupiter",
+            "Mars square Neptune",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Scorpio",
+      "year": 2026,
+      "month": 8,
+      "headline": "The wider process deepens when the right people can help it grow",
+      "theme_axis": "Career, reputation & visible results x Friends, audiences & future plans",
+      "primary_house": 10,
+      "secondary_house": 11,
+      "solar_source_house": 10,
+      "solar_destination_house": 11,
+      "relationship_question": "Around 18-21 August 2026, one question matters: Does intimacy deepen trust\u2014or increase uncertainty?",
+      "action_plan": [
+        "Complete the requirement that makes the wider path usable.",
+        "Define the visible result before accepting the pressure around it.",
+        "Give the idea a finished form and a real audience."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 10,
+          "scenario_key": "visa_legal_study",
+          "scenario_label": "visa, legal or higher-education progress",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 10,
+          "scenario_key": "career_interview",
+          "scenario_label": "interview, offer or professional visibility",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Venus sextile Jupiter",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 11,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Sagittarius",
+      "year": 2026,
+      "month": 8,
+      "headline": "The wider horizon moves into view when the result can stand in public",
+      "theme_axis": "Travel, study & wider horizons x Career, reputation & visible results",
+      "primary_house": 9,
+      "secondary_house": 10,
+      "solar_source_house": 9,
+      "solar_destination_house": 10,
+      "relationship_question": "Around 17-21 August 2026, one question matters: Can freedom and shared direction keep moving together?",
+      "action_plan": [
+        "Turn the wider possibility into a dated, workable plan.",
+        "Complete the requirement that makes the wider path usable.",
+        "Name the wider path worth exploring."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 5,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mars square Neptune",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 10,
+          "scenario_key": "visa_legal_study",
+          "scenario_label": "visa, legal or higher-education progress",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Capricorn",
+      "year": 2026,
+      "month": 8,
+      "headline": "The private foundation gains ground when the next path can be explored with direction",
+      "theme_axis": "Trust, shared resources & obligations x Travel, study & wider horizons",
+      "primary_house": 8,
+      "secondary_house": 9,
+      "solar_source_house": 8,
+      "solar_destination_house": 9,
+      "relationship_question": "Around 15-21 August 2026, one question matters: Does steadiness support growth, or turn into another duty?",
+      "action_plan": [
+        "Choose the option that improves the private foundation, not only the appearance.",
+        "Make the shared stake and boundary clear before moving deeper.",
+        "Turn the wider possibility into a dated, workable plan."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 8,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "Mercury conjunction Jupiter",
+            "Mars square Neptune",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Aquarius",
+      "year": 2026,
+      "month": 8,
+      "headline": "The attraction changes the future when trust and resources are named clearly",
+      "theme_axis": "Relationships, clients & agreements x Trust, shared resources & obligations",
+      "primary_house": 7,
+      "secondary_house": 8,
+      "solar_source_house": 7,
+      "solar_destination_house": 8,
+      "relationship_question": "Around 15-21 August 2026, one question matters: Is there enough space for individuality and enough effort for closeness?",
+      "action_plan": [
+        "Watch whether warmth becomes a believable next step.",
+        "Put the agreement into language that leaves no hidden job for either side.",
+        "Put the real number beside the decision before reacting."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 7,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Mercury conjunction Jupiter",
+            "Venus sextile Jupiter",
+            "Mercury trine Saturn",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 8,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Mercury square Uranus"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Pisces",
+      "year": 2026,
+      "month": 8,
+      "headline": "The plan finds a new shape when effort becomes mutual",
+      "theme_axis": "Work, rhythm & wellbeing x Relationships, clients & agreements",
+      "primary_house": 6,
+      "secondary_house": 7,
+      "solar_source_house": 6,
+      "solar_destination_house": 7,
+      "relationship_question": "Around 17-21 August 2026, one question matters: Is tenderness becoming mutual, or remaining imagined?",
+      "action_plan": [
+        "Create the rhythm that makes the promising result easier to continue.",
+        "Put the agreement into language that leaves no hidden job for either side.",
+        "Identify the routine or workload that needs a better shape."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Sun sextile Uranus",
+            "Sun conjunction Jupiter",
+            "Full Moon in Aquarius"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Venus opposition Neptune",
+            "Venus trine Pluto",
+            "Mars trine True Node",
+            "Mars enters Cancer"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 2,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mars square Neptune",
+            "Venus sextile Jupiter",
+            "Venus opposition Saturn"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Sun enters Virgo",
+            "Mercury opposition True Node",
+            "Mercury enters Virgo",
+            "Partial Lunar Eclipse in Pisces"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Aries",
+      "year": 2026,
+      "month": 9,
+      "headline": "The hidden chapter becomes real when it reflects the person now taking the lead",
+      "theme_axis": "Relationships, clients & agreements x Identity, energy & direction",
+      "primary_house": 7,
+      "secondary_house": 1,
+      "solar_source_house": 6,
+      "solar_destination_house": 7,
+      "relationship_question": "",
+      "action_plan": [
+        "Give the unfinished matter a clean ending or a protected period of rest.",
+        "Put the agreement into language that leaves no hidden job for either side.",
+        "Name what the connection or agreement needs next."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "contract, lease or formal agreement",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Taurus",
+      "year": 2026,
+      "month": 9,
+      "headline": "The future plan holds its value when what is ending has space to close",
+      "theme_axis": "Work, rhythm & wellbeing x Rest, closure & private renewal",
+      "primary_house": 6,
+      "secondary_house": 12,
+      "solar_source_house": 5,
+      "solar_destination_house": 6,
+      "relationship_question": "",
+      "action_plan": [
+        "Build with the alliance or audience that adds mutual value.",
+        "Create the rhythm that makes the promising result easier to continue.",
+        "Identify the routine or workload that needs a better shape."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Gemini",
+      "year": 2026,
+      "month": 9,
+      "headline": "The private foundation becomes clear when the right people can help it grow",
+      "theme_axis": "Romance, creativity & pleasure x Friends, audiences & future plans",
+      "primary_house": 5,
+      "secondary_house": 11,
+      "solar_source_house": 4,
+      "solar_destination_house": 5,
+      "relationship_question": "",
+      "action_plan": [
+        "Choose the option that improves the private foundation, not only the appearance.",
+        "Give the strongest spark one clear next stage.",
+        "Name the spark worth developing."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 10,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Cancer",
+      "year": 2026,
+      "month": 9,
+      "headline": "The wider path feels safe enough to grow when the result can stand in public",
+      "theme_axis": "Home, family & private foundations x Career, reputation & visible results",
+      "primary_house": 4,
+      "secondary_house": 10,
+      "solar_source_house": 3,
+      "solar_destination_house": 4,
+      "relationship_question": "",
+      "action_plan": [
+        "Turn the wider possibility into a dated, workable plan.",
+        "Complete the requirement that makes the wider path usable.",
+        "Choose the option that improves the private foundation, not only the appearance."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 4,
+          "scenario_key": "visa_legal_study",
+          "scenario_label": "visa, legal or higher-education progress",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Leo",
+      "year": 2026,
+      "month": 9,
+      "headline": "The shared stake keeps its fire when the next path can be explored with direction",
+      "theme_axis": "Communication, choices & movement x Travel, study & wider horizons",
+      "primary_house": 3,
+      "secondary_house": 9,
+      "solar_source_house": 2,
+      "solar_destination_house": 3,
+      "relationship_question": "",
+      "action_plan": [
+        "Make the shared stake and boundary clear before moving deeper.",
+        "Give the idea a finished form and a real audience.",
+        "Turn the wider possibility into a dated, workable plan."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 3,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Virgo",
+      "year": 2026,
+      "month": 9,
+      "headline": "The attraction becomes workable when trust and resources are named clearly",
+      "theme_axis": "Money, value & security x Trust, shared resources & obligations",
+      "primary_house": 2,
+      "secondary_house": 8,
+      "solar_source_house": 1,
+      "solar_destination_house": 2,
+      "relationship_question": "",
+      "action_plan": [
+        "Watch whether warmth becomes a believable next step.",
+        "Put the real number beside the decision before reacting.",
+        "Name the value, cost or priority shaping the choice."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 7,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Libra",
+      "year": 2026,
+      "month": 9,
+      "headline": "The plan finds balance when effort becomes mutual",
+      "theme_axis": "Identity, energy & direction x Relationships, clients & agreements",
+      "primary_house": 1,
+      "secondary_house": 7,
+      "solar_source_house": 12,
+      "solar_destination_house": 1,
+      "relationship_question": "",
+      "action_plan": [
+        "Create the rhythm that makes the promising result easier to continue.",
+        "Choose the direction that matches the person now taking the lead.",
+        "Name the direction that deserves real movement."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 6,
+          "scenario_key": "routine_wellbeing",
+          "scenario_label": "workload, routine or wellbeing adjustment",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Scorpio",
+      "year": 2026,
+      "month": 9,
+      "headline": "The spark deepens when the week can carry it",
+      "theme_axis": "Rest, closure & private renewal x Work, rhythm & wellbeing",
+      "primary_house": 12,
+      "secondary_house": 6,
+      "solar_source_house": 11,
+      "solar_destination_house": 12,
+      "relationship_question": "Around 14-16 September 2026, one question matters: Does intimacy deepen trust\u2014or increase uncertainty?",
+      "action_plan": [
+        "Give the strongest spark one clear next stage.",
+        "Give the unfinished matter a clean ending or a protected period of rest.",
+        "Name the unfinished matter that needs space, rest or release."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 5,
+          "scenario_key": "creative_development",
+          "scenario_label": "creative, romantic or entrepreneurial development",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Venus trine True Node",
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 12,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mercury trine Uranus",
+            "Sun sextile Mars",
+            "Venus square Pluto"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 12,
+          "scenario_key": "private_closure",
+          "scenario_label": "rest, closure or private preparation",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Sagittarius",
+      "year": 2026,
+      "month": 9,
+      "headline": "The private foundation moves into view when joy, creativity or attraction has room to grow",
+      "theme_axis": "Friends, audiences & future plans x Romance, creativity & pleasure",
+      "primary_house": 11,
+      "secondary_house": 5,
+      "solar_source_house": 10,
+      "solar_destination_house": 11,
+      "relationship_question": "Around 13-18 September 2026, one question matters: Can freedom and shared direction keep moving together?",
+      "action_plan": [
+        "Choose the option that improves the private foundation, not only the appearance.",
+        "Build with the alliance or audience that adds mutual value.",
+        "Identify the alliance, audience or future plan with real momentum."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 4,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Venus trine True Node",
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 11,
+          "scenario_key": "relationship_opening",
+          "scenario_label": "romantic or relationship opening",
+          "evidence": [
+            "Mercury opposition Neptune",
+            "Mercury trine Pluto",
+            "Mercury trine Uranus",
+            "Sun sextile Mars"
+          ]
+        },
+        {
+          "role": "climax",
+          "house": 11,
+          "scenario_key": "community_future",
+          "scenario_label": "friends, audience or future-plan development",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Capricorn",
+      "year": 2026,
+      "month": 9,
+      "headline": "The wider path gains ground when it has somewhere real to land",
+      "theme_axis": "Career, reputation & visible results x Home, family & private foundations",
+      "primary_house": 10,
+      "secondary_house": 4,
+      "solar_source_house": 9,
+      "solar_destination_house": 10,
+      "relationship_question": "",
+      "action_plan": [
+        "Turn the wider possibility into a dated, workable plan.",
+        "Give the idea a finished form and a real audience.",
+        "Complete the requirement that makes the wider path usable."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 3,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 10,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 10,
+          "scenario_key": "visa_legal_study",
+          "scenario_label": "visa, legal or higher-education progress",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Aquarius",
+      "year": 2026,
+      "month": 9,
+      "headline": "The real cost changes the future when the facts can be spoken and acted on",
+      "theme_axis": "Travel, study & wider horizons x Communication, choices & movement",
+      "primary_house": 9,
+      "secondary_house": 3,
+      "solar_source_house": 8,
+      "solar_destination_house": 9,
+      "relationship_question": "",
+      "action_plan": [
+        "Put the real number beside the decision before reacting.",
+        "Give the idea a finished form and a real audience.",
+        "Turn the wider possibility into a dated, workable plan."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 2,
+          "scenario_key": "financial_shock",
+          "scenario_label": "unexpected cost or disappointing amount",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 9,
+          "scenario_key": "publishing_media",
+          "scenario_label": "writing, publishing or audience response",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 9,
+          "scenario_key": "travel",
+          "scenario_label": "travel or a wider-world opportunity",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    },
+    {
+      "sign": "Pisces",
+      "year": 2026,
+      "month": 9,
+      "headline": "A new direction finds a new shape when its value is clear enough to support",
+      "theme_axis": "Trust, shared resources & obligations x Money, value & security",
+      "primary_house": 8,
+      "secondary_house": 2,
+      "solar_source_house": 7,
+      "solar_destination_house": 8,
+      "relationship_question": "",
+      "action_plan": [
+        "Choose the direction that matches the person now taking the lead.",
+        "Make the shared stake and boundary clear before moving deeper.",
+        "Choose the option that improves the private foundation, not only the appearance."
+      ],
+      "mapping_audit": [
+        {
+          "role": "opening",
+          "house": 1,
+          "scenario_key": "identity_direction",
+          "scenario_label": "identity, confidence or personal direction",
+          "evidence": [
+            "Partial Lunar Eclipse in Pisces",
+            "Full Moon in Pisces",
+            "Sun square Uranus"
+          ]
+        },
+        {
+          "role": "complication",
+          "house": 8,
+          "scenario_key": "shared_trust",
+          "scenario_label": "trust, intimacy or shared-resource decision",
+          "evidence": [
+            "Uranus stations retrograde",
+            "New Moon in Virgo",
+            "Venus enters Scorpio",
+            "Mercury enters Libra"
+          ]
+        },
+        {
+          "role": "relationship test",
+          "house": 7,
+          "scenario_key": "contracts_agreements",
+          "scenario_label": "relationship, client or formal agreement",
+          "evidence": []
+        },
+        {
+          "role": "climax",
+          "house": 8,
+          "scenario_key": "property_home",
+          "scenario_label": "property, home or family decision",
+          "evidence": [
+            "Sun opposition Neptune",
+            "Sun trine Pluto",
+            "Full Moon in Aries",
+            "Mars enters Leo"
+          ]
+        }
+      ]
+    }
+  ]
+}

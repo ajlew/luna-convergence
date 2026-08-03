@@ -71,11 +71,11 @@ def main() -> None:
         "Act III",
         "Act IV",
     ]
-    assert monthly.chapters[2].title == "Watch what happens next"
+    assert monthly.chapters[2].title == "Warmth becomes meaningful through continuity"
     assert monthly.chapters[2].date_range == "17-21 August 2026"
 
     html = build_monthly_experience_html(monthly, result, show_print=True)
-    relationship_line = "steady presence or a passing moment?"
+    relationship_line = "Can freedom and shared direction keep moving together?"
     assert html.count('class="luna-story-act"') == 4
     assert html.count(relationship_line) == 1
     assert '<section class="luna-monthly-section luna-relationship-test">' not in html

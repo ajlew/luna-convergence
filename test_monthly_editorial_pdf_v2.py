@@ -32,13 +32,13 @@ def main() -> None:
     compact = "".join(text.lower().split())
 
     required_compact = (
-        "apossibilitybecomesrealthroughthechoicesthatgiveitshape",
-        "possibility&attentionxclarity,care&achosenlife",
-        "shapingpossibilityintomomentum",
-        "bringingdetailsintofocus",
-        "watchingwhetherthesparkholds",
-        "selectingwhatremainsinlife",
-        "fromreadingthefuturetowritingit.",
+        "thewiderhorizonmovesintoviewwhentheresultcanstandinpublic",
+        "travel,study&widerhorizonsxcareer,reputation&visibleresults",
+        "shapingtravel,studyandwiderhorizonsintomomentum",
+        "bringingtravel,studyandwiderhorizonsintofocus",
+        "watchingwhethertheconnectionkeepsmoving",
+        "givingcareerandvisibleresultsalastingform",
+        "fromreadingthefuturetowritingit",
         "technicalappendix",
         "lc-editorial-v2-test",
     )

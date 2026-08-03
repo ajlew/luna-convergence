@@ -6,6 +6,7 @@ import re
 from typing import Iterable
 
 from date_display import human_date, human_date_range
+from monthly_story_profiles import profile_from_dict, story_profile_for
 from luna_editorial_system import (
     GATEKEEPER_LINE,
     VALIDATION_LINE,
@@ -465,7 +466,10 @@ def _chapter_hook(segment: str, main_house: int, second_house: int) -> str:
     return "The ending decides what deserves another month"
 
 
-def _life_area_hooks(primary_house: int, secondary_house: int) -> tuple[str, str, str]:
+def _life_area_hooks(sign: str, primary_house: int, secondary_house: int) -> tuple[str, str, str]:
+    profile = story_profile_for(sign, primary_house, secondary_house)
+    if profile:
+        return profile.love_hook, profile.work_hook, profile.money_hook
     pair = frozenset({primary_house, secondary_house})
     love = (
         "The spark matters. What happens next tells the story"
@@ -572,14 +576,15 @@ def _luna_voice(
 
 
 def _romance_copy(
+    sign: str,
     primary_house: int,
     secondary_house: int,
 ) -> tuple[str, str]:
-    houses = {primary_house, secondary_house}
-    validation_area = _natural_house(
-        primary_house if primary_house in VALIDATION_HOUSES else secondary_house
-    )
+    profile = story_profile_for(sign, primary_house, secondary_house)
+    if profile:
+        return profile.romance_active, profile.romance_quiet
 
+    houses = {primary_house, secondary_house}
     if houses & ROMANCE_HOUSES:
         active = (
             "When romance or flirting becomes active, enjoy the chemistry and watch "
@@ -742,7 +747,8 @@ def _focus_answer(
     return tuple(paragraphs)
 
 
-def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
+def _love_story(result: dict, sign: str, primary_house: int, secondary_house: int) -> tuple[str, ...]:
+    profile = story_profile_for(sign, primary_house, secondary_house)
     relevant = [
         item for item in _all_events(result)
         if set(item.get("planets") or []) & {"Venus", "Mars", "Neptune", "Saturn", "Moon"}
@@ -750,14 +756,22 @@ def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple
     ]
     evidence = _select_chapter_evidence(relevant, maximum=3)
     evidence_text = "; ".join(evidence) if evidence else "the month's relationship-sensitive transitions"
+    if profile:
+        return (
+            f"In love, {profile.relationship_support[0].lower() + profile.relationship_support[1:]}",
+            f"The relationship evidence concentrates around {evidence_text}.",
+            profile.love_move or "Notice whether warmth becomes clear, mutual and consistent.",
+        )
     return (
         "Enjoy the spark, then watch what follows it. Clear intention, consistent "
         "effort and a believable next step show whether the connection can grow.",
         f"The relationship evidence concentrates around {evidence_text}.",
-        "From reading the future to writing it. Choose the connection that matches your heart and your standards.",
+        "Choose the connection that matches your heart and your standards.",
     )
 
-def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
+
+def _work_story(result: dict, sign: str, primary_house: int, secondary_house: int) -> tuple[str, ...]:
+    profile = story_profile_for(sign, primary_house, secondary_house)
     career_events = [
         item for item in _all_events(result)
         if set(item.get("houses") or []) & {6, 10, 11, 3, 9}
@@ -765,6 +779,12 @@ def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple
     ]
     evidence = _select_chapter_evidence(career_events, maximum=3)
     evidence_text = "; ".join(evidence) if evidence else "the month's work-sensitive transitions"
+    if profile and profile.work_copy:
+        return (
+            profile.work_copy,
+            f"Important work evidence includes {evidence_text}.",
+            profile.work_move or "Finish one result before expanding the plan.",
+        )
     return (
         "A creative or professional idea can become visible. Define the result, "
         "deadline and owner before expanding it.",
@@ -772,7 +792,9 @@ def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple
         "Finish one result before opening three more directions.",
     )
 
-def _money_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
+
+def _money_story(result: dict, sign: str, primary_house: int, secondary_house: int) -> tuple[str, ...]:
+    profile = story_profile_for(sign, primary_house, secondary_house)
     money_events = [
         item for item in _all_events(result)
         if set(item.get("houses") or []) & {2, 8, 10}
@@ -780,12 +802,19 @@ def _money_story(result: dict, primary_house: int, secondary_house: int) -> tupl
     ]
     evidence = _select_chapter_evidence(money_events, maximum=3)
     evidence_text = "; ".join(evidence) if evidence else "the month's money-sensitive transitions"
+    if profile and profile.money_copy:
+        return (
+            profile.money_copy,
+            f"Important financial evidence includes {evidence_text}.",
+            profile.money_move or "Choose from clear numbers and enough room to live.",
+        )
     return (
         "An exciting offer deserves clear numbers. Write down the price, ownership "
         "and shared expectations before you say yes.",
         f"Important financial evidence includes {evidence_text}.",
-        "Choose from clear numbers and proven demand—not pressure or wishful thinking.",
+        "Choose from clear numbers and proven demand-not pressure or wishful thinking.",
     )
+
 
 def _headline(focus: str, primary_house: int, secondary_house: int) -> tuple[str, str]:
     if focus == "Love and relationships":
@@ -893,32 +922,63 @@ def _arc_scenario_examples(arc: dict, maximum: int = 6) -> tuple[str, ...]:
 def _arc_key_dates(arc: dict, maximum: int = 6) -> tuple[KeyDate, ...]:
     selected: list[KeyDate] = []
     deferred_inciting: list[KeyDate] = []
+    seen_dates: set[tuple[str, str]] = set()
+    seen_evidence: set[str] = set()
+    profile = profile_from_dict(arc.get("story_profile")) or story_profile_for(
+        str(arc.get("sign", "")),
+        int(arc.get("primary_house", 1)),
+        int(arc.get("secondary_house", arc.get("primary_house", 1))),
+    )
+
+    role_index = {
+        "inciting event": 0,
+        "complication": 1,
+        "pivot": 2,
+        "climax": 3,
+        "resolution": 3,
+    }
+
     for beat in _arc_beats(arc):
-        role = beat.get("role")
-        if role in {"inherited state", "relationship test"}:
+        role = str(beat.get("role", ""))
+        if role in {"inherited state", "relationship test", "resolution"}:
             continue
         start = str(beat.get("start_date", ""))
         end = str(beat.get("end_date", start))
+        evidence = str(beat.get("title", "Convergence")).strip()
         if not start:
             continue
+
+        fingerprint = (end or start, evidence.casefold())
+        if fingerprint in seen_dates or evidence.casefold() in seen_evidence:
+            continue
+        seen_dates.add(fingerprint)
+        seen_evidence.add(evidence.casefold())
+
+        if profile and role in role_index:
+            index = role_index[role]
+            consequence = profile.act_titles[index].rstrip(".") + "."
+            response = str(beat.get("response", "Use the new information deliberately."))
+        else:
+            consequence = str(beat.get("summary", "A turning point develops."))
+            response = str(beat.get("response", "Use the new information deliberately."))
+
         item = KeyDate(
             date_label=_date_range(start, end),
-            consequence=str(beat.get("summary", "A turning point develops.")),
-            response=str(beat.get("response", "Use the new information deliberately.")),
-            evidence=str(beat.get("title", "Convergence")),
+            consequence=consequence,
+            response=response,
+            evidence=evidence,
         )
         if role == "inciting event":
             deferred_inciting.append(item)
         else:
             selected.append(item)
 
-    # Keep the opening out of a dense month, but use it when the arc would
-    # otherwise provide fewer than four visible dates.
-    if len(selected) < 4:
+    if len(selected) < 3:
         selected = deferred_inciting + selected
+    else:
+        selected = deferred_inciting[:1] + selected
 
     return tuple(selected[:maximum])
-
 
 def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
     """Build one chronological monthly spine.
@@ -928,6 +988,23 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
     same month several times.
     """
     beats = {item.get("role"): item for item in _arc_beats(arc)}
+    profile = profile_from_dict(arc.get("story_profile")) or story_profile_for(
+        str(arc.get("sign", "")),
+        int(arc.get("primary_house", 1)),
+        int(arc.get("secondary_house", arc.get("primary_house", 1))),
+    )
+    act_hooks = profile.act_hooks if profile else (
+        "Shaping possibility into momentum",
+        "Bringing details into focus",
+        "Watching whether the spark holds",
+        "Selecting what remains in life",
+    )
+    act_titles = profile.act_titles if profile else (
+        "Carry the opening forward",
+        "See what comes with the opportunity",
+        "Watch what happens next",
+        "Write the ending you want to live",
+    )
 
     def section(name: str) -> tuple[str, ...]:
         return tuple(
@@ -937,10 +1014,14 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
     def evidence(*roles: str) -> tuple[str, ...]:
         values: list[str] = []
         for role in roles:
-            for item in beats.get(role, {}).get("evidence") or ():
-                text = str(item).strip()
-                if text and text not in values:
-                    values.append(text)
+            beat = beats.get(role, {})
+            title = str(beat.get("title", "")).strip().casefold()
+            items = [str(item).strip() for item in beat.get("evidence") or () if str(item).strip()]
+            if title:
+                items.sort(key=lambda item: (title not in item.casefold(), item))
+            for item in items:
+                if item not in values:
+                    values.append(item)
         return tuple(values)
 
     def window(*roles: str, fallback: str) -> str:
@@ -960,18 +1041,22 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
         MonthlyChapter(
             label="Act I",
             date_range=window("inherited state", "inciting event", fallback="Opening"),
-            hook="Shaping possibility into momentum",
-            title="Carry the opening forward",
+            hook=act_hooks[0],
+            title=act_titles[0],
             paragraphs=opening or (
                 str(beats.get("inherited state", {}).get("summary", "The month reveals its starting condition.")),
             ),
-            action=str(
-                beats.get("inciting event", {}).get(
-                    "response",
-                    beats.get("inherited state", {}).get(
+            action=(
+                profile.action_plan[0]
+                if profile
+                else str(
+                    beats.get("inciting event", {}).get(
                         "response",
-                        "Use the first response to open the conversation—not to write the ending.",
-                    ),
+                        beats.get("inherited state", {}).get(
+                            "response",
+                            "Use the first response to open the conversation-not to write the ending.",
+                        ),
+                    )
                 )
             ),
             evidence=evidence("inherited state", "inciting event"),
@@ -979,8 +1064,8 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
         MonthlyChapter(
             label="Act II",
             date_range=window("complication", fallback="Middle of the month"),
-            hook="Bringing details into focus",
-            title="See what comes with the opportunity",
+            hook=act_hooks[1],
+            title=act_titles[1],
             paragraphs=complication or (
                 str(beats.get("complication", {}).get("summary", "The practical terms become visible.")),
             ),
@@ -999,8 +1084,8 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
             MonthlyChapter(
                 label="Act III",
                 date_range=window("relationship test", fallback="Relationship test"),
-                hook="Watching whether the spark holds",
-                title="Watch what happens next",
+                hook=act_hooks[2],
+                title=act_titles[2],
                 paragraphs=relationship,
                 action=str(
                     beats.get("relationship test", {}).get(
@@ -1016,21 +1101,25 @@ def _arc_chapters(arc: dict) -> tuple[MonthlyChapter, ...]:
         MonthlyChapter(
             label="Act IV" if relationship else "Act III",
             date_range=window("pivot", "climax", "resolution", fallback="Final week"),
-            hook="Selecting what remains in life",
-            title="Write the ending you want to live",
+            hook=act_hooks[3],
+            title=act_titles[3],
             paragraphs=ending or (
                 str(beats.get("climax", {}).get("summary", "The strongest convergence delivers the answer.")),
             ),
-            action=str(
-                beats.get("resolution", {}).get(
-                    "response",
-                    beats.get("climax", {}).get(
+            action=(
+                profile.action_plan[2]
+                if profile
+                else str(
+                    beats.get("resolution", {}).get(
                         "response",
-                        beats.get("pivot", {}).get(
+                        beats.get("climax", {}).get(
                             "response",
-                            "Choose what still feels right after the excitement settles.",
+                            beats.get("pivot", {}).get(
+                                "response",
+                                "Choose what still feels right after the excitement settles.",
+                            ),
                         ),
-                    ),
+                    )
                 )
             ),
             evidence=evidence("pivot", "climax", "resolution"),
@@ -1102,6 +1191,26 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
     ]
 
     arc = _monthly_arc(result)
+    formula = arc.get("evidence_formula") or {}
+    formula_rows = [
+        "| Universal formula output | Calculated value |",
+        "|---|---|",
+        f"| Formula version | {formula.get('formula_version', 'n/a')} |",
+        f"| Selected source house | {formula.get('primary_house', 'n/a')} |",
+        f"| Selected destination house | {formula.get('secondary_house', 'n/a')} |",
+        f"| Solar source house | {formula.get('solar_source_house', 'n/a')} |",
+        f"| Solar destination house | {formula.get('solar_destination_house', 'n/a')} |",
+    ]
+    mapping_rows = [
+        "| Narrative role | House | Scenario family | Evidence |",
+        "|---|---:|---|---|",
+    ]
+    for item in arc.get("mapping_audit") or []:
+        evidence = "; ".join(str(value) for value in (item.get("evidence") or [])[:3])
+        mapping_rows.append(
+            f"| {item.get('role', '')} | {item.get('house', '')} | {item.get('scenario_label', '') or item.get('scenario_key', '')} | {evidence} |"
+        )
+
     scenario_rows = ["| Rank | Scenario family | Symbolic support | Examples |", "|---:|---|---|---|"]
     for rank, item in enumerate((arc.get("ranked_scenarios") or [])[:8], 1):
         examples = "; ".join(str(value) for value in (item.get("examples") or [])[:2])
@@ -1121,6 +1230,16 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             "# Technical appendix",
             "",
             "This appendix contains the calculation trail supporting the customer narrative. House numbers and event names are evidence; the main report above translates them into consequences, timing and practical decisions.",
+            "",
+            "## Universal Monthly Evidence Engine",
+            "",
+            "Every sign and month uses the same evidence formula. The result is a symbolic relevance score, not a probability of an event.",
+            "",
+            *formula_rows,
+            "",
+            "## Evidence-to-story mapping",
+            "",
+            *mapping_rows,
             "",
             "## Ranked scenario families",
             "",
@@ -1175,6 +1294,9 @@ def build_monthly_narrative(
     if arc:
         primary_house = int(arc.get("primary_house", _dominant_house(result, 0, 1)))
         secondary_house = int(arc.get("secondary_house", _dominant_house(result, 1, primary_house)))
+        profile = profile_from_dict(arc.get("story_profile")) or story_profile_for(
+            str(result.get("sign", "")), primary_house, secondary_house
+        )
         hook_headline = str(arc.get("headline", _monthly_hook(main_focus, primary_house, secondary_house)))
         convergence_axis = str(
             arc.get(
@@ -1211,14 +1333,20 @@ def build_monthly_narrative(
         relationship_test = tuple(
             str(item) for item in (arc.get("relationship_test") or ()) if str(item).strip()
         )
-        at_glance = (
-            opening_text,
-            complication_text,
-            climax_text,
-        )
+        if profile and profile.overview_copy:
+            at_glance = profile.overview_copy
+        elif profile:
+            at_glance = (
+                f"The first half moves from {profile.act_hooks[0].lower()} to {profile.act_hooks[1].lower()}.",
+                f"Late August centres on {profile.act_hooks[2].lower()} before {profile.act_hooks[3].lower()}.",
+            )
+        else:
+            at_glance = (
+                "The opening gathers momentum, the important detail sharpens and the strongest option earns its place.",
+            )
         do_line = str(arc.get("do_line", "Follow the evidence in sequence."))
         dont_line = str(arc.get("dont_line", "Force the ending before the terms arrive."))
-        action_plan = (
+        action_plan = profile.action_plan if profile else (
             "Choose the possibility that feels both alive and aligned.",
             "Name the standard guiding the yes.",
             "Write one next move that turns insight into direction.",
@@ -1226,6 +1354,7 @@ def build_monthly_narrative(
     else:
         primary_house = _dominant_house(result, 0, 1)
         secondary_house = _dominant_house(result, 1, primary_house)
+        profile = story_profile_for(str(result.get("sign", "")), primary_house, secondary_house)
         headline, subtitle = _headline(main_focus, primary_house, secondary_house)
         hook_headline = _monthly_hook(main_focus, primary_house, secondary_house)
         convergence_axis = f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}"
@@ -1256,10 +1385,11 @@ def build_monthly_narrative(
             "Choose what still feels right when the excitement settles.",
         )
 
-    romance_active, romance_quiet = _romance_copy(primary_house, secondary_house)
+    sign_name = str(result.get("sign", ""))
+    romance_active, romance_quiet = _romance_copy(sign_name, primary_house, secondary_house)
     agency_rule = GATEKEEPER_LINE
     validation_rule = VALIDATION_LINE
-    love_hook, work_hook, money_hook = _life_area_hooks(primary_house, secondary_house)
+    love_hook, work_hook, money_hook = _life_area_hooks(sign_name, primary_house, secondary_house)
     convergences = _convergences(result)
 
     solar = result.get("solar_convergence") or {}
@@ -1288,16 +1418,15 @@ def build_monthly_narrative(
             else "Shape relationship decisions through clear words and behaviour that matches the promise."
         )
     )
-    arc_scenarios = list(arc.get("ranked_scenarios") or []) if arc else []
-    top_scenario_text = "; ".join(
-        f"{item.get('label', '')} ({item.get('confidence', '')})"
-        for item in arc_scenarios[:3]
-    ) or "No single scenario family dominates."
+    story_drivers = [HOUSE_DISPLAY[primary_house], HOUSE_DISPLAY[secondary_house]]
+    if relationship_test:
+        story_drivers.append("Relationship continuity")
+    driver_text = "; ".join(dict.fromkeys(story_drivers))
     snapshot_rows = (
         ("Primary story", convergence_axis),
         ("Personal focus", main_focus),
         ("Relationship current", relationship_current),
-        ("Ranked scenario families", top_scenario_text),
+        ("Primary story drivers", driver_text),
         ("Complication window", first_window),
         ("Climax window", second_window),
         ("Monthly concentration", _strength_label(top_score)),
@@ -1328,23 +1457,31 @@ def build_monthly_narrative(
         focus_title=FOCUS_TITLES.get(main_focus, FOCUS_TITLES["General overview"]),
         focus_answer=_focus_answer(result, main_focus, question, primary_house, secondary_house),
         chapters=chapters,
-        love_story=_love_story(result, primary_house, secondary_house),
-        work_story=_work_story(result, primary_house, secondary_house),
-        money_story=_money_story(result, primary_house, secondary_house),
+        love_story=_love_story(result, sign_name, primary_house, secondary_house),
+        work_story=_work_story(result, sign_name, primary_house, secondary_house),
+        money_story=_money_story(result, sign_name, primary_house, secondary_house),
         do_line=do_line,
         dont_line=dont_line,
         love_hook=love_hook,
         work_hook=work_hook,
         money_hook=money_hook,
         hidden_opportunity=(
-            str((arc.get("climax") or (f"Turn the strongest opening in {second_window} into a deliberate next move.",))[0])
-            if arc
-            else f"Turn the strongest opening in {first_window} into one clear relationship, creative or strategic move."
+            profile.strategy_hidden
+            if profile and profile.strategy_hidden
+            else (
+                str((arc.get("resolution") or arc.get("climax") or (f"Turn the strongest opening in {second_window} into a deliberate next move.",))[0])
+                if arc
+                else f"Turn the strongest opening in {first_window} into one clear relationship, creative or strategic move."
+            )
         ),
         watch_out=(
-            str((arc.get("complication") or (f"Bring the important details into focus around {first_window}.",))[0])
-            if arc
-            else f"Do not let excitement around {HOUSE_PROSE[secondary_house]} outrun facts, cost, timing or operational capacity."
+            profile.strategy_watch
+            if profile and profile.strategy_watch
+            else (
+                str((arc.get("complication") or (f"Bring the important details into focus around {first_window}.",))[0])
+                if arc
+                else f"Do not let excitement around {HOUSE_PROSE[secondary_house]} outrun facts, cost, timing or operational capacity."
+            )
         ),
         action_plan=action_plan,
         key_dates=key_dates,

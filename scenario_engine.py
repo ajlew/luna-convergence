@@ -208,6 +208,85 @@ SCENARIO_DEFINITIONS: tuple[ScenarioDefinition, ...] = (
         opportunity_bias=1.20,
     ),
     ScenarioDefinition(
+        "identity_direction",
+        "identity, confidence or personal direction",
+        frozenset({1}),
+        frozenset({"Sun", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Mercury"}),
+        frozenset({"lunation", "eclipse", "station", "aspect", "ingress"}),
+        (
+            "a personal decision or visible change of direction",
+            "a new role, identity or boundary becoming clearer",
+            "greater confidence after an uncertain phase",
+        ),
+        opportunity_bias=1.10,
+    ),
+    ScenarioDefinition(
+        "creative_development",
+        "creative, romantic or entrepreneurial development",
+        frozenset({5}),
+        frozenset({"Sun", "Venus", "Mars", "Jupiter", "Mercury", "Uranus", "Moon"}),
+        frozenset({"lunation", "eclipse", "station", "aspect", "ingress"}),
+        (
+            "a creative project gathering attention",
+            "an attraction or invitation becoming more visible",
+            "a pleasure, performance or entrepreneurial idea gaining momentum",
+        ),
+        opportunity_bias=1.20,
+    ),
+    ScenarioDefinition(
+        "routine_wellbeing",
+        "workload, routine or wellbeing adjustment",
+        frozenset({6}),
+        frozenset({"Mercury", "Mars", "Saturn", "Sun", "Jupiter", "Venus", "Uranus"}),
+        frozenset({"lunation", "eclipse", "station", "aspect", "ingress"}),
+        (
+            "a workload, schedule or process change",
+            "a health or wellbeing routine needing a better rhythm",
+            "a practical system becoming repeatable",
+        ),
+        tension_bias=1.08,
+        opportunity_bias=1.08,
+    ),
+    ScenarioDefinition(
+        "shared_trust",
+        "trust, intimacy or shared-resource decision",
+        frozenset({8}),
+        frozenset({"Venus", "Mars", "Saturn", "Pluto", "Moon", "Mercury", "Jupiter", "Neptune"}),
+        frozenset({"lunation", "eclipse", "station", "aspect", "ingress"}),
+        (
+            "a conversation about trust, intimacy or shared responsibility",
+            "a boundary around money, ownership or emotional exposure",
+            "a shared obligation becoming easier to name",
+        ),
+        tension_bias=1.12,
+    ),
+    ScenarioDefinition(
+        "community_future",
+        "friends, audience or future-plan development",
+        frozenset({11}),
+        frozenset({"Jupiter", "Venus", "Mercury", "Sun", "Uranus", "Pluto", "Saturn"}),
+        frozenset({"lunation", "eclipse", "station", "aspect", "ingress"}),
+        (
+            "a friend, audience or organisation opening a door",
+            "a collaboration or alliance becoming more useful",
+            "a long-term plan gaining support",
+        ),
+        opportunity_bias=1.15,
+    ),
+    ScenarioDefinition(
+        "private_closure",
+        "rest, closure or private preparation",
+        frozenset({12}),
+        frozenset({"Saturn", "Neptune", "Pluto", "Moon", "Sun", "Mercury", "Venus"}),
+        frozenset({"lunation", "eclipse", "station", "aspect", "ingress"}),
+        (
+            "an unfinished matter reaching a private conclusion",
+            "rest, retreat or emotional recovery becoming necessary",
+            "quiet preparation before a more visible beginning",
+        ),
+        tension_bias=1.10,
+    ),
+    ScenarioDefinition(
         "property_home",
         "property, home or family decision",
         frozenset({2, 3, 4, 8, 10}),
@@ -261,7 +340,6 @@ def event_scenario_contribution(
     main_focus: str = "General overview",
 ) -> float:
     kind = str(_value(event, "kind", ""))
-    importance = float(_value(event, "importance", 0.0) or 0.0)
     planets = set(_value(event, "planets", ()) or ())
     houses = {int(item) for item in (_value(event, "houses", ()) or ())}
     polarity = str(_value(event, "polarity", "neutral"))
@@ -271,6 +349,9 @@ def event_scenario_contribution(
     if planets == {"Moon"} and kind not in {"lunation", "eclipse"}:
         return 0.0
 
+    # Scenario eligibility is a hard gate. A story cannot be selected when the
+    # event does not activate a relevant house, and non-lunation events also
+    # require a relevant planet.
     house_overlap = len(houses & definition.houses)
     planet_overlap = len(planets & definition.planets)
     if house_overlap == 0:
@@ -278,25 +359,15 @@ def event_scenario_contribution(
     if planet_overlap == 0 and kind not in {"lunation", "eclipse"}:
         return 0.0
 
-    trigger = TRIGGER_MULTIPLIERS.get(kind, 0.75)
-    strength = max(0.35, min(1.35, importance / 8.0))
-    house_match = 1.0 + min(0.55, house_overlap * 0.24)
-    planet_match = 1.0 + min(0.45, planet_overlap * 0.18)
-    ruler_bonus = 1.0
-    if planets & set(SIGN_RULERS.get(sign, ())):
-        ruler_bonus = 1.25
-        if houses & definition.houses:
-            ruler_bonus += 0.05
+    # Import locally to avoid a module-load cycle: the universal formula uses
+    # the scenario registry to build the final story context.
+    from universal_monthly_evidence import event_evidence_score
 
-    return (
-        trigger
-        * strength
-        * house_match
-        * planet_match
-        * ruler_bonus
-        * _polarity_multiplier(polarity, definition)
-        * _focus_multiplier(houses, main_focus)
-    )
+    base = event_evidence_score(event, sign, main_focus).total
+    house_match = 1.0 + min(0.48, house_overlap * 0.20)
+    planet_match = 1.0 + min(0.36, planet_overlap * 0.14)
+    scenario_bias = _polarity_multiplier(polarity, definition)
+    return base * house_match * planet_match * scenario_bias
 
 
 def _confidence_ratio(ratio: float) -> str:

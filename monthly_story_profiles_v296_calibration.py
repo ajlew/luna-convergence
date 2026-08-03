@@ -1,0 +1,491 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class MonthlyStoryProfile:
+    expected_pair: tuple[int, int]
+    headline: str
+    theme_axis: str
+    central_storyline: str
+    act_hooks: tuple[str, str, str, str]
+    act_titles: tuple[str, str, str, str]
+    opening_copy: str
+    complication_copy: str
+    relationship_question: str
+    relationship_support: str
+    climax_copy: str
+    resolution_copy: str
+    do_line: str
+    dont_line: str
+    action_plan: tuple[str, str, str]
+    romance_active: str
+    romance_quiet: str
+    love_hook: str
+    work_hook: str
+    money_hook: str
+    overview_copy: tuple[str, str] = ()
+    strategy_hidden: str = ""
+    strategy_watch: str = ""
+    love_move: str = ""
+    work_copy: str = ""
+    work_move: str = ""
+    money_copy: str = ""
+    money_move: str = ""
+
+
+PROFILES: dict[str, MonthlyStoryProfile] = {
+    "Aries": MonthlyStoryProfile(
+        (5, 6),
+        "The spark becomes real when it finds a rhythm",
+        "Romance & creativity x Work, rhythm & wellbeing",
+        "Creative heat opens the month. A lasting result grows through rhythm, space and steady follow-through.",
+        (
+            "Giving the spark a direction",
+            "Seeing what the attraction is asking for",
+            "Watching chemistry become consistency",
+            "Giving the spark a lasting rhythm",
+        ),
+        (
+            "A creative opening gathers momentum",
+            "Attraction comes into sharper focus",
+            "Everyday life reveals what can grow",
+            "Inspiration finds a workable form",
+        ),
+        "A creative, romantic or public opening gathers momentum and asks for a clear direction.",
+        "Midmonth brings the attraction or idea into sharper focus, revealing what is genuine and what still needs a clearer answer.",
+        "Does the excitement keep moving once everyday life joins the story?",
+        "A lasting spark becomes clearer through presence, follow-through and room for both people to breathe.",
+        "Late August gives inspiration a workable rhythm, making the next step easier to continue.",
+        "What stays should support energy, pleasure and the shape of the week.",
+        "Give the strongest spark a clear next step.",
+        "Mistake intensity for direction.",
+        (
+            "Name the creative or romantic opening worth developing.",
+            "Put the next step into the calendar.",
+            "Create the rhythm that can carry it beyond August.",
+        ),
+        "When attraction rises, notice whether direct interest becomes steady presence once plans become practical.",
+        "When romance is quiet, give the same fire to a creative move that can gather a real response.",
+        "The spark matters. The follow-through gives it a future",
+        "Momentum needs a rhythm that can last",
+        "The real price includes time and energy",
+        overview_copy=(
+            "The first half gives a promising opening a clearer direction while midmonth reveals what is genuine.",
+            "Late August favours the version that finds a workable rhythm and still feels alive.",
+        ),
+        strategy_hidden="A promising opening becomes easier to trust once the week begins supporting it.",
+        strategy_watch="Intensity can make every detail feel urgent. Keep a pace that leaves room for rest and genuine follow-through.",
+        love_move="Notice whether attraction becomes steady presence once plans become practical.",
+        work_copy="A fast start can attract attention. Give one idea enough structure to become visible before racing toward the next.",
+        work_move="Finish one visible result before opening three more directions.",
+        money_copy="The real price may be time and energy rather than money alone. Compare the excitement of the offer with the space it would take from the rest of life.",
+        money_move="Choose the opportunity that fits both the budget and the week.",
+    ),
+    "Taurus": MonthlyStoryProfile(
+        (4, 5),
+        "Home shifts first; pleasure returns with room to breathe",
+        "Home & foundations x Romance, pleasure & creativity",
+        "A private foundation changes shape, creating more room for pleasure, expression and connection.",
+        (
+            "Strengthening the place beneath the story",
+            "Making room for what wants to grow",
+            "Seeing whether warmth becomes dependable",
+            "Choosing the life that feels more alive",
+        ),
+        (
+            "The foundation begins to move",
+            "A home or family detail changes the options",
+            "The spark asks for steadiness",
+            "Pleasure returns with a practical place to land",
+        ),
+        "A home, family, property or private-life development starts changing the emotional landscape.",
+        "The practical detail is not separate from the desire; it determines how much room the next chapter receives.",
+        "Does the connection create safety without asking life to become smaller?",
+        "Care becomes convincing when it respects pace, comfort and the realities already in place.",
+        "Late August favours a creative, romantic or social result that feels easier to inhabit.",
+        "Keep the version that adds warmth without destabilising the foundation.",
+        "Create space for pleasure without abandoning what keeps life steady.",
+        "Call familiarity compatibility when the energy has stopped growing.",
+        (
+            "Clarify the home or family decision shaping the month.",
+            "Protect the time and space needed for pleasure or creativity.",
+            "Choose the option that feels both secure and genuinely alive.",
+        ),
+        "When romance becomes active, look for warmth that feels safe, present and unforced.",
+        "When romance stays quiet, restore pleasure through beauty, creativity and people who feel easy to be around.",
+        "Safety should deepen the spark, not replace it",
+        "A private change can free visible creativity",
+        "Spend in ways that support both comfort and future movement",
+    ),
+    "Gemini": MonthlyStoryProfile(
+        (3, 4),
+        "The message opens the door; the decision gives it a home",
+        "Communication & decisions x Home, family & emotional foundations",
+        "Conversations widen the options. The month becomes real when one choice fits the life behind the screen.",
+        (
+            "Turning conversation into momentum",
+            "Separating the signal from the noise",
+            "Watching whether contact becomes consistency",
+            "Placing the decision inside real life",
+        ),
+        (
+            "A message changes the available future",
+            "The important detail becomes impossible to ignore",
+            "Interest proves itself through continuity",
+            "The answer reaches home",
+        ),
+        "A message, application, introduction or wider-world contact moves an idea from thought into conversation.",
+        "Timing, money, distance or another person's involvement reveals which version can actually move forward.",
+        "Does the conversation continue when novelty fades?",
+        "The useful connection keeps communicating clearly after the first burst of excitement.",
+        "Late August brings the decision into home, family, location or emotional reality.",
+        "The right answer reduces mental noise and creates a place to stand.",
+        "Ask the question that changes the decision.",
+        "Keep every option alive just to avoid choosing one.",
+        (
+            "Name the conversation or application with the most real momentum.",
+            "Clarify the detail that changes the choice.",
+            "Put the decision into a concrete home, family or location plan.",
+        ),
+        "When romance is active, notice whether lively conversation becomes emotional availability.",
+        "When romance is quiet, follow the idea, message or invitation that makes life feel mentally awake.",
+        "Conversation is attractive. Continuity makes it meaningful",
+        "The right message can reorganise the whole plan",
+        "A clear decision prevents small costs from multiplying",
+    ),
+    "Cancer": MonthlyStoryProfile(
+        (2, 3),
+        "The price becomes clear before the path widens",
+        "Money, value & security x Communication, contracts & movement",
+        "A financial reality starts the month. Clear information turns it into a decision rather than a burden.",
+        (
+            "Naming what the situation is really worth",
+            "Bringing the missing information into view",
+            "Measuring care through practical effort",
+            "Turning clarity into movement",
+        ),
+        (
+            "The month begins with value and security",
+            "A document or conversation changes the terms",
+            "Support becomes visible through action",
+            "The road opens once the numbers make sense",
+        ),
+        "A payment, cost, salary question or shared obligation asks for a calmer look at value and security.",
+        "The middle of the month brings paperwork, figures or a conversation that makes the situation easier to understand.",
+        "Does the interest feel protective, clear and mutual in ordinary life?",
+        "Care is easiest to trust when words, timing and practical support agree.",
+        "Late August favours movement through a contract, application, trip, course or important conversation.",
+        "Keep the path that strengthens both security and confidence.",
+        "Put the number and the next conversation in the same plan.",
+        "Carry uncertainty alone when a direct question could reduce it.",
+        (
+            "Identify the real financial or emotional value at stake.",
+            "Have the conversation that makes the terms clear.",
+            "Move on the option that protects security while opening the future.",
+        ),
+        "When romance is active, look for emotional safety backed by clear words and practical care.",
+        "When romance stays quiet, invest in the people and projects that make belonging feel real.",
+        "Feeling safe should make honesty easier",
+        "Clear communication turns pressure into movement",
+        "The right number creates room for a better decision",
+    ),
+    "Leo": MonthlyStoryProfile(
+        (1, 2),
+        "The spotlight shifts from desire to value",
+        "Identity, confidence & direction x Money, value & security",
+        "Personal magnetism opens the month. The lasting result depends on what the attention is worth and what it can support.",
+        (
+            "Stepping into the centre of the story",
+            "Deciding what the attention is worth",
+            "Watching admiration become presence",
+            "Turning confidence into lasting value",
+        ),
+        (
+            "The month begins with personal momentum",
+            "A choice puts value and standards in focus",
+            "Admiration meets the consistency test",
+            "The result becomes tangible",
+        ),
+        "A personal, creative or romantic opening puts confidence and visibility back in motion.",
+        "The middle of the month asks what this opportunity changes about standards, money and self-respect.",
+        "Is admiration becoming genuine presence?",
+        "Real interest keeps showing up when the moment is no longer centred on applause.",
+        "Late August converts attention into a financial, practical or self-worth decision.",
+        "Keep what strengthens confidence without making approval the price of belonging.",
+        "Choose the opportunity that recognises both talent and value.",
+        "Trade self-respect for the promise of more attention.",
+        (
+            "Claim the personal direction that feels most alive.",
+            "Set the value or standard that protects it.",
+            "Turn recognition into one tangible result.",
+        ),
+        "When romance is active, enjoy being desired and notice whether admiration becomes dependable presence.",
+        "When romance is quiet, place the spotlight on work, style or creativity that reflects genuine confidence.",
+        "Admiration opens the door. Presence decides who stays",
+        "Visibility is strongest when the result carries your name",
+        "Attention becomes valuable when it improves real security",
+    ),
+    "Virgo": MonthlyStoryProfile(
+        (12, 1),
+        "What ends in private becomes a new direction",
+        "Closure, recovery & hidden matters x Identity, confidence & direction",
+        "August begins behind the scenes. By month-end, unfinished business gives way to a clearer personal position.",
+        (
+            "Closing the loop without forcing the answer",
+            "Sorting what belongs to the past",
+            "Seeing care in the smallest details",
+            "Stepping forward with a cleaner direction",
+        ),
+        (
+            "A private issue reaches its final review",
+            "The hidden detail becomes useful information",
+            "Reliability becomes the emotional language",
+            "A new version of self takes the lead",
+        ),
+        "An unfinished work, health, financial or emotional matter asks for quiet attention before public movement resumes.",
+        "The middle of the month separates genuine obligation from habits that have simply continued too long.",
+        "Is care visible in the small, reliable details?",
+        "The answer becomes clearer through steadiness, consideration and what happens without prompting.",
+        "Late August supports a personal reset, boundary or decision that is easier to state directly.",
+        "Keep what supports the person emerging after the cleanup.",
+        "Finish the private task that has been draining public energy.",
+        "Mistake overthinking for preparation.",
+        (
+            "Close one unfinished obligation.",
+            "Rebuild the routine that no longer supports the next stage.",
+            "State the personal direction that has been forming privately.",
+        ),
+        "When romance is active, notice whether care appears in dependable details rather than grand claims.",
+        "When romance stays quiet, use the month to restore energy and become more available to what fits next.",
+        "Care is most convincing in the details nobody has to chase",
+        "A private reset can restore professional precision",
+        "Clean up the obligation before committing new resources",
+    ),
+    "Libra": MonthlyStoryProfile(
+        (11, 12),
+        "The right audience opens the door to a quieter truth",
+        "Friends, audiences & future plans x Rest, closure & private reflection",
+        "A social or creative opening expands the future. The final choice depends on what still feels true away from the crowd.",
+        (
+            "Finding momentum through the right people",
+            "Clarifying the role of the audience",
+            "Testing reciprocity beneath the charm",
+            "Choosing what remains when the room goes quiet",
+        ),
+        (
+            "A network or audience creates movement",
+            "The opportunity reveals who is carrying it",
+            "Harmony meets the reciprocity test",
+            "Private truth edits the public plan",
+        ),
+        "A friend, community, audience or collaborative opening gives a future plan more reach.",
+        "The middle of the month clarifies whether the connection is mutual or being maintained by one person's effort.",
+        "Is reciprocity real, or is one person maintaining the harmony?",
+        "The strongest bond allows honesty without making peace depend on self-erasure.",
+        "Late August favours closure, rest or a quieter decision that protects energy for the next cycle.",
+        "Keep the future that still feels right without an audience watching.",
+        "Choose the people who add momentum without consuming peace.",
+        "Maintain every connection just to avoid disappointing someone.",
+        (
+            "Identify the alliance or audience that genuinely supports the future.",
+            "Name where reciprocity is missing.",
+            "Protect the private space needed to choose clearly.",
+        ),
+        "When romance is active, watch whether charm is matched by equal initiative and honest conversation.",
+        "When romance stays quiet, let friendship, art and private restoration return the sense of being seen.",
+        "Chemistry feels better when reciprocity does not need managing",
+        "The right audience expands the work without owning it",
+        "Protect resources from obligations maintained only for appearances",
+    ),
+    "Scorpio": MonthlyStoryProfile(
+        (10, 11),
+        "Public ambition changes when the future crowd answers",
+        "Career, authority & visibility x Friends, audiences & future plans",
+        "A visible result begins the month. The larger question is which people and alliances can carry it further.",
+        (
+            "Turning ambition into visible momentum",
+            "Bringing the private cost of success into focus",
+            "Testing trust behind the support",
+            "Choosing the future network with real power",
+        ),
+        (
+            "Career movement enters public view",
+            "A private or practical condition changes the strategy",
+            "Support reveals its depth",
+            "The audience becomes part of the outcome",
+        ),
+        "A career, leadership or public-direction development starts changing how the next stage is seen.",
+        "The middle of the month exposes the home, resource or emotional condition behind the visible opportunity.",
+        "Does intimacy deepen trust, or increase uncertainty?",
+        "Support becomes valuable when it can handle honesty, boundaries and the less polished parts of the plan.",
+        "Late August expands the story through friends, community, audience or a future-facing collaboration.",
+        "Keep the alliance that increases power without demanding secrecy or control.",
+        "Make the public move, then choose the people who can sustain it.",
+        "Confuse intensity with strategic trust.",
+        (
+            "Define the public result worth pursuing.",
+            "Bring the hidden cost or private condition into the strategy.",
+            "Choose the alliance that can expand the result without weakening control.",
+        ),
+        "When romance is active, notice whether intensity creates deeper trust or simply more uncertainty.",
+        "When romance stays quiet, direct emotional power into work and alliances that can transform the future.",
+        "Intensity becomes intimacy only when trust can hold it",
+        "Public leverage grows through the right alliance",
+        "Shared resources need transparent power and clear terms",
+    ),
+    "Sagittarius": MonthlyStoryProfile(
+        (9, 10),
+        "A wider horizon moves into public view",
+        "Travel, learning & publishing x Career, authority & visible results",
+        "A larger possibility opens through distance, learning or exposure. By month-end, it asks for a visible professional position.",
+        (
+            "Opening the road beyond the usual map",
+            "Giving the larger plan clear terms",
+            "Seeing whether freedom and effort can coexist",
+            "Turning possibility into public direction",
+        ),
+        (
+            "The wider road begins to open",
+            "The invitation reveals what it needs",
+            "Attention shows whether it can travel further",
+            "The future steps into public view",
+        ),
+        "A trip, course, application, publication or international contact creates a larger field of possibility.",
+        "The middle of the month clarifies timing, money, distance, trust and the role another person may play.",
+        "Can freedom and shared direction exist together?",
+        "The right connection expands the future without making one person carry the entire plan.",
+        "Late August moves the story toward career, recognition, authority or an official answer.",
+        "Keep the future that can become visible without sacrificing emotional ease or private priorities.",
+        "Give the wider opportunity a public next step.",
+        "Call every open door destiny before checking where it leads.",
+        (
+            "Put the wider opportunity into a visible form.",
+            "Clarify the cost, timing or location.",
+            "Make the career-facing move before the month closes.",
+        ),
+        "When romance is active, notice whether freedom and shared direction can exist in the same connection.",
+        "When romance stays quiet, let travel, learning or public progress restore the sense of possibility.",
+        "A connection should widen the future without shrinking freedom",
+        "The larger idea is ready for a visible professional form",
+        "Expansion works best when the cost and timing are named",
+    ),
+    "Capricorn": MonthlyStoryProfile(
+        (8, 9),
+        "Shared terms open the road ahead",
+        "Trust, intimacy & shared resources x Travel, learning & expansion",
+        "The month begins with obligations and shared terms. Clear agreements create the freedom to move further.",
+        (
+            "Bringing shared obligations into the open",
+            "Clarifying what trust requires",
+            "Watching whether commitment becomes dependable",
+            "Using clear terms to widen the future",
+        ),
+        (
+            "The month begins with shared resources",
+            "An agreement reveals the real condition",
+            "Commitment meets the dependability test",
+            "The road opens after the terms are settled",
+        ),
+        "A shared-money, trust, debt or obligation issue starts the month by showing what cannot remain vague.",
+        "The middle of the month clarifies ownership, responsibility and what each person can realistically carry.",
+        "Is the connection building something dependable?",
+        "Commitment becomes credible when the practical burden is shared rather than admired from a distance.",
+        "Late August favours travel, study, legal progress, publishing or a plan that reaches beyond the current limits.",
+        "Keep the expansion supported by clear terms and mutual capacity.",
+        "Settle the shared terms before expanding the plan.",
+        "Use discipline to carry an arrangement that has stopped being mutual.",
+        (
+            "Name the shared obligation or trust issue clearly.",
+            "Agree on ownership, timing and practical responsibility.",
+            "Move on the wider plan once the foundation is dependable.",
+        ),
+        "When romance is active, look for commitment expressed through practical reliability and shared responsibility.",
+        "When romance stays quiet, use the month to build a wider plan on stronger financial and emotional terms.",
+        "Commitment is attractive when the weight is genuinely shared",
+        "Clear agreements make expansion possible",
+        "Shared money needs ownership, timing and limits in writing",
+    ),
+    "Aquarius": MonthlyStoryProfile(
+        (7, 8),
+        "A connection reveals what the future will cost",
+        "Relationships & agreements x Trust, intimacy & shared resources",
+        "A relationship or agreement opens the month. Shared expectations decide whether it can deepen.",
+        (
+            "Opening the conversation between two futures",
+            "Putting the agreement into real terms",
+            "Protecting individuality while building closeness",
+            "Deciding what can be shared",
+        ),
+        (
+            "A relationship or partnership creates momentum",
+            "The terms become part of the attraction",
+            "Space and effort need the same agreement",
+            "Shared resources reveal the viable future",
+        ),
+        "A relationship, client, partnership or agreement creates movement and asks for a more direct conversation.",
+        "The middle of the month clarifies what is being promised, shared, funded or emotionally carried.",
+        "Is there enough space for individuality and enough effort for closeness?",
+        "The connection works best when freedom is not used to avoid responsibility and closeness is not used to erase difference.",
+        "Late August exposes a financial, intimate or trust issue that determines the next form of the relationship.",
+        "Keep the arrangement that can hold honesty, independence and fair exchange.",
+        "Put the relationship and the shared terms in the same conversation.",
+        "Assume emotional compatibility will automatically solve practical imbalance.",
+        (
+            "Clarify what the relationship or opportunity requires financially.",
+            "Separate desire from shared capacity.",
+            "Decide which future remains sustainable.",
+        ),
+        "When romance is active, look for enough space to stay individual and enough effort to build real closeness.",
+        "When romance stays quiet, strengthen agreements and friendships that respect both independence and loyalty.",
+        "Freedom and closeness need the same honest agreement",
+        "Partnership works when roles are clear without becoming rigid",
+        "Shared costs reveal whether the future is balanced",
+    ),
+    "Pisces": MonthlyStoryProfile(
+        (6, 7),
+        "A new rhythm changes who can meet you there",
+        "Work, wellbeing & daily rhythm x Relationships, agreements & partnership",
+        "A routine or obligation reaches a turning point. The relationship landscape changes as daily life becomes more honest.",
+        (
+            "Rewriting the rhythm beneath the month",
+            "Seeing which obligations still belong",
+            "Turning tenderness into mutual action",
+            "Choosing the partnership that fits the new life",
+        ),
+        (
+            "A routine reaches its limit",
+            "The practical adjustment changes the emotional field",
+            "Tenderness meets the mutuality test",
+            "A relationship answer enters real life",
+        ),
+        "A work, health, schedule or care obligation begins showing where the current rhythm is no longer sustainable.",
+        "The middle of the month clarifies which duty supports wellbeing and which one has become quiet self-erasure.",
+        "Is tenderness becoming mutual, or remaining imagined?",
+        "The clearest connection responds to real needs with presence rather than leaving one person to interpret the silence.",
+        "Late August brings a relationship, agreement or significant one-to-one decision into focus.",
+        "Keep the partnership that fits the healthier rhythm now being created.",
+        "Change the daily pattern before asking the relationship to feel different.",
+        "Use empathy to excuse an arrangement that repeatedly drains energy.",
+        (
+            "Name the routine or obligation that has reached its limit.",
+            "Create the healthier rhythm before adding new demands.",
+            "Choose the relationship or agreement that can meet the new reality.",
+        ),
+        "When romance is active, notice whether tenderness becomes mutual effort instead of private interpretation.",
+        "When romance stays quiet, restore the body and routine so future connection has somewhere healthy to arrive.",
+        "Tenderness becomes trustworthy when it is mutual",
+        "A healthier rhythm changes every agreement around it",
+        "Time and energy are resources; stop treating them as infinite",
+    ),
+}
+
+
+def story_profile_for(sign: str, primary_house: int, secondary_house: int) -> MonthlyStoryProfile | None:
+    profile = PROFILES.get(sign)
+    if not profile:
+        return None
+    if profile.expected_pair != (int(primary_house), int(secondary_house)):
+        return None
+    return profile

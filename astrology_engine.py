@@ -102,6 +102,9 @@ class Event:
     planets: tuple[str, ...]
     houses: tuple[int, ...]
     polarity: str
+    orb: float | None = None
+    aspect_name: str = ""
+    applying_state: str = ""
 
 
 @dataclass(frozen=True)
@@ -293,6 +296,9 @@ def _aspect_events(
                         planets=(p1, p2),
                         houses=houses,
                         polarity=_event_polarity(aspect_name, (p1, p2)),
+                        orb=orb,
+                        aspect_name=aspect_name,
+                        applying_state="exact",
                     )
                 )
     return result

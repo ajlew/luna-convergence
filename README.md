@@ -459,3 +459,72 @@ writing it.** See `ACTIVE_AGENCY_MONTHLY_V293.md`.
 ## Reflective Agency Monthly voice v2.9.4
 
 The Monthly narrator now uses reflective active language. Four-act headings use gerunds rather than repetitive “You...” constructions, and customer copy limits second-person address to moments where intimacy or direct action adds value. See `REFLECTIVE_AGENCY_MONTHLY_V294.md`.
+
+## v2.9.5 - Evidence-Mapped Monthly
+
+The August 2026 Monthly engine now maps evidence and houses into sign-specific scenarios, customer chapter titles, relationship questions and final actions. Duplicate calendar events are removed, print portals are isolated between signs, and generated PDFs are checked for merged-word text-layer defects before delivery.
+
+Run the twelve-sign release gate with:
+
+```powershell
+python sanity_check_monthly_batch.py --year 2026 --month 8 --json Luna_v295_monthly_batch_audit.json
+```
+
+See `EVIDENCE_MAPPED_MONTHLY_V295.md` for the implementation and validation details.
+
+## v2.9.6 - Refined Evidence-Mapped Monthly
+
+The mapped Monthly engine now keeps the sign-specific logic while removing the
+most visible signs of report repetition. Aries is the calibration case for the
+new customer layer:
+
+- the House 5 to House 6 story now reads as creativity and attraction finding a
+  workable rhythm;
+- the customer overview, chapter story, strategy and key dates each perform a
+  different job rather than repeating the same forecast paragraph;
+- the late-August key date now names the Virgo ingress that carries the practical
+  result instead of using the Pisces eclipse for two separate roles;
+- Love, Work and Money can use sign-specific consequence and action copy;
+- the final signature, **From reading the future to writing it**, belongs to the
+  strategy page rather than the Love card;
+- the evidence snapshot shows primary story drivers before secondary scenario
+  possibilities;
+- convergence tables derive house values when the source does not precompute
+  them;
+- the customer PDF is reduced to nine pages and retains a clean searchable text
+  layer.
+
+Run the twelve-sign release gate with:
+
+```powershell
+python sanity_check_monthly_batch.py --year 2026 --month 8 --json Luna_v296_monthly_batch_audit.json
+python test_refined_mapped_monthly_v296.py
+```
+
+See `REFINED_EVIDENCE_MAPPED_MONTHLY_V296.md` for the implementation and
+validation details.
+
+---
+
+## v2.9.7 - Universal Monthly Evidence Engine
+
+The Monthly product now uses one evidence formula for every sign and month:
+
+```text
+C(e,i,f) = T x O x A x H x R x I x D x F x P
+```
+
+The engine calculates event strength, applies a hard evidence-to-scenario gate, derives the source/destination house path, assigns evidence to chronological roles, and then applies Luna's existing editorial voice and report layout.
+
+Production no longer selects a hand-written sign/month story profile. The v2.9.6 profiles remain only as a calibration archive in `monthly_story_profiles_v296_calibration.py`.
+
+Validation:
+
+- 12 signs x 12 months = 144 Monthly reports;
+- no missing evidence-to-scenario mappings in active roles;
+- no duplicate customer calendar triggers;
+- highest same-month cross-sign similarity: 60.41%, below the 65% review gate;
+- at least 80% distinct headlines across the year for every sign;
+- isolated nine-page customer PDFs with clean searchable text.
+
+Daily remains unchanged, Yearly remains hidden, and the private Monthly preview remains available.
