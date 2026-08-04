@@ -12,6 +12,13 @@ import tempfile
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
 from monthly_report_pdf_v2 import build_monthly_editorial_pdf
+from luna_focus_reset import (
+    FOCUS_RESET_CUE,
+    FOCUS_RESET_DURATION,
+    FOCUS_RESET_LABEL,
+    FOCUS_RESET_METHOD,
+    focus_reset_data_uri,
+)
 
 
 BRAND = "Luna Convergence"
@@ -169,6 +176,12 @@ def _render_html(
 ) -> str:
     report_right = f"{narrative.sign} / {narrative.label}"
     snapshot = dict(narrative.snapshot_rows)
+    focus_reset_uri = focus_reset_data_uri()
+    focus_reset_image = (
+        f'<img src="{focus_reset_uri}" alt="Uttarabodhi mudra circular illustration" />'
+        if focus_reset_uri
+        else ""
+    )
 
     # Page 1 - direct structural match to the Luna homepage.
     page1_body = f"""
@@ -317,6 +330,15 @@ def _render_html(
     <div class="eyebrow">Practical direction / next move</div>
     <h1 class="section-title">From reading the future to writing it</h1>
     <div class="best-move wide"><span>Hidden opportunity</span><strong>{_safe(narrative.hidden_opportunity)}</strong></div>
+    <div class="focus-reset-inline">
+      {focus_reset_image}
+      <div>
+        <span>{_safe(FOCUS_RESET_LABEL)}</span>
+        <strong>{_safe(FOCUS_RESET_METHOD)}</strong>
+        <p>{_safe(FOCUS_RESET_CUE)}</p>
+      </div>
+      <small>{_safe(FOCUS_RESET_DURATION)}</small>
+    </div>
   </section>
   <aside class="reading-card">
     <div class="daily-kicker">Watch out</div>
@@ -540,6 +562,12 @@ p {{ margin:0 0 3.2mm; font:400 8.2pt/1.48 'Josefin Sans'; }}
 .best-move strong {{ font:500 8.2pt/1.4 'Josefin Sans'; }}
 .best-move.wide {{ margin-top:7mm; grid-template-columns:36mm 1fr; }}
 .best-move.wide strong p {{ margin:0 0 2mm; }}
+.focus-reset-inline {{ display:grid; grid-template-columns:14mm minmax(0,1fr) auto; gap:3mm; align-items:center; margin-top:4mm; padding:2.3mm 0; border-top:.45pt solid var(--black); border-bottom:.45pt solid var(--black); }}
+.focus-reset-inline img {{ width:14mm; height:14mm; border-radius:50%; object-fit:cover; }}
+.focus-reset-inline span, .focus-reset-inline small {{ display:block; font:500 4.4pt/1.3 'IBM Plex Mono'; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }}
+.focus-reset-inline strong {{ display:block; margin:.7mm 0 .35mm; font:500 9.3pt/1.05 'Bodoni Moda','Libre Bodoni',Didot,Georgia,serif; color:var(--black); }}
+.focus-reset-inline p {{ margin:0; font:400 6.4pt/1.35 'Josefin Sans'; }}
+.focus-reset-inline small {{ max-width:20mm; text-align:right; }}
 .chapter-list {{ display:grid; gap:4mm; }}
 .chapter-row {{ display:grid; grid-template-columns:14mm 1fr; gap:5mm; border-top:.45pt solid var(--black); border-bottom:.45pt solid var(--black); padding:4.2mm 1mm; min-height:48mm; }}
 .chapter-number {{ font:400 23pt 'Bodoni Moda','Libre Bodoni',serif; }}

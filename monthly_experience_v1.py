@@ -19,6 +19,7 @@ from luna_editorial_system import (
 )
 from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import narrator_cue
+from luna_focus_reset import focus_reset_web_html
 
 
 PRINT_PAPERS = ("A4",)
@@ -295,6 +296,7 @@ def build_monthly_experience_html(
     mapping_audit_rows = _mapping_audit_rows_html(result)
     scenario_rows = _scenario_rows_html(result)
     carryover_rows = _carryover_rows_html(result)
+    focus_reset = focus_reset_web_html(class_name="luna-focus-reset")
 
     focus_section = ""
     if (
@@ -460,6 +462,8 @@ def build_monthly_experience_html(
     {''.join(f'<li>{_safe(action)}</li>' for action in narrative.action_plan)}
   </ol>
 </section>
+
+{focus_reset}
 
 {evidence}
         """
@@ -773,6 +777,56 @@ def build_monthly_experience_html(
   font-size:1.03rem;
   line-height:1.48;
 }}
+.luna-focus-reset {{
+  display:grid;
+  grid-template-columns:4.6rem minmax(0,1fr) auto;
+  gap:1rem;
+  align-items:center;
+  margin:0 clamp(1rem,4vw,3.2rem) 2.2rem;
+  padding:.75rem 0;
+  border-top:1px solid var(--black);
+  border-bottom:1px solid var(--black);
+}}
+.luna-focus-reset img,
+.luna-focus-reset-fallback {{
+  width:4.6rem;
+  height:4.6rem;
+  border-radius:50%;
+  object-fit:cover;
+}}
+.luna-focus-reset-fallback {{
+  display:grid;
+  place-items:center;
+  border:1px solid var(--line);
+  font-size:1.5rem;
+}}
+.luna-focus-reset-copy span,
+.luna-focus-reset small {{
+  display:block;
+  color:var(--muted);
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.61rem;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}}
+.luna-focus-reset-copy strong {{
+  display:block;
+  margin:.18rem 0 .12rem;
+  font-family:"Bodoni Moda",Didot,Georgia,serif;
+  font-size:clamp(1.2rem,3vw,1.55rem);
+  font-weight:500;
+  line-height:1.08;
+}}
+.luna-focus-reset-copy p {{
+  margin:0;
+  font-size:.92rem;
+  line-height:1.4;
+}}
+.luna-focus-reset small {{
+  max-width:7rem;
+  text-align:right;
+  line-height:1.4;
+}}
 .luna-evidence-path {{
   border-top:1px solid var(--black);
   margin:1rem 0 1.35rem;
@@ -977,6 +1031,20 @@ def build_monthly_experience_html(
   .luna-print-controls button {{
     width:100%;
   }}
+  .luna-focus-reset {{
+    grid-template-columns:3.7rem minmax(0,1fr);
+    gap:.75rem;
+  }}
+  .luna-focus-reset img,
+  .luna-focus-reset-fallback {{
+    width:3.7rem;
+    height:3.7rem;
+  }}
+  .luna-focus-reset small {{
+    grid-column:2;
+    max-width:none;
+    text-align:left;
+  }}
 }}
 @media print {{
   .luna-print-controls {{ display:none !important; }}
@@ -1029,6 +1097,10 @@ def build_monthly_experience_html(
   .luna-evidence-stack {{
     break-before:page;
     page-break-before:always;
+  }}
+  .luna-focus-reset {{
+    break-inside:avoid;
+    page-break-inside:avoid;
   }}
   .luna-evidence-stack details > *:not(summary) {{
     display:block !important;

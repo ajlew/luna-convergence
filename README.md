@@ -562,3 +562,13 @@ Daily remains unchanged, Yearly remains hidden, and the private Monthly preview 
 - Monthly searchable A4 PDF button now uses Luna's black primary style.
 - Both Daily PDF download buttons now use the same black primary style.
 - Download clicks no longer rerun the Streamlit page.
+
+## v2.9.7.4 - Luna Signature Focus Reset
+
+- Added one compact, optional **Luna Focus Reset** to Daily and Monthly reports.
+- The signature ritual is **Uttarabodhi mudra + box breath**.
+- The customer cue is: **Bring thought, intention and action into one line.**
+- Uses the approved circular mudra artwork discreetly so the report flow remains intact.
+- Does not teach box-breathing technique or add another reflection question.
+- Included in the web experience, searchable Daily PDFs, homepage-style Monthly PDFs and the ReportLab Monthly fallback.
+- Daily and Monthly calculations remain unchanged.

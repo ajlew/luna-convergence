@@ -26,6 +26,14 @@ from luna_editorial_system import (
     luna_do_dont,
 )
 from luna_voice import narrator_cue
+from luna_focus_reset import (
+    FOCUS_RESET_CUE,
+    FOCUS_RESET_DURATION,
+    FOCUS_RESET_LABEL,
+    FOCUS_RESET_METHOD,
+    focus_reset_data_uri,
+    focus_reset_web_html,
+)
 
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -1812,6 +1820,60 @@ def _render_css() -> None:
     line-height:1.16;
     overflow-wrap:anywhere;
 }
+.luna-focus-reset {
+    width:100%;
+    max-width:820px;
+    margin:.15rem auto 1.1rem;
+    padding:.72rem .9rem;
+    border-top:1px solid #050505;
+    border-bottom:1px solid #050505;
+    display:grid;
+    grid-template-columns:4.5rem minmax(0,1fr) auto;
+    gap:.9rem;
+    align-items:center;
+    background:#fff;
+}
+.luna-focus-reset img,
+.luna-focus-reset-fallback {
+    width:4.5rem;
+    height:4.5rem;
+    border-radius:50%;
+    object-fit:cover;
+}
+.luna-focus-reset-fallback {
+    display:grid;
+    place-items:center;
+    border:1px solid #d8d8d3;
+    font-size:1.5rem;
+}
+.luna-focus-reset-copy span,
+.luna-focus-reset small {
+    display:block;
+    color:#696963;
+    font-family:"IBM Plex Mono","Courier New",monospace;
+    font-size:.62rem;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+}
+.luna-focus-reset-copy strong {
+    display:block;
+    margin:.2rem 0 .15rem;
+    font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
+    font-size:clamp(1.2rem,3vw,1.55rem);
+    font-weight:500;
+    line-height:1.05;
+}
+.luna-focus-reset-copy p {
+    margin:0;
+    font-family:"Josefin Sans",sans-serif;
+    font-size:.93rem;
+    line-height:1.35;
+}
+.luna-focus-reset small {
+    max-width:7.5rem;
+    text-align:right;
+    line-height:1.4;
+}
 .daily-monthly-offer {
     width:100%;
     max-width:820px;
@@ -2090,6 +2152,21 @@ def _render_css() -> None:
     .question-item {
         min-height:auto;
     }
+    .luna-focus-reset {
+        grid-template-columns:3.7rem minmax(0,1fr);
+        gap:.75rem;
+        padding:.65rem 0;
+    }
+    .luna-focus-reset img,
+    .luna-focus-reset-fallback {
+        width:3.7rem;
+        height:3.7rem;
+    }
+    .luna-focus-reset small {
+        grid-column:2;
+        max-width:none;
+        text-align:left;
+    }
 }
 </style>
         """,
@@ -2107,6 +2184,21 @@ def _daily_print_document_html(
     """Create one isolated A4 HTML document for browser printing."""
     evidence = narrative.evidence
     question = narrative.reflection_questions[0] if narrative.reflection_questions else "What matters most now?"
+    focus_image = focus_reset_data_uri()
+    focus_image_html = (
+        f'<img src="{focus_image}" alt="Uttarabodhi mudra circular illustration">'
+        if focus_image
+        else ""
+    )
+    focus_reset_html = f"""
+<section class="focus-reset">
+  {focus_image_html}
+  <div><div class="label">{escape(FOCUS_RESET_LABEL)}</div>
+  <h3>{escape(FOCUS_RESET_METHOD)}</h3>
+  <p>{escape(FOCUS_RESET_CUE)}</p></div>
+  <small>{escape(FOCUS_RESET_DURATION)}</small>
+</section>
+"""
     solar_html = ""
     if solar:
         change = float(solar.get("daylight_change", 0.0) or 0.0)
@@ -2170,6 +2262,7 @@ h1{{font-size:28pt;line-height:1.04;margin:8mm 0 4mm}} h2{{font-size:17pt;margin
 .label{{font:7pt 'Courier New',monospace;text-transform:uppercase;color:#555}} section{{border-top:1px solid #aaa;padding-top:2mm;margin-top:6mm}}
 table{{width:100%;border-collapse:collapse;margin:2mm 0 4mm}} th,td{{padding:2.2mm;border-bottom:.25mm solid #ccc;text-align:left;vertical-align:top}} th{{width:38mm;font:7pt 'Courier New',monospace;text-transform:uppercase}}
 .two{{display:grid;grid-template-columns:1fr 1fr;gap:6mm}} blockquote{{font-family:Georgia,'Times New Roman',serif;font-size:17pt;margin:3mm 0;padding:4mm;border-left:1.5mm solid #050505}}
+.focus-reset{{display:grid;grid-template-columns:22mm 1fr auto;gap:4mm;align-items:center;border-top:1px solid #050505;border-bottom:1px solid #050505;padding:3mm 0;margin-top:5mm}} .focus-reset img{{width:19mm;height:19mm;border-radius:50%;object-fit:cover}} .focus-reset h3{{margin:1mm 0;font-size:13pt}} .focus-reset p{{margin:0}} .focus-reset small{{font:6.5pt 'Courier New',monospace;text-transform:uppercase;color:#555;max-width:25mm;text-align:right}}
 .page-break{{break-before:page}} .matrix{{font:7.5pt 'Courier New',monospace;line-height:1.35}} footer{{border-top:1px solid #050505;margin-top:8mm;padding-top:3mm;font-size:7pt;color:#555}}
 @media print{{a,button{{display:none!important}} tr,section,.do-dont{{break-inside:avoid}}}}
 </style></head><body><main>
@@ -2179,6 +2272,7 @@ table{{width:100%;border-collapse:collapse;margin:2mm 0 4mm}} th,td{{padding:2.2
 <div class="do-dont"><div><div class="label">Do</div><strong>{escape(narrative.action_today)}</strong></div><div><div class="label">Don't</div><strong>{escape(narrative.watch_out)}</strong></div></div>
 <section><h2>Why this matters today</h2><table>{why_rows}</table><div class="two"><div><div class="label">Weather / today</div><h3>{escape(narrative.emotional_weather)}</h3></div><div><div class="label">Climate / longer current</div><h3>{escape(narrative.long_term_current)}</h3></div></div></section>
 <section><h2>Hidden opportunity</h2><p>{escape(narrative.hidden_opportunity)}</p></section>
+{focus_reset_html}
 {solar_html}
 <section><h2>Relationships, work and money</h2><h3>Relationships</h3><p>{escape(narrative.relationship_story)}</p><div class="two"><div><h3>Work</h3><p>{escape(narrative.work_note)}</p></div><div><h3>Money</h3><p>{escape(narrative.money_note)}</p></div></div></section>
 <section><div class="label">One question to sit with</div><blockquote>{escape(question)}</blockquote></section>
@@ -2240,6 +2334,11 @@ def render_daily_narrative_v3(
   </div>
 </section>
         """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        focus_reset_web_html(),
         unsafe_allow_html=True,
     )
 

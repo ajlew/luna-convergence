@@ -13,12 +13,22 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
     HRFlowable,
+    Image as RLImage,
+    KeepTogether,
     PageBreak,
     PageTemplate,
     Paragraph,
     Spacer,
     Table,
     TableStyle,
+)
+
+from luna_focus_reset import (
+    FOCUS_RESET_ASSET,
+    FOCUS_RESET_CUE,
+    FOCUS_RESET_DURATION,
+    FOCUS_RESET_LABEL,
+    FOCUS_RESET_METHOD,
 )
 
 
@@ -149,6 +159,35 @@ def _simple_table(rows: list[tuple[str, str]], styles, widths=None) -> Table:
     return table
 
 
+def _focus_reset_card(styles: dict[str, ParagraphStyle]):
+    """Render Luna's signature ritual as a compact, non-instructional strip."""
+    image_cell = Spacer(22 * mm, 22 * mm)
+    if FOCUS_RESET_ASSET.exists():
+        image_cell = RLImage(str(FOCUS_RESET_ASSET), width=22 * mm, height=22 * mm)
+
+    copy = [
+        Paragraph(_safe(FOCUS_RESET_LABEL), styles["label"]),
+        Paragraph(_safe(FOCUS_RESET_METHOD), styles["h2"]),
+        Paragraph(_safe(FOCUS_RESET_CUE), styles["body"]),
+    ]
+    duration = Paragraph(_safe(FOCUS_RESET_DURATION), styles["small"])
+    table = Table(
+        [[image_cell, copy, duration]],
+        colWidths=[27 * mm, PAGE_WIDTH - 2 * MARGIN_X - 58 * mm, 31 * mm],
+    )
+    table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.7, colors.black),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.7, colors.black),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+    ]))
+    return KeepTogether([Spacer(1, 3 * mm), table, Spacer(1, 2 * mm)])
+
+
 def _matrix_flowables(markdown: str, styles) -> list:
     lines = [line.strip() for line in str(markdown or "").splitlines() if line.strip()]
     table_lines = [line for line in lines if line.startswith("|") and line.endswith("|")]
@@ -220,6 +259,7 @@ def build_daily_report_pdf(narrative, solar: dict | None = None, *, include_evid
     story.append(_two_column_box("Weather / today", narrative.emotional_weather, "Climate / longer current", narrative.long_term_current, styles))
     story.extend(_section("Hidden opportunity", styles))
     story.append(Paragraph(_safe(narrative.hidden_opportunity), styles["body"]))
+    story.append(_focus_reset_card(styles))
 
     if solar:
         solar_rows = [

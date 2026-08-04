@@ -13,6 +13,7 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
     HRFlowable,
+    Image as RLImage,
     KeepTogether,
     NextPageTemplate,
     PageBreak,
@@ -24,6 +25,13 @@ from reportlab.platypus import (
 )
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
+from luna_focus_reset import (
+    FOCUS_RESET_ASSET,
+    FOCUS_RESET_CUE,
+    FOCUS_RESET_DURATION,
+    FOCUS_RESET_LABEL,
+    FOCUS_RESET_METHOD,
+)
 
 
 BRAND = "Luna Convergence"
@@ -227,6 +235,36 @@ def _small_card(label: str, value: str, styles: dict, dark: bool = False):
     return card
 
 
+def _focus_reset_card(styles: dict):
+    image_cell = Spacer(18 * mm, 18 * mm)
+    if FOCUS_RESET_ASSET.exists():
+        image_cell = RLImage(str(FOCUS_RESET_ASSET), width=18 * mm, height=18 * mm)
+
+    copy = [
+        _p(FOCUS_RESET_LABEL.upper(), styles["label"]),
+        Spacer(1, .7 * mm),
+        _p(FOCUS_RESET_METHOD, styles["card_hook"]),
+        _p(FOCUS_RESET_CUE, styles["sans_small"]),
+    ]
+    duration = _p(FOCUS_RESET_DURATION.upper(), styles["label"])
+    table = Table(
+        [[image_cell, copy, duration]],
+        colWidths=[23 * mm, CONTENT_WIDTH - 49 * mm, 26 * mm],
+        hAlign="LEFT",
+    )
+    table.setStyle(TableStyle([
+        ("LINEABOVE", (0, 0), (-1, 0), .6, INK),
+        ("LINEBELOW", (0, 0), (-1, -1), .6, INK),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+    ]))
+    return KeepTogether([table])
+
+
 def _cover(narrative, styles: dict):
     focus_line = narrative.main_focus
     if narrative.personal_question:
@@ -421,7 +459,13 @@ def _strategy(narrative, styles: dict):
         ("TOPPADDING", (0, 0), (-1, -1), 4 * mm),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4 * mm),
     ]))
-    story.extend([_p("THREE MOVES FOR THE MONTH", styles["kicker"]), action_box, Spacer(1, 5 * mm)])
+    story.extend([
+        _p("THREE MOVES FOR THE MONTH", styles["kicker"]),
+        action_box,
+        Spacer(1, 3 * mm),
+        _focus_reset_card(styles),
+        Spacer(1, 4 * mm),
+    ])
     story.append(_p("Key dates", styles["hook"]))
 
     featured_dates = list(narrative.key_dates[:6])
