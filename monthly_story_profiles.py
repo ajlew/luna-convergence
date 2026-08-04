@@ -461,10 +461,23 @@ def story_profile_for(
         condition=destination["condition"],
     )
     theme_axis = f"{source['axis']} x {destination['axis']}"
+    destination_story = {
+        1: "attention shifts toward the direction that feels genuinely yours",
+        2: "the real value and cost of the choice become clearer",
+        3: "the right words, facts or next move give it direction",
+        4: "the question becomes where it can live in private life",
+        5: "joy and creative response show which version deserves more room",
+        6: "attention shifts toward the rhythm that could help it grow in real life",
+        7: "mutual effort shows whether the connection can continue",
+        8: "trust, shared resources and clear boundaries decide what can continue",
+        9: "the wider possibility needs a path, application or journey",
+        10: "the strongest possibility moves toward a visible result",
+        11: "the right people and future direction decide what can grow",
+        12: "closure and private renewal clear space for what comes next",
+    }[secondary_house]
     central_storyline = (
-        f"The first signal arrives through {opening_scenario['noun']} and touches {opening_role_house['short']}. "
-        f"The month’s larger movement runs from {source['short']} toward {destination['short']}, "
-        f"revealing which version can keep growing."
+        f"The month opens through {opening_scenario['noun']}. "
+        f"As it develops, {destination_story}."
     )
 
     act_hooks = (
@@ -493,12 +506,14 @@ def story_profile_for(
         f"What remains should strengthen {destination['short']} without abandoning what first made the opening feel alive."
     )
 
+    # Keep the practical close in a natural decision order:
+    # identify the subject, clarify its next stage, then act on the destination.
     action_candidates = (
-        opening_scenario["move"],
-        complication_scenario["move"],
-        climax_scenario["move"],
         source["opening_action"],
+        complication_scenario["move"],
         destination["destination_action"],
+        opening_scenario["move"],
+        climax_scenario["move"],
     )
     action_items: list[str] = []
     for item in action_candidates:
@@ -518,8 +533,8 @@ def story_profile_for(
     }[SIGN_META.get(sign, {"element": "air"})["element"]]
 
     overview_copy = (
-        f"The opening grows through {opening_role_house['short']}; the middle reveals {complication_scenario['clarity']}.",
-        f"The closing stretch moves through {climax_role_house['short']} and favours the version that gives {destination['short']} a clear, workable form.",
+        f"The opening gathers momentum; the middle reveals {complication_scenario['clarity']}.",
+        f"Late in the month, {climax_scenario['noun']} gives the strongest option a clearer, workable form.",
     )
 
     return MonthlyStoryProfile(

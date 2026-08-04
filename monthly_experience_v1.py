@@ -425,7 +425,7 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-opening-story">
   <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
   <h2>{_safe(narrative.central_storyline)}</h2>
-  <p class="luna-opening-rule">The month unfolds in sequence: the opening gathers momentum, the meaning sharpens, consistency becomes visible and the strongest option earns its place.</p>
+  <p class="luna-opening-rule">Momentum builds first. Meaning sharpens next. By late month, the strongest possibility has found a workable form.</p>
   <div class="luna-do-dont luna-do-dont-light">
     <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
     <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
@@ -587,11 +587,19 @@ def build_monthly_experience_html(
   padding:clamp(2.25rem,5vw,4.3rem) clamp(1rem,4vw,3.2rem);
   border-bottom:1px solid var(--black);
 }}
+.luna-opening-story {{
+  break-inside:avoid;
+  page-break-inside:avoid;
+}}
 .luna-opening-story h2 {{
-  max-width:780px;
-  margin:.45rem 0 1.35rem;
-  font-size:clamp(2.25rem,5vw,4.45rem);
-  line-height:.98;
+  max-width:46rem;
+  margin:.55rem 0 1.25rem;
+  font-size:clamp(1.65rem,3.1vw,2.75rem);
+  line-height:1.17;
+  text-align:justify;
+  text-justify:inter-word;
+  hyphens:auto;
+  text-wrap:pretty;
 }}
 .luna-story-prose {{
   max-width:760px;
@@ -932,6 +940,13 @@ def build_monthly_experience_html(
   cursor:pointer;
 }}
 @media (max-width:720px) {{
+  .luna-opening-story h2 {{
+    max-width:100%;
+    font-size:1.65rem;
+    line-height:1.24;
+    text-align:left;
+    hyphens:none;
+  }}
   .luna-monthly-meta,
   .luna-hero-theme,
   .luna-do-dont,

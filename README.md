@@ -542,3 +542,13 @@ Daily remains unchanged, Yearly remains hidden, and the private Monthly preview 
 - The Monthly "Why Luna sees this" panel now displays role -> house -> scenario -> supporting events.
 - Canonical filenames: `2026-08-03_Aries_Daily.pdf` and `2026-08_Aries_Monthly.pdf`.
 
+
+## v2.9.7.2 - Monthly Opening Typography and Copy Polish
+
+- Reduced and widened the web `Luna Says` block so it reads as body copy rather than a second hero headline.
+- Added desktop justification and preserved left alignment on mobile.
+- Kept the opening block together during printing where space permits.
+- Replaced repeated house labels with a shorter customer-facing storyline.
+- Simplified the opening sequence line.
+- Reordered final Monthly actions as identify, clarify, act.
+- Preserved the v2.9.7 Universal Monthly Evidence Engine and v2.9.7.1 reliability fixes.
