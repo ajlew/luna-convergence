@@ -63,11 +63,16 @@ def main() -> None:
         assert GATEKEEPER_LINE in html
         assert "@page" in html
         assert "Include evidence" not in html
-        assert "open=true" in html or "open = true" in html
 
-    assert "A4 portrait" in monthly_html
-    assert "isolatedReportClone" in monthly_html
-    assert 'document.createElement("iframe")' in monthly_html
+    # Monthly keeps evidence collapsed on screen and uses a searchable server PDF.
+    assert "<details>" in monthly_html
+    assert "<details open" not in monthly_html
+    # Yearly retains its legacy browser print expansion while hidden from customers.
+    assert "open=true" in yearly_html or "open = true" in yearly_html
+
+    assert "Print or save report" not in monthly_html
+    assert "isolatedReportClone" not in monthly_html
+    assert 'document.createElement("iframe")' not in monthly_html
     assert "Evidence-to-scenario trace" in monthly_html
     assert "luna-print-paper" in yearly_html
     assert "luna-print-orientation" in yearly_html

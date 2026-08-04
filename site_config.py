@@ -11,7 +11,7 @@ def _environment_flag(name: str, default: bool = False) -> bool:
 
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna Monthly Opening Polish v2.9.7.2"
+BUILD_LABEL = "Luna Download-Only Report Controls v2.9.7.3"
 
 # Public deployments are customer-only by default. The Windows editorial
 # launchers set LUNA_EDITOR_PREVIEW=1 so Yearly and inventory tools remain

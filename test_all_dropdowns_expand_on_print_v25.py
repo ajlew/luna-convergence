@@ -33,13 +33,12 @@ def yearly_result() -> dict:
 
 
 def check_monthly(html: str) -> None:
-    assert 'querySelectorAll("details")' in html
-    assert "detail.open = true" in html or "detail.open=true" in html
-    assert 'detail.setAttribute("open", "")' in html or 'detail.setAttribute("open","")' in html
-    assert "isolatedReportClone" in html
-    assert 'document.createElement("iframe")' in html
-    assert "destroyLegacyPrintArtifacts" in html
-    assert "document.body.appendChild(printPortal)" not in html
+    # Monthly browser printing was retired in v2.9.7.3. Evidence remains
+    # collapsed on the page and the searchable server-generated PDF is used.
+    assert "Print or save report" not in html
+    assert "luna-print-report" not in html
+    assert "isolatedReportClone" not in html
+    assert 'document.createElement("iframe")' not in html
     assert "<details>" in html
     assert "<details open" not in html
 

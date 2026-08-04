@@ -552,3 +552,13 @@ Daily remains unchanged, Yearly remains hidden, and the private Monthly preview 
 - Simplified the opening sequence line.
 - Reordered final Monthly actions as identify, clarify, act.
 - Preserved the v2.9.7 Universal Monthly Evidence Engine and v2.9.7.1 reliability fixes.
+
+
+## v2.9.7.3 - Download-Only Report Controls
+
+- Removed the non-working Monthly `Print or save report` control and its A4 status block.
+- Removed the two browser-print controls from Daily.
+- Kept only reliable server-generated PDF downloads.
+- Monthly searchable A4 PDF button now uses Luna's black primary style.
+- Both Daily PDF download buttons now use the same black primary style.
+- Download clicks no longer rerun the Streamlit page.

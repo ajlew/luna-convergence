@@ -41,13 +41,8 @@ def main() -> None:
         "Solar Convergence",
         "Key dates and planetary timing",
         "Full technical evidence",
-        "Print or save report",
-        "A4",
-        "A3",
-        "Portrait",
-        "Landscape",
-        "window.print()",
-        "@media print",
+        "Evidence-to-scenario trace",
+        "@page",
     ):
         assert required in html, required
 
@@ -67,9 +62,11 @@ def main() -> None:
     assert "Include evidence" not in html
     assert "Monthly arc equation" not in html
     assert "luna-arc-card" not in html
-    assert "detail.open = true" in html
+    assert "Print or save report" not in html
+    assert "luna-print-report" not in html
+    assert "isolatedReportClone" not in html
+    assert 'document.createElement("iframe")' not in html
     assert "position:sticky" not in html
-    assert "min-height:0 !important" in html
 
     print("Monthly four-act webpage tests passed.")
 

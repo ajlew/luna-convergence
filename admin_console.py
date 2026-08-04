@@ -254,9 +254,8 @@ if result:
             )
 
             st.caption(
-                "Customer webpage preview — read it here, then use "
-                "'Print or save report' inside the page. The browser creates the "
-                "PDF from the same Luna layout and fonts."
+                "Customer webpage preview — read it here, then use the black "
+                "'Download searchable A4 Monthly PDF' button below the report."
             )
             render_monthly_experience(
                 customer_narrative,

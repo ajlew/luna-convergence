@@ -85,11 +85,14 @@ def main() -> None:
         evidence_names = [item.evidence.casefold() for item in narrative.key_dates]
         assert len(evidence_names) == len(set(evidence_names)), (sign, evidence_names)
 
-        # Browser printing removes stale clones and switches to extraction-safe fonts.
-        assert "stalePrintPortals" in html
-        assert 'className = "luna-print-portal"' in html
-        assert "font-family:Arial,Helvetica,sans-serif" in html
-        assert "font-family:Georgia" in html
+        # Browser print controls are removed; the server-generated searchable
+        # A4 PDF is the only customer output path.
+        assert "Print or save report" not in html
+        assert "isolatedReportClone" not in html
+        assert 'document.createElement("iframe")' not in html
+        assert "Evidence-to-scenario trace" in html
+        assert 'font-family:"Josefin Sans"' in html
+        assert 'font-family:"Bodoni MT"' in html
 
     assert len(headlines) == 12
     assert len(relationship_questions) == 12

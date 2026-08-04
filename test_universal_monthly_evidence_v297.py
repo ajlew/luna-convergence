@@ -98,14 +98,14 @@ def main() -> None:
             evidence_names = [item.evidence.casefold() for item in narrative.key_dates]
             assert len(evidence_names) == len(set(evidence_names)), (sign, month, evidence_names)
 
-            # Existing Luna format remains, while printing uses one isolated A4 window.
-            assert "isolatedReportClone" in html
-            assert "destroyLegacyPrintArtifacts" in html
-            assert 'document.createElement("iframe")' in html
+            # Existing Luna format remains; browser printing is removed in favour
+            # of the server-generated searchable A4 PDF.
+            assert "Print or save report" not in html
+            assert "isolatedReportClone" not in html
+            assert 'document.createElement("iframe")' not in html
             assert "Evidence-to-scenario trace" in html
-            assert "document.body.appendChild(printPortal)" not in html
-            assert "font-family:Arial,Helvetica,sans-serif" in html
-            assert "font-family:Georgia" in html
+            assert 'font-family:"Josefin Sans"' in html
+            assert 'font-family:"Bodoni MT"' in html
 
             monthly_headlines.add(narrative.hook_headline)
             monthly_pairs.add((arc["primary_house"], arc["secondary_house"]))

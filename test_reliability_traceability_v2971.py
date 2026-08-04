@@ -90,13 +90,10 @@ def main() -> None:
         narrative = build_monthly_narrative(result)
         html = build_monthly_experience_html(narrative, result, show_print=True, preview=False)
         assert "Evidence-to-scenario trace" in html
-        assert "isolatedReportClone" in html
-        assert "destroyLegacyPrintArtifacts" in html
-        assert 'document.createElement("iframe")' in html
-        assert "document.body.appendChild(printPortal)" not in html
-        assert "A4 portrait" in html
-        assert 'querySelectorAll("details")' in html
-        assert 'detail.setAttribute("open", "")' in html
+        assert "Print or save report" not in html
+        assert "isolatedReportClone" not in html
+        assert 'document.createElement("iframe")' not in html
+        assert "<details>" in html
         assert len(result["monthly_arc"].get("mapping_audit") or []) >= 3
 
     # Searchable Monthly PDF uses canonical name and contains one sign only.

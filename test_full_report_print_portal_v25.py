@@ -47,13 +47,11 @@ def main() -> None:
         show_print=True,
     )
 
-    assert "isolatedReportClone" in monthly_html
-    assert "destroyLegacyPrintArtifacts" in monthly_html
-    assert 'document.createElement("iframe")' in monthly_html
-    assert 'querySelectorAll("details")' in monthly_html
-    assert 'detail.setAttribute("open", "")' in monthly_html or 'detail.setAttribute("open","")' in monthly_html
-    assert "document.body.appendChild(printPortal)" not in monthly_html
-    assert "A4 portrait" in monthly_html
+    assert "Print or save report" not in monthly_html
+    assert "isolatedReportClone" not in monthly_html
+    assert 'document.createElement("iframe")' not in monthly_html
+    assert "luna-print-report" not in monthly_html
+    assert "<details>" in monthly_html
 
     assert "luna-year-print-portal" in yearly_html
     assert "luna-year-print-active" in yearly_html

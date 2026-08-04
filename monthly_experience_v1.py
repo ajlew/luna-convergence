@@ -272,21 +272,6 @@ def _life_rows(narrative: MonthlyNarrative) -> str:
     )
 
 
-def _print_controls(
-    default_paper: str,
-    default_orientation: str,
-) -> str:
-    del default_paper, default_orientation
-    return """
-<div class="luna-print-controls">
-  <div class="luna-print-format">
-    <strong>A4 portrait</strong>
-    <span>All evidence sections open in an isolated print window.</span>
-  </div>
-  <button id="luna-print-report" type="button">Print or save report</button>
-</div>
-    """
-
 
 def build_monthly_experience_html(
     narrative: MonthlyNarrative,
@@ -487,11 +472,9 @@ def build_monthly_experience_html(
 </section>
         """
 
-    controls = (
-        _print_controls(default_paper, default_orientation)
-        if show_print
-        else ""
-    )
+    # Browser print controls were removed in v2.9.7.3. The reliable
+    # customer action is the server-generated searchable A4 PDF below.
+    controls = ""
 
     return f"""
 <style id="luna-print-page-size">
@@ -1089,81 +1072,6 @@ def build_monthly_experience_html(
   {controls}
 </div>
 
-<script>
-(() => {{
-  const report = document.getElementById("luna-monthly-report");
-  const printButton = document.getElementById("luna-print-report");
-
-  function destroyLegacyPrintArtifacts() {{
-    document.querySelectorAll(".luna-print-portal, #luna-print-portal, iframe[data-luna-print-frame]").forEach((node) => node.remove());
-    document.body.classList.remove("luna-print-active");
-    window.__lunaMonthlyPrintFrame = null;
-  }}
-
-  function isolatedReportClone() {{
-    const clone = report.cloneNode(true);
-    clone.id = "luna-monthly-report-print";
-    clone.dataset.printPaper = "A4";
-    clone.dataset.printOrientation = "portrait";
-    clone.querySelectorAll(".luna-print-controls, script").forEach((node) => node.remove());
-    clone.querySelectorAll("details").forEach((detail) => {{
-      detail.open = true;
-      detail.setAttribute("open", "");
-    }});
-    return clone;
-  }}
-
-  function styleMarkup() {{
-    return Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-      .map((node) => node.outerHTML)
-      .join("\n");
-  }}
-
-  async function printIsolatedReport() {{
-    destroyLegacyPrintArtifacts();
-    const clone = isolatedReportClone();
-    const filename = report.dataset.printFilename || "Luna_Monthly";
-    const frame = document.createElement("iframe");
-    frame.setAttribute("data-luna-print-frame", "monthly");
-    frame.setAttribute("title", "Luna Monthly print document");
-    frame.style.position = "fixed";
-    frame.style.right = "0";
-    frame.style.bottom = "0";
-    frame.style.width = "1px";
-    frame.style.height = "1px";
-    frame.style.border = "0";
-    frame.style.opacity = "0";
-    document.body.appendChild(frame);
-    window.__lunaMonthlyPrintFrame = frame;
-    const target = frame.contentWindow;
-    const targetDocument = frame.contentDocument || target.document;
-    targetDocument.open();
-    targetDocument.write(
-      '<!doctype html><html><head><meta charset="utf-8"><title>' + filename + '</title>' +
-      styleMarkup() +
-      '<style>@page{{size:A4 portrait;margin:12mm}}html,body{{margin:0!important;padding:0!important;background:#fff!important}}' +
-      '.luna-monthly-report{{width:100%!important;max-width:none!important;margin:0!important;font-family:Arial,Helvetica,sans-serif!important;word-spacing:.04em!important}}' +
-      '.luna-monthly-report h1,.luna-monthly-report h2,.luna-monthly-report h3{{font-family:Georgia,"Times New Roman",serif!important;letter-spacing:0!important}}' +
-      '.luna-print-controls{{display:none!important}}details{{display:block!important}}details>*:not(summary){{display:block!important;height:auto!important;max-height:none!important;overflow:visible!important}}' +
-      'summary span{{display:none!important}}tr,article,section,.luna-story-act,.luna-date-card{{break-inside:avoid;page-break-inside:avoid}}</style>' +
-      '</head><body>' + clone.outerHTML + '</body></html>'
-    );
-    targetDocument.close();
-    targetDocument.title = filename;
-    if (targetDocument.fonts && targetDocument.fonts.ready) await targetDocument.fonts.ready;
-    const cleanup = () => {{
-      if (frame.isConnected) frame.remove();
-      window.__lunaMonthlyPrintFrame = null;
-    }};
-    target.addEventListener("afterprint", cleanup, {{once:true}});
-    target.setTimeout(() => {{ target.focus(); target.print(); }}, 220);
-    window.setTimeout(() => {{ if (frame.isConnected) cleanup(); }}, 120000);
-  }}
-
-  destroyLegacyPrintArtifacts();
-  printButton?.addEventListener("click", printIsolatedReport);
-}})();
-</script>
     """
 
 
@@ -1206,5 +1114,7 @@ def render_monthly_experience(
             file_name=report_filename(result),
             mime="application/pdf",
             key=f"monthly-searchable-pdf-{narrative.sign}-{result.get('start', narrative.label)}-{order_reference or 'preview'}",
+            type="primary",
+            on_click="ignore",
             use_container_width=True,
         )

@@ -40,12 +40,14 @@ def main() -> None:
         "Sun conjunction Jupiter",
         "Full Moon in Aquarius",
         "luna-evidence-path",
-        "luna-print-portal",
-        "cloneNode(true)",
-        "requestAnimationFrame(expandAllPrintDetails)",
+        "Evidence-to-scenario trace",
     ):
         assert required in html, required
 
+
+    assert "Print or save report" not in html
+    assert "isolatedReportClone" not in html
+    assert 'document.createElement("iframe")' not in html
     assert html.count('class="luna-story-act"') == 4
     assert html.count('class="luna-story-date-card"') == 4
     assert "Include evidence" not in html

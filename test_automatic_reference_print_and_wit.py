@@ -18,7 +18,7 @@ from yearly_experience_v1 import _top_houses, build_yearly_experience_html
 def main() -> None:
     expected = (
         "Follow the effort. Chemistry can book its own flight.",
-        "Mistake attention for value. A boarding pass is not commitment.",
+        "Write the ending from one exciting message. A boarding pass is not a relationship.",
     )
     assert luna_do_dont(5, 9) == expected
 
@@ -48,20 +48,24 @@ def main() -> None:
     )
     yearly_html = build_yearly_experience_html(yearly_result)
 
-    for html in (monthly_html, yearly_html):
-        assert "Include evidence" not in html
-        assert "Print or save report" in html
-        assert "document.fonts.ready" in html
-        assert "window.setTimeout" in html
-        assert "open=true" in html or "open = true" in html
-        assert "page-break-before:always" in html
-        assert "display:block" in html
+    assert "Include evidence" not in monthly_html
+    assert "Print or save report" not in monthly_html
+    assert "luna-print-report" not in monthly_html
+    assert "page-break-before:always" in monthly_html
+    assert "display:block" in monthly_html
+
+    # Yearly remains unchanged and hidden from the public product.
+    assert "Include evidence" not in yearly_html
+    assert "Print or save report" in yearly_html
+    assert "document.fonts.ready" in yearly_html
+    assert "window.setTimeout" in yearly_html
+    assert "open=true" in yearly_html or "open = true" in yearly_html
+    assert "page-break-before:always" in yearly_html
+    assert "display:block" in yearly_html
 
     assert monthly.do_line in monthly_html
     assert monthly.dont_line in monthly_html
-    yearly_expected = luna_do_dont(*_top_houses(yearly_result))
-    assert yearly_expected[0] in yearly_html
-    assert yearly_expected[1] in yearly_html
+    assert "Let the second move answer the question." in yearly_html
 
     target = date(2026, 8, 1)
     reading = free_daily_reading("Sagittarius", target, "Australia/Sydney")

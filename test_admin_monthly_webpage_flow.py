@@ -8,7 +8,7 @@ def main() -> None:
     assert "render_monthly_experience" in admin
     assert "Customer webpage preview" in admin
     assert "Download customer webpage" in admin
-    assert "Print or save report" in admin
+    assert "Download searchable A4 Monthly PDF" in admin
     assert "Internal backup and calculation output" in admin
     assert "Download legacy backup PDF" in admin
     assert "customer webpage or printed report" in admin

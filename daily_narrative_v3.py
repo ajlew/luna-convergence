@@ -2187,61 +2187,6 @@ table{{width:100%;border-collapse:collapse;margin:2mm 0 4mm}} th,td{{padding:2.2
 </main></body></html>"""
 
 
-def _daily_print_controls_html(narrative: DailyNarrative, solar: dict | None) -> str:
-    customer_html = _daily_print_document_html(narrative, solar, include_evidence=False)
-    full_html = _daily_print_document_html(narrative, solar, include_evidence=True)
-    base_name = f"{narrative.reading_date.isoformat()}_{narrative.sign}_Daily"
-    return f"""
-<style>
-.luna-daily-output-controls{{display:flex;gap:.65rem;flex-wrap:wrap;margin:.75rem 0 1rem}}
-.luna-daily-output-controls button{{border:1px solid #050505;background:#fff;color:#050505;padding:.65rem .8rem;font:600 .7rem 'Courier New',monospace;text-transform:uppercase;cursor:pointer}}
-.luna-daily-output-controls button.primary{{background:#050505;color:#fff}}
-</style>
-<div class="luna-daily-output-controls">
-  <button id="luna-print-daily-customer">Print Daily Reading</button>
-  <button class="primary" id="luna-print-daily-full">Print Full Daily + Evidence</button>
-</div>
-<script>
-(() => {{
-  const customerHtml = {json.dumps(customer_html)};
-  const fullHtml = {json.dumps(full_html)};
-  const title = {json.dumps(base_name)};
-  function printIsolated(html) {{
-    document.querySelectorAll('iframe[data-luna-print-frame="daily"]').forEach((node) => node.remove());
-    const frame = document.createElement('iframe');
-    frame.setAttribute('data-luna-print-frame', 'daily');
-    frame.setAttribute('title', 'Luna Daily print document');
-    frame.style.position = 'fixed';
-    frame.style.right = '0';
-    frame.style.bottom = '0';
-    frame.style.width = '1px';
-    frame.style.height = '1px';
-    frame.style.border = '0';
-    frame.style.opacity = '0';
-    document.body.appendChild(frame);
-    const target = frame.contentWindow;
-    const targetDocument = frame.contentDocument || target.document;
-    targetDocument.open();
-    targetDocument.write(html);
-    targetDocument.close();
-    targetDocument.title = title;
-    const cleanup = () => {{ if (frame.isConnected) frame.remove(); }};
-    const run = async () => {{
-      if (targetDocument.fonts && targetDocument.fonts.ready) await targetDocument.fonts.ready;
-      target.focus();
-      target.print();
-    }};
-    target.addEventListener('afterprint', cleanup, {{once:true}});
-    target.setTimeout(run, 180);
-    window.setTimeout(() => {{ if (frame.isConnected) cleanup(); }}, 120000);
-  }}
-  document.getElementById('luna-print-daily-customer')?.addEventListener('click', () => printIsolated(customerHtml));
-  document.getElementById('luna-print-daily-full')?.addEventListener('click', () => printIsolated(fullHtml));
-}})();
-</script>
-"""
-
-
 def render_daily_narrative_v3(
     narrative: DailyNarrative,
     solar: dict | None = None,
@@ -2517,11 +2462,8 @@ def render_daily_narrative_v3(
         st.markdown("### The 12-house reference matrix")
         st.markdown(narrative.house_matrix)
 
-    st.html(
-        _daily_print_controls_html(narrative, solar),
-        unsafe_allow_javascript=True,
-    )
-
+    # The unreliable browser-print controls were removed. Customers now use
+    # the two server-generated searchable PDF downloads below.
     from daily_report_pdf import build_daily_report_pdf, daily_report_filename
 
     download_left, download_right = st.columns(2, gap="medium")
@@ -2532,6 +2474,8 @@ def render_daily_narrative_v3(
             file_name=daily_report_filename(narrative),
             mime="application/pdf",
             key=f"daily-pdf-customer-{narrative.sign}-{narrative.reading_date.isoformat()}",
+            type="primary",
+            on_click="ignore",
             use_container_width=True,
         )
     with download_right:
@@ -2541,5 +2485,7 @@ def render_daily_narrative_v3(
             file_name=daily_report_filename(narrative),
             mime="application/pdf",
             key=f"daily-pdf-full-{narrative.sign}-{narrative.reading_date.isoformat()}",
+            type="primary",
+            on_click="ignore",
             use_container_width=True,
         )
