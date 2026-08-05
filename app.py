@@ -54,8 +54,6 @@ from site_config import (
     BRAND_NAME,
     BUILD_LABEL,
     EDITOR_PREVIEW_ENABLED,
-    PUBLIC_YEARLY_ENABLED,
-    MONTHLY_PREVIEW_BYPASS_ENABLED,
     TAGLINE,
     SUBTITLE,
     MONTHLY_PRICE,
@@ -93,20 +91,8 @@ REPORT_REQUEST_URL = secret("REPORT_REQUEST_URL")
 NEWSLETTER_URL = secret("NEWSLETTER_URL")
 CONTACT_EMAIL = secret("CONTACT_EMAIL", "your-email@example.com")
 GA_MEASUREMENT_ID = secret("GA_MEASUREMENT_ID", "G-TE5HPKV94D")
-
-
-def _truthy(value: str) -> bool:
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-# The private Monthly preview can be enabled either by a local environment
-# variable or by Streamlit Community Cloud secrets. It never enables Yearly.
-MONTHLY_PREVIEW_BYPASS_ACTIVE = (
-    MONTHLY_PREVIEW_BYPASS_ENABLED
-    or _truthy(secret("LUNA_MONTHLY_PREVIEW_BYPASS", "0"))
-)
-MONTHLY_PREVIEW_PIN = secret("LUNA_MONTHLY_PREVIEW_PIN", "")
-
+STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
+STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 DAILY_PAGE_REF = None
 
@@ -475,7 +461,7 @@ a {
 
 .question-list {
     display:grid;
-    grid-template-columns:1fr;
+    grid-template-columns:repeat(2, minmax(0,1fr));
     border-top:1px solid var(--black);
     border-left:1px solid var(--black);
 }
@@ -484,7 +470,7 @@ a {
     border-right:1px solid var(--black);
     border-bottom:1px solid var(--black);
     padding:1.2rem;
-    min-height:auto;
+    min-height:8.5rem;
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
     font-size:1.33rem;
     line-height:1.25;
@@ -1210,6 +1196,40 @@ def install_google_analytics(page_title: str, page_path: str) -> None:
     )
 
 
+def install_statcounter() -> None:
+    """Install the invisible Statcounter tracker once per visitor session."""
+    project_id = STATCOUNTER_PROJECT_ID.strip()
+    security_code = STATCOUNTER_SECURITY_CODE.strip()
+
+    if not project_id.isdigit() or not security_code:
+        return
+    if st.session_state.get("_statcounter_loaded", False):
+        return
+
+    st.html(
+        f"""
+<script>
+(() => {{
+  globalThis.sc_project = {int(project_id)};
+  globalThis.sc_invisible = 1;
+  globalThis.sc_security = {json.dumps(security_code)};
+  globalThis.sc_https = 1;
+
+  if (!document.getElementById('luna-statcounter-script')) {{
+    const script = document.createElement('script');
+    script.id = 'luna-statcounter-script';
+    script.async = true;
+    script.src = 'https://secure.statcounter.com/counter/counter.js';
+    document.head.appendChild(script);
+  }}
+}})();
+</script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+    st.session_state["_statcounter_loaded"] = True
+
+
 def track_event(event_name: str, parameters: dict | None = None) -> None:
     if not GA_MEASUREMENT_ID.startswith("G-"):
         return
@@ -1346,25 +1366,25 @@ def report_cta(
         unsafe_allow_html=True,
     )
 
-    monthly_card = f"""
-<div class="card monthly-only-card">
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown(
+            f"""
+<div class="card">
   <div class="eyebrow">Monthly strategic report</div>
   <div class="price">{MONTHLY_PRICE}</div>
-  <p>A complete monthly story with major transitions, relationship tests, work, money and the dates that change the decision.</p>
+  <p>Major transitions, convergence points, retrogrades, work, money, relationships and important dates.</p>
   <span class="pill">One star sign</span>
   <span class="pill">One month</span>
   <span class="pill">Personalised PDF</span>
   <span class="pill">Within 24 hours</span>
 </div>
-    """
-
-    if PUBLIC_YEARLY_ENABLED:
-        left, right = st.columns(2, gap="large")
-        with left:
-            st.markdown(monthly_card, unsafe_allow_html=True)
-        with right:
-            st.markdown(
-                f"""
+            """,
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            f"""
 <div class="card">
   <div class="eyebrow">Year-ahead strategic report</div>
   <div class="price">{YEARLY_PRICE}</div>
@@ -1374,19 +1394,16 @@ def report_cta(
   <span class="pill">Personalised PDF</span>
   <span class="pill">Within 24 hours</span>
 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        monthly_tab, yearly_tab = st.tabs(
-            [
-                f"Monthly report — {MONTHLY_PRICE}",
-                f"Year-ahead report — {YEARLY_PRICE}",
-            ]
+            """,
+            unsafe_allow_html=True,
         )
-    else:
-        st.markdown(monthly_card, unsafe_allow_html=True)
-        monthly_tab = st.container()
-        yearly_tab = None
+
+    monthly_tab, yearly_tab = st.tabs(
+        [
+            f"Monthly report — {MONTHLY_PRICE}",
+            f"Year-ahead report — {YEARLY_PRICE}",
+        ]
+    )
 
     with monthly_tab:
         pairs = month_choices()
@@ -1561,175 +1578,174 @@ def report_cta(
                 unsafe_allow_html=True,
             )
 
-    if yearly_tab is not None:
-        with yearly_tab:
-            years = year_choices()
-            chosen_default_year = (
-                prefill_year if prefill_year in years else default_year()
+    with yearly_tab:
+        years = year_choices()
+        chosen_default_year = (
+            prefill_year if prefill_year in years else default_year()
+        )
+        chosen_default_sign = (
+            prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
+        )
+
+        with st.form(f"{key_context}-yearly-checkout"):
+            st.markdown("### Choose your year-ahead report")
+            y1, y2 = st.columns(2)
+            with y1:
+                delivery_email = st.text_input(
+                    "Delivery email",
+                    key=f"{key_context}-yearly-email",
+                    placeholder="name@example.com",
+                )
+                sign = st.selectbox(
+                    "Your star sign",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-yearly-sign",
+                    help="Use your Sun sign unless you know and prefer your rising sign.",
+                )
+            with y2:
+                selected_year = st.selectbox(
+                    "Calendar year",
+                    years,
+                    index=years.index(chosen_default_year),
+                    key=f"{key_context}-yearly-period",
+                )
+                timezone_name = st.selectbox(
+                    "Timezone",
+                    TIMEZONES,
+                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    key=f"{key_context}-yearly-timezone",
+                )
+            nearest_city = st.text_input(
+                "Nearest city (optional)",
+                value=prefill_city or "",
+                key=f"{key_context}-yearly-city",
+                placeholder=representative_city_name(timezone_name),
+                help=city_input_help(timezone_name),
             )
-            chosen_default_sign = (
-                prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
+            main_focus = st.selectbox(
+                "Main priority for the year",
+                YEARLY_FOCUS_CHOICES,
+                key=f"{key_context}-yearly-focus",
+                help="This guides which themes receive extra emphasis in the personalised PDF.",
+            )
+            personal_question = st.text_area(
+                "Optional decision or transition",
+                key=f"{key_context}-yearly-question",
+                max_chars=QUESTION_MAX_CHARS,
+                placeholder="Is there a major decision, relationship or transition to consider?",
+                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters so the request can travel with the Stripe order reference.",
+            )
+            st.caption(
+                "Manual delivery during launch: your personalised PDF is emailed within 24 hours after payment."
+            )
+            submitted = st.form_submit_button(
+                f"Prepare year-ahead checkout — {YEARLY_PRICE}",
+                type="primary",
+                use_container_width=True,
             )
 
-            with st.form(f"{key_context}-yearly-checkout"):
-                st.markdown("### Choose your year-ahead report")
-                y1, y2 = st.columns(2)
-                with y1:
-                    delivery_email = st.text_input(
-                        "Delivery email",
-                        key=f"{key_context}-yearly-email",
-                        placeholder="name@example.com",
-                    )
-                    sign = st.selectbox(
-                        "Your star sign",
-                        SIGNS,
-                        index=SIGNS.index(chosen_default_sign),
-                        key=f"{key_context}-yearly-sign",
-                        help="Use your Sun sign unless you know and prefer your rising sign.",
-                    )
-                with y2:
-                    selected_year = st.selectbox(
-                        "Calendar year",
-                        years,
-                        index=years.index(chosen_default_year),
-                        key=f"{key_context}-yearly-period",
-                    )
-                    timezone_name = st.selectbox(
-                        "Timezone",
-                        TIMEZONES,
-                        index=TIMEZONES.index(DEFAULT_TIMEZONE),
-                        key=f"{key_context}-yearly-timezone",
-                    )
-                nearest_city = st.text_input(
-                    "Nearest city (optional)",
-                    value=prefill_city or "",
-                    key=f"{key_context}-yearly-city",
-                    placeholder=representative_city_name(timezone_name),
-                    help=city_input_help(timezone_name),
+        state_key = f"prepared-order::{key_context}::yearly"
+        if submitted:
+            if not valid_email(delivery_email):
+                st.error("Enter a valid delivery email before continuing to payment.")
+                st.session_state.pop(state_key, None)
+            else:
+                period_code = str(selected_year)
+                reference = build_order_reference(
+                    "YEAR",
+                    sign,
+                    period_code,
+                    timezone_name,
+                    _order_token(key_context, "YEAR"),
+                    main_focus=main_focus,
+                    personal_question=personal_question,
+                    nearest_city=nearest_city,
                 )
-                main_focus = st.selectbox(
-                    "Main priority for the year",
-                    YEARLY_FOCUS_CHOICES,
-                    key=f"{key_context}-yearly-focus",
-                    help="This guides which themes receive extra emphasis in the personalised PDF.",
+                checkout_url = build_stripe_checkout_url(
+                    YEARLY_PAYMENT_URL,
+                    delivery_email,
+                    reference,
+                    f"year-{period_code}-{sign}",
                 )
-                personal_question = st.text_area(
-                    "Optional decision or transition",
-                    key=f"{key_context}-yearly-question",
-                    max_chars=QUESTION_MAX_CHARS,
-                    placeholder="Is there a major decision, relationship or transition to consider?",
-                    help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters so the request can travel with the Stripe order reference.",
+                location, location_basis = resolve_location(
+                    nearest_city,
+                    timezone_name,
                 )
-                st.caption(
-                    "Manual delivery during launch: your personalised PDF is emailed within 24 hours after payment."
-                )
-                submitted = st.form_submit_button(
-                    f"Prepare year-ahead checkout — {YEARLY_PRICE}",
-                    type="primary",
-                    use_container_width=True,
-                )
-
-            state_key = f"prepared-order::{key_context}::yearly"
-            if submitted:
-                if not valid_email(delivery_email):
-                    st.error("Enter a valid delivery email before continuing to payment.")
-                    st.session_state.pop(state_key, None)
-                else:
-                    period_code = str(selected_year)
-                    reference = build_order_reference(
-                        "YEAR",
-                        sign,
-                        period_code,
-                        timezone_name,
-                        _order_token(key_context, "YEAR"),
-                        main_focus=main_focus,
-                        personal_question=personal_question,
-                        nearest_city=nearest_city,
-                    )
-                    checkout_url = build_stripe_checkout_url(
-                        YEARLY_PAYMENT_URL,
-                        delivery_email,
-                        reference,
-                        f"year-{period_code}-{sign}",
-                    )
-                    location, location_basis = resolve_location(
-                        nearest_city,
-                        timezone_name,
-                    )
-                    st.session_state[state_key] = {
-                        "report_name": "Year-Ahead Strategic Report",
-                        "email": delivery_email.strip(),
-                        "sign": sign,
-                        "period": f"Calendar year {selected_year}",
-                        "period_code": period_code,
-                        "timezone": timezone_name,
-                        "nearest_city": location.name,
-                        "location_basis": location_basis,
-                        "main_focus": main_focus,
-                        "personal_question": personal_question.strip(),
-                        "reference": reference,
-                        "checkout_url": checkout_url,
-                    }
-                    track_event(
-                        "yearly_order_prepared",
-                        {
-                            "zodiac_sign": sign,
-                            "report_period": period_code,
-                            "timezone": timezone_name,
-                            "main_focus": main_focus,
-                        },
-                    )
-
-            order = st.session_state.get(state_key)
-            if order:
-                _order_summary(
-                    order["report_name"],
-                    order["sign"],
-                    order["period"],
-                    order["timezone"],
-                    order["nearest_city"],
-                    order["location_basis"],
-                    order["email"],
-                    order["main_focus"],
-                    order["personal_question"],
-                    order["reference"],
-                )
-                record_columns = st.columns(2)
-                with record_columns[0]:
-                    st.download_button(
-                        "Download order details",
-                        data=order_payload_json(order),
-                        file_name=f"{order['reference']}.json",
-                        mime="application/json",
-                        use_container_width=True,
-                        key=f"{key_context}-yearly-order-download",
-                    )
-                with record_columns[1]:
-                    if CONTACT_EMAIL != "your-email@example.com":
-                        st.link_button(
-                            "Email order details to Luna",
-                            order_details_mailto(CONTACT_EMAIL, order),
-                            use_container_width=True,
-                        )
-                payment_button(
-                    f"Continue to secure payment — {YEARLY_PRICE}",
-                    order["checkout_url"],
-                    f"{key_context}-yearly-payment-disabled",
-                    "yearly_report_click",
+                st.session_state[state_key] = {
+                    "report_name": "Year-Ahead Strategic Report",
+                    "email": delivery_email.strip(),
+                    "sign": sign,
+                    "period": f"Calendar year {selected_year}",
+                    "period_code": period_code,
+                    "timezone": timezone_name,
+                    "nearest_city": location.name,
+                    "location_basis": location_basis,
+                    "main_focus": main_focus,
+                    "personal_question": personal_question.strip(),
+                    "reference": reference,
+                    "checkout_url": checkout_url,
+                }
+                track_event(
+                    "yearly_order_prepared",
                     {
-                        "zodiac_sign": order["sign"],
-                        "report_period": order["period_code"],
-                        "order_reference": order["reference"],
+                        "zodiac_sign": sign,
+                        "report_period": period_code,
+                        "timezone": timezone_name,
+                        "main_focus": main_focus,
                     },
                 )
-                st.markdown(
-                    '<div class="checkout-note">'
-                    "Stripe opens in a new tab. Your sign, year, timezone, focus and the readable "
-                    "personal-question fragment are attached through the order reference shown above. "
-                    "The PDF is manually prepared and emailed within 24 hours after payment."
-                    "</div>",
-                    unsafe_allow_html=True,
+
+        order = st.session_state.get(state_key)
+        if order:
+            _order_summary(
+                order["report_name"],
+                order["sign"],
+                order["period"],
+                order["timezone"],
+                order["nearest_city"],
+                order["location_basis"],
+                order["email"],
+                order["main_focus"],
+                order["personal_question"],
+                order["reference"],
+            )
+            record_columns = st.columns(2)
+            with record_columns[0]:
+                st.download_button(
+                    "Download order details",
+                    data=order_payload_json(order),
+                    file_name=f"{order['reference']}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key=f"{key_context}-yearly-order-download",
                 )
+            with record_columns[1]:
+                if CONTACT_EMAIL != "your-email@example.com":
+                    st.link_button(
+                        "Email order details to Luna",
+                        order_details_mailto(CONTACT_EMAIL, order),
+                        use_container_width=True,
+                    )
+            payment_button(
+                f"Continue to secure payment — {YEARLY_PRICE}",
+                order["checkout_url"],
+                f"{key_context}-yearly-payment-disabled",
+                "yearly_report_click",
+                {
+                    "zodiac_sign": order["sign"],
+                    "report_period": order["period_code"],
+                    "order_reference": order["reference"],
+                },
+            )
+            st.markdown(
+                '<div class="checkout-note">'
+                "Stripe opens in a new tab. Your sign, year, timezone, focus and the readable "
+                "personal-question fragment are attached through the order reference shown above. "
+                "The PDF is manually prepared and emailed within 24 hours after payment."
+                "</div>",
+                unsafe_allow_html=True,
+            )
 
 
 def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
@@ -1839,18 +1855,13 @@ def render_free_reading(
         timezone_name,
         nearest_city,
     )
-    render_daily_narrative_v3(
-        narrative,
-        solar=solar,
-        monthly_price=MONTHLY_PRICE,
-        monthly_url=f"/reports?sign={sign}",
-    )
+    render_daily_narrative_v3(narrative, solar=solar)
 
 
 def home_page() -> None:
     set_page_metadata(
         "Luna Convergence | Strategic Astrology",
-        "Free daily horoscopes and detailed monthly astrology reports using whole-sign houses, retrogrades and convergence analysis.",
+        "Free daily horoscopes and detailed monthly and year-ahead astrology reports using whole-sign houses, retrogrades and convergence analysis.",
         "/",
     )
     left, right = st.columns([1.2, .8], gap="large")
@@ -2024,25 +2035,24 @@ def daily_page() -> None:
             nearest_city,
         )
 
+        location, _basis = resolve_location(nearest_city, timezone_name)
+        with st.expander("Want the wider monthly story?", expanded=False):
+            report_cta(
+                context=f"daily-{sign.lower()}",
+                prefill_sign=sign,
+                prefill_city=location.name,
+            )
 
 
-def render_report_generator_workspace(*, monthly_only: bool = False) -> None:
-    if monthly_only:
-        report_type = "Monthly"
-        prior_result = st.session_state.get("report-generator-result")
-        if prior_result and prior_result.get("period") != "monthly":
-            st.session_state.pop("report-generator-result", None)
-        st.caption("Monthly preview only — Yearly remains hidden.")
-    else:
-        report_type = st.radio(
-            "Report type",
-            ["Monthly", "Year ahead"],
-            horizontal=True,
-            key="report-generator-type",
-        )
+def render_report_generator_workspace() -> None:
+    report_type = st.radio(
+        "Report type",
+        ["Monthly", "Year ahead"],
+        horizontal=True,
+        key="report-generator-type",
+    )
 
-    form_key = "monthly-preview-generator-form" if monthly_only else "report-generator-form"
-    with st.form(form_key, clear_on_submit=False):
+    with st.form("report-generator-form", clear_on_submit=False):
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
@@ -2144,10 +2154,9 @@ def render_report_generator_workspace(*, monthly_only: bool = False) -> None:
     if not result:
         return
 
-    preview_label = "Private Monthly preview" if monthly_only else "Editorial preview"
     st.caption(
         f"{result.get('sign')} / {result.get('label')} • "
-        f"{BUILD_LABEL} • {preview_label} • Checkout bypassed"
+        f"{BUILD_LABEL} • Checkout bypassed"
     )
 
     if result.get("period") == "monthly":
@@ -2314,53 +2323,6 @@ def forecast_library_page() -> None:
             })
 
 
-
-def monthly_preview_page() -> None:
-    set_page_metadata(
-        "Private Monthly Preview | Luna Convergence",
-        "Privately generate and inspect the complete Luna Monthly report without payment.",
-        "/monthly-preview",
-    )
-
-    if not MONTHLY_PREVIEW_BYPASS_ACTIVE:
-        st.error("The private Monthly preview is disabled.")
-        st.caption(
-            "Enable LUNA_MONTHLY_PREVIEW_BYPASS only while reviewing the Monthly product."
-        )
-        return
-
-    if MONTHLY_PREVIEW_PIN and not st.session_state.get("monthly-preview-authorised"):
-        st.markdown('<div class="eyebrow">Private editorial access</div>', unsafe_allow_html=True)
-        st.markdown("# Open the Monthly preview")
-        with st.form("monthly-preview-pin-form"):
-            entered_pin = st.text_input("Preview PIN", type="password")
-            unlock = st.form_submit_button(
-                "Open Monthly preview",
-                type="primary",
-                use_container_width=True,
-            )
-        if unlock:
-            if secrets.compare_digest(entered_pin, MONTHLY_PREVIEW_PIN):
-                st.session_state["monthly-preview-authorised"] = True
-                st.rerun()
-            else:
-                st.error("Incorrect preview PIN.")
-        return
-
-    st.markdown('<div class="eyebrow">Private Monthly product review</div>', unsafe_allow_html=True)
-    st.markdown("# Generate the complete Monthly report")
-    st.warning(
-        "Payment is bypassed on this private review page. Yearly is hidden. "
-        "Disable the bypass again after the Monthly report has been approved."
-    )
-    st.markdown(
-        "Choose a sign, month, timezone, city and focus. Luna will generate the "
-        "same complete Monthly customer report, including the print/save controls, "
-        "without opening Stripe."
-    )
-    render_report_generator_workspace(monthly_only=True)
-
-
 def editorial_preview_page() -> None:
     if not EDITOR_PREVIEW_ENABLED:
         st.error("Editorial preview is disabled.")
@@ -2385,8 +2347,8 @@ def editorial_preview_page() -> None:
 
 def reports_page() -> None:
     set_page_metadata(
-        "Monthly Astrology Reports | Luna Convergence",
-        "Order a monthly strategic astrology report delivered electronically.",
+        "Monthly and Year-Ahead Astrology Reports | Luna Convergence",
+        "Order a monthly strategic astrology report or a detailed year-ahead forecast delivered electronically.",
         "/reports",
     )
     if EDITOR_PREVIEW_ENABLED:
@@ -2404,10 +2366,10 @@ def reports_page() -> None:
         return
 
     st.markdown('<div class="eyebrow">Paid reports</div>', unsafe_allow_html=True)
-    st.markdown("# Choose your monthly report")
+    st.markdown("# Choose the depth you need")
     st.markdown(
-        "Choose your star sign, month, timezone and focus before entering Stripe. "
-        "The report is generated with the calculation engine and checked before manual delivery."
+        "Choose your star sign and report period before entering Stripe. "
+        "Reports are generated with the calculation engine and checked before manual delivery."
     )
     if EDITOR_PREVIEW_ENABLED:
         st.warning(
@@ -2419,13 +2381,7 @@ def reports_page() -> None:
             label="Open the full printable editorial preview",
             use_container_width=True,
         )
-    query_sign = st.query_params.get("sign", "")
-    if isinstance(query_sign, list):
-        query_sign = query_sign[0] if query_sign else ""
-    report_cta(
-        context="reports",
-        prefill_sign=query_sign if query_sign in SIGNS else None,
-    )
+    report_cta(context="reports")
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## How ordering works")
@@ -2457,10 +2413,13 @@ def reports_page() -> None:
             "with the missing fulfilment information and your payment reference."
         )
         with st.form("report-order-details"):
-            product_options = [f"Monthly Strategic Report — {MONTHLY_PRICE}"]
-            if PUBLIC_YEARLY_ENABLED:
-                product_options.append(f"Year-Ahead Strategic Report — {YEARLY_PRICE}")
-            product = st.selectbox("Report ordered", product_options)
+            product = st.selectbox(
+                "Report ordered",
+                [
+                    f"Monthly Strategic Report — {MONTHLY_PRICE}",
+                    f"Year-Ahead Strategic Report — {YEARLY_PRICE}",
+                ],
+            )
             c1, c2 = st.columns(2)
             with c1:
                 customer_name = st.text_input("Name")
@@ -2472,8 +2431,8 @@ def reports_page() -> None:
                 )
             with c2:
                 requested_period = st.text_input(
-                    "Requested month",
-                    placeholder="Example: August 2026",
+                    "Requested month or calendar year",
+                    placeholder="Example: August 2026 or 2027",
                 )
                 timezone_name = st.selectbox(
                     "Timezone",
@@ -2574,8 +2533,8 @@ def houses_page() -> None:
     st.markdown("## Use this sign for a report")
     st.markdown(
         "The twelve-house map is fixed by the selected sign, so it does **not** need "
-        "a month selector. The purchase panel below asks for a month because that "
-        "determines which planetary movements are analysed."
+        "a month selector. The purchase panel below asks for a month or calendar year "
+        "because that determines which planetary movements are analysed."
     )
     report_cta(
         context="house-guide",
@@ -2585,52 +2544,71 @@ def houses_page() -> None:
 
 def sample_page() -> None:
     set_page_metadata(
-        "Sagittarius August 2026 Monthly Report Sample | Luna Convergence",
-        "Read a sample Luna Convergence monthly astrology report showing the four-act story, relationship test and practical response.",
+        "Sagittarius 2026 Astrology Report Sample | Luna Convergence",
+        "Read a sample Luna Convergence year-ahead astrology report showing houses, transitions, convergence points and practical conclusions.",
         "/sample-report",
     )
-    st.markdown('<div class="eyebrow">Monthly report sample</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Example report</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="editorial-title">Sagittarius —<br>August 2026</div>',
+        '<div class="editorial-title">Sagittarius 2026 —<br>sample</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        "This excerpt shows the customer structure now used for Monthly reports: "
-        "one central story, four distinct acts and the evidence kept optional."
+        "This excerpt shows the depth and structure of a year-ahead report without publishing every paid section."
     )
 
     st.markdown(
         """
 <div class="card">
-  <div class="eyebrow">Luna says</div>
-  <h3>A possibility becomes real through the choices that give it shape</h3>
-  <p>A wider possibility opens. Attention shifts toward what supports joy, earns trust and belongs in the life already taking shape.</p>
+  <div class="eyebrow">Core theme</div>
+  <h3>Expansion becomes useful only when the foundations can carry it</h3>
+  <p>The year connects creative enterprise, partnerships, communication and international reach.
+  The main question is not whether opportunity exists, but whether money, contracts and operations
+  can support the scale of the opening.</p>
 </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("## The month in four acts")
-    acts = [
-        ("Act I — 28 July to 7 August", "Shaping possibility into momentum", "Carry a late-July breakthrough forward and use a response, contact or audience to shape the next move."),
-        ("Act II — 11 to 15 August", "Bringing details into focus", "Ask how timing, money, distance, trust or another person's involvement shapes the choice."),
-        ("Act III — 17 to 21 August", "Watching whether the spark holds", "Enjoy the warmth, then watch whether clear and consistent effort follows it."),
-        ("Act IV — 24 to 28 August", "Selecting what remains in life", "Move the opportunity toward a result, then select the version that supports real life."),
-    ]
-    for label, title, body in acts:
-        st.markdown(f"### {escape(title)}")
-        st.caption(label)
-        st.markdown(body)
+    st.markdown("## Example major transition")
+    st.markdown(
+        """
+### Jupiter enters the ninth house
 
-    st.markdown("## The relationship test")
+The ninth house governs **travel, publishing, higher education, law and foreign markets**.  
+The opportunity is to take one proven idea into a larger territory. The risk is expanding before
+shipping, pricing, content or legal systems are ready.
+
+**Strategic response:** prove the offer in one market, document the process, then increase reach.
+        """
+    )
+
+    st.markdown("## Example convergence point")
+    st.markdown(
+        """
+### Expansion versus control
+
+Several events connect houses 3, 5, 7 and 9: communication, creativity, contracts and foreign reach.
+The interaction matters more than any single aspect. A partnership or media opportunity can accelerate
+growth, but unclear ownership, payment or messaging can turn the same opening into a power struggle.
+
+**Sequence:** clarify the agreement, test the channel, measure the result and only then scale.
+        """
+    )
+
+    st.markdown("## Example two-sentence conclusion")
     st.info(
-        "Enjoy the spark, then compare words with effort. Clear, consistent action shows what deserves more of the heart."
+        "House 9 governs travel, publishing, higher education, law and foreign markets, "
+        "so the best strategy for Sagittarius is to take one proven idea into a larger territory. "
+        "House 2 governs personal income, pricing, possessions and self-worth, so short-term pressure "
+        "in this area—especially confusing turnover, credit or possessions with financial strength—"
+        "should not derail the larger transition."
     )
 
     report_cta(
         context="sample",
         prefill_sign=DEFAULT_SIGN,
-        prefill_month="August 2026",
+        prefill_year=2026,
     )
 
 
@@ -2951,7 +2929,7 @@ def solar_year_page() -> None:
 def privacy_page() -> None:
     set_page_metadata(
         "Privacy and Analytics | Luna Convergence",
-        "How Luna Convergence uses Google Analytics, Stripe and customer information for digital astrology reports.",
+        "How Luna Convergence uses Google Analytics, Statcounter, Stripe and customer information for digital astrology reports.",
         "/privacy",
     )
     st.markdown('<div class="eyebrow">Privacy</div>', unsafe_allow_html=True)
@@ -2961,10 +2939,10 @@ def privacy_page() -> None:
     )
     st.markdown(
         """
-Luna Convergence uses **Google Analytics 4** to understand website visits,
-page use, free-reading generation and clicks leading to Stripe checkout.
-Google Analytics may process device, browser, approximate location and usage
-information according to Google's own privacy terms.
+Luna Convergence uses **Google Analytics 4** and **Statcounter** to understand
+website visits, page use, free-reading generation and clicks leading to Stripe
+checkout. These analytics services may process device, browser, approximate
+location and usage information according to their own privacy terms.
 
 Payments are processed by **Stripe**. Luna Convergence does not receive or
 store complete card details. Stripe supplies the payment status, customer
@@ -2985,6 +2963,7 @@ email displayed during checkout or in the report-delivery message.
 - page views;
 - free daily reading generation;
 - monthly report checkout clicks;
+- year-ahead report checkout clicks.
         """
     )
 
@@ -3023,12 +3002,6 @@ MONTHLY_INDEX_REF = st.Page(
     monthly_index_page,
     title="August 2026 Horoscopes",
     url_path="august-2026-horoscopes",
-)
-MONTHLY_PREVIEW_REF = st.Page(
-    monthly_preview_page,
-    title="Private Monthly Preview",
-    url_path="monthly-preview",
-    visibility="hidden",
 )
 EDITORIAL_PREVIEW_REF = st.Page(
     editorial_preview_page,
@@ -3088,7 +3061,6 @@ ALL_PAGES = [
     HOME_PAGE_REF,
     DAILY_PAGE_REF,
     MONTHLY_INDEX_REF,
-    MONTHLY_PREVIEW_REF,
     EDITORIAL_PREVIEW_REF,
     FORECAST_LIBRARY_REF,
     REPORTS_PAGE_REF,
@@ -3108,6 +3080,7 @@ install_google_analytics(
     f"{current_page.title} | {BRAND_NAME}",
     "/" if not current_page.url_path else f"/{current_page.url_path}",
 )
+install_statcounter()
 
 current_page.run()
 footer()
