@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 import json
 import secrets
 from calendar import month_name
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from html import escape
 import base64
 from PIL import Image
@@ -95,6 +96,45 @@ STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 DAILY_PAGE_REF = None
+
+
+def browser_timezone_name() -> str:
+    """Return the visitor's browser timezone, with Luna's default as fallback."""
+    try:
+        timezone_name = str(st.context.timezone or "").strip()
+        if timezone_name:
+            ZoneInfo(timezone_name)  # Validate the IANA timezone name.
+            return timezone_name
+    except Exception:
+        pass
+    return DEFAULT_TIMEZONE
+
+
+def browser_local_now() -> datetime:
+    """Return the current real-world time converted to the visitor's timezone."""
+    return datetime.now(timezone.utc).astimezone(ZoneInfo(browser_timezone_name()))
+
+
+def browser_local_date() -> date:
+    """Return today's calendar date for the visitor, not the Streamlit server."""
+    return browser_local_now().date()
+
+
+def timezone_select_index() -> int:
+    """Select the browser timezone when Luna offers it, otherwise use the default."""
+    timezone_name = browser_timezone_name()
+    if timezone_name in TIMEZONES:
+        return TIMEZONES.index(timezone_name)
+    return TIMEZONES.index(DEFAULT_TIMEZONE)
+
+
+def browser_time_caption() -> str:
+    """Human-readable browser-local date and time for transparent date selection."""
+    local_now = browser_local_now()
+    return (
+        f"Device timezone detected: {browser_timezone_name()} · "
+        f"{local_now.strftime('%A, %d %B %Y · %I:%M %p')}"
+    )
 
 
 def install_css() -> None:
@@ -1444,7 +1484,7 @@ def report_cta(
                 timezone_name = st.selectbox(
                     "Timezone",
                     TIMEZONES,
-                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    index=timezone_select_index(),
                     key=f"{key_context}-monthly-timezone",
                 )
             nearest_city = st.text_input(
@@ -1613,7 +1653,7 @@ def report_cta(
                 timezone_name = st.selectbox(
                     "Timezone",
                     TIMEZONES,
-                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    index=timezone_select_index(),
                     key=f"{key_context}-yearly-timezone",
                 )
             nearest_city = st.text_input(
@@ -1760,7 +1800,7 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
     with first_row[1]:
         reading_date = st.date_input(
             "Date",
-            value=date.today(),
+            value=browser_local_date(),
             min_value=date(1900, 1, 1),
             max_value=date(2100, 12, 31),
             key=f"{prefix}-date",
@@ -1771,7 +1811,7 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
         timezone_name = st.selectbox(
             "Timezone",
             TIMEZONES,
-            index=TIMEZONES.index(DEFAULT_TIMEZONE),
+            index=timezone_select_index(),
             key=f"{prefix}-timezone",
         )
     with second_row[1]:
@@ -1781,6 +1821,8 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
             placeholder=representative_city_name(timezone_name),
             help=city_input_help(timezone_name),
         )
+
+    st.caption(browser_time_caption())
 
     return sign, reading_date, timezone_name, nearest_city
 
@@ -1855,7 +1897,7 @@ def render_free_reading(
         timezone_name,
         nearest_city,
     )
-    render_daily_narrative_v3(narrative, solar=solar)
+    render_daily_narrative_v3(narrative, solar=solar, topic_tabs=True)
 
 
 def home_page() -> None:
@@ -1891,7 +1933,7 @@ def home_page() -> None:
 
     with right:
         try:
-            reading = free_daily_reading(DEFAULT_SIGN, date.today(), DEFAULT_TIMEZONE)
+            reading = free_daily_reading(DEFAULT_SIGN, browser_local_date(), browser_timezone_name())
             st.markdown(
                 f"""
 <div class="reading-card">
@@ -2085,7 +2127,7 @@ def render_report_generator_workspace() -> None:
             timezone_name = st.selectbox(
                 "Timezone",
                 TIMEZONES,
-                index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                index=timezone_select_index(),
                 key="report-generator-timezone",
             )
         with second_row[1]:
@@ -2223,7 +2265,7 @@ def forecast_library_page() -> None:
             timezone_name = st.selectbox(
                 "Timezone basis",
                 TIMEZONES,
-                index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                index=timezone_select_index(),
             )
         with top[2]:
             city = st.text_input(
@@ -2437,7 +2479,7 @@ def reports_page() -> None:
                 timezone_name = st.selectbox(
                     "Timezone",
                     TIMEZONES,
-                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    index=timezone_select_index(),
                 )
                 payment_reference = st.text_input(
                     "Stripe payment reference or receipt number",
@@ -2877,7 +2919,7 @@ def solar_year_page() -> None:
     with c2:
         selected_date = st.date_input(
             "Date",
-            value=date.today(),
+            value=browser_local_date(),
             min_value=date(1900, 1, 1),
             max_value=date(2100, 12, 31),
             key="solar-year-date",
@@ -2886,7 +2928,7 @@ def solar_year_page() -> None:
         timezone_name = st.selectbox(
             "Timezone",
             TIMEZONES,
-            index=TIMEZONES.index(DEFAULT_TIMEZONE),
+            index=timezone_select_index(),
             key="solar-year-timezone",
         )
     nearest_city = st.text_input(
@@ -2895,6 +2937,7 @@ def solar_year_page() -> None:
         placeholder=representative_city_name(timezone_name),
         help=city_input_help(timezone_name),
     )
+    st.caption(browser_time_caption())
 
     solar = daily_solar_convergence(
         sign,
