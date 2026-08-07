@@ -1336,12 +1336,12 @@ def build_monthly_experience_html(
 (() => {{
   const root = document.getElementById("{instance_id}");
   if (!root) return;
+
   const report = root.querySelector("[data-luna-report]");
   const paper = root.querySelector("[data-luna-paper]");
   const orientation = root.querySelector("[data-luna-orientation]");
   const printButton = root.querySelector("[data-luna-print]");
   const pageStyle = root.querySelector("style[data-luna-page-size]");
-  let printFrame = null;
   let prePrintDocumentTitle = null;
   let prePrintParentTitle = null;
 
@@ -1362,21 +1362,17 @@ def build_monthly_experience_html(
       "@page {{ size: " + paperValue + " " + orientationValue + "; margin: 12mm; }}";
   }}
 
-  function removePrintFrame() {{
-    if (printFrame && printFrame.parentNode) {{
-      printFrame.parentNode.removeChild(printFrame);
-    }}
-    printFrame = null;
+  function removeAnyPrintPortal() {{
+    document.querySelectorAll("[data-luna-print-portal]").forEach((node) => node.remove());
+    document.body.classList.remove("luna-print-active");
   }}
 
   function applyOuterPrintTitle(printTitle) {{
-    // Keep the sortable Luna filename available to Chromium while the isolated
-    // print frame is active. The report itself is printed from the child frame,
-    // so no previously rendered Streamlit reports can leak into the PDF.
     if (prePrintDocumentTitle === null) {{
       prePrintDocumentTitle = document.title;
     }}
     document.title = printTitle;
+
     try {{
       if (window.parent && window.parent !== window) {{
         if (prePrintParentTitle === null) {{
@@ -1385,7 +1381,7 @@ def build_monthly_experience_html(
         window.parent.document.title = printTitle;
       }}
     }} catch (error) {{
-      // Parent title access may be blocked by the browser sandbox.
+      // Parent title access can be blocked by browser sandboxing.
     }}
   }}
 
@@ -1399,13 +1395,21 @@ def build_monthly_experience_html(
         window.parent.document.title = prePrintParentTitle;
       }}
     }} catch (error) {{
-      // Ignore sandboxed parent-title restore.
+      // Ignore a sandboxed parent-title restore.
     }}
     prePrintParentTitle = null;
   }}
 
-  function clonedReportForPrint() {{
+  function createPrintPortal() {{
+    // Remove any portal left by a previous report. This is what makes
+    // sequential Aries -> Pisces printing deterministic in one Streamlit session.
+    removeAnyPrintPortal();
     applyPrintSettings();
+
+    const portal = document.createElement("div");
+    portal.id = "luna-print-portal";
+    portal.setAttribute("data-luna-print-portal", "{instance_id}");
+
     const clone = report.cloneNode(true);
     clone.id = "{instance_id}-report-print";
     clone.dataset.printPaper = selectedPaper();
@@ -1415,67 +1419,42 @@ def build_monthly_experience_html(
       detail.open = true;
       detail.setAttribute("open", "");
     }});
-    return clone;
+
+    portal.appendChild(clone);
+    document.body.appendChild(portal);
+    document.body.classList.add("luna-print-active");
+    return portal;
   }}
 
-  async function printCurrentReportOnly() {{
-    removePrintFrame();
+  function cleanupAfterPrint() {{
+    // Delay title restore slightly because Chromium can derive the Save-as-PDF
+    // filename late in the print-dialog lifecycle.
+    window.setTimeout(() => {{
+      restoreOuterPrintTitle();
+      removeAnyPrintPortal();
+    }}, 1200);
+  }}
+
+  function printCurrentReportOnly() {{
+    if (!report) return;
     const printTitle = report.dataset.printFileTitle || "Luna_Convergence_Monthly";
+    createPrintPortal();
     applyOuterPrintTitle(printTitle);
 
-    const clone = clonedReportForPrint();
-    const styles = Array.from(document.querySelectorAll("style"))
-      .map((node) => node.outerHTML)
-      .join("\\n");
-
-    // A dedicated child document is the isolation boundary. Calling print on
-    // the main Streamlit document can include every report iframe still mounted
-    // in the session; printing this frame can only contain the active report.
-    printFrame = document.createElement("iframe");
-    printFrame.id = "{instance_id}-print-frame";
-    printFrame.setAttribute("aria-hidden", "true");
-    printFrame.style.position = "fixed";
-    printFrame.style.right = "0";
-    printFrame.style.bottom = "0";
-    printFrame.style.width = "1px";
-    printFrame.style.height = "1px";
-    printFrame.style.border = "0";
-    printFrame.style.opacity = "0";
-    document.body.appendChild(printFrame);
-
-    const frameDocument = printFrame.contentDocument || printFrame.contentWindow.document;
-    frameDocument.open();
-    frameDocument.write(
-      '<!doctype html><html><head><meta charset="utf-8"><title>' + printTitle +
-      '</title>' + styles +
-      '</head><body class="luna-print-active"><div id="luna-print-portal">' +
-      clone.outerHTML +
-      '</div></body></html>'
-    );
-    frameDocument.close();
-    frameDocument.title = printTitle;
-
-    const frameWindow = printFrame.contentWindow;
-    if (frameDocument.fonts && frameDocument.fonts.ready) {{
-      try {{ await frameDocument.fonts.ready; }} catch (error) {{}}
-    }}
-
-    // Let layout, imported fonts and expanded disclosures settle before print.
-    await new Promise((resolve) => window.setTimeout(resolve, 220));
-    frameWindow.focus();
-    frameWindow.print();
-
-    // Chromium may read the document title late while opening Save as PDF.
-    // Keep both titles alive for a few seconds, then clean up the frame.
-    window.setTimeout(restoreOuterPrintTitle, 3500);
-    window.setTimeout(removePrintFrame, 4500);
+    // IMPORTANT: call window.print() directly inside the click event. The v3.5
+    // hidden-iframe implementation waited for fonts/layout first; some browsers
+    // then treated print() as no longer user-initiated, so the button appeared dead.
+    window.print();
   }}
 
   if (paper) paper.addEventListener("change", applyPrintSettings);
   if (orientation) orientation.addEventListener("change", applyPrintSettings);
 
+  window.addEventListener("afterprint", cleanupAfterPrint);
+
   if (printButton) {{
-    printButton.addEventListener("click", () => {{
+    printButton.addEventListener("click", (event) => {{
+      event.preventDefault();
       printCurrentReportOnly();
     }});
   }}
