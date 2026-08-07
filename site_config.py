@@ -1,31 +1,11 @@
 from __future__ import annotations
 
-import os
-
-
-def _environment_flag(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna Signature Focus Reset v2.9.7.4"
-
-# Public deployments are customer-only by default. The Windows editorial
-# launchers set LUNA_EDITOR_PREVIEW=1 so Yearly and inventory tools remain
-# available for internal development without appearing on the live site.
-EDITOR_PREVIEW_ENABLED = _environment_flag("LUNA_EDITOR_PREVIEW", False)
-PUBLIC_YEARLY_ENABLED = _environment_flag("LUNA_PUBLIC_YEARLY", False)
-MONTHLY_PREVIEW_BYPASS_ENABLED = _environment_flag(
-    "LUNA_MONTHLY_PREVIEW_BYPASS",
-    False,
-)
-
+BUILD_LABEL = "Luna Monthly Narrative v3 — Event-Led Story Engine"
+EDITOR_PREVIEW_ENABLED = True  # Set False before the paid public launch.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
-    "Daily and monthly astrology explained through planetary transitions, "
+    "Daily, monthly and yearly astrology explained through planetary transitions, "
     "whole-sign houses, retrogrades and convergence points."
 )
 

@@ -20,6 +20,7 @@ from solar_cycle import (
     yearly_solar_markdown,
 )
 from monthly_arc_engine import build_monthly_arc
+from monthly_qa import validate_monthly_arc
 from yearly_game_engine import build_yearly_game_map
 
 
@@ -784,6 +785,7 @@ def period_report(
     solar_year_chapters = []
     solar_year_section = ""
     monthly_arc = None
+    monthly_qa = None
     yearly_game_map = None
     inherited_events = []
 
@@ -811,7 +813,14 @@ def period_report(
             inherited_events=inherited_events,
             retrograde_cycles=cycles,
             main_focus=main_focus,
+            house_weights={house: weight for house, weight in houses},
         ).to_dict()
+        monthly_qa = validate_monthly_arc(
+            sign=sign,
+            events=events,
+            monthly_arc=monthly_arc,
+            house_weights={house: weight for house, weight in houses},
+        )
     else:
         year_chapters = yearly_solar_chapters(
             sign,
@@ -942,8 +951,10 @@ The winning sequence is:
         "solar_convergence": solar_convergence,
         "solar_year_chapters": solar_year_chapters,
         "monthly_arc": monthly_arc,
+        "monthly_qa": monthly_qa,
         "yearly_game_map": yearly_game_map,
         "inherited_events": serialize(inherited_events),
         "nearest_city": nearest_city,
+        "timezone_name": timezone_name,
         "main_focus": main_focus,
     }
