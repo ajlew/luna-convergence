@@ -661,6 +661,11 @@ def _headline_and_axis(
             "Money and value set the terms; travel, study, publishing or an international opening shows what those terms can support.",
             "Money & value x Travel & wider horizons",
         ),
+        (3, 10): (
+            "The message becomes a career decision once the result is visible",
+            "A contract, assignment or important conversation opens the month; career, reputation or a public result shows what the message can become.",
+            "Communication & decisions x Career & visibility",
+        ),
         (1, 8): (
             "The new direction gets real when trust and resources are named",
             "A personal opening gathers force, then shared money, ownership or responsibility reveals what can actually continue.",
@@ -670,6 +675,11 @@ def _headline_and_axis(
             "The private ending clears space for a more visible beginning",
             "Closure, recovery or unfinished business changes the background; a personal decision then makes the next direction visible.",
             "Rest & private renewal x Identity & direction",
+        ),
+        (12, 7): (
+            "The private chapter reaches its answer through another person",
+            "Rest, closure or confidential work shapes the background; a partner, collaborator or agreement then requires a clear decision about what continues.",
+            "Rest & private renewal x Relationships & agreements",
         ),
         (11, 6): (
             "The future plan survives only if the week can carry it",
@@ -939,6 +949,8 @@ def _generic_story(
     relationship_test: dict | None,
     sign: str,
     main_focus: str,
+    primary_plot: dict | None = None,
+    secondary_plot: dict | None = None,
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str]:
     def scenarios(cluster: dict | None) -> tuple[ScenarioResult, ...]:
         return _cluster_scenarios(cluster, sign, main_focus)
@@ -950,6 +962,8 @@ def _generic_story(
     climax_results = scenarios(climax)
     resolution_results = scenarios(resolution)
     relationship_results = scenarios(relationship_test)
+    primary_results = scenarios(primary_plot)
+    secondary_results = scenarios(secondary_plot)
 
     def examples(results: Sequence[ScenarioResult], maximum: int = 3) -> str:
         values: list[str] = []
@@ -961,9 +975,10 @@ def _generic_story(
                     return ", ".join(values)
         return ", ".join(values) or "a person, choice or opportunity"
 
+    opening_basis = primary_results or inciting_results or inherited_results
     opening = (
-        f"{month} opens through {examples(inherited_results or inciting_results)}. "
-        "The first development establishes the problem or possibility that the rest of the month must answer.",
+        f"{month}'s main story takes shape through {examples(opening_basis)}. "
+        "Early signals show where the opportunity or pressure is gathering; later events decide what can actually continue.",
     )
     complication_text = (
         f"The middle of the month introduces {examples(complication_results)}. "
@@ -973,8 +988,9 @@ def _generic_story(
         f"The direction changes around {_date_range_label(pivot['start'], pivot['end']) if pivot else 'the middle of the month'}. "
         f"{examples(pivot_results)} can begin to move once information, timing or cooperation becomes usable.",
     )
+    climax_basis = secondary_results or climax_results or resolution_results
     climax_text = (
-        f"The strongest late-month convergence concentrates around {examples(climax_results)}. "
+        f"The strongest late-month convergence concentrates around {examples(climax_basis)}. "
         "This is the point where the month asks for a visible answer rather than more speculation.",
     )
     resolution_text = (
@@ -1258,6 +1274,8 @@ def build_monthly_arc(
             relationship_test,
             sign,
             main_focus,
+            primary_plot,
+            secondary_plot,
         )
 
 

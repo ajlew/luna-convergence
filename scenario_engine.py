@@ -299,7 +299,16 @@ def event_scenario_contribution(
         return 0.0
 
     event_score = event_importance_score(event, sign, house_weights) / 10.0
+
+    # Scenario families that span many houses are useful as secondary pattern
+    # recognizers, but they must not outrank a precise one-house interpretation
+    # merely because they can match almost anything. Reward coverage and apply a
+    # modest breadth penalty. This keeps the scenario database specific without
+    # removing cross-house families such as funding or contracts.
+    house_coverage = len(house_overlap) / max(1, len(definition.houses))
     house_match = min(1.0, 0.70 + 0.15 * len(house_overlap))
+    house_match *= 0.72 + 0.28 * house_coverage
+    breadth_factor = max(0.64, 1.0 - 0.08 * max(0, len(definition.houses) - 1))
     if definition.planets:
         planet_match = min(1.0, len(planet_overlap) / max(1, min(2, len(definition.planets))))
     else:
@@ -320,6 +329,7 @@ def event_scenario_contribution(
     )
     return (
         score
+        * breadth_factor
         * _polarity_multiplier(polarity, definition)
         * _focus_multiplier(houses, main_focus)
     )

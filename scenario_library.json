@@ -1,273 +1,1392 @@
 {
-  "version": "3.0",
-  "selection_policy": "deterministic_evidence_ranked",
-  "notes": "Scenario atoms describe plausible manifestations, not predictions. Customer prose must preserve uncertainty and must not randomly select examples.",
+  "version": "3.1",
+  "selection_policy": "deterministic_evidence_ranked_no_randomness",
+  "notes": "Scenario atoms describe plausible manifestations, not predictions. Customer prose must preserve uncertainty. Source reports are calibration references for associations only; Luna wording remains independently generated.",
   "scenario_families": [
     {
       "key": "identity_direction",
       "label": "personal direction or visible change of role",
       "domain": "identity",
-      "houses": [1],
-      "planets": ["Sun", "Mars", "Jupiter", "Mercury", "Uranus"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a new role or leadership step", "a personal relaunch or boundary", "a visible decision about what comes next"],
-      "friction_examples": ["overextension or fatigue", "a role that no longer fits", "an impulsive move made before the direction is clear"],
-      "neutral_examples": ["a change in personal direction", "a decision about how you want to be seen"],
+      "houses": [
+        1
+      ],
+      "planets": [
+        "Sun",
+        "Mars",
+        "Jupiter",
+        "Mercury",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a new role, launch or leadership step",
+        "a personal decision that increases your control over what happens next",
+        "a visible reset in direction, priorities or presentation"
+      ],
+      "friction_examples": [
+        "fatigue or reduced vitality forcing a change of pace",
+        "a role or identity that no longer fits the person you are becoming",
+        "a sudden personal development requiring a self-directed decision"
+      ],
+      "neutral_examples": [
+        "a change in personal direction or role",
+        "a decision about identity, visibility or how you want to lead"
+      ],
       "opportunity_bias": 1.15,
       "tension_bias": 1.05,
-      "calibration": ["august_2026_leo_benchmark", "house_1_matrix"]
+      "calibration": [
+        "august_2026_leo",
+        "august_2026_cancer",
+        "august_2026_pisces",
+        "house_1_matrix"
+      ]
     },
     {
       "key": "earned_income",
       "label": "income, pricing or value decision",
       "domain": "money",
-      "houses": [2],
-      "planets": ["Venus", "Jupiter", "Saturn", "Mercury", "Sun", "Uranus"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a pay or pricing improvement", "a valuable client or sales opportunity", "a purchase that strengthens security"],
-      "friction_examples": ["an unexpected bill", "a delayed payment or invoice", "an offer that undervalues the work"],
-      "neutral_examples": ["a salary, price or spending decision", "a question about what your time is worth"],
+      "houses": [
+        2
+      ],
+      "planets": [
+        "Venus",
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Sun",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a raise, fee increase or better-paid assignment",
+        "additional income from a client, side project or new position",
+        "a pricing or salary decision that improves security"
+      ],
+      "friction_examples": [
+        "an unexpected bill or sudden rise in expenses",
+        "a payment, raise or income amount arriving differently than expected",
+        "a spending pattern that no longer matches the value it delivers"
+      ],
+      "neutral_examples": [
+        "a salary, fee, price or spending decision",
+        "a question about what your time, work or lifestyle is costing"
+      ],
       "opportunity_bias": 1.08,
       "tension_bias": 1.12,
-      "calibration": ["august_2026_leo_benchmark", "house_2_matrix"]
+      "calibration": [
+        "august_2026_cancer",
+        "august_2026_aquarius",
+        "august_2026_gemini",
+        "august_2026_leo",
+        "house_2_matrix"
+      ]
     },
     {
       "key": "communication_contracts",
       "label": "message, contract or local decision",
       "domain": "communication",
-      "houses": [3],
-      "planets": ["Mercury", "Venus", "Mars", "Jupiter", "Uranus", "Saturn"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a signed agreement or useful introduction", "a course or skill milestone", "a pitch, message or local connection that opens options"],
-      "friction_examples": ["a misunderstanding or delayed reply", "a travel or transport change", "a clause or detail that needs correction"],
-      "neutral_examples": ["an important conversation", "a contract, application or short journey"],
+      "houses": [
+        3
+      ],
+      "planets": [
+        "Mercury",
+        "Venus",
+        "Mars",
+        "Jupiter",
+        "Uranus",
+        "Saturn"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a contract, assignment or important message moving forward",
+        "a writing, speaking, media or digital project gaining a usable next step",
+        "a short trip, course, certification or local connection opening options"
+      ],
+      "friction_examples": [
+        "a contract term or late change requiring another conversation",
+        "a transport, shipping or short-trip disruption",
+        "a disagreement with a sibling, relative or local contact"
+      ],
+      "neutral_examples": [
+        "an important conversation, contract or application",
+        "a short journey, delivery, course or communication project"
+      ],
       "opportunity_bias": 1.05,
-      "tension_bias": 1.10,
-      "calibration": ["house_3_matrix"]
+      "tension_bias": 1.1,
+      "calibration": [
+        "august_2026_gemini",
+        "august_2026_capricorn",
+        "house_3_matrix"
+      ]
     },
     {
       "key": "property_home",
       "label": "property, home or family decision",
       "domain": "home",
-      "houses": [4],
-      "planets": ["Moon", "Saturn", "Venus", "Mercury", "Jupiter", "Sun", "Mars", "Uranus"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a move, lease or property decision", "a renovation or practical home improvement", "a family agreement that makes the private foundation easier"],
-      "friction_examples": ["an urgent home repair", "a family or household disagreement", "a move or property timeline that changes suddenly"],
-      "neutral_examples": ["a home, family or location decision", "a private-life adjustment"],
+      "houses": [
+        4
+      ],
+      "planets": [
+        "Moon",
+        "Saturn",
+        "Venus",
+        "Mercury",
+        "Jupiter",
+        "Sun",
+        "Mars",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a move, lease, purchase or sale becoming workable",
+        "a renovation, repair or home improvement gaining momentum",
+        "a family solution, relocation or private-life change strengthening the foundation"
+      ],
+      "friction_examples": [
+        "an urgent repair, water issue or unexpected property cost",
+        "a family or household matter demanding immediate attention",
+        "a move, renovation or property timeline changing suddenly"
+      ],
+      "neutral_examples": [
+        "a home, property, family or location decision",
+        "a private-life adjustment involving where or how you live"
+      ],
       "opportunity_bias": 1.05,
       "tension_bias": 1.12,
-      "calibration": ["august_2026_sagittarius_benchmark", "house_4_matrix"]
+      "calibration": [
+        "august_2026_taurus",
+        "august_2026_pisces",
+        "august_2026_sagittarius",
+        "house_4_matrix"
+      ]
     },
     {
       "key": "romance_creativity",
       "label": "romance, creativity or joyful risk",
       "domain": "love",
-      "houses": [5],
-      "planets": ["Sun", "Venus", "Mars", "Jupiter", "Moon", "Uranus"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a romantic spark or memorable invitation", "a creative project moving into public form", "news involving a child, pregnancy or family milestone"],
-      "friction_examples": ["a romantic mismatch revealed by follow-through", "a creative block or competing demand", "a risk that needs clearer limits before more is invested"],
-      "neutral_examples": ["a romantic or creative opening", "an invitation, performance or child-related development"],
-      "opportunity_bias": 1.20,
+      "houses": [
+        5
+      ],
+      "planets": [
+        "Sun",
+        "Venus",
+        "Mars",
+        "Jupiter",
+        "Moon",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a romantic spark, date or memorable invitation",
+        "a creative project, performance or launch gaining momentum",
+        "news involving a child, pregnancy, leisure plan or family milestone"
+      ],
+      "friction_examples": [
+        "a romantic mismatch or revelation becoming difficult to ignore",
+        "an unexpected cost tied to a child, social event or creative project",
+        "a creative or speculative risk needing clearer limits"
+      ],
+      "neutral_examples": [
+        "a romantic, creative or child-related development",
+        "an invitation, social event, passion project or leisure decision"
+      ],
+      "opportunity_bias": 1.2,
       "tension_bias": 1.05,
-      "calibration": ["august_2026_aries_benchmark", "house_5_matrix"]
+      "calibration": [
+        "august_2026_aries",
+        "august_2026_scorpio",
+        "august_2026_aquarius",
+        "august_2026_libra",
+        "august_2026_pisces",
+        "house_5_matrix"
+      ]
     },
     {
       "key": "work_wellbeing",
       "label": "workload, routine or wellbeing adjustment",
       "domain": "work",
-      "houses": [6],
-      "planets": ["Mercury", "Mars", "Saturn", "Sun", "Moon", "Jupiter"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a workflow or schedule improvement", "a useful staffing or operational change", "a health or wellbeing routine that becomes easier to sustain"],
-      "friction_examples": ["physical exhaustion or an overloaded week", "an administrative backlog", "a staffing or routine problem that needs redesign"],
-      "neutral_examples": ["a workload or routine change", "a practical wellbeing decision"],
+      "houses": [
+        6
+      ],
+      "planets": [
+        "Mercury",
+        "Mars",
+        "Saturn",
+        "Sun",
+        "Moon",
+        "Jupiter"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a new assignment, client or workflow improvement",
+        "a useful hire, staffing change, tool or software upgrade",
+        "a health routine, treatment or practical wellbeing plan becoming easier to sustain"
+      ],
+      "friction_examples": [
+        "a work project going off track or requiring a rapid fix",
+        "a staff departure, shortage or operational backlog",
+        "physical exhaustion or a health concern requiring attention"
+      ],
+      "neutral_examples": [
+        "a workload, staffing or routine change",
+        "a practical health, treatment or wellbeing decision"
+      ],
       "opportunity_bias": 1.08,
       "tension_bias": 1.15,
-      "calibration": ["august_2026_aries_benchmark", "house_6_matrix"]
+      "calibration": [
+        "august_2026_pisces",
+        "august_2026_virgo",
+        "august_2026_libra",
+        "august_2026_capricorn",
+        "august_2026_aries",
+        "house_6_matrix"
+      ]
     },
     {
       "key": "partnership_commitment",
       "label": "partnership, client or commitment decision",
       "domain": "love",
-      "houses": [7],
-      "planets": ["Venus", "Mars", "Moon", "Jupiter", "Saturn", "Mercury", "Sun"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a relationship moving toward clearer commitment", "a useful business partnership", "a client or agreement becoming more formal"],
-      "friction_examples": ["a boundary dispute or mismatch in expectations", "a client or partner pulling back", "terms that need renegotiation before trust can grow"],
-      "neutral_examples": ["a relationship or partnership decision", "a client or agreement requiring clear terms"],
+      "houses": [
+        7
+      ],
+      "planets": [
+        "Venus",
+        "Mars",
+        "Moon",
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Sun"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a relationship moving toward engagement, commitment or clearer terms",
+        "a business partnership, collaborator or anchor client becoming more formal",
+        "an agreement with a specialist, adviser or professional becoming useful"
+      ],
+      "friction_examples": [
+        "a partner or collaborator decision that can no longer be postponed",
+        "a client or partner pulling back, leaving or changing the terms",
+        "a boundary dispute revealing that expectations are no longer aligned"
+      ],
+      "neutral_examples": [
+        "a relationship, partnership or collaborator decision",
+        "a client, specialist or agreement requiring clear terms"
+      ],
       "opportunity_bias": 1.15,
       "tension_bias": 1.12,
-      "calibration": ["house_7_matrix"]
+      "calibration": [
+        "august_2026_aquarius",
+        "august_2026_virgo",
+        "august_2026_pisces",
+        "house_7_matrix"
+      ]
     },
     {
       "key": "external_money",
       "label": "shared or externally controlled money",
       "domain": "money",
-      "houses": [8],
-      "planets": ["Jupiter", "Venus", "Mercury", "Neptune", "Pluto", "Saturn", "Moon", "Uranus"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a loan, mortgage or refinancing approval", "an insurance, tax or compensation payment", "money connected to a partner, investment or institution"],
-      "friction_examples": ["a tax, debt or shared-cost issue", "a refinancing or funding delay", "a disagreement about ownership, trust or another person's obligation"],
-      "neutral_examples": ["shared money or another person's obligation", "a loan, tax, insurance or settlement matter"],
+      "houses": [
+        8
+      ],
+      "planets": [
+        "Jupiter",
+        "Venus",
+        "Mercury",
+        "Neptune",
+        "Pluto",
+        "Saturn",
+        "Moon",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a loan, mortgage, grant or formal funding approval",
+        "an insurance, tax, settlement, commission or compensation payment",
+        "money connected to a partner, investment, property sale or institution"
+      ],
+      "friction_examples": [
+        "a tax, debt, credit or shared-cost issue",
+        "a funding, insurance or expected payment being delayed or changed",
+        "a disagreement about ownership, obligations or another person’s money"
+      ],
+      "neutral_examples": [
+        "shared or externally controlled money",
+        "a loan, mortgage, tax, insurance, settlement or funding matter"
+      ],
       "opportunity_bias": 1.12,
       "tension_bias": 1.18,
-      "calibration": ["august_2026_leo_benchmark", "house_8_matrix"]
+      "calibration": [
+        "august_2026_capricorn",
+        "august_2026_cancer",
+        "august_2026_scorpio",
+        "august_2026_aquarius",
+        "august_2026_leo",
+        "house_8_matrix"
+      ]
     },
     {
       "key": "travel",
       "label": "travel or a wider-world opportunity",
       "domain": "expansion",
-      "houses": [9],
-      "planets": ["Jupiter", "Mercury", "Sun", "Moon", "Uranus", "Venus", "Saturn"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a long-distance or overseas trip", "a university, course or qualification opportunity", "a publishing, legal, visa or international-business opening"],
-      "friction_examples": ["a visa, legal or study delay", "a journey or itinerary that needs revision", "a belief, publishing or international matter that requires better facts"],
-      "neutral_examples": ["travel, study or publishing", "a legal, visa or international matter"],
+      "houses": [
+        9
+      ],
+      "planets": [
+        "Jupiter",
+        "Mercury",
+        "Sun",
+        "Moon",
+        "Uranus",
+        "Venus",
+        "Saturn"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a long-distance or overseas trip moving ahead",
+        "a university, course, publishing or broadcasting opportunity",
+        "a visa, passport, legal or international-business development"
+      ],
+      "friction_examples": [
+        "a visa, legal, customs or study complication",
+        "a journey, itinerary, shipment or international plan needing revision",
+        "a publishing, media or official matter requiring better facts"
+      ],
+      "neutral_examples": [
+        "travel, study, publishing or international activity",
+        "a legal, visa, passport, university or import-export matter"
+      ],
       "opportunity_bias": 1.22,
       "tension_bias": 1.08,
-      "calibration": ["august_2026_sagittarius_benchmark", "august_2026_leo_benchmark", "house_9_matrix"]
+      "calibration": [
+        "august_2026_sagittarius",
+        "august_2026_cancer",
+        "august_2026_gemini",
+        "august_2026_libra",
+        "august_2026_capricorn",
+        "house_9_matrix"
+      ]
     },
     {
       "key": "career_interview",
       "label": "career visibility or professional result",
       "domain": "work",
-      "houses": [10],
-      "planets": ["Sun", "Saturn", "Jupiter", "Mercury", "Venus", "Mars", "Uranus"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a promotion, interview or leadership step", "public recognition for completed work", "a visible project or career milestone"],
-      "friction_examples": ["public scrutiny or a management disagreement", "a project being delayed or cancelled", "a role whose responsibility exceeds the support around it"],
-      "neutral_examples": ["a career or reputation decision", "an interview, offer or visible result"],
+      "houses": [
+        10
+      ],
+      "planets": [
+        "Sun",
+        "Saturn",
+        "Jupiter",
+        "Mercury",
+        "Venus",
+        "Mars",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a promotion, new position or leadership responsibility",
+        "recognition, publicity or praise for work already done",
+        "a prestigious client, interview or visible project moving forward"
+      ],
+      "friction_examples": [
+        "a manager, leader or key colleague leaving unexpectedly",
+        "a project, role or public result changing without much warning",
+        "professional pressure requiring a quick, visible response"
+      ],
+      "neutral_examples": [
+        "a career, title or reputation decision",
+        "an interview, offer, client or visible professional result"
+      ],
       "opportunity_bias": 1.15,
-      "tension_bias": 1.10,
-      "calibration": ["august_2026_leo_benchmark", "august_2026_sagittarius_benchmark", "house_10_matrix"]
+      "tension_bias": 1.1,
+      "calibration": [
+        "august_2026_scorpio",
+        "august_2026_gemini",
+        "august_2026_libra",
+        "august_2026_taurus",
+        "august_2026_virgo",
+        "august_2026_leo",
+        "august_2026_sagittarius",
+        "house_10_matrix"
+      ]
     },
     {
       "key": "networks_audience",
       "label": "friends, audience or future-plan development",
       "domain": "networks",
-      "houses": [11],
-      "planets": ["Uranus", "Saturn", "Jupiter", "Venus", "Mercury", "Sun"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["an audience or community growing", "a useful introduction through friends or colleagues", "a future plan gaining support from the right people"],
-      "friction_examples": ["a group disagreement or misaligned alliance", "support disappearing when responsibility arrives", "a platform, sponsor or community change that forces a new plan"],
-      "neutral_examples": ["a friendship, audience or community development", "a future plan depending on the right people"],
+      "houses": [
+        11
+      ],
+      "planets": [
+        "Uranus",
+        "Saturn",
+        "Jupiter",
+        "Venus",
+        "Mercury",
+        "Sun"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a friendship, network or community opening useful doors",
+        "an industry event, group or audience creating valuable introductions",
+        "a joint venture or future plan gaining support from the right people"
+      ],
+      "friction_examples": [
+        "a friendship or group relationship revealing a cost or mismatch",
+        "support disappearing when responsibility or money enters the picture",
+        "a community, platform or alliance change forcing a different future plan"
+      ],
+      "neutral_examples": [
+        "a friendship, network, audience or community development",
+        "a future plan depending on who is willing to participate"
+      ],
       "opportunity_bias": 1.12,
       "tension_bias": 1.08,
-      "calibration": ["august_2026_aries_benchmark", "house_11_matrix"]
+      "calibration": [
+        "august_2026_libra",
+        "august_2026_virgo",
+        "august_2026_aquarius",
+        "august_2026_aries",
+        "house_11_matrix"
+      ]
     },
     {
       "key": "closure_private",
       "label": "closure, recovery or behind-the-scenes matter",
       "domain": "private",
-      "houses": [12],
-      "planets": ["Neptune", "Jupiter", "Moon", "Saturn", "Mars", "Mercury", "Sun"],
-      "event_kinds": ["eclipse", "lunation", "station", "aspect", "ingress"],
-      "positive_examples": ["a private matter finally reaching closure", "a restorative period of rest", "behind-the-scenes work being completed before the next public move"],
-      "friction_examples": ["an unseen obstacle or unfinished obligation", "fatigue, anxiety or lost sleep requiring a quieter schedule", "a delay connected to an institution or private matter"],
-      "neutral_examples": ["a private ending or recovery period", "unfinished work requiring space before the next move"],
+      "houses": [
+        12
+      ],
+      "planets": [
+        "Neptune",
+        "Jupiter",
+        "Moon",
+        "Saturn",
+        "Mars",
+        "Mercury",
+        "Sun"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "station",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a private matter or confidential negotiation resolving quietly",
+        "solo or behind-the-scenes work gaining protected space to develop",
+        "a restorative period of rest, reflection or treatment clearing the ground for what comes next"
+      ],
+      "friction_examples": [
+        "an unseen obstacle, private ending or unfinished obligation",
+        "fatigue, anxiety or lost sleep requiring a quieter schedule",
+        "a hospital, rehabilitation, institutional or confidential matter requiring attention"
+      ],
+      "neutral_examples": [
+        "a private ending, recovery period or confidential matter",
+        "unfinished or behind-the-scenes work requiring space before the next public move"
+      ],
       "opportunity_bias": 1.05,
       "tension_bias": 1.15,
-      "calibration": ["august_2026_aries_benchmark", "house_12_matrix"]
+      "calibration": [
+        "august_2026_virgo",
+        "august_2026_pisces",
+        "august_2026_cancer",
+        "august_2026_aries",
+        "house_12_matrix"
+      ]
     },
     {
       "key": "financial_shock",
       "label": "unexpected cost or disappointing amount",
       "domain": "money",
-      "houses": [2, 8],
-      "planets": ["Moon", "Saturn", "Neptune", "Uranus", "Mars", "Mercury", "Sun"],
-      "event_kinds": ["lunation", "eclipse", "aspect", "station"],
-      "positive_examples": ["a financial figure becoming clear enough to act on", "a cost being renegotiated after the facts arrive"],
-      "friction_examples": ["an unexpected expense", "a raise, payment or outside sum arriving differently than expected", "a valuable possession or shared cost becoming an issue"],
-      "neutral_examples": ["a financial amount that changes the decision", "a payment or cost requiring attention"],
-      "opportunity_bias": 1.00,
+      "houses": [
+        2,
+        8
+      ],
+      "planets": [
+        "Moon",
+        "Saturn",
+        "Neptune",
+        "Uranus",
+        "Mars",
+        "Mercury",
+        "Sun"
+      ],
+      "event_kinds": [
+        "lunation",
+        "eclipse",
+        "aspect",
+        "station"
+      ],
+      "positive_examples": [
+        "a financial figure becoming clear enough to restructure the decision",
+        "a cost or payment being renegotiated after the full facts arrive"
+      ],
+      "friction_examples": [
+        "an unexpected bill, fee or social cost",
+        "a salary, payment or outside sum arriving differently than expected",
+        "a cost tied to a child, creative project, property or relationship suddenly increasing"
+      ],
+      "neutral_examples": [
+        "a financial amount that changes the decision",
+        "a payment, fee or cost requiring immediate attention"
+      ],
+      "opportunity_bias": 1.0,
       "tension_bias": 1.25,
-      "calibration": ["august_2026_leo_benchmark"]
+      "calibration": [
+        "august_2026_aquarius",
+        "august_2026_taurus",
+        "august_2026_scorpio",
+        "august_2026_gemini",
+        "august_2026_leo"
+      ]
     },
     {
       "key": "funding_application",
       "label": "loan, mortgage or formal funding process",
       "domain": "money",
-      "houses": [2, 4, 8, 10, 11],
-      "planets": ["Mercury", "Saturn", "Jupiter", "Venus", "Moon"],
-      "event_kinds": ["lunation", "station", "aspect", "eclipse"],
-      "positive_examples": ["a mortgage or bank-loan application moving forward", "business finance or a line of credit becoming available", "a formal request for funding receiving a useful response"],
-      "friction_examples": ["a lender asking for more proof", "a funding amount being reduced or delayed", "a shared-resource application requiring revised terms"],
-      "neutral_examples": ["a loan, mortgage or funding application", "a formal request for shared resources"],
+      "houses": [
+        2,
+        4,
+        8,
+        10,
+        11
+      ],
+      "planets": [
+        "Mercury",
+        "Saturn",
+        "Jupiter",
+        "Venus",
+        "Moon"
+      ],
+      "event_kinds": [
+        "lunation",
+        "station",
+        "aspect",
+        "eclipse"
+      ],
+      "positive_examples": [
+        "a mortgage, bank loan or refinancing request moving forward",
+        "a grant, scholarship, business finance or investment request receiving support",
+        "an insurance, settlement or formal funding claim getting a useful response"
+      ],
+      "friction_examples": [
+        "a lender, insurer or institution asking for more evidence",
+        "a funding amount being reduced, delayed or tied to new conditions",
+        "a shared-resource application requiring revised terms"
+      ],
+      "neutral_examples": [
+        "a loan, mortgage, grant, insurance or funding application",
+        "a formal request for money controlled by another party"
+      ],
       "opportunity_bias": 1.08,
       "tension_bias": 1.18,
-      "calibration": ["house_8_matrix"]
+      "calibration": [
+        "august_2026_capricorn",
+        "august_2026_cancer",
+        "house_8_matrix"
+      ]
     },
     {
       "key": "paperwork_verification",
       "label": "paperwork, verification and revised terms",
       "domain": "communication",
-      "houses": [3, 6, 8, 9, 10],
-      "planets": ["Mercury", "Saturn", "Jupiter", "Sun"],
-      "event_kinds": ["station", "aspect", "lunation", "ingress", "eclipse"],
-      "positive_examples": ["an application clearing after the required information is supplied", "a contract or estimate becoming usable once the details are verified"],
-      "friction_examples": ["forms or supporting documents needing correction", "a decision delayed by missing information", "terms being revised before signature"],
-      "neutral_examples": ["paperwork or verification", "an application, contract or estimate needing accurate information"],
+      "houses": [
+        3,
+        6,
+        8,
+        9,
+        10
+      ],
+      "planets": [
+        "Mercury",
+        "Saturn",
+        "Jupiter",
+        "Sun"
+      ],
+      "event_kinds": [
+        "station",
+        "aspect",
+        "lunation",
+        "ingress",
+        "eclipse"
+      ],
+      "positive_examples": [
+        "an application clearing after the required information is supplied",
+        "a contract, estimate or official document becoming usable once details are verified",
+        "paperwork supporting travel, study, property or funding finally moving"
+      ],
+      "friction_examples": [
+        "forms or supporting documents needing correction",
+        "a decision delayed by missing information or an official requirement",
+        "terms, registration or paperwork being revised before completion"
+      ],
+      "neutral_examples": [
+        "paperwork, verification or an official application",
+        "a contract, estimate, registration or approval needing accurate information"
+      ],
       "opportunity_bias": 1.03,
       "tension_bias": 1.18,
-      "calibration": ["august_2026_sagittarius_benchmark"]
+      "calibration": [
+        "august_2026_sagittarius",
+        "august_2026_cancer",
+        "august_2026_capricorn",
+        "august_2026_gemini"
+      ]
     },
     {
       "key": "publishing_media",
       "label": "writing, publishing or audience response",
       "domain": "communication",
-      "houses": [3, 5, 9, 10, 11],
-      "planets": ["Mercury", "Jupiter", "Sun", "Venus", "Uranus"],
-      "event_kinds": ["lunation", "station", "aspect", "ingress", "eclipse"],
-      "positive_examples": ["a manuscript, proposal or creative submission gaining traction", "publisher, audience or media interest", "a launch, presentation or broadcast opportunity"],
-      "friction_examples": ["a publication or campaign requiring revision", "mixed audience response", "a message that needs a clearer destination before launch"],
-      "neutral_examples": ["a writing, publishing or audience opportunity", "a proposal, presentation or media decision"],
+      "houses": [
+        3,
+        5,
+        9,
+        10,
+        11
+      ],
+      "planets": [
+        "Mercury",
+        "Jupiter",
+        "Sun",
+        "Venus",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "lunation",
+        "station",
+        "aspect",
+        "ingress",
+        "eclipse"
+      ],
+      "positive_examples": [
+        "a writing, speaking or media assignment gaining traction",
+        "publisher, audience, publicity or broadcast interest",
+        "a launch, pitch, presentation or digital project finding the right audience"
+      ],
+      "friction_examples": [
+        "a publication, campaign or media project requiring revision",
+        "a review, publicity issue or mixed audience response",
+        "a message that needs stronger facts before release"
+      ],
+      "neutral_examples": [
+        "a writing, publishing, publicity or audience opportunity",
+        "a proposal, presentation, campaign or media decision"
+      ],
       "opportunity_bias": 1.18,
       "tension_bias": 1.05,
-      "calibration": ["august_2026_sagittarius_benchmark"]
+      "calibration": [
+        "august_2026_gemini",
+        "august_2026_sagittarius",
+        "august_2026_libra"
+      ]
     },
     {
       "key": "visa_legal_study",
       "label": "visa, legal or higher-education progress",
       "domain": "expansion",
-      "houses": [3, 4, 9, 10],
-      "planets": ["Jupiter", "Mercury", "Saturn", "Sun"],
-      "event_kinds": ["lunation", "station", "aspect", "ingress", "eclipse"],
-      "positive_examples": ["a visa or passport decision", "a legal or official approval", "a university, course or qualification result"],
-      "friction_examples": ["a visa or legal delay", "an official requirement needing more evidence", "a course or qualification timeline being revised"],
-      "neutral_examples": ["a visa, legal or education process", "an official application or approval"],
+      "houses": [
+        3,
+        4,
+        9,
+        10
+      ],
+      "planets": [
+        "Jupiter",
+        "Mercury",
+        "Saturn",
+        "Sun"
+      ],
+      "event_kinds": [
+        "lunation",
+        "station",
+        "aspect",
+        "ingress",
+        "eclipse"
+      ],
+      "positive_examples": [
+        "a visa, passport, residency or travel approval",
+        "a legal or official decision moving in your favour",
+        "a university, course, qualification or publishing result"
+      ],
+      "friction_examples": [
+        "a visa, customs, legal or immigration delay",
+        "an official requirement needing more evidence",
+        "a course, registration, publishing or qualification timeline being revised"
+      ],
+      "neutral_examples": [
+        "a visa, legal, education or official process",
+        "an international, university or publishing application"
+      ],
       "opportunity_bias": 1.15,
-      "tension_bias": 1.10,
-      "calibration": ["august_2026_sagittarius_benchmark"]
+      "tension_bias": 1.1,
+      "calibration": [
+        "august_2026_sagittarius",
+        "august_2026_cancer",
+        "august_2026_capricorn",
+        "august_2026_gemini",
+        "august_2026_libra"
+      ]
     },
     {
       "key": "relationship_opening",
       "label": "romantic or relationship opening",
       "domain": "love",
-      "houses": [5, 7, 8, 11],
-      "planets": ["Venus", "Mars", "Moon", "Jupiter", "Uranus", "Neptune", "Saturn"],
-      "event_kinds": ["lunation", "aspect", "ingress", "eclipse", "station"],
-      "positive_examples": ["a first date, flirtation or introduction", "a relationship conversation about the next step", "an attraction becoming more consistent through mutual effort"],
-      "friction_examples": ["strong chemistry with weak follow-through", "timing, distance or availability exposing the limits", "a relationship boundary needing clearer terms"],
-      "neutral_examples": ["an attraction or relationship opening", "a conversation about what the connection needs next"],
+      "houses": [
+        5,
+        7,
+        8,
+        11
+      ],
+      "planets": [
+        "Venus",
+        "Mars",
+        "Moon",
+        "Jupiter",
+        "Uranus",
+        "Neptune",
+        "Saturn"
+      ],
+      "event_kinds": [
+        "lunation",
+        "aspect",
+        "ingress",
+        "eclipse",
+        "station"
+      ],
+      "positive_examples": [
+        "a first date, attraction or introduction gaining momentum",
+        "a relationship conversation about commitment or the next step",
+        "a social or travel setting creating a promising connection"
+      ],
+      "friction_examples": [
+        "strong chemistry with weak follow-through",
+        "money, timing or availability exposing the limits of a connection",
+        "a relationship boundary or expectation requiring a direct answer"
+      ],
+      "neutral_examples": [
+        "an attraction or relationship opening",
+        "a conversation about what the connection can realistically become"
+      ],
       "opportunity_bias": 1.15,
       "tension_bias": 1.12,
-      "calibration": ["august_2026_aries_benchmark", "august_2026_leo_benchmark"]
+      "calibration": [
+        "august_2026_aries",
+        "august_2026_aquarius",
+        "august_2026_pisces",
+        "august_2026_scorpio",
+        "august_2026_leo"
+      ]
     },
     {
       "key": "contracts_agreements",
       "label": "contract, lease or formal agreement",
       "domain": "communication",
-      "houses": [3, 7, 8, 9, 10],
-      "planets": ["Mercury", "Saturn", "Venus", "Jupiter", "Sun"],
-      "event_kinds": ["station", "aspect", "lunation", "ingress", "eclipse"],
-      "positive_examples": ["a contract, lease or formal agreement reaching workable terms", "a client or partner agreement becoming clear enough to sign", "a delayed signature moving after information clears"],
-      "friction_examples": ["a contract clause requiring renegotiation", "a signature delayed by missing information", "terms that look attractive until ownership or obligations are named"],
-      "neutral_examples": ["a contract, lease or formal agreement", "terms negotiated with a client or partner"],
+      "houses": [
+        3,
+        7,
+        8,
+        9,
+        10
+      ],
+      "planets": [
+        "Mercury",
+        "Saturn",
+        "Venus",
+        "Jupiter",
+        "Sun"
+      ],
+      "event_kinds": [
+        "station",
+        "aspect",
+        "lunation",
+        "ingress",
+        "eclipse"
+      ],
+      "positive_examples": [
+        "a contract, lease or formal agreement reaching workable terms",
+        "a client, collaborator or partner agreement becoming clear enough to sign",
+        "a delayed signature moving once information or approval clears"
+      ],
+      "friction_examples": [
+        "a clause or late request requiring renegotiation",
+        "a signature delayed by missing information or changing terms",
+        "an agreement that looks attractive until responsibilities and costs are named"
+      ],
+      "neutral_examples": [
+        "a contract, lease or formal agreement",
+        "terms negotiated with a client, partner or institution"
+      ],
       "opportunity_bias": 1.08,
-      "tension_bias": 1.10,
-      "calibration": ["august_2026_sagittarius_benchmark", "august_2026_leo_benchmark"]
+      "tension_bias": 1.1,
+      "calibration": [
+        "august_2026_gemini",
+        "august_2026_capricorn",
+        "august_2026_aquarius",
+        "august_2026_sagittarius",
+        "august_2026_leo"
+      ]
+    },
+    {
+      "key": "home_property_expansion",
+      "label": "home or property opportunity becoming tangible",
+      "domain": "home",
+      "houses": [
+        4
+      ],
+      "planets": [
+        "Jupiter",
+        "Sun",
+        "Venus",
+        "Saturn",
+        "Mercury"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect",
+        "ingress"
+      ],
+      "positive_examples": [
+        "a purchase, lease, sale or relocation opportunity",
+        "a renovation, repair or furnishing plan receiving resources",
+        "family support making a home decision easier"
+      ],
+      "friction_examples": [
+        "a property opportunity expanding into more work or cost than expected",
+        "a renovation or move requiring a larger commitment",
+        "family needs changing the original property plan"
+      ],
+      "neutral_examples": [
+        "a home or property plan moving from idea to decision",
+        "a living arrangement or family matter becoming more concrete"
+      ],
+      "opportunity_bias": 1.22,
+      "tension_bias": 1.05,
+      "calibration": [
+        "august_2026_taurus",
+        "august_2026_pisces"
+      ]
+    },
+    {
+      "key": "communication_assignment",
+      "label": "new assignment, message or communication opportunity",
+      "domain": "communication",
+      "houses": [
+        3
+      ],
+      "planets": [
+        "Mercury",
+        "Jupiter",
+        "Sun",
+        "Venus",
+        "Uranus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a new writing, speaking or digital assignment",
+        "a contract, pitch or publicity opportunity",
+        "a communication project that showcases a skill more clearly"
+      ],
+      "friction_examples": [
+        "an assignment whose brief or terms change suddenly",
+        "a message or contract needing a fast correction",
+        "a communications project becoming more complex than expected"
+      ],
+      "neutral_examples": [
+        "a new assignment or communication project",
+        "a contract, pitch, message or short-trip development"
+      ],
+      "opportunity_bias": 1.2,
+      "tension_bias": 1.08,
+      "calibration": [
+        "august_2026_gemini"
+      ]
+    },
+    {
+      "key": "work_client_growth",
+      "label": "work, client or staffing growth",
+      "domain": "work",
+      "houses": [
+        6
+      ],
+      "planets": [
+        "Jupiter",
+        "Sun",
+        "Mercury",
+        "Saturn",
+        "Venus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "more work or a stronger client brief",
+        "a qualified hire or extra help joining the workload",
+        "better tools, systems or routines supporting higher-quality output"
+      ],
+      "friction_examples": [
+        "growth creating a staffing or capacity problem",
+        "a workload expanding faster than the system can carry",
+        "a client brief requiring more resources than expected"
+      ],
+      "neutral_examples": [
+        "a change in workload, clients or staffing",
+        "a practical upgrade to the way the work gets done"
+      ],
+      "opportunity_bias": 1.22,
+      "tension_bias": 1.1,
+      "calibration": [
+        "august_2026_pisces",
+        "august_2026_virgo"
+      ]
+    },
+    {
+      "key": "partnership_formalization",
+      "label": "partnership becoming formal or consequential",
+      "domain": "love",
+      "houses": [
+        7
+      ],
+      "planets": [
+        "Jupiter",
+        "Saturn",
+        "Venus",
+        "Sun",
+        "Mercury"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "an engagement, marriage or relationship commitment",
+        "a business collaborator or professional partnership becoming formal",
+        "an expert, adviser or client relationship gaining long-term value"
+      ],
+      "friction_examples": [
+        "a partnership revealing incompatible expectations",
+        "a collaborator or partner forcing a decision about the future",
+        "formal terms exposing a responsibility that needs negotiation"
+      ],
+      "neutral_examples": [
+        "a partnership moving toward a defining decision",
+        "a relationship or collaboration becoming more formal"
+      ],
+      "opportunity_bias": 1.24,
+      "tension_bias": 1.12,
+      "calibration": [
+        "august_2026_aquarius",
+        "august_2026_virgo"
+      ]
+    },
+    {
+      "key": "shared_finance_opportunity",
+      "label": "outside money or funding becoming available",
+      "domain": "money",
+      "houses": [
+        8
+      ],
+      "planets": [
+        "Jupiter",
+        "Sun",
+        "Mercury",
+        "Saturn",
+        "Venus"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a loan, mortgage, grant or investment approval",
+        "an insurance, tax, settlement, bonus or commission payment",
+        "a property, business or partner-linked financial opportunity"
+      ],
+      "friction_examples": [
+        "funding arriving with conditions that need scrutiny",
+        "a shared-money opportunity requiring a larger obligation",
+        "a payment or approval taking longer than the headline suggests"
+      ],
+      "neutral_examples": [
+        "outside money becoming central to the decision",
+        "a formal funding, insurance, tax or settlement matter"
+      ],
+      "opportunity_bias": 1.25,
+      "tension_bias": 1.08,
+      "calibration": [
+        "august_2026_capricorn",
+        "august_2026_cancer"
+      ]
+    },
+    {
+      "key": "career_breakthrough",
+      "label": "career breakthrough, recognition or new role",
+      "domain": "work",
+      "houses": [
+        10
+      ],
+      "planets": [
+        "Jupiter",
+        "Sun",
+        "Mercury",
+        "Saturn",
+        "Venus",
+        "Mars"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a promotion, prestigious role or major interview",
+        "recognition, publicity or praise from influential people",
+        "a lucrative or high-profile client opening"
+      ],
+      "friction_examples": [
+        "a visible role expanding faster than support or capacity",
+        "a management change altering the opportunity",
+        "a public result carrying more responsibility than expected"
+      ],
+      "neutral_examples": [
+        "a career milestone or visible professional decision",
+        "a role, title, client or reputation development"
+      ],
+      "opportunity_bias": 1.26,
+      "tension_bias": 1.08,
+      "calibration": [
+        "august_2026_scorpio",
+        "august_2026_leo",
+        "august_2026_taurus"
+      ]
+    },
+    {
+      "key": "community_joint_venture",
+      "label": "friendship, network or joint venture opening",
+      "domain": "networks",
+      "houses": [
+        11
+      ],
+      "planets": [
+        "Jupiter",
+        "Saturn",
+        "Mercury",
+        "Venus",
+        "Sun"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a useful new friendship or professional contact",
+        "an industry event or community opening a future path",
+        "a joint venture with a friend or network contact becoming viable"
+      ],
+      "friction_examples": [
+        "a friendship becoming complicated by money or responsibility",
+        "a network promise proving less useful than expected",
+        "a group plan needing stronger roles before it can continue"
+      ],
+      "neutral_examples": [
+        "a friendship or network becoming more consequential",
+        "a community, audience or joint venture shaping the next plan"
+      ],
+      "opportunity_bias": 1.2,
+      "tension_bias": 1.08,
+      "calibration": [
+        "august_2026_libra"
+      ]
+    },
+    {
+      "key": "private_preparation",
+      "label": "private preparation, confidential work or closure",
+      "domain": "private",
+      "houses": [
+        12
+      ],
+      "planets": [
+        "Jupiter",
+        "Sun",
+        "Mercury",
+        "Saturn",
+        "Neptune"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "confidential talks working quietly in your favour",
+        "solo creative or strategic work developing away from scrutiny",
+        "rest, reflection or treatment clearing space for a later launch"
+      ],
+      "friction_examples": [
+        "a private ending or hidden issue needing closure first",
+        "institutional or health-related demands slowing the public plan",
+        "too much noise preventing the deeper preparation from happening"
+      ],
+      "neutral_examples": [
+        "behind-the-scenes work preparing the next stage",
+        "a confidential, restorative or closing chapter"
+      ],
+      "opportunity_bias": 1.18,
+      "tension_bias": 1.12,
+      "calibration": [
+        "august_2026_virgo"
+      ]
+    },
+    {
+      "key": "unexpected_work_disruption",
+      "label": "unexpected work or staffing disruption",
+      "domain": "work",
+      "houses": [
+        6,
+        10
+      ],
+      "planets": [
+        "Uranus",
+        "Moon",
+        "Sun",
+        "Mercury",
+        "Mars"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a sudden work change creating room for a better system",
+        "an unexpected departure clarifying what the team really needs"
+      ],
+      "friction_examples": [
+        "a project suddenly going off track",
+        "a trusted worker, manager or collaborator leaving without much notice",
+        "an urgent operational problem requiring a quick solution"
+      ],
+      "neutral_examples": [
+        "a sudden work or staffing change",
+        "a project or management development requiring fast adjustment"
+      ],
+      "opportunity_bias": 1.0,
+      "tension_bias": 1.3,
+      "calibration": [
+        "august_2026_libra",
+        "august_2026_capricorn",
+        "august_2026_gemini",
+        "august_2026_virgo"
+      ]
+    },
+    {
+      "key": "travel_legal_disruption",
+      "label": "unexpected travel, legal or official complication",
+      "domain": "expansion",
+      "houses": [
+        3,
+        9
+      ],
+      "planets": [
+        "Uranus",
+        "Moon",
+        "Sun",
+        "Mercury",
+        "Saturn"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a disrupted plan exposing a better route or alternative",
+        "a legal or official issue becoming clear enough to solve"
+      ],
+      "friction_examples": [
+        "a trip, shipment or itinerary changing suddenly",
+        "a visa, customs, legal or immigration complication",
+        "a university, publishing, media or official matter requiring a rapid correction"
+      ],
+      "neutral_examples": [
+        "an unexpected travel or official development",
+        "a legal, academic, publishing or transport matter changing the plan"
+      ],
+      "opportunity_bias": 1.0,
+      "tension_bias": 1.3,
+      "calibration": [
+        "august_2026_cancer",
+        "august_2026_capricorn",
+        "august_2026_libra"
+      ]
+    },
+    {
+      "key": "romance_child_creative_cost",
+      "label": "money pressure tied to love, children or creativity",
+      "domain": "money",
+      "houses": [
+        2,
+        5,
+        8
+      ],
+      "planets": [
+        "Uranus",
+        "Moon",
+        "Venus",
+        "Saturn",
+        "Mars"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a cost becoming visible early enough to set a sensible limit",
+        "a creative or family expense being reorganised before it grows"
+      ],
+      "friction_examples": [
+        "an unexpected social, romantic or child-related expense",
+        "a creative project requiring more cash than expected",
+        "money complicating a friendship, date or leisure plan"
+      ],
+      "neutral_examples": [
+        "a cost tied to romance, children, creativity or social life",
+        "a financial decision attached to something you care about"
+      ],
+      "opportunity_bias": 1.0,
+      "tension_bias": 1.28,
+      "calibration": [
+        "august_2026_aquarius",
+        "august_2026_scorpio",
+        "august_2026_taurus"
+      ]
+    },
+    {
+      "key": "health_treatment",
+      "label": "health, treatment or recovery decision",
+      "domain": "work",
+      "houses": [
+        1,
+        6,
+        12
+      ],
+      "planets": [
+        "Moon",
+        "Sun",
+        "Jupiter",
+        "Saturn",
+        "Neptune",
+        "Mars",
+        "Mercury"
+      ],
+      "event_kinds": [
+        "eclipse",
+        "lunation",
+        "aspect"
+      ],
+      "positive_examples": [
+        "a useful diagnosis, treatment plan or health routine",
+        "a course of therapy, rehabilitation or recovery reaching a milestone",
+        "a practical change improving sleep, energy or day-to-day wellbeing"
+      ],
+      "friction_examples": [
+        "fatigue or a health concern requiring prompt attention",
+        "a treatment, appointment or recovery period changing the schedule",
+        "stress or overload making rest non-negotiable"
+      ],
+      "neutral_examples": [
+        "a health, treatment or recovery decision",
+        "a practical adjustment to energy, routine or care"
+      ],
+      "opportunity_bias": 1.1,
+      "tension_bias": 1.2,
+      "calibration": [
+        "august_2026_virgo",
+        "august_2026_pisces",
+        "august_2026_libra",
+        "august_2026_capricorn"
+      ]
     }
-  ]
+  ],
+  "calibration_scope": "August 2026: all 12 Susan Miller sign reports used only to abstract scenario associations and narrative patterns; no source prose is stored."
 }

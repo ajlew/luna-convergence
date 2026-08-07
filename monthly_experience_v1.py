@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from html import escape
 from typing import Iterable
+from zoneinfo import ZoneInfo
 
 from date_display import human_date, human_date_range
 from luna_editorial_system import (
@@ -34,6 +36,45 @@ def _paragraphs(values: Iterable[str], maximum: int | None = None) -> str:
     if maximum is not None:
         selected = selected[:maximum]
     return "".join(f"<p>{_safe(value)}</p>" for value in selected if value)
+
+
+def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict[str, str]:
+    """Return stable, human-readable metadata embedded in the printable report.
+
+    Browser print headers are inconsistent and can be disabled, so Luna places its
+    own report identity inside the document. The timestamp is calculated in the
+    report's selected/browser timezone rather than the Streamlit server timezone.
+    """
+    timezone_name = str(result.get("timezone_name") or "UTC")
+    try:
+        timezone = ZoneInfo(timezone_name)
+    except Exception:
+        timezone_name = "UTC"
+        timezone = ZoneInfo("UTC")
+
+    now = datetime.now(timezone)
+    hour = now.strftime("%I").lstrip("0") or "0"
+    generated = f"{now.day} {now.strftime('%B %Y')} · {hour}:{now.strftime('%M %p')}"
+    zone_short = now.tzname() or timezone_name
+
+    return {
+        "sign": str(narrative.sign),
+        "month": str(narrative.label),
+        "generated": generated,
+        "timezone": f"{zone_short} · {timezone_name}",
+    }
+
+
+def _report_details_html(narrative: MonthlyNarrative, result: dict) -> str:
+    details = _generated_report_details(narrative, result)
+    return f"""
+<div class="luna-report-details" aria-label="Report details">
+  <div><span>Star sign</span><strong>{_safe(details['sign'])}</strong></div>
+  <div><span>Report month</span><strong>{_safe(details['month'])}</strong></div>
+  <div><span>Generated</span><strong>{_safe(details['generated'])}</strong></div>
+  <div><span>Timezone</span><strong>{_safe(details['timezone'])}</strong></div>
+</div>
+    """
 
 
 def _key_date_cards(narrative: MonthlyNarrative) -> str:
@@ -496,6 +537,7 @@ def build_monthly_experience_html(
         if show_print
         else ""
     )
+    report_details = _report_details_html(narrative, result)
 
     return f"""
 <style id="luna-print-page-size">
@@ -877,6 +919,34 @@ def build_monthly_experience_html(
   line-height:1.5;
   border-top:1px solid var(--line);
 }}
+.luna-report-details {{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  border-bottom:1px solid var(--black);
+  background:var(--soft);
+}}
+.luna-report-details > div {{
+  min-width:0;
+  padding:.7rem .85rem;
+  border-right:1px solid var(--line);
+}}
+.luna-report-details > div:last-child {{ border-right:none; }}
+.luna-report-details span,
+.luna-report-details strong {{ display:block; }}
+.luna-report-details span {{
+  margin-bottom:.22rem;
+  color:var(--muted);
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.57rem;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}}
+.luna-report-details strong {{
+  overflow-wrap:anywhere;
+  font-size:.78rem;
+  line-height:1.32;
+  font-weight:600;
+}}
 .luna-print-controls {{
   position:static;
   z-index:1;
@@ -959,6 +1029,11 @@ def build_monthly_experience_html(
     grid-template-columns:1fr;
     gap:.35rem;
   }}
+  .luna-report-details {{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }}
+  .luna-report-details > div:nth-child(2) {{ border-right:none; }}
+  .luna-report-details > div:nth-child(-n+2) {{ border-bottom:1px solid var(--line); }}
   .luna-print-controls {{
     align-items:stretch;
     flex-wrap:wrap;
@@ -1004,6 +1079,23 @@ def build_monthly_experience_html(
     margin:0;
   }}
   .luna-print-controls {{ display:none !important; }}
+  .luna-report-details {{
+    display:grid !important;
+    grid-template-columns:repeat(4,1fr) !important;
+    background:#fff !important;
+    border-top:1px solid #050505 !important;
+    border-bottom:1px solid #050505 !important;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }}
+  .luna-report-details > div {{
+    padding:3mm 2.5mm !important;
+    border-right:1px solid #050505 !important;
+    border-bottom:none !important;
+  }}
+  .luna-report-details > div:last-child {{ border-right:none !important; }}
+  .luna-report-details span {{ color:#333 !important; font-size:7pt !important; }}
+  .luna-report-details strong {{ color:#050505 !important; font-size:9pt !important; }}
   .luna-monthly-hero {{
     padding:7mm 0 6mm;
     color:#050505 !important;
@@ -1126,6 +1218,8 @@ def build_monthly_experience_html(
       <strong>{_safe(narrative.headline)}</strong>
     </div>
   </section>
+
+  {report_details}
 
   {controls}
 
