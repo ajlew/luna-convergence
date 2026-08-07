@@ -1109,6 +1109,10 @@ def top_navigation(current_path: str) -> None:
         ("solar-year", "Solar year"),
         ("how-it-works", "How it works"),
     ]
+    if path == "monthly-preview":
+        # Keep the editorial Monthly Preview unlisted everywhere else, but show
+        # its active location while the owner is using the direct route.
+        items.insert(3, ("monthly-preview", "Monthly preview"))
     if EDITOR_PREVIEW_ENABLED:
         items.insert(3, ("editorial-preview", "Editorial preview"))
         items.insert(4, ("forecast-library", "Forecast library"))
@@ -2086,6 +2090,153 @@ def daily_page() -> None:
             )
 
 
+def render_monthly_preview_workspace() -> None:
+    """Generate a complete monthly report without exposing the paid checkout flow."""
+    local_today = browser_local_date()
+    default_year_value = min(max(local_today.year, 1950), 2100)
+    default_month_value = local_today.month
+
+    st.caption(browser_time_caption())
+
+    with st.form("monthly-preview-form", clear_on_submit=False):
+        first_row = st.columns(3, gap="medium")
+        with first_row[0]:
+            sign = st.selectbox(
+                "Star sign",
+                SIGNS,
+                index=SIGNS.index(DEFAULT_SIGN),
+                key="monthly-preview-sign",
+            )
+        with first_row[1]:
+            forecast_year = st.number_input(
+                "Year",
+                min_value=1950,
+                max_value=2100,
+                value=default_year_value,
+                step=1,
+                key="monthly-preview-year",
+            )
+        with first_row[2]:
+            selected_month = st.selectbox(
+                "Month",
+                list(range(1, 13)),
+                index=default_month_value - 1,
+                format_func=lambda value: month_name[value],
+                key="monthly-preview-month",
+            )
+
+        second_row = st.columns(2, gap="medium")
+        with second_row[0]:
+            timezone_name = st.selectbox(
+                "Timezone",
+                TIMEZONES,
+                index=timezone_select_index(),
+                key="monthly-preview-timezone",
+            )
+        with second_row[1]:
+            nearest_city = st.text_input(
+                "Nearest city",
+                value=representative_city_name(timezone_name),
+                help=city_input_help(timezone_name),
+                key="monthly-preview-city",
+            )
+
+        main_focus = st.selectbox(
+            "Main focus",
+            MONTHLY_FOCUS_CHOICES,
+            key="monthly-preview-focus",
+        )
+
+        submitted = st.form_submit_button(
+            "Generate full monthly preview",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if submitted:
+        year = int(forecast_year)
+        month = int(selected_month)
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year, 12, 31)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+
+        try:
+            with st.spinner(
+                f"Building {sign} — {month_name[month]} {year}..."
+            ):
+                result = period_report(
+                    sign,
+                    start_date,
+                    end_date,
+                    timezone_name,
+                    f"{month_name[month]} {year}",
+                    transition_count=9,
+                    nearest_city=nearest_city,
+                    main_focus=main_focus,
+                )
+        except Exception as exc:
+            st.error("Luna could not generate this monthly preview.")
+            st.exception(exc)
+            return
+
+        st.session_state["monthly-preview-result"] = result
+        st.session_state["monthly-preview-focus-value"] = main_focus
+        st.rerun()
+
+    result = st.session_state.get("monthly-preview-result")
+    if not result:
+        st.info(
+            "Choose a sign and month, then generate the preview. "
+            "The complete customer-style monthly report will appear below."
+        )
+        return
+
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    st.caption(
+        f"{result.get('sign')} / {result.get('label')} · "
+        "full editorial preview · no checkout"
+    )
+
+    narrative = build_monthly_narrative(
+        result,
+        main_focus=st.session_state.get(
+            "monthly-preview-focus-value",
+            "General overview",
+        ),
+    )
+    render_monthly_experience(
+        narrative,
+        result,
+        show_print=True,
+        preview=False,
+    )
+
+
+def monthly_preview_page() -> None:
+    """Unlisted owner/editor route for viewing complete monthly reports."""
+    set_page_metadata(
+        "Monthly Preview | Luna Convergence",
+        "Unlisted editorial workspace for generating complete Luna monthly reports without checkout.",
+        "/monthly-preview",
+    )
+    st.markdown(
+        '<div class="eyebrow">Unlisted editorial workspace</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("# Monthly preview")
+    st.markdown(
+        "Generate any Luna monthly report here without entering Stripe. "
+        "This route is intentionally excluded from the normal navigation."
+    )
+    st.warning(
+        "Editorial testing only. This page renders the complete monthly product, "
+        "including the browser print/save controls."
+    )
+    render_monthly_preview_workspace()
+
+
 def render_report_generator_workspace() -> None:
     report_type = st.radio(
         "Report type",
@@ -2393,6 +2544,23 @@ def reports_page() -> None:
         "Order a monthly strategic astrology report or a detailed year-ahead forecast delivered electronically.",
         "/reports",
     )
+
+    # Private monthly preview fallback. This deliberately uses the existing
+    # /reports route so the preview remains reachable even if a deployment
+    # has trouble recognising the separate /monthly-preview route.
+    preview_mode = str(st.query_params.get("preview", "")).strip().lower()
+    if preview_mode in {"monthly", "month", "monthly-report"}:
+        st.markdown(
+            '<div class="eyebrow">Private monthly preview</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("# Generate a complete monthly report")
+        st.caption(
+            "Preview workspace — no Stripe checkout. Choose the sign, month, "
+            "year and location settings, then generate the full Luna monthly."
+        )
+        render_monthly_preview_workspace()
+        return
     if EDITOR_PREVIEW_ENABLED:
         st.markdown(
             '<div class="eyebrow">Monthly and year-ahead reports</div>',
@@ -3046,6 +3214,12 @@ MONTHLY_INDEX_REF = st.Page(
     title="August 2026 Horoscopes",
     url_path="august-2026-horoscopes",
 )
+MONTHLY_PREVIEW_REF = st.Page(
+    monthly_preview_page,
+    title="Monthly Preview",
+    url_path="monthly-preview",
+    visibility="hidden",
+)
 EDITORIAL_PREVIEW_REF = st.Page(
     editorial_preview_page,
     title="Editorial Preview",
@@ -3104,6 +3278,7 @@ ALL_PAGES = [
     HOME_PAGE_REF,
     DAILY_PAGE_REF,
     MONTHLY_INDEX_REF,
+    MONTHLY_PREVIEW_REF,
     EDITORIAL_PREVIEW_REF,
     FORECAST_LIBRARY_REF,
     REPORTS_PAGE_REF,

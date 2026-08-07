@@ -1,0 +1,26 @@
+--- /mnt/data/app_before_monthly_preview_fallback.py	2026-08-07 08:31:33.970249432 +0000
++++ /mnt/data/app.py	2026-08-07 08:31:34.387367157 +0000
+@@ -2544,6 +2544,23 @@
+         "Order a monthly strategic astrology report or a detailed year-ahead forecast delivered electronically.",
+         "/reports",
+     )
++
++    # Private monthly preview fallback. This deliberately uses the existing
++    # /reports route so the preview remains reachable even if a deployment
++    # has trouble recognising the separate /monthly-preview route.
++    preview_mode = str(st.query_params.get("preview", "")).strip().lower()
++    if preview_mode in {"monthly", "month", "monthly-report"}:
++        st.markdown(
++            '<div class="eyebrow">Private monthly preview</div>',
++            unsafe_allow_html=True,
++        )
++        st.markdown("# Generate a complete monthly report")
++        st.caption(
++            "Preview workspace — no Stripe checkout. Choose the sign, month, "
++            "year and location settings, then generate the full Luna monthly."
++        )
++        render_monthly_preview_workspace()
++        return
+     if EDITOR_PREVIEW_ENABLED:
+         st.markdown(
+             '<div class="eyebrow">Monthly and year-ahead reports</div>',
