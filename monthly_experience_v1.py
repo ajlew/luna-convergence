@@ -54,25 +54,38 @@ def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict
 
     now = datetime.now(timezone)
     hour = now.strftime("%I").lstrip("0") or "0"
-    generated = f"{now.day} {now.strftime('%B %Y')} · {hour}:{now.strftime('%M %p')}"
+    minute = now.strftime("%M")
+    meridiem = now.strftime("%p").lower()
+    time_label = f"{hour}:{minute}{meridiem}"
+    month_label = str(narrative.label)
+    sign_label = str(narrative.sign)
+    display_title = f"{sign_label} {time_label} {month_label}"
+
+    # Windows does not allow a colon in filenames. The on-page identity keeps
+    # the familiar 8:50pm format, while the print document title uses a dot so
+    # Save as PDF defaults to a clean, ready-to-file name such as:
+    # Aries 8.50pm August 2026.pdf
+    file_time_label = f"{hour}.{minute}{meridiem}"
+    file_title = f"{sign_label} {file_time_label} {month_label}"
+    generated_date = f"{now.day} {now.strftime('%B %Y')}"
     zone_short = now.tzname() or timezone_name
 
     return {
-        "sign": str(narrative.sign),
-        "month": str(narrative.label),
-        "generated": generated,
+        "sign": sign_label,
+        "month": month_label,
+        "time": time_label,
+        "display_title": display_title,
+        "file_title": file_title,
+        "generated_date": generated_date,
         "timezone": f"{zone_short} · {timezone_name}",
     }
 
 
-def _report_details_html(narrative: MonthlyNarrative, result: dict) -> str:
-    details = _generated_report_details(narrative, result)
+def _report_details_html(details: dict[str, str]) -> str:
     return f"""
 <div class="luna-report-details" aria-label="Report details">
-  <div><span>Star sign</span><strong>{_safe(details['sign'])}</strong></div>
-  <div><span>Report month</span><strong>{_safe(details['month'])}</strong></div>
-  <div><span>Generated</span><strong>{_safe(details['generated'])}</strong></div>
-  <div><span>Timezone</span><strong>{_safe(details['timezone'])}</strong></div>
+  <strong class="luna-report-identity">{_safe(details['display_title'])}</strong>
+  <span class="luna-report-generated">Generated {_safe(details['generated_date'])} · {_safe(details['timezone'])}</span>
 </div>
     """
 
@@ -537,7 +550,9 @@ def build_monthly_experience_html(
         if show_print
         else ""
     )
-    report_details = _report_details_html(narrative, result)
+    report_identity = _generated_report_details(narrative, result)
+    report_details = _report_details_html(report_identity)
+    print_file_title = report_identity["file_title"]
 
     return f"""
 <style id="luna-print-page-size">
@@ -920,32 +935,27 @@ def build_monthly_experience_html(
   border-top:1px solid var(--line);
 }}
 .luna-report-details {{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.85rem 1.5rem;
+  padding:.78rem clamp(1rem,4vw,3.2rem);
   border-bottom:1px solid var(--black);
   background:var(--soft);
 }}
-.luna-report-details > div {{
-  min-width:0;
-  padding:.7rem .85rem;
-  border-right:1px solid var(--line);
+.luna-report-identity {{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.82rem;
+  line-height:1.35;
+  font-weight:600;
+  letter-spacing:.01em;
 }}
-.luna-report-details > div:last-child {{ border-right:none; }}
-.luna-report-details span,
-.luna-report-details strong {{ display:block; }}
-.luna-report-details span {{
-  margin-bottom:.22rem;
+.luna-report-generated {{
   color:var(--muted);
   font-family:"IBM Plex Mono",monospace;
-  font-size:.57rem;
-  letter-spacing:.04em;
-  text-transform:uppercase;
-}}
-.luna-report-details strong {{
-  overflow-wrap:anywhere;
-  font-size:.78rem;
-  line-height:1.32;
-  font-weight:600;
+  font-size:.6rem;
+  line-height:1.35;
+  text-align:right;
 }}
 .luna-print-controls {{
   position:static;
@@ -1030,9 +1040,11 @@ def build_monthly_experience_html(
     gap:.35rem;
   }}
   .luna-report-details {{
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:flex-start;
+    flex-direction:column;
+    gap:.25rem;
   }}
-  .luna-report-details > div:nth-child(2) {{ border-right:none; }}
+  .luna-report-generated {{ text-align:left; }}
   .luna-report-details > div:nth-child(-n+2) {{ border-bottom:1px solid var(--line); }}
   .luna-print-controls {{
     align-items:stretch;
@@ -1206,6 +1218,7 @@ def build_monthly_experience_html(
   id="luna-monthly-report"
   data-print-paper="{_safe(default_paper)}"
   data-print-orientation="{_safe(default_orientation)}"
+  data-print-file-title="{_safe(print_file_title)}"
 >
   <section class="luna-monthly-hero">
     <div class="luna-monthly-meta">
@@ -1239,6 +1252,7 @@ def build_monthly_experience_html(
   const printButton = document.getElementById("luna-print-report");
   const pageStyle = document.getElementById("luna-print-page-size");
   let printPortal = null;
+  let prePrintDocumentTitle = null;
 
   function selectedPaper() {{
     return paper ? paper.value : "{default_paper}";
@@ -1298,11 +1312,24 @@ def build_monthly_experience_html(
     return printPortal;
   }}
 
+  function applyPrintDocumentTitle() {{
+    if (prePrintDocumentTitle === null) {{
+      prePrintDocumentTitle = document.title;
+    }}
+    const printTitle = report.dataset.printFileTitle || "Luna Convergence Monthly Report";
+    document.title = printTitle;
+  }}
+
   function preparePrint() {{
     createPrintPortal();
+    applyPrintDocumentTitle();
   }}
 
   function restorePrint() {{
+    if (prePrintDocumentTitle !== null) {{
+      document.title = prePrintDocumentTitle;
+      prePrintDocumentTitle = null;
+    }}
     window.setTimeout(removePrintPortal, 0);
   }}
 
@@ -1313,7 +1340,7 @@ def build_monthly_experience_html(
 
   if (printButton) {{
     printButton.addEventListener("click", async () => {{
-      createPrintPortal();
+      preparePrint();
       if (document.fonts && document.fonts.ready) {{
         await document.fonts.ready;
       }}
