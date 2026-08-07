@@ -61,12 +61,20 @@ def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict
     sign_label = str(narrative.sign)
     display_title = f"{sign_label} {time_label} {month_label}"
 
-    # Windows does not allow a colon in filenames. The on-page identity keeps
-    # the familiar 8:50pm format, while the print document title uses a dot so
-    # Save as PDF defaults to a clean, ready-to-file name such as:
-    # Aries 8.50pm August 2026.pdf
-    file_time_label = f"{hour}.{minute}{meridiem}"
-    file_title = f"{sign_label} {file_time_label} {month_label}"
+    # Preserve Luna's original, sortable monthly PDF naming convention.
+    # Browser print-to-PDF uses the document title as the proposed filename,
+    # so a Virgo report for August 2026 should prefill as:
+    # 2026-08_Virgo_Monthly.pdf
+    try:
+        parsed_month = datetime.strptime(month_label, "%B %Y")
+        period_key = parsed_month.strftime("%Y-%m")
+    except Exception:
+        try:
+            period_key = datetime.fromisoformat(str(result.get("start", ""))).strftime("%Y-%m")
+        except Exception:
+            period_key = month_label.replace(" ", "-")
+    safe_sign = "".join(ch for ch in sign_label if ch.isalnum() or ch in ("-", "_")) or "Report"
+    file_title = f"{period_key}_{safe_sign}_Monthly"
     generated_date = f"{now.day} {now.strftime('%B %Y')}"
     zone_short = now.tzname() or timezone_name
 
@@ -1312,12 +1320,29 @@ def build_monthly_experience_html(
     return printPortal;
   }}
 
+  let prePrintParentTitle = null;
+
   function applyPrintDocumentTitle() {{
+    const printTitle = report.dataset.printFileTitle || "Luna_Convergence_Monthly";
+
+    // Chromium may derive the Save-as-PDF name from either the document being
+    // printed or the outer Streamlit document. Set both so the filename is not
+    // blank when Luna is rendered inside Streamlit's HTML container.
     if (prePrintDocumentTitle === null) {{
       prePrintDocumentTitle = document.title;
     }}
-    const printTitle = report.dataset.printFileTitle || "Luna Convergence Monthly Report";
     document.title = printTitle;
+
+    try {{
+      if (window.parent && window.parent !== window) {{
+        if (prePrintParentTitle === null) {{
+          prePrintParentTitle = window.parent.document.title;
+        }}
+        window.parent.document.title = printTitle;
+      }}
+    }} catch (error) {{
+      // Cross-origin protection: the local print document title above still applies.
+    }}
   }}
 
   function preparePrint() {{
@@ -1325,11 +1350,25 @@ def build_monthly_experience_html(
     applyPrintDocumentTitle();
   }}
 
-  function restorePrint() {{
+  function restorePrintTitles() {{
     if (prePrintDocumentTitle !== null) {{
       document.title = prePrintDocumentTitle;
       prePrintDocumentTitle = null;
     }}
+    try {{
+      if (prePrintParentTitle !== null && window.parent && window.parent !== window) {{
+        window.parent.document.title = prePrintParentTitle;
+      }}
+    }} catch (error) {{
+      // Ignore parent-title restore when access is unavailable.
+    }}
+    prePrintParentTitle = null;
+  }}
+
+  function restorePrint() {{
+    // Some Chromium builds populate the Save-as-PDF filename after `afterprint`.
+    // Keep the print title in place briefly so the filename remains available.
+    window.setTimeout(restorePrintTitles, 2500);
     window.setTimeout(removePrintPortal, 0);
   }}
 
