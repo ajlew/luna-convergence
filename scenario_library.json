@@ -1,7 +1,7 @@
 {
-  "version": "3.1",
-  "selection_policy": "deterministic_evidence_ranked_no_randomness",
-  "notes": "Scenario atoms describe plausible manifestations, not predictions. Customer prose must preserve uncertainty. Source reports are calibration references for associations only; Luna wording remains independently generated.",
+  "version": "3.4",
+  "selection_policy": "deterministic_evidence_ranked_strict_house_provenance_no_randomness",
+  "notes": "Scenario atoms describe plausible manifestations, not predictions. Customer prose must preserve uncertainty. Narrative beats use strict house provenance: a scenario must match both the assigned story house and a supporting event in that house. House 2 earned income is kept distinct from House 8 shared/external funding. Source reports are calibration references for associations only; Luna wording remains independently generated.",
   "scenario_families": [
     {
       "key": "identity_direction",
@@ -547,8 +547,8 @@
       ],
       "friction_examples": [
         "an unseen obstacle, private ending or unfinished obligation",
-        "fatigue, anxiety or lost sleep requiring a quieter schedule",
-        "a hospital, rehabilitation, institutional or confidential matter requiring attention"
+        "reduced energy, restless sleep or emotional overload requiring a quieter schedule",
+        "a private care, recovery, institutional or confidential matter requiring attention"
       ],
       "neutral_examples": [
         "a private ending, recovery period or confidential matter",
@@ -615,11 +615,7 @@
       "label": "loan, mortgage or formal funding process",
       "domain": "money",
       "houses": [
-        2,
-        4,
-        8,
-        10,
-        11
+        8
       ],
       "planets": [
         "Mercury",
@@ -651,9 +647,10 @@
       "opportunity_bias": 1.08,
       "tension_bias": 1.18,
       "calibration": [
-        "august_2026_capricorn",
         "august_2026_cancer",
-        "house_8_matrix"
+        "august_2026_capricorn",
+        "house_8_matrix",
+        "house_8_strict"
       ]
     },
     {
@@ -755,10 +752,7 @@
       "label": "visa, legal or higher-education progress",
       "domain": "expansion",
       "houses": [
-        3,
-        4,
-        9,
-        10
+        9
       ],
       "planets": [
         "Jupiter",
@@ -790,11 +784,12 @@
       "opportunity_bias": 1.15,
       "tension_bias": 1.1,
       "calibration": [
-        "august_2026_sagittarius",
         "august_2026_cancer",
         "august_2026_capricorn",
         "august_2026_gemini",
-        "august_2026_libra"
+        "august_2026_libra",
+        "august_2026_sagittarius",
+        "house_9_strict"
       ]
     },
     {
@@ -1263,7 +1258,6 @@
       "label": "unexpected travel, legal or official complication",
       "domain": "expansion",
       "houses": [
-        3,
         9
       ],
       "planets": [
@@ -1296,7 +1290,8 @@
       "calibration": [
         "august_2026_cancer",
         "august_2026_capricorn",
-        "august_2026_libra"
+        "august_2026_libra",
+        "house_9_disruption_strict"
       ]
     },
     {
@@ -1343,12 +1338,10 @@
     },
     {
       "key": "health_treatment",
-      "label": "health, treatment or recovery decision",
+      "label": "wellbeing, care or recovery adjustment",
       "domain": "work",
       "houses": [
-        1,
-        6,
-        12
+        6
       ],
       "planets": [
         "Moon",
@@ -1365,26 +1358,27 @@
         "aspect"
       ],
       "positive_examples": [
-        "a useful diagnosis, treatment plan or health routine",
-        "a course of therapy, rehabilitation or recovery reaching a milestone",
+        "a check-up, care plan or wellbeing routine becoming easier to sustain",
+        "a recovery, therapy or rehabilitation plan reaching a useful milestone",
         "a practical change improving sleep, energy or day-to-day wellbeing"
       ],
       "friction_examples": [
-        "fatigue or a health concern requiring prompt attention",
-        "a treatment, appointment or recovery period changing the schedule",
-        "stress or overload making rest non-negotiable"
+        "reduced energy or wellbeing requiring more attention",
+        "an appointment, recovery period or care routine changing the schedule",
+        "stress or overload making rest and practical support more important"
       ],
       "neutral_examples": [
-        "a health, treatment or recovery decision",
-        "a practical adjustment to energy, routine or care"
+        "a wellbeing, care or recovery decision",
+        "a practical adjustment to energy, routine or support"
       ],
       "opportunity_bias": 1.1,
       "tension_bias": 1.2,
       "calibration": [
-        "august_2026_virgo",
-        "august_2026_pisces",
+        "august_2026_capricorn",
         "august_2026_libra",
-        "august_2026_capricorn"
+        "august_2026_pisces",
+        "august_2026_virgo",
+        "house_6_strict"
       ]
     }
   ],

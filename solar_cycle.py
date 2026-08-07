@@ -176,6 +176,70 @@ PHASE_ACTIONS = {
     },
 }
 
+HOUSE_SOLAR_GUIDANCE = {
+    1: {
+        "prepare": "clarify the personal direction you actually want",
+        "arrive": "choose one self-directed move that makes the new identity tangible",
+        "risk": "performing a new identity before it has a workable shape",
+    },
+    2: {
+        "prepare": "name the value, price or resource requirement",
+        "arrive": "put the number, budget or personal priority on firmer ground",
+        "risk": "expanding the plan without knowing what it costs or what it is worth",
+    },
+    3: {
+        "prepare": "get the facts, words and terms into usable form",
+        "arrive": "turn the message, contract or decision into a clear next step",
+        "risk": "moving on assumptions when the wording, timing or paperwork is still loose",
+    },
+    4: {
+        "prepare": "stabilise the private foundation",
+        "arrive": "make the home, family or location decision support the wider plan",
+        "risk": "building outward while the private arrangement underneath it remains unsettled",
+    },
+    5: {
+        "prepare": "give the creative, romantic or joyful opening room to develop",
+        "arrive": "choose the version of the spark that has a believable next move",
+        "risk": "mistaking excitement, applause or chemistry for a finished structure",
+    },
+    6: {
+        "prepare": "strengthen the routine, workload and practical support system",
+        "arrive": "make the week capable of carrying what you want to continue",
+        "risk": "asking energy, health or operations to absorb more than the system can sustain",
+    },
+    7: {
+        "prepare": "make your own position clear before negotiating with another person",
+        "arrive": "put the relationship, client or agreement into mutual and explicit terms",
+        "risk": "letting another person's expectations define the arrangement by default",
+    },
+    8: {
+        "prepare": "name ownership, trust, cost and shared responsibility",
+        "arrive": "make the shared-money or obligation structure explicit enough to manage",
+        "risk": "assuming trust will compensate for unclear money, ownership or obligations",
+    },
+    9: {
+        "prepare": "turn the wider possibility into an itinerary, application or decision",
+        "arrive": "give travel, study, publishing, legal or international plans a usable route forward",
+        "risk": "falling in love with the horizon before documents, timing or commitments are workable",
+    },
+    10: {
+        "prepare": "develop the result until it is ready to be judged",
+        "arrive": "make the career, role or public outcome visible on terms you can support",
+        "risk": "seeking recognition before the responsibilities and consequences are understood",
+    },
+    11: {
+        "prepare": "identify the people, audience or alliance that can genuinely help",
+        "arrive": "give the future plan a network and a realistic next milestone",
+        "risk": "confusing popularity or group momentum with durable support",
+    },
+    12: {
+        "prepare": "protect enough quiet to finish, recover or understand what is ending",
+        "arrive": "close the private chapter without forcing the next public move too early",
+        "risk": "keeping a completed pattern alive because silence feels less certain than action",
+    },
+}
+
+
 FOCUS_PHASES = {
     "Love and relationships": {
         "Emergence": "A relationship may be beginning or asking for new terms. Look for mutual curiosity and a workable first step.",
@@ -683,18 +747,22 @@ def monthly_solar_convergence(
         main_focus=main_focus,
         headline=_solar_headline(direction, end_house),
         meaning=meaning,
-        focus_meaning=_focus_text(main_focus, quarter),
+        focus_meaning=(
+            _focus_text(main_focus, quarter)
+            if main_focus not in {"General overview", "General year ahead"}
+            else f"Background emphasis: {HOUSE_SOLAR_GUIDANCE[end_house]['arrive'].capitalize()}."
+        ),
         opportunity=(
-            f"{phase['opportunity']} Use house {start_house} to prepare the direction "
-            f"and house {end_house} to make the result visible and dependable."
+            f"Use house {start_house} to {HOUSE_SOLAR_GUIDANCE[start_house]['prepare']}. "
+            f"As the emphasis moves into house {end_house}, {HOUSE_SOLAR_GUIDANCE[end_house]['arrive']}."
         ),
         risk=(
-            f"{phase['risk']} In particular, do not announce the destination before "
-            f"{HOUSE_NAMES[end_house]} can support it."
+            f"Watch for {HOUSE_SOLAR_GUIDANCE[end_house]['risk']}. "
+            f"The solar background is context for the event-led story, not a replacement for it."
         ),
         action=(
-            f"Use the {start_sun.sign} period to {SIGN_RULES[start_sun.sign].lower()}. "
-            f"Use the {end_sun.sign} period to {SIGN_RULES[end_sun.sign].lower()}."
+            f"During the {start_sun.sign} phase, {HOUSE_SOLAR_GUIDANCE[start_house]['prepare']}. "
+            f"During the {end_sun.sign} phase, {HOUSE_SOLAR_GUIDANCE[end_house]['arrive']}."
         ),
         solar_rule=_rule(start_sun.sign, end_sun.sign),
         equation=equation,

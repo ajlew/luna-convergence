@@ -6,7 +6,7 @@ import re
 from typing import Iterable
 
 from date_display import human_date, human_date_range
-from scenario_engine import rank_scenarios
+from scenario_engine import FOCUS_HOUSES, rank_scenarios
 
 from luna_editorial_system import (
     GATEKEEPER_LINE,
@@ -478,12 +478,26 @@ def _house_weight_map(result: dict) -> dict[int, float]:
 
 
 def _domain_scenarios(result: dict, focus: str, maximum: int = 4):
+    house_weights = _house_weight_map(result)
+    focus_houses = FOCUS_HOUSES.get(focus)
+    required_houses = None
+    if focus_houses and house_weights:
+        ranked_relevant = [
+            house
+            for house, _weight in sorted(house_weights.items(), key=lambda item: -item[1])
+            if house in focus_houses
+        ]
+        if ranked_relevant:
+            # Each Love / Work / Money card gets its own strongest relevant house
+            # rather than borrowing a broad scenario family from another domain.
+            required_houses = {ranked_relevant[0]}
     return rank_scenarios(
         _all_events(result),
         str(result.get("sign", "")),
         focus,
         maximum=maximum,
-        house_weights=_house_weight_map(result),
+        house_weights=house_weights,
+        required_houses=required_houses,
     )
 
 
@@ -1201,11 +1215,11 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             "",
             "The scenario labels are ranked symbolic event families, not measured probabilities or guaranteed events.",
             "",
-            "## Solar Convergence evidence",
+            "## Solar background evidence",
             "",
             *solar_rows,
             "",
-            "## Dominant house evidence",
+            "## Monthly background weight",
             "",
             *dominant_rows,
             "",

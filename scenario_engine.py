@@ -89,6 +89,8 @@ class ScenarioResult:
     supporting_events: tuple[ScenarioSupport, ...]
     domain: str = "general"
     dominant_polarity: str = "neutral"
+    scenario_houses: tuple[int, ...] = ()
+    matched_houses: tuple[int, ...] = ()
 
     def to_dict(self) -> dict:
         return {
@@ -98,6 +100,8 @@ class ScenarioResult:
             "score": round(self.score, 2),
             "confidence": self.confidence,
             "dominant_polarity": self.dominant_polarity,
+            "scenario_houses": list(self.scenario_houses),
+            "matched_houses": list(self.matched_houses),
             "examples": list(self.examples),
             "supporting_events": [
                 {
@@ -243,12 +247,19 @@ def event_importance_score(
     configuration = _configuration_score(event)
 
     score = 10.0 * (
-        0.32 * astronomy
-        + 0.26 * event_class
-        + 0.18 * house_relevance
-        + 0.14 * ruler_relevance
+        0.30 * astronomy
+        + 0.24 * event_class
+        + 0.16 * house_relevance
+        + 0.20 * ruler_relevance
         + 0.10 * configuration
     )
+
+    # Ruler contacts should feel structurally louder, especially when they are
+    # exact or attached to a major event. The small multiplier increases
+    # prominence without turning ordinary ruler transits into eclipse-level
+    # events.
+    if ruler_relevance and configuration >= 0.70:
+        score *= 1.06
 
     polarity = str(_value(event, "polarity", "neutral"))
     # Polarity changes urgency slightly, but never overrules event hierarchy.
@@ -280,6 +291,7 @@ def event_scenario_contribution(
     sign: str,
     main_focus: str = "General overview",
     house_weights: Mapping[int, float] | None = None,
+    required_houses: frozenset[int] | None = None,
 ) -> float:
     kind = str(_value(event, "kind", ""))
     planets = set(str(value) for value in (_value(event, "planets", ()) or ()))
@@ -290,6 +302,17 @@ def event_scenario_contribution(
         return 0.0
     if planets == {"Moon"} and kind not in {"lunation", "eclipse"}:
         return 0.0
+
+    # Narrative provenance rule: when a story beat has already been assigned to
+    # a house, a scenario may only qualify if BOTH the scenario definition and
+    # the supporting astronomical event touch that house. This prevents a
+    # nearby House 9 event from supplying visa/travel examples to a House 10
+    # eclipse simply because both events sit in the same date cluster.
+    if required_houses:
+        if not (definition.houses & required_houses):
+            return 0.0
+        if not (houses & required_houses):
+            return 0.0
 
     house_overlap = houses & definition.houses
     planet_overlap = planets & definition.planets
@@ -327,9 +350,18 @@ def event_scenario_contribution(
         + 0.10 * ruler_match
         + 0.10 * class_score
     )
+    exact_house_factor = 1.0
+    if required_houses:
+        matched_required = definition.houses & required_houses
+        if matched_required:
+            # Prefer a precise one-house family over a broad cross-house family
+            # when both are supported by the same event.
+            exact_house_factor = 1.16 if len(definition.houses) == 1 else 1.04
+
     return (
         score
         * breadth_factor
+        * exact_house_factor
         * _polarity_multiplier(polarity, definition)
         * _focus_multiplier(houses, main_focus)
     )
@@ -383,10 +415,22 @@ def rank_scenarios(
     main_focus: str = "General overview",
     maximum: int = 8,
     house_weights: Mapping[int, float] | None = None,
+    required_houses: Iterable[int] | None = None,
 ) -> tuple[ScenarioResult, ...]:
     results: list[ScenarioResult] = []
     allowed_domains = FOCUS_DOMAINS.get(main_focus)
+    required_house_set = frozenset(int(value) for value in (required_houses or ()))
+    context_planets = {
+        str(planet)
+        for event in events
+        for planet in (_value(event, "planets", ()) or ())
+    }
+    context_polarities = {str(_value(event, "polarity", "neutral")) for event in events}
+    pressure_context = bool(context_polarities & {"pressure", "review", "turning point"})
+    opportunity_context = bool(context_polarities & {"opportunity", "release", "new cycle", "culmination"})
     for definition in SCENARIO_DEFINITIONS:
+        if required_house_set and not (definition.houses & required_house_set):
+            continue
         if allowed_domains is not None and definition.domain not in allowed_domains:
             continue
         supports: list[ScenarioSupport] = []
@@ -398,6 +442,7 @@ def rank_scenarios(
                 sign,
                 main_focus,
                 house_weights,
+                required_house_set or None,
             )
             if contribution <= 0:
                 continue
@@ -422,6 +467,20 @@ def rank_scenarios(
         independent_titles = len({item.title for item in supports})
         diversity_bonus = min(3.0, independent_dates * 0.20 + independent_titles * 0.12)
         score = total + diversity_bonus
+
+        # Aspect-conditioned scenario modifier. A planet in a neighbouring house
+        # may modify the eclipse/lunation that owns the story beat. The scenario
+        # still needs strict provenance in the required house, but the surrounding
+        # configuration can decide which manifestation within that house rises.
+        if pressure_context and "Uranus" in context_planets and "Uranus" in definition.planets:
+            score *= 1.30
+        elif pressure_context and "Saturn" in context_planets and "Saturn" in definition.planets:
+            score *= 1.08
+        if opportunity_context and "Jupiter" in context_planets and "Jupiter" in definition.planets:
+            score *= 1.08
+        if opportunity_context and "Venus" in context_planets and "Venus" in definition.planets:
+            score *= 1.04
+
         polarity = _dominant_polarity(supports)
         results.append(
             ScenarioResult(
@@ -433,6 +492,13 @@ def rank_scenarios(
                 dominant_polarity=polarity,
                 examples=_examples_for(definition, polarity),
                 supporting_events=tuple(supports[:5]),
+                scenario_houses=tuple(sorted(definition.houses)),
+                matched_houses=tuple(sorted({
+                    house
+                    for support in supports
+                    for house in support.houses
+                    if house in definition.houses
+                })),
             )
         )
 
@@ -448,6 +514,8 @@ def rank_scenarios(
             dominant_polarity=item.dominant_polarity,
             examples=item.examples,
             supporting_events=item.supporting_events,
+            scenario_houses=item.scenario_houses,
+            matched_houses=item.matched_houses,
         )
         for item in results
     ]

@@ -4,6 +4,7 @@ from datetime import datetime
 from html import escape
 from typing import Iterable
 from zoneinfo import ZoneInfo
+from uuid import uuid4
 
 from date_display import human_date, human_date_range
 from luna_editorial_system import (
@@ -152,6 +153,26 @@ def _technical_rows(result: dict) -> str:
     return "".join(rows)
 
 
+def _story_driver_rows(result: dict) -> str:
+    arc = result.get("monthly_arc") or {}
+    preferred_roles = {"complication", "pivot", "climax", "resolution"}
+    rows = []
+    for beat in arc.get("beats") or []:
+        role = str(beat.get("role") or "").lower()
+        if role not in preferred_roles:
+            continue
+        houses = ", ".join(f"H{int(value)}" for value in (beat.get("houses") or [])[:3])
+        rows.append(
+            "<tr>"
+            f"<td>{_safe(role.replace('_', ' ').title())}</td>"
+            f"<td>{_safe(beat.get('title'))}</td>"
+            f"<td>{_safe(houses)}</td>"
+            f"<td>{float(beat.get('score', 0.0)):.1f}</td>"
+            "</tr>"
+        )
+    return "".join(rows)
+
+
 def _transition_rows(result: dict) -> str:
     rows = []
     for item in (result.get("major_transitions") or [])[:12]:
@@ -280,15 +301,33 @@ def _carryover_rows_html(result: dict) -> str:
     return "".join(rows)
 
 
-def _chapter_cards(narrative: MonthlyNarrative) -> str:
+def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
+    exact_dates: dict[str, str] = {}
+    for item in result.get("events") or []:
+        title = str(item.get("title") or "").strip()
+        event_date = item.get("event_date")
+        if title and event_date and title not in exact_dates:
+            exact_dates[title] = human_date(event_date)
+
     acts = []
     for chapter in narrative.chapters:
+        exact_date = exact_dates.get(str(chapter.title).strip(), "")
+        if exact_date and exact_date != chapter.date_range:
+            date_html = (
+                f'<span>{_safe(exact_date)}</span>'
+                f'<small>{_safe(chapter.title)}</small>'
+                f'<em>Influence window: {_safe(chapter.date_range)}</em>'
+            )
+        else:
+            date_html = (
+                f'<span>{_safe(chapter.date_range)}</span>'
+                f'<small>{_safe(chapter.title)}</small>'
+            )
         acts.append(
             f"""
 <article class="luna-story-act">
   <div class="luna-story-date">
-    <span>{_safe(chapter.date_range)}</span>
-    <small>{_safe(chapter.title)}</small>
+    {date_html}
   </div>
   <div class="luna-story-copy">
     <h3>{_safe(chapter.hook)}</h3>
@@ -321,6 +360,7 @@ def _life_rows(narrative: MonthlyNarrative) -> str:
 def _print_controls(
     default_paper: str,
     default_orientation: str,
+    instance_id: str,
 ) -> str:
     paper_options = "".join(
         f'<option value="{paper}"'
@@ -337,14 +377,14 @@ def _print_controls(
     return f"""
 <div class="luna-print-controls">
   <div class="luna-print-field">
-    <label for="luna-print-paper">Paper</label>
-    <select id="luna-print-paper">{paper_options}</select>
+    <label for="{instance_id}-paper">Paper</label>
+    <select id="{instance_id}-paper" data-luna-paper>{paper_options}</select>
   </div>
   <div class="luna-print-field">
-    <label for="luna-print-orientation">Orientation</label>
-    <select id="luna-print-orientation">{orientation_options}</select>
+    <label for="{instance_id}-orientation">Orientation</label>
+    <select id="{instance_id}-orientation" data-luna-orientation>{orientation_options}</select>
   </div>
-  <button id="luna-print-report" type="button">Print / Save PDF</button>
+  <button id="{instance_id}-print" data-luna-print type="button">Print / Save PDF</button>
 </div>
     """
 
@@ -364,7 +404,8 @@ def build_monthly_experience_html(
     if default_orientation not in PRINT_ORIENTATIONS:
         raise ValueError(f"Unsupported orientation: {default_orientation}")
 
-    chapters = _chapter_cards(narrative)
+    instance_id = f"luna-monthly-{uuid4().hex}"
+    chapters = _chapter_cards(narrative, result)
     life_rows = _life_rows(narrative)
     story_dates = _story_date_cards(narrative)
     arc_evidence_path = _arc_evidence_path(result)
@@ -407,6 +448,7 @@ def build_monthly_experience_html(
       <p>{_safe(narrative.central_storyline)}</p>
       <p><strong>Theme:</strong> {_safe(narrative.headline)}</p>
       <p><strong>Convergence:</strong> {_safe(narrative.convergence_axis)}</p>
+      <p><strong>Intensity:</strong> {_safe((result.get("monthly_arc") or {}).get("intensity_rating", "Steady"))}</p>
       <h3>Evidence path</h3>
       <div class="luna-evidence-path">{arc_evidence_path}</div>
       <p><strong>Rule:</strong> {_safe(VALIDATION_LINE)}</p>
@@ -414,8 +456,9 @@ def build_monthly_experience_html(
   </details>
 
   <details>
-    <summary>{_safe(SOLAR_LABEL)} <span>+</span></summary>
+    <summary>Solar background <span>+</span></summary>
     <div class="luna-detail-body">
+      <p class="luna-method-note"><strong>Background current:</strong> this slower solar movement adds context; it does not replace the event-led monthly story above.</p>
       <h3>{_safe(narrative.solar_title)}</h3>
       {_paragraphs(narrative.solar_paragraphs, maximum=2)}
       <div class="luna-evidence-grid">
@@ -455,7 +498,15 @@ def build_monthly_experience_html(
         </table>
       </div>
       <p class="luna-method-note">These are ranked symbolic event families, not measured probabilities or guarantees.</p>
-      <h3>Dominant houses</h3>
+      <h3>Story-driver events</h3>
+      <p class="luna-method-note">These are the event clusters that control the public narrative. Their scores are not the same thing as the broader monthly house weights below.</p>
+      <div class="luna-table-wrap">
+        <table>
+          <thead><tr><th>Role</th><th>Event</th><th>Houses</th><th>Score</th></tr></thead>
+          <tbody>{_story_driver_rows(result)}</tbody>
+        </table>
+      </div>
+      <h3>Monthly background weight</h3>
       <div class="luna-table-wrap">
         <table>
           <thead><tr><th>House</th><th>Life area</th><th>Weight</th></tr></thead>
@@ -554,7 +605,7 @@ def build_monthly_experience_html(
         """
 
     controls = (
-        _print_controls(default_paper, default_orientation)
+        _print_controls(default_paper, default_orientation, instance_id)
         if show_print
         else ""
     )
@@ -563,7 +614,8 @@ def build_monthly_experience_html(
     print_file_title = report_identity["file_title"]
 
     return f"""
-<style id="luna-print-page-size">
+<div id="{instance_id}" class="luna-monthly-instance" data-luna-instance>
+<style id="{instance_id}-page-size" data-luna-page-size>
 @page {{ size: {default_paper} {default_orientation}; margin: 12mm; }}
 </style>
 <style>
@@ -721,6 +773,12 @@ def build_monthly_experience_html(
   color:var(--muted);
   font-size:.85rem;
   line-height:1.4;
+}}
+.luna-story-date em {{
+  color:var(--muted);
+  font-size:.72rem;
+  line-height:1.35;
+  font-style:normal;
 }}
 .luna-story-copy {{
   max-width:700px;
@@ -1139,12 +1197,29 @@ def build_monthly_experience_html(
   .luna-monthly-section {{
     padding:6mm 0;
   }}
-  .luna-opening-story h2 {{
-    font-size:27pt;
+  .luna-opening-story {{
+    display:flex !important;
+    flex-direction:column !important;
+    padding-top:4mm !important;
+    padding-bottom:4mm !important;
   }}
+  .luna-opening-story > .luna-eyebrow {{ order:1; }}
+  .luna-opening-story > h2 {{
+    order:2;
+    font-size:25pt;
+    margin-bottom:2.5mm !important;
+  }}
+  .luna-opening-story > .luna-do-dont {{
+    order:3;
+    margin:1mm 0 3mm !important;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }}
+  .luna-opening-story > .luna-story-prose {{ order:4; }}
   .luna-story-prose p {{
-    font-size:10.5pt;
-    line-height:1.5;
+    font-size:9.7pt;
+    line-height:1.42;
+    margin:.25rem 0 .55rem;
   }}
   .luna-report-footer {{
     padding:3mm 0 0;
@@ -1175,8 +1250,12 @@ def build_monthly_experience_html(
   }}
   .luna-monthly-report[data-print-orientation="portrait"] .luna-story-section,
   .luna-monthly-report[data-print-orientation="portrait"] .luna-story-dates-section {{
-    break-before:page;
-    page-break-before:always;
+    break-before:auto;
+    page-break-before:auto;
+  }}
+  .luna-monthly-report[data-print-orientation="portrait"] .luna-do-dont {{
+    break-inside:avoid;
+    page-break-inside:avoid;
   }}
   .luna-monthly-report[data-print-orientation="landscape"] .luna-monthly-hero h1 {{
     font-size:30pt;
@@ -1223,7 +1302,8 @@ def build_monthly_experience_html(
 
 <div
   class="luna-monthly-report"
-  id="luna-monthly-report"
+  id="{instance_id}-report"
+  data-luna-report
   data-print-paper="{_safe(default_paper)}"
   data-print-orientation="{_safe(default_orientation)}"
   data-print-file-title="{_safe(print_file_title)}"
@@ -1254,13 +1334,16 @@ def build_monthly_experience_html(
 
 <script>
 (() => {{
-  const report = document.getElementById("luna-monthly-report");
-  const paper = document.getElementById("luna-print-paper");
-  const orientation = document.getElementById("luna-print-orientation");
-  const printButton = document.getElementById("luna-print-report");
-  const pageStyle = document.getElementById("luna-print-page-size");
-  let printPortal = null;
+  const root = document.getElementById("{instance_id}");
+  if (!root) return;
+  const report = root.querySelector("[data-luna-report]");
+  const paper = root.querySelector("[data-luna-paper]");
+  const orientation = root.querySelector("[data-luna-orientation]");
+  const printButton = root.querySelector("[data-luna-print]");
+  const pageStyle = root.querySelector("style[data-luna-page-size]");
+  let printFrame = null;
   let prePrintDocumentTitle = null;
+  let prePrintParentTitle = null;
 
   function selectedPaper() {{
     return paper ? paper.value : "{default_paper}";
@@ -1279,60 +1362,21 @@ def build_monthly_experience_html(
       "@page {{ size: " + paperValue + " " + orientationValue + "; margin: 12mm; }}";
   }}
 
-  function removePrintPortal() {{
-    if (printPortal && printPortal.parentNode) {{
-      printPortal.parentNode.removeChild(printPortal);
+  function removePrintFrame() {{
+    if (printFrame && printFrame.parentNode) {{
+      printFrame.parentNode.removeChild(printFrame);
     }}
-    printPortal = null;
-    document.body.classList.remove("luna-print-active");
+    printFrame = null;
   }}
 
-  function createPrintPortal() {{
-    if (printPortal) return printPortal;
-
-    applyPrintSettings();
-
-    printPortal = document.createElement("div");
-    printPortal.id = "luna-print-portal";
-
-    const clone = report.cloneNode(true);
-    clone.id = "luna-monthly-report-print";
-    clone.dataset.printPaper = selectedPaper();
-    clone.dataset.printOrientation = selectedOrientation();
-
-    clone.querySelectorAll(".luna-print-controls").forEach((node) => node.remove());
-    const expandAllPrintDetails = () => {{
-      clone.querySelectorAll("details").forEach((detail) => {{
-        detail.open = true;
-        detail.setAttribute("open", "");
-      }});
-    }};
-
-    expandAllPrintDetails();
-
-    // Run again after the clone enters the document. This catches nested
-    // disclosures and any browser-created details state before pagination.
-    window.requestAnimationFrame(expandAllPrintDetails);
-
-    printPortal.appendChild(clone);
-    document.body.appendChild(printPortal);
-    document.body.classList.add("luna-print-active");
-    return printPortal;
-  }}
-
-  let prePrintParentTitle = null;
-
-  function applyPrintDocumentTitle() {{
-    const printTitle = report.dataset.printFileTitle || "Luna_Convergence_Monthly";
-
-    // Chromium may derive the Save-as-PDF name from either the document being
-    // printed or the outer Streamlit document. Set both so the filename is not
-    // blank when Luna is rendered inside Streamlit's HTML container.
+  function applyOuterPrintTitle(printTitle) {{
+    // Keep the sortable Luna filename available to Chromium while the isolated
+    // print frame is active. The report itself is printed from the child frame,
+    // so no previously rendered Streamlit reports can leak into the PDF.
     if (prePrintDocumentTitle === null) {{
       prePrintDocumentTitle = document.title;
     }}
     document.title = printTitle;
-
     try {{
       if (window.parent && window.parent !== window) {{
         if (prePrintParentTitle === null) {{
@@ -1341,16 +1385,11 @@ def build_monthly_experience_html(
         window.parent.document.title = printTitle;
       }}
     }} catch (error) {{
-      // Cross-origin protection: the local print document title above still applies.
+      // Parent title access may be blocked by the browser sandbox.
     }}
   }}
 
-  function preparePrint() {{
-    createPrintPortal();
-    applyPrintDocumentTitle();
-  }}
-
-  function restorePrintTitles() {{
+  function restoreOuterPrintTitle() {{
     if (prePrintDocumentTitle !== null) {{
       document.title = prePrintDocumentTitle;
       prePrintDocumentTitle = null;
@@ -1360,36 +1399,91 @@ def build_monthly_experience_html(
         window.parent.document.title = prePrintParentTitle;
       }}
     }} catch (error) {{
-      // Ignore parent-title restore when access is unavailable.
+      // Ignore sandboxed parent-title restore.
     }}
     prePrintParentTitle = null;
   }}
 
-  function restorePrint() {{
-    // Some Chromium builds populate the Save-as-PDF filename after `afterprint`.
-    // Keep the print title in place briefly so the filename remains available.
-    window.setTimeout(restorePrintTitles, 2500);
-    window.setTimeout(removePrintPortal, 0);
+  function clonedReportForPrint() {{
+    applyPrintSettings();
+    const clone = report.cloneNode(true);
+    clone.id = "{instance_id}-report-print";
+    clone.dataset.printPaper = selectedPaper();
+    clone.dataset.printOrientation = selectedOrientation();
+    clone.querySelectorAll(".luna-print-controls").forEach((node) => node.remove());
+    clone.querySelectorAll("details").forEach((detail) => {{
+      detail.open = true;
+      detail.setAttribute("open", "");
+    }});
+    return clone;
+  }}
+
+  async function printCurrentReportOnly() {{
+    removePrintFrame();
+    const printTitle = report.dataset.printFileTitle || "Luna_Convergence_Monthly";
+    applyOuterPrintTitle(printTitle);
+
+    const clone = clonedReportForPrint();
+    const styles = Array.from(document.querySelectorAll("style"))
+      .map((node) => node.outerHTML)
+      .join("\\n");
+
+    // A dedicated child document is the isolation boundary. Calling print on
+    // the main Streamlit document can include every report iframe still mounted
+    // in the session; printing this frame can only contain the active report.
+    printFrame = document.createElement("iframe");
+    printFrame.id = "{instance_id}-print-frame";
+    printFrame.setAttribute("aria-hidden", "true");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "1px";
+    printFrame.style.height = "1px";
+    printFrame.style.border = "0";
+    printFrame.style.opacity = "0";
+    document.body.appendChild(printFrame);
+
+    const frameDocument = printFrame.contentDocument || printFrame.contentWindow.document;
+    frameDocument.open();
+    frameDocument.write(
+      '<!doctype html><html><head><meta charset="utf-8"><title>' + printTitle +
+      '</title>' + styles +
+      '</head><body class="luna-print-active"><div id="luna-print-portal">' +
+      clone.outerHTML +
+      '</div></body></html>'
+    );
+    frameDocument.close();
+    frameDocument.title = printTitle;
+
+    const frameWindow = printFrame.contentWindow;
+    if (frameDocument.fonts && frameDocument.fonts.ready) {{
+      try {{ await frameDocument.fonts.ready; }} catch (error) {{}}
+    }}
+
+    // Let layout, imported fonts and expanded disclosures settle before print.
+    await new Promise((resolve) => window.setTimeout(resolve, 220));
+    frameWindow.focus();
+    frameWindow.print();
+
+    // Chromium may read the document title late while opening Save as PDF.
+    // Keep both titles alive for a few seconds, then clean up the frame.
+    window.setTimeout(restoreOuterPrintTitle, 3500);
+    window.setTimeout(removePrintFrame, 4500);
   }}
 
   if (paper) paper.addEventListener("change", applyPrintSettings);
   if (orientation) orientation.addEventListener("change", applyPrintSettings);
-  window.addEventListener("beforeprint", preparePrint);
-  window.addEventListener("afterprint", restorePrint);
 
   if (printButton) {{
-    printButton.addEventListener("click", async () => {{
-      preparePrint();
-      if (document.fonts && document.fonts.ready) {{
-        await document.fonts.ready;
-      }}
-      window.setTimeout(() => window.print(), 180);
+    printButton.addEventListener("click", () => {{
+      printCurrentReportOnly();
     }});
   }}
 
   applyPrintSettings();
 }})();
 </script>
+</div>
     """
 
 

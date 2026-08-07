@@ -45,6 +45,7 @@ class ArcBeat:
     houses: tuple[int, ...]
     planets: tuple[str, ...]
     scenarios: tuple[str, ...]
+    scenario_provenance: tuple[dict, ...]
     evidence: tuple[str, ...]
 
     def to_dict(self) -> dict:
@@ -59,6 +60,7 @@ class ArcBeat:
             "houses": list(self.houses),
             "planets": list(self.planets),
             "scenarios": list(self.scenarios),
+            "scenario_provenance": list(self.scenario_provenance),
             "evidence": list(self.evidence),
         }
 
@@ -74,6 +76,9 @@ class MonthlyArc:
     secondary_house: int
     supporting_house: int
     selection_rationale: str
+    intensity_rating: str
+    rulership_amplified: bool
+    rulership_evidence: tuple[str, ...]
     opening: tuple[str, ...]
     complication: tuple[str, ...]
     pivot: tuple[str, ...]
@@ -98,6 +103,9 @@ class MonthlyArc:
             "secondary_house": self.secondary_house,
             "supporting_house": self.supporting_house,
             "selection_rationale": self.selection_rationale,
+            "intensity_rating": self.intensity_rating,
+            "rulership_amplified": self.rulership_amplified,
+            "rulership_evidence": list(self.rulership_evidence),
             "opening": list(self.opening),
             "complication": list(self.complication),
             "pivot": list(self.pivot),
@@ -283,18 +291,45 @@ def _top_scenarios(
     sign: str,
     main_focus: str,
     maximum: int = 3,
+    *,
+    house_weights: Mapping[int, float] | None = None,
+    required_houses: Iterable[int] | None = None,
 ) -> tuple[ScenarioResult, ...]:
-    return rank_scenarios(events, sign, main_focus, maximum=maximum)
+    return rank_scenarios(
+        events,
+        sign,
+        main_focus,
+        maximum=maximum,
+        house_weights=house_weights,
+        required_houses=required_houses,
+    )
 
 
 def _scenario_keys(results: Sequence[ScenarioResult]) -> set[str]:
     return {item.key for item in results}
 
 
-def _cluster_scenarios(cluster: dict | None, sign: str, main_focus: str) -> tuple[ScenarioResult, ...]:
+def _cluster_scenarios(
+    cluster: dict | None,
+    sign: str,
+    main_focus: str,
+    *,
+    house_weights: Mapping[int, float] | None = None,
+    required_house: int | None = None,
+) -> tuple[ScenarioResult, ...]:
     if not cluster:
         return ()
-    return _top_scenarios(cluster["events"], sign, main_focus, maximum=3)
+    if required_house is None:
+        fallback = int(max((house_weights or {1: 1.0}).items(), key=lambda item: item[1])[0])
+        required_house = _cluster_dominant_house(cluster, sign, house_weights, fallback)
+    return _top_scenarios(
+        cluster["events"],
+        sign,
+        main_focus,
+        maximum=3,
+        house_weights=house_weights,
+        required_houses={required_house},
+    )
 
 
 def _dominant_house(cluster: dict | None, fallback: int) -> int:
@@ -393,6 +428,7 @@ def _select_complication(
     inherited: dict | None,
     sign: str,
     main_focus: str,
+    house_weights: Mapping[int, float] | None = None,
 ) -> dict | None:
     inherited_houses = set(inherited.get("houses", ())) if inherited else set()
     candidates: list[tuple[float, dict]] = []
@@ -409,7 +445,9 @@ def _select_complication(
         cluster_houses = set(cluster.get("houses", ()))
         if cluster_houses & inherited_houses:
             score += 1.4
-        scenario_keys = _scenario_keys(_cluster_scenarios(cluster, sign, main_focus))
+        scenario_keys = _scenario_keys(
+            _cluster_scenarios(cluster, sign, main_focus, house_weights=house_weights)
+        )
         if scenario_keys & {"funding_application", "paperwork_verification", "external_money", "financial_shock"}:
             score += 2.2
         candidates.append((score, cluster))
@@ -423,9 +461,31 @@ def _select_relationship_test(
     sign: str,
     main_focus: str,
     used_clusters: Sequence[dict | None] = (),
+    house_weights: Mapping[int, float] | None = None,
 ) -> dict | None:
-    relationship_houses = {5, 7, 8, 11}
+    # Love remains in every report's dedicated Love section. It only becomes a
+    # chronological monthly beat when the sky itself directly activates the
+    # romance/partnership houses. This prevents a generic Venus aspect in H8/H11
+    # from becoming a compulsory Act III relationship test.
+    relationship_houses = {5, 7}
     relationship_planets = {"Venus", "Mars", "Jupiter", "Saturn", "Neptune", "Pluto", "Uranus"}
+
+    # A relationship subplot must be materially important for the sign, not just
+    # present somewhere in a multi-day cluster. This closes the Pisces-style leak
+    # where a weak H5 event near a Venus aspect could create a compulsory romance
+    # chapter even though the month is actually about H6 -> H1.
+    weights = {int(key): float(value) for key, value in (house_weights or {}).items()}
+    if weights:
+        top_weight = max(weights.values(), default=0.0)
+        qualified_relationship_houses = {
+            house for house in relationship_houses
+            if weights.get(house, 0.0) >= max(45.0, top_weight * 0.70)
+        }
+        if not qualified_relationship_houses:
+            return None
+    else:
+        qualified_relationship_houses = set(relationship_houses)
+
     selected_events = [
         event for event in _meaningful(events)
         if start <= _date_value(event) <= end
@@ -437,10 +497,19 @@ def _select_relationship_test(
             )
         )
     ]
-    anchors = [
+    # A relationship beat needs direct house provenance on the anchor event,
+    # not merely a nearby event in the same multi-day cluster. This is the key
+    # guard against every sign receiving the same Venus-led Act III.
+    direct_relationship_events = [
         event for event in selected_events
+        if set(int(value) for value in (_value(event, "houses", ()) or ())) & qualified_relationship_houses
+    ]
+    if not direct_relationship_events:
+        return None
+    anchors = [
+        event for event in direct_relationship_events
         if "Venus" in set(_value(event, "planets", ()) or ())
-    ] or selected_events
+    ] or direct_relationship_events
 
     candidates: list[tuple[float, dict]] = []
     for anchor in anchors:
@@ -454,6 +523,14 @@ def _select_relationship_test(
         dates = [_date_value(item) for item in members]
         houses = [int(house) for item in members for house in (_value(item, "houses", ()) or ())]
         planets = [str(planet) for item in members for planet in (_value(item, "planets", ()) or ())]
+        anchor_houses = set(int(value) for value in (_value(anchor, "houses", ()) or ()))
+        candidate_relationship_houses = anchor_houses & qualified_relationship_houses
+        if not candidate_relationship_houses:
+            continue
+        relationship_house = max(
+            candidate_relationship_houses,
+            key=lambda house: weights.get(house, 0.0) if weights else 1.0,
+        )
         cluster = {
             "start": min(dates),
             "end": max(dates),
@@ -461,6 +538,7 @@ def _select_relationship_test(
             "events": members,
             "houses": tuple(house for house, _ in Counter(houses).most_common()),
             "planets": tuple(planet for planet, _ in Counter(planets).most_common()),
+            "relationship_house": relationship_house,
         }
         if _substantially_overlaps(cluster, used_clusters, ratio=0.45):
             continue
@@ -475,11 +553,13 @@ def _select_relationship_test(
             score += 2.2
         if "Neptune" in planet_set or "Pluto" in planet_set:
             score += 0.6
-        if set(houses) & relationship_houses:
+        if set(houses) & qualified_relationship_houses:
             score += 1.0
         if polarities & {"opportunity", "new cycle"} and polarities & {"pressure", "review"}:
             score += 3.2
-        scenario_keys = _scenario_keys(_cluster_scenarios(cluster, sign, main_focus))
+        scenario_keys = _scenario_keys(
+            _cluster_scenarios(cluster, sign, main_focus, house_weights=house_weights)
+        )
         if "relationship_opening" in scenario_keys:
             score += 1.4
         candidates.append((score, cluster))
@@ -488,31 +568,64 @@ def _select_relationship_test(
     return chosen[1] if chosen[0] >= 6.0 else None
 
 
-def _relationship_test_copy(cluster: dict | None) -> tuple[str, ...]:
+def _relationship_test_copy(cluster: dict | None, sign: str = "") -> tuple[str, ...]:
     if not cluster:
         return ()
     events = cluster.get("events", ())
     planets = {str(planet) for item in events for planet in (_value(item, "planets", ()) or ())}
+    houses = {int(value) for value in cluster.get("houses", ())}
     window = _date_range_label(cluster["start"], cluster["end"])
-    if {"Venus", "Jupiter", "Saturn"} <= planets:
-        return (
-            f"Around {window}, attention, warmth or approval can rise quickly. Then timing, responsibility or availability asks the question Luna cares about: are they here for you - or just for the fun of it?",
-            "Enjoy the interest, but let the second move answer the question. Consistency matters more than the first emotional high.",
+    direct_house = int(cluster.get("relationship_house") or (7 if 7 in houses else 5 if 5 in houses else 0))
+    sign_order = [
+        "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+        "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+    ]
+    variant = sign_order.index(sign) % 4 if sign in sign_order else 0
+
+    if direct_house == 7:
+        first_options = (
+            f"Around {window}, a connection or agreement becomes more revealing once the next step has to be mutual.",
+            f"Around {window}, another person's response matters more than the first wave of attention.",
+            f"Around {window}, partnership energy moves from interest into terms, timing and reciprocity.",
+            f"Around {window}, the useful question is no longer whether there is interest, but whether both sides can carry the plan.",
         )
-    if "Venus" in planets and "Saturn" in planets:
-        return (
-            f"Around {window}, attraction or approval meets a practical test. Interest may be real, but timing, distance, availability or responsibility reveals whether it can continue.",
+    else:
+        first_options = (
+            f"Around {window}, chemistry, pleasure or creative attention gets a chance to prove it can develop.",
+            f"Around {window}, the spark is easy to notice; the second move tells you whether it has direction.",
+            f"Around {window}, attraction or creative excitement becomes more useful when somebody turns it into a plan.",
+            f"Around {window}, attention rises quickly, but continuity is what gives the moment meaning.",
+        )
+
+    if {"Venus", "Jupiter", "Saturn"} <= planets:
+        second_options = (
+            "Enjoy the warmth, then watch what remains when timing and responsibility enter the room.",
+            "Let optimism open the door; let consistency and realistic timing decide how far it stays open.",
+            "A generous first response is encouraging. The stronger evidence is follow-through after the practical question arrives.",
+            "Approval is useful, but durability is better evidence than intensity alone.",
+        )
+    elif "Venus" in planets and "Saturn" in planets:
+        second_options = (
+            "Interest may be real, but timing, distance, availability or responsibility reveals whether it can continue.",
+            "Do not measure the connection by chemistry alone; measure what each person is prepared to carry.",
+            "The practical limit is not a romance killer. It is the information that makes the next choice cleaner.",
             "Watch what remains after the mood changes. Effort is the evidence.",
         )
-    if "Venus" in planets and ("Neptune" in planets or "Pluto" in planets):
-        return (
-            f"Around {window}, attraction may feel intense, flattering or unusually persuasive. Luna wants the motive, terms and power balance kept visible.",
-            "Let chemistry introduce the story. Do not let it write the contract.",
+    elif "Venus" in planets and ("Neptune" in planets or "Pluto" in planets):
+        second_options = (
+            "Keep motive, terms and power balance visible while the chemistry is strong.",
+            "Intensity can introduce the story; it should not be allowed to write the agreement by itself.",
+            "Enjoy the pull, but verify what is actually being offered before giving it more meaning.",
+            "The strongest attraction is still easier to trust when expectations can be spoken plainly.",
         )
-    return (
-        f"Around {window}, attention is tested through behaviour. The useful question is whether the connection, audience or alliance still shows up when a plan is required.",
-        "Let consistency decide what earns more access.",
-    )
+    else:
+        second_options = (
+            "Let behaviour decide what earns more access.",
+            "The second response carries more information than the first impression.",
+            "Consistency is the part of the story worth keeping.",
+            "Notice whether the connection still works when a real plan is required.",
+        )
+    return (first_options[variant], second_options[variant])
 
 
 def _select_climax(
@@ -552,9 +665,18 @@ def _beat(
     summary: str,
     response: str,
     fallback_date: date,
+    *,
+    house_weights: Mapping[int, float] | None = None,
+    required_house: int | None = None,
 ) -> ArcBeat:
     if cluster:
-        scenarios = _cluster_scenarios(cluster, sign, main_focus)
+        scenarios = _cluster_scenarios(
+            cluster,
+            sign,
+            main_focus,
+            house_weights=house_weights,
+            required_house=required_house,
+        )
         events = list(cluster["events"])
         if role == "pivot":
             strongest = next(
@@ -608,6 +730,14 @@ def _beat(
             houses=tuple(int(item) for item in cluster.get("houses", ())),
             planets=tuple(str(item) for item in cluster.get("planets", ())),
             scenarios=tuple(item.label for item in scenarios),
+            scenario_provenance=tuple(
+                {
+                    "key": item.key,
+                    "scenario_houses": list(item.scenario_houses),
+                    "matched_houses": list(item.matched_houses),
+                }
+                for item in scenarios
+            ),
             evidence=evidence,
         )
     return ArcBeat(
@@ -621,6 +751,7 @@ def _beat(
         houses=(),
         planets=(),
         scenarios=(),
+        scenario_provenance=(),
         evidence=(),
     )
 
@@ -911,7 +1042,7 @@ def _expansion_public_private_story(
         "The complication does not automatically weaken the opening. It reveals the terms of the game. A message, agreement or approval can make the next step visible once those terms are named.",
     )
     pivot_text: tuple[str, ...] = ()
-    relationship_text = _relationship_test_copy(relationship_test)
+    relationship_text = _relationship_test_copy(relationship_test, sign)
     climax_text = (
         f"Around {climax_window}, the project, application, trip or relationship seeks a visible result. Career, reputation or an official decision moves the story into public view.",
         "Then home, family, location or emotional security asks where the result will live. The opportunity earns its place only when public ambition and private reality can support each other.",
@@ -951,19 +1082,37 @@ def _generic_story(
     main_focus: str,
     primary_plot: dict | None = None,
     secondary_plot: dict | None = None,
+    *,
+    primary_house: int,
+    secondary_house: int,
+    house_weights: Mapping[int, float] | None = None,
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str]:
-    def scenarios(cluster: dict | None) -> tuple[ScenarioResult, ...]:
-        return _cluster_scenarios(cluster, sign, main_focus)
+    fallback_house = int(max((house_weights or {1: 1.0}).items(), key=lambda item: item[1])[0])
+
+    def cluster_house(cluster: dict | None, fallback: int) -> int:
+        return _cluster_dominant_house(cluster, sign, house_weights, fallback) if cluster else fallback
+
+    def scenarios(cluster: dict | None, required_house: int | None = None) -> tuple[ScenarioResult, ...]:
+        if not cluster:
+            return ()
+        target_house = required_house or cluster_house(cluster, fallback_house)
+        return _cluster_scenarios(
+            cluster,
+            sign,
+            main_focus,
+            house_weights=house_weights,
+            required_house=target_house,
+        )
 
     inherited_results = scenarios(inherited)
     inciting_results = scenarios(inciting)
-    complication_results = scenarios(complication)
+    complication_results = scenarios(complication, primary_house if complication is primary_plot else None)
     pivot_results = scenarios(pivot)
-    climax_results = scenarios(climax)
-    resolution_results = scenarios(resolution)
+    climax_results = scenarios(climax, secondary_house if climax is secondary_plot else None)
+    resolution_results = scenarios(resolution, secondary_house if resolution is secondary_plot else None)
     relationship_results = scenarios(relationship_test)
-    primary_results = scenarios(primary_plot)
-    secondary_results = scenarios(secondary_plot)
+    primary_results = scenarios(primary_plot, primary_house)
+    secondary_results = scenarios(secondary_plot, secondary_house)
 
     def examples(results: Sequence[ScenarioResult], maximum: int = 3) -> str:
         values: list[str] = []
@@ -976,28 +1125,112 @@ def _generic_story(
         return ", ".join(values) or "a person, choice or opportunity"
 
     opening_basis = primary_results or inciting_results or inherited_results
-    opening = (
-        f"{month}'s main story takes shape through {examples(opening_basis)}. "
-        "Early signals show where the opportunity or pressure is gathering; later events decide what can actually continue.",
-    )
-    complication_text = (
-        f"The middle of the month introduces {examples(complication_results)}. "
-        "This is not a separate forecast; it is the condition that reveals what the opening requires.",
-    )
-    pivot_text = (
-        f"The direction changes around {_date_range_label(pivot['start'], pivot['end']) if pivot else 'the middle of the month'}. "
-        f"{examples(pivot_results)} can begin to move once information, timing or cooperation becomes usable.",
-    )
     climax_basis = secondary_results or climax_results or resolution_results
+
+    primary_leads = {
+        1: "A personal opening starts the month",
+        2: "The month opens by putting a number on what matters",
+        3: "A message, contract or assignment opens the plot",
+        4: "Home, family or location sets the starting condition",
+        5: "Romance, creativity or pleasure supplies the opening spark",
+        6: "Work, routine or wellbeing reveals the practical condition first",
+        7: "A partner, client or agreement opens the story",
+        8: "Shared money, trust or obligation sets the first terms",
+        9: "A wider-world possibility gives the month its opening momentum",
+        10: "Career or public visibility moves to the front of the month",
+        11: "Friends, audiences or a future goal create the first opening",
+        12: "The month begins quietly, through closure, preparation or private work",
+    }
+    secondary_leads = {
+        1: "By late month, the answer becomes personal",
+        2: "By late month, value and cash flow decide what survives",
+        3: "By late month, the decisive fact arrives through a message, document or conversation",
+        4: "By late month, home, family or location decides how the opening fits real life",
+        5: "By late month, desire, creativity or a child-related matter changes the stakes",
+        6: "By late month, workload, staffing, routine or wellbeing tests the plan",
+        7: "By late month, another person or agreement requires a clear answer",
+        8: "By late month, shared money, ownership or responsibility exposes the real terms",
+        9: "By late month, travel, study, publishing or an official wider-world matter changes the route",
+        10: "By late month, career, reputation or a visible result makes the outcome public",
+        11: "By late month, friends, networks or the future plan show which version can grow",
+        12: "By late month, rest, closure or a private reality decides what should be released",
+    }
+    do_lines = {
+        1: "Choose the version that gives you more agency after the excitement fades.",
+        2: "Put the number beside the promise before you commit.",
+        3: "Get the important words, dates and terms into writing.",
+        4: "Make sure the larger plan can live inside the home and family reality.",
+        5: "Enjoy the spark, then give it one concrete next step.",
+        6: "Protect the routine that lets the opportunity keep working.",
+        7: "Ask for mutual terms instead of guessing what the other person intends.",
+        8: "Name ownership, cost and responsibility before trust does the work for you.",
+        9: "Turn the wider possibility into an itinerary, application or decision.",
+        10: "Make the result visible and let the response become evidence.",
+        11: "Follow the introductions that support the future you actually want.",
+        12: "Leave enough quiet to hear what the month is asking you to finish.",
+    }
+    dont_lines = {
+        1: "Let other people's enthusiasm choose your direction for you.",
+        2: "Confuse a hopeful number with money that is already available.",
+        3: "Assume everyone heard the same thing you did.",
+        4: "Build the future on a private arrangement nobody has agreed to.",
+        5: "Call chemistry, applause or excitement a finished plan.",
+        6: "Spend tomorrow's energy to make today's opening look bigger.",
+        7: "Fill in the other person's half of the agreement yourself.",
+        8: "Leave shared obligations vague because the mood is good.",
+        9: "Treat inspiration as permission to skip the document, deadline or route.",
+        10: "Mistake visibility for permanence before the terms are clear.",
+        11: "Say yes to every invitation just because the room is opening.",
+        12: "Force an ending to become a new beginning before it is complete.",
+    }
+
+    opening = (
+        f"{primary_leads.get(primary_house, month + ' reveals its main opening')}: {examples(opening_basis)}. "
+        "The early movement is useful because it shows where the month is gathering force, not because it guarantees the final outcome.",
+    )
+
+    complication_window = _date_range_label(complication['start'], complication['end']) if complication else f"mid-{month}"
+    complication_text = (
+        f"Around {complication_window}, the opening has to deal with {examples(complication_results)}. "
+        "That detail changes the terms: what looked attractive now has to become workable.",
+    )
+
+    pivot_window = _date_range_label(pivot['start'], pivot['end']) if pivot else f"the middle of {month}"
+    pivot_subject = examples(pivot_results)
+    pivot_house_lines = {
+        1: "a personal decision becomes easier to own once the missing fact arrives",
+        2: "a price, payment or value question becomes easier to judge once the number is usable",
+        3: "a message, document or conversation begins to clear the stalled part of the plan",
+        4: "a home, family or location question becomes easier to place inside the larger decision",
+        5: "a creative or romantic opening becomes easier to judge once there is a believable next move",
+        6: "a workload, routine or wellbeing issue becomes easier to organise once the practical condition is visible",
+        7: "a partner, client or agreement becomes easier to evaluate once both sides respond clearly",
+        8: "a shared-money or responsibility question becomes easier to manage once ownership is named",
+        9: "a travel, study, publishing or legal path becomes easier to use once the official step is clear",
+        10: "a career or visibility decision becomes easier to make once the public response is measurable",
+        11: "a network, audience or future plan becomes easier to trust once the useful people keep showing up",
+        12: "a private or unfinished matter becomes easier to release once you know what no longer needs your energy",
+    }
+    if pivot_results:
+        pivot_clause = pivot_subject
+    else:
+        pivot_clause = pivot_house_lines.get(primary_house, "the stalled part of the story begins to clear")
+    pivot_text = (
+        f"Around {pivot_window}, {pivot_clause}. The new information does not erase the earlier condition; it gives you a better way to respond to it.",
+    )
+
+    climax_window = _date_range_label((secondary_plot or climax or resolution)['start'], (secondary_plot or climax or resolution)['end']) if (secondary_plot or climax or resolution) else f"late {month}"
     climax_text = (
-        f"The strongest late-month convergence concentrates around {examples(climax_basis)}. "
-        "This is the point where the month asks for a visible answer rather than more speculation.",
+        f"{secondary_leads.get(secondary_house, 'By late month, the second plot takes control')}. Around {climax_window}, this can look like {examples(climax_basis)}. "
+        "The point is not to predict one literal event; it is to show where the month's consequence becomes hardest to ignore.",
     )
+
+    resolution_basis = resolution_results or secondary_results or climax_results
     resolution_text = (
-        f"The closing movement brings the result back to {examples(resolution_results, maximum=2)}. "
-        "Keep what supports the life you are building; let the rest become information.",
+        f"The closing decision is therefore about {HOUSE_SHORT.get(secondary_house, 'what the second plot requires')}. "
+        f"Use {examples(resolution_basis, maximum=2)} as possible manifestations, then keep the version that remains coherent with the evidence already visible.",
     )
-    relationship_text = _relationship_test_copy(relationship_test)
+    relationship_text = _relationship_test_copy(relationship_test, sign)
     return (
         opening,
         complication_text,
@@ -1005,8 +1238,8 @@ def _generic_story(
         climax_text,
         resolution_text,
         relationship_text,
-        "Follow the sequence. The first scene is not the whole plot.",
-        "Force a happy ending before the practical terms arrive.",
+        do_lines.get(primary_house, "Follow the evidence from opening to outcome."),
+        dont_lines.get(primary_house, "Treat the first scene as the whole story."),
     )
 
 
@@ -1120,6 +1353,7 @@ def build_monthly_arc(
         inherited,
         sign,
         main_focus,
+        house_weights,
     )
     if complication:
         used.add((complication["start"], complication["end"]))
@@ -1131,6 +1365,7 @@ def build_monthly_arc(
         sign,
         main_focus,
         used_clusters=(inciting, complication),
+        house_weights=house_weights,
     )
 
     direct_events = [
@@ -1182,9 +1417,21 @@ def build_monthly_arc(
     else:
         resolution = climax
 
-    inherited_scenarios = _top_scenarios(carryover + monthly_events[:3], sign, main_focus, maximum=4)
-    complication_scenarios = _cluster_scenarios(complication, sign, main_focus)
-    climax_scenarios = _cluster_scenarios(climax, sign, main_focus)
+    inherited_scenarios = _cluster_scenarios(
+        inherited, sign, main_focus, house_weights=house_weights
+    ) or _top_scenarios(
+        carryover + monthly_events[:3],
+        sign,
+        main_focus,
+        maximum=4,
+        house_weights=house_weights,
+    )
+    complication_scenarios = _cluster_scenarios(
+        complication, sign, main_focus, house_weights=house_weights
+    )
+    climax_scenarios = _cluster_scenarios(
+        climax, sign, main_focus, house_weights=house_weights
+    )
     global_scenarios = rank_scenarios(carryover + monthly_events, sign, main_focus, maximum=12, house_weights=house_weights)
     all_scenarios = _narrative_scenario_ranking(
         inherited_scenarios,
@@ -1232,8 +1479,20 @@ def build_monthly_arc(
         primary_house,
     )
 
-    primary_plot_scenarios = _cluster_scenarios(primary_plot, sign, main_focus)
-    secondary_plot_scenarios = _cluster_scenarios(secondary_plot, sign, main_focus)
+    primary_plot_scenarios = _cluster_scenarios(
+        primary_plot,
+        sign,
+        main_focus,
+        house_weights=house_weights,
+        required_house=primary_house,
+    )
+    secondary_plot_scenarios = _cluster_scenarios(
+        secondary_plot,
+        sign,
+        main_focus,
+        house_weights=house_weights,
+        required_house=secondary_house,
+    )
     month = label.split()[0]
     headline, central, axis = _headline_and_axis(
         month,
@@ -1276,13 +1535,16 @@ def build_monthly_arc(
             main_focus,
             primary_plot,
             secondary_plot,
+            primary_house=primary_house,
+            secondary_house=secondary_house,
+            house_weights=house_weights,
         )
 
 
     opening, complication_text, pivot_text, climax_text, resolution_text, relationship_text, do_line, dont_line = story
 
     if not relationship_text:
-        relationship_text = _relationship_test_copy(relationship_test)
+        relationship_text = _relationship_test_copy(relationship_test, sign)
 
     beat_list = [
         _beat(
@@ -1293,6 +1555,8 @@ def build_monthly_arc(
             opening[0],
             "Identify the amount, timing or condition before reacting.",
             start,
+            house_weights=house_weights,
+            required_house=_cluster_dominant_house(inherited, sign, house_weights, primary_house) if inherited else primary_house,
         ),
         _beat(
             "inciting event",
@@ -1306,6 +1570,8 @@ def build_monthly_arc(
             ),
             "Treat the first response as information, not the final result.",
             start + timedelta(days=3),
+            house_weights=house_weights,
+            required_house=_cluster_dominant_house(inciting, sign, house_weights, primary_house) if inciting else primary_house,
         ),
         _beat(
             "complication",
@@ -1315,6 +1581,8 @@ def build_monthly_arc(
             complication_text[0],
             "Make the cost, document, expectation or practical condition visible.",
             start + timedelta(days=13),
+            house_weights=house_weights,
+            required_house=primary_house if complication is primary_plot else (_cluster_dominant_house(complication, sign, house_weights, primary_house) if complication else primary_house),
         ),
     ]
     if pivot and pivot_text:
@@ -1327,6 +1595,8 @@ def build_monthly_arc(
                 pivot_text[0],
                 "Use the new information to revise the decision rather than repeat the delay.",
                 start + timedelta(days=22),
+                house_weights=house_weights,
+                required_house=_cluster_dominant_house(pivot, sign, house_weights, primary_house) if pivot else primary_house,
             )
         )
     if relationship_test and relationship_text:
@@ -1339,6 +1609,8 @@ def build_monthly_arc(
                 relationship_text[0],
                 "Let the second move reveal whether the interest can become consistent.",
                 start + timedelta(days=18),
+                house_weights=house_weights,
+                required_house=int(relationship_test.get("relationship_house") or 7) if relationship_test else 7,
             )
         )
     beat_list.extend([
@@ -1350,6 +1622,8 @@ def build_monthly_arc(
             climax_text[0],
             "Act on the strongest supported opportunity while the evidence is visible.",
             end - timedelta(days=2),
+            house_weights=house_weights,
+            required_house=secondary_house if climax is secondary_plot else (_cluster_dominant_house(climax, sign, house_weights, secondary_house) if climax else secondary_house),
         ),
         _beat(
             "resolution",
@@ -1359,10 +1633,38 @@ def build_monthly_arc(
             resolution_text[0],
             "Keep the outcome that survives both excitement and practical reality.",
             end,
+            house_weights=house_weights,
+            required_house=secondary_house,
         ),
     ])
     beats = tuple(sorted(beat_list, key=lambda item: (item.start_date, item.role)))
 
+    story_events = list((primary_plot or {}).get("events", ())) + list((secondary_plot or {}).get("events", ()))
+    rulers = set(SIGN_RULERS.get(sign, ()))
+    ruler_events = [
+        event for event in story_events
+        if set(str(value) for value in (_value(event, "planets", ()) or ())) & rulers
+    ]
+    rulership_evidence = tuple(
+        _event_label(event) for event in sorted(ruler_events, key=_date_value)[:4]
+    )
+    peak_event_score = max(
+        (_event_weight(event, sign, house_weights) for event in story_events),
+        default=0.0,
+    )
+    ruler_peak = max(
+        (_event_weight(event, sign, house_weights) for event in ruler_events),
+        default=0.0,
+    )
+    rulership_amplified = bool(ruler_events and ruler_peak >= 7.2)
+    if rulership_amplified and peak_event_score >= 8.5:
+        intensity_rating = "High / inflection point"
+    elif peak_event_score >= 8.5:
+        intensity_rating = "High"
+    elif peak_event_score >= 7.0:
+        intensity_rating = "Elevated"
+    else:
+        intensity_rating = "Steady"
 
     return MonthlyArc(
         sign=sign,
@@ -1378,6 +1680,9 @@ def build_monthly_arc(
             f"Secondary plot: {_cluster_label(secondary_plot)} / house {secondary_house}. "
             f"House {supporting_house} retained as strongest additional monthly evidence."
         ),
+        intensity_rating=intensity_rating,
+        rulership_amplified=rulership_amplified,
+        rulership_evidence=rulership_evidence,
         opening=opening,
         complication=complication_text,
         pivot=pivot_text,
