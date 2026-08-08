@@ -230,8 +230,11 @@ def _direct_story_event(result: dict, context: dict) -> dict:
     if target_house in (None, "") or not context.get("start_date"):
         return {}
     try:
-        start = datetime.fromisoformat(str(context.get("start_date"))).date() - timedelta(days=7)
-        end = datetime.fromisoformat(str(context.get("end_date") or context.get("start_date"))).date() + timedelta(days=2)
+        start = datetime.fromisoformat(str(context.get("start_date"))).date()
+        end = datetime.fromisoformat(str(context.get("end_date") or context.get("start_date"))).date()
+        if not context.get("trajectory_window"):
+            start -= timedelta(days=7)
+            end += timedelta(days=2)
     except ValueError:
         return {}
 
@@ -703,7 +706,12 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
         context = _chapter_context(result, index, total)
         display_event = _direct_story_event(result, context)
         evidence_context = _context_for_evidence(context, display_event)
-        display_title = str(display_event.get("title") or chapter.title)
+        if display_event.get("title"):
+            display_title = str(display_event.get("title"))
+        elif context.get("trajectory_window"):
+            display_title = f"{str(context.get('trajectory_window')).capitalize()} sky"
+        else:
+            display_title = str(chapter.title)
         exact_date = human_date(display_event.get("event_date")) if display_event.get("event_date") else ""
         window = chapter.date_range
         sky_evidence = _sky_evidence_for_chapter(narrative, result, chapter, context=evidence_context)
@@ -723,7 +731,14 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     # tell the story once and let the interpretation progress inside that card.
     merged = []
     for item in prepared:
-        if merged and item["event_key"] != ("", "") and item["event_key"] == merged[-1]["event_key"]:
+        can_merge = (
+            merged
+            and item["event_key"] != ("", "")
+            and item["event_key"] == merged[-1]["event_key"]
+            and not item["context"].get("trajectory_window")
+            and not merged[-1]["context"].get("trajectory_window")
+        )
+        if can_merge:
             previous = merged[-1]
             previous["paragraphs"].extend(list(item["chapter"].paragraphs))
             previous["actions"].append((item["strategy"], item["chapter"].action))
@@ -843,6 +858,42 @@ def _print_controls(
     """
 
 
+def _relationship_test_evidence(result: dict) -> dict:
+    arc = result.get("monthly_arc") or {}
+    beats = [dict(item) for item in (arc.get("beats") or []) if str(item.get("role") or "").lower() == "relationship test"]
+    if not beats:
+        return {}
+    beat = max(beats, key=lambda item: float(item.get("score", 0.0) or 0.0))
+    title = str(beat.get("title") or "")
+    start_date = str(beat.get("start_date") or "")
+    end_date = str(beat.get("end_date") or start_date)
+    matching = []
+    for event in result.get("events") or []:
+        if str(event.get("title") or "") != title:
+            continue
+        event_date = str(event.get("event_date") or "")
+        if start_date and end_date and start_date <= event_date <= end_date:
+            matching.append(event)
+    event = max(matching, key=lambda item: float(item.get("importance", 0.0) or 0.0), default={})
+    direct = _plain_area_list(beat.get("direct_houses") or event.get("houses") or [])
+    narrative_house = beat.get("narrative_house")
+    story_area = _plain_life_area(narrative_house) if narrative_house not in (None, "") else ""
+    connected = _plain_area_list(beat.get("connected_houses") or [])
+    aspect = _event_short(event) if event else title
+    evidence = f"{aspect} is the exact aspect Luna uses for this relationship test."
+    if direct:
+        evidence += f" It directly activates {direct}."
+    if story_area and story_area not in direct:
+        evidence += f" The wider event cluster connects that pressure to {story_area}."
+    if connected and connected != direct:
+        evidence += f" Connected areas include {connected}."
+    return {
+        "title": title,
+        "date_range": human_date_range(start_date, end_date),
+        "evidence": evidence,
+    }
+
+
 def build_monthly_experience_html(
     narrative: MonthlyNarrative,
     result: dict,
@@ -867,9 +918,19 @@ def build_monthly_experience_html(
 
     relationship_test_section = ""
     if narrative.relationship_test:
+        rel_evidence = _relationship_test_evidence(result)
+        evidence_html = ""
+        if rel_evidence:
+            evidence_html = f"""
+  <div class="luna-sky-evidence">
+    <span>{_safe(rel_evidence.get('date_range'))} · {_safe(rel_evidence.get('title'))}</span>
+    <p>{_safe(rel_evidence.get('evidence'))}</p>
+  </div>
+            """
         relationship_test_section = f"""
 <section class="luna-monthly-section luna-relationship-test">
   <div class="luna-eyebrow">{_safe(narrator_cue("monthly", 1))}</div>
+  {evidence_html}
   <h2>{_safe(narrative.relationship_test[0])}</h2>
   {_paragraphs(narrative.relationship_test[1:])}
 </section>
@@ -907,7 +968,7 @@ def build_monthly_experience_html(
       <p>{_safe(narrative.central_storyline)}</p>
       <p><strong>Intensity:</strong> {_safe((result.get("monthly_arc") or {}).get("intensity_rating", "Steady"))}</p>
       {f'<p><strong>Trajectory:</strong> {_safe((result.get("monthly_trajectory") or {}).get("trajectory_reason", ""))}</p>' if result.get("monthly_trajectory") else ''}
-      {f'<p><strong>Countercurrent:</strong> {_safe(((result.get("monthly_trajectory") or {}).get("countercurrent") or {}).get("summary", ""))}</p>' if ((result.get("monthly_trajectory") or {}).get("countercurrent") or {}) else ''}
+      {f'<p><strong>Relief:</strong> {_safe(((result.get("monthly_trajectory") or {}).get("countercurrent") or {}).get("summary", ""))}</p>' if ((result.get("monthly_trajectory") or {}).get("countercurrent") or {}) else ''}
       <h3>Evidence path</h3>
       <div class="luna-evidence-path">{arc_evidence_path}</div>
       <p><strong>Rule:</strong> {_safe(narrative.validation_rule)}</p>

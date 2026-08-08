@@ -25,7 +25,7 @@ def _visible_text(html: str) -> str:
 
 
 def test_first_principles_v14_makes_choice_time_sensitive():
-    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.4"
+    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.5"
     meta = methodology_metadata()
     assert meta["time_sensitive_choice_policy"] == "window_strategy_then_monthly_synthesis_never_average_only"
     assert meta["evidence_count_policy"] == "deduplicated_claim_count_must_match_visible_contacts"

@@ -18,7 +18,7 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.4"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.5"
 
 PIPELINE = (
     "Nature",
@@ -54,7 +54,7 @@ FIRST_PRINCIPLES = (
     "Choice is time-sensitive: Luna may hold early and advance later when Nature has materially changed the conditions.",
     "Evidence counts are exact and deduplicated; a claimed number of hard or supportive contacts must match the contacts shown beside the claim.",
     "A narrative role is never forced. If Nature does not supply a strong bridge, Luna does not invent one.",
-    "A supportive secondary current may be a countercurrent or relief rather than another main plot; its evidence and limits must be named.",
+    "A supportive secondary current may be Relief rather than another main plot; its evidence and limits must be named.",
     "Customer prose earns its place by bringing Nature, consequence or choice to the table; generic filler is removed.",
     "Engineering errors are corrected; interpretive errors are studied.",
     "Historical tests remain blind; expected answers are never hard-coded.",
@@ -143,6 +143,9 @@ def methodology_metadata() -> dict:
         "evidence_count_policy": "deduplicated_claim_count_must_match_visible_contacts",
         "bridge_policy": "optional_only_never_forced",
         "countercurrent_policy": "supportive_relief_may_offset_main_pressure_without_becoming_main_plot",
+        "customer_relief_label": "Relief",
+        "window_chapter_policy": "one_trajectory_window_one_customer_chapter_one_move",
+        "event_window_policy": "customer_event_date_must_fall_inside_displayed_window",
         "nature_only_editorial_policy": "remove_customer_copy_that_adds_neither_evidence_consequence_nor_choice",
     }
 

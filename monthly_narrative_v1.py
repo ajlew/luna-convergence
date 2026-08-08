@@ -1490,7 +1490,7 @@ def _trajectory_aligned_chapters(
             if pressure:
                 paragraphs.append(
                     f"This is not vague atmosphere: the hard contacts include {pressure}."
-                    + (f" Counter-support remains through {supportive}." if supportive else "")
+                    + (f" Support remains through {supportive}." if supportive else "")
                 )
             if trajectory_kind in {"late_storm", "pressure_builds"}:
                 paragraphs.append(
@@ -1521,7 +1521,7 @@ def _trajectory_aligned_chapters(
                 )
             if countercurrent and str(window.get("label", "")) == counter_window:
                 evidence = "; ".join(str(item) for item in (countercurrent.get("support_evidence") or [])[:3])
-                relief = f"At the same time, {countercurrent.get('label', 'another part of life')} provides a genuine countercurrent"
+                relief = f"At the same time, {countercurrent.get('label', 'another part of life')} provide genuine relief"
                 if evidence:
                     relief += f", supported by {evidence}"
                 relief += ". Let it give you perspective and relief without making it responsible for solving the main problem."
@@ -1545,7 +1545,7 @@ def _countercurrent_love_story(result: dict, trajectory: dict) -> tuple[str, ...
         return None
     support = "; ".join(str(item) for item in (counter.get("support_evidence") or [])[:3])
     late = "; ".join(str(item) for item in (counter.get("late_pressure_evidence") or [])[:3])
-    first = "Romance, creativity or pleasure is not the cause of the main problem; it is a countercurrent that can give you somewhere else to breathe."
+    first = "Romance, creativity or pleasure is not the cause of the main problem; it is relief that can give you somewhere else to breathe."
     second = (f"The relief has real sky support: {support}." if support else "The relief is supported by direct relationship or creative evidence in the sky.")
     third = (f"Late-month pressure changes the terms — {late}. Enjoy the lift, but keep commitments reversible." if late else "Use the relief without asking it to make the month's larger decision for you.")
     return (first, second, third)
@@ -1730,7 +1730,7 @@ def build_monthly_narrative(
     romance_posture = str(romance_decision.get("posture", monthly_decision.get("posture", "QUESTION")))
     romance_truth = str(romance_decision.get("action_truth", "NOT ACT" if romance_posture != "ADVANCE" else "ACT"))
     if romance_relevance == "COUNTERCURRENT":
-        romance_title = f"Romance & creativity · COUNTERCURRENT · {romance_truth} / {romance_posture}"
+        romance_title = f"Romance & creativity · RELIEF · {romance_truth} / {romance_posture}"
         if romance_note:
             romance_active = romance_note
         romance_quiet = "Relief is useful precisely because it does not have to solve the main problem. Enjoy what is supportive and keep the timing honest."
@@ -1795,7 +1795,7 @@ def build_monthly_narrative(
     ) or "No single scenario family dominates."
     countercurrent = dict(trajectory.get("countercurrent") or {})
     narrative_structure = (
-        "Two-house convergence + countercurrent" if countercurrent and not tertiary_house
+        "Two-house convergence + relief" if countercurrent and not tertiary_house
         else "Three-house convergence" if tertiary_house
         else "Two-house convergence"
     )
@@ -1812,7 +1812,7 @@ def build_monthly_narrative(
         ("Narrative structure", narrative_structure),
         ("Trajectory", str(trajectory.get("trajectory_reason", "Event-led sequence")) if trajectory else "Event-led sequence"),
         ("Bridge current", bridge_label),
-        ("Countercurrent", str(countercurrent.get("summary", "None verified")) if countercurrent else "None verified"),
+        ("Relief", str(countercurrent.get("summary", "None verified")) if countercurrent else "None verified"),
         ("Personal focus", main_focus),
         ("Relationship current", relationship_current),
         ("Ranked scenario families", top_scenario_text),

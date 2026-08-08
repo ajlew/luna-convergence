@@ -9,8 +9,8 @@ question the event-led engine alone cannot answer:
 
 Events remain authoritative.  The trajectory engine does not invent a plot; it
 compares chronological windows, identifies where pressure/support strengthens
-or weakens, and may identify a genuine countercurrent (for example romance or
-creativity providing relief while work pressure builds).
+or weakens, and may identify genuine Relief (for example romance or creativity providing
+room to breathe while work pressure builds).
 """
 
 from calendar import month_name
@@ -21,7 +21,7 @@ from typing import Mapping, Sequence
 from monthly_decision_engine import calculate_climate_components, choose_posture
 from scenario_engine import event_importance_score
 
-TRAJECTORY_VERSION = "1.1"
+TRAJECTORY_VERSION = "1.2"
 
 LIFE_AREAS = {
     1: "identity, energy and personal direction",
@@ -399,6 +399,7 @@ def _countercurrent(
             "domain": domain,
             "label": "romance, creativity and pleasure",
             "role": "COUNTERCURRENT",
+            "public_role": "RELIEF",
             "phase": phase,
             "window_label": str(windows[relief_idx].get("label", "middle of the month")),
             "support": round(float(relief_local.get("support", 0.0)), 1),
@@ -407,9 +408,9 @@ def _countercurrent(
             "late_pressure_evidence": late_pressure_events,
             "recommended_posture": posture,
             "summary": (
-                "Romance, creativity or pleasure offers a genuine countercurrent to the main pressure, but the late-month evidence becomes less stable; use the relief without making it carry the whole decision."
+                "Romance, creativity or pleasure offers genuine relief from the main pressure, but the late-month evidence becomes less stable; use the relief without making it carry the whole decision."
                 if late_reversal
-                else "Romance, creativity or pleasure provides a genuine supportive countercurrent to the main monthly pressure."
+                else "Romance, creativity or pleasure provides genuine relief from the main monthly pressure."
             ),
         }
     return None
@@ -472,6 +473,77 @@ def build_monthly_trajectory(
     secondary_area = LIFE_AREAS.get(secondary_house, "the later consequence")
     primary_short = SHORT_AREAS.get(primary_house, primary_area)
 
+    tertiary_house_raw = arc.get("tertiary_house")
+    tertiary_house = int(tertiary_house_raw) if tertiary_house_raw not in (None, "") else None
+    bridge = None
+    if tertiary_house and tertiary_house not in {primary_house, secondary_house}:
+        bridge_area = LIFE_AREAS.get(tertiary_house, "the connecting life area")
+        bridge_short = SHORT_AREAS.get(tertiary_house, bridge_area)
+        bridge_events = [
+            event for event in events
+            if tertiary_house in _event_houses(event)
+            and str(_value(event, "kind", "")).lower() in {"ingress", "lunation", "eclipse", "station"}
+            and float(_value(event, "importance", 0.0) or 0.0) >= 4.8
+        ]
+        bridge_events.sort(key=lambda event: (str(_value(event, "event_date", "")), -float(_value(event, "importance", 0.0) or 0.0)))
+        bridge_movements = []
+        for event in bridge_events:
+            event_date = str(_value(event, "event_date", ""))
+            try:
+                month_label = month_name[int(event_date[5:7])]
+            except Exception:
+                month_label = ""
+            text = f"{_value(event, 'title', 'Event')} on {_event_day(event)} {month_label}".strip()
+            if text not in bridge_movements:
+                bridge_movements.append(text)
+            if len(bridge_movements) >= 4:
+                break
+        movement_text = "; ".join(bridge_movements[:3])
+        bridge_summary = (
+            f"{bridge_short.capitalize()} form the bridge between {primary_area} and {secondary_area}."
+        )
+        if movement_text:
+            bridge_summary += f" The bridge is visible in Nature: {movement_text}."
+        bridge = {
+            "house": tertiary_house,
+            "area": bridge_area,
+            "short": bridge_short,
+            "movements": bridge_movements,
+            "summary": bridge_summary,
+        }
+
+    # Make the portfolio strategy name the life area and the timing it applies to.
+    # This avoids outputs such as "TIMED ADVANCE" without telling the reader what
+    # is actually safe to advance.
+    if trajectory in {"recovery", "easing"}:
+        trajectory_portfolio_reason = (
+            f"Keep the early {primary_short} problem reversible; use the mid-month improvement to advance the part that has become workable, then judge later developments involving {secondary_area} on their own evidence."
+        )
+        trajectory_portfolio_plan = (
+            f"Negotiate {primary_short} conditions while the difficult opening is still dominant.",
+            f"Advance the workable part of {primary_short} once support materially improves.",
+            f"Question later developments involving {secondary_area} before increasing commitment.",
+        )
+    elif trajectory in {"support_builds", "support_strengthens"}:
+        bridge_phrase = f" Use {bridge['short']} as the route between the opening and the later result." if bridge else ""
+        trajectory_portfolio_reason = (
+            f"Support strengthens around {primary_short}; advance the clean professional or practical opening without generalising that permission to every domain.{bridge_phrase}"
+        )
+        trajectory_portfolio_plan = (
+            f"Use the strongest supported move around {primary_short}.",
+            (f"Let {bridge['short']} carry information and introductions between the opening and the later result." if bridge else "Keep cost, timing and ownership visible as momentum grows."),
+            f"Keep {secondary_area} selective where its own terms remain mixed.",
+        )
+    elif trajectory in {"late_storm", "pressure_builds"}:
+        trajectory_portfolio_reason = (
+            f"Use the cleaner early or middle window for essential {primary_short} decisions, then reduce exposure before late pressure spreads into {secondary_area}."
+        )
+        trajectory_portfolio_plan = (
+            f"Complete essential {primary_short} moves before the pressure peak where possible.",
+            "Renegotiate unavoidable commitments as the difficult cluster builds.",
+            f"Let optional exposure pass when late pressure spreads into {secondary_area}.",
+        )
+
     if trajectory == "late_storm" and countercurrent:
         headline = f"{primary_short.capitalize()} pressure tightens late; romance and creativity offer somewhere to breathe"
     elif trajectory in {"late_storm", "pressure_builds"}:
@@ -489,7 +561,7 @@ def build_monthly_trajectory(
 
     if trajectory == "late_storm" and countercurrent:
         central_storyline = (
-            f"{primary_short.capitalize()} pressure is the main weather. Romance, creativity and pleasure offer a real countercurrent earlier, "
+            f"{primary_short.capitalize()} pressure is the main weather. Romance, creativity and pleasure offer real relief earlier, "
             f"but late-month pressure spreads the consequences into {secondary_area}."
         )
     elif trajectory in {"late_storm", "pressure_builds"}:
@@ -497,9 +569,14 @@ def build_monthly_trajectory(
             f"{primary_short.capitalize()} carry the main pressure, and the consequences become harder to contain as the month moves toward {secondary_area}."
         )
     elif trajectory in {"support_builds", "support_strengthens"}:
-        central_storyline = (
-            f"Support gathers around {primary_short}, with {secondary_area} showing where the opening can become useful."
-        )
+        if bridge:
+            central_storyline = (
+                f"Support gathers around {primary_short}; {bridge['short']} carry the opening toward {secondary_area}, where the later result becomes clearer."
+            )
+        else:
+            central_storyline = (
+                f"Support gathers around {primary_short}, with {secondary_area} showing where the opening can become useful."
+            )
     elif trajectory in {"recovery", "easing"}:
         central_storyline = (
             f"{primary_short.capitalize()} carry the difficult opening, but the balance improves as the month develops; later conditions give {secondary_area} more room than the opening did."
@@ -543,10 +620,13 @@ def build_monthly_trajectory(
             "The practical question is no longer whether something is happening, but what the situation is asking you to carry."
         )
 
+    if bridge:
+        paragraphs.append(bridge["summary"] + " It is not a separate third story; it is the route through which the opening reaches the later result.")
+
     if countercurrent:
         support_evidence = "; ".join(countercurrent.get("support_evidence") or [])
         counter_text = (
-            f"A countercurrent appears through {countercurrent['label']}. "
+            f"Relief appears through {countercurrent['label']}. "
             + (f"The supportive evidence includes {support_evidence}. " if support_evidence else "")
             + "It can provide genuine relief from the main pressure without having to solve it."
         )
@@ -595,6 +675,8 @@ def build_monthly_trajectory(
         "windows": windows,
         "peak_window": {key: value for key, value in peak.items() if key != "events"},
         "countercurrent": countercurrent,
+        "relief": countercurrent,
+        "bridge": bridge,
         "portfolio_posture": trajectory_portfolio,
         "portfolio_rationale": trajectory_portfolio_reason,
         "portfolio_action_plan": trajectory_portfolio_plan,

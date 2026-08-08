@@ -81,7 +81,7 @@ def test_customer_report_removes_generic_non_nature_blocks_but_preserves_data():
     assert "Monthly background weight" not in text
     assert "How September unfolds" in text
     assert "Trajectory:" in text
-    assert "Countercurrent:" in text
+    assert "Relief:" in text
     # Underlying functionality/data remain available for QA and other workflows.
     assert result["monthly_arc"].get("ranked_scenarios")
     assert result.get("dominant_houses")
