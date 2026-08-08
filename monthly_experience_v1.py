@@ -380,8 +380,23 @@ def _chapter_strategy_label(result: dict, chapter, *, context: dict | None = Non
     return posture
 
 
+def _normalise_render_text(value: object) -> str:
+    """Keep browser/PDF text layers readable without changing Luna's meaning.
+
+    Browser print engines can collapse spaces around custom-font glyph runs, which
+    produced extracted text such as ``firstsignal`` even when the visual page
+    looked correct. Normalise invisible spacing here; print CSS below also gives
+    real word spaces a little more width so PDF extraction preserves them.
+    """
+    text = str(value or "")
+    text = text.replace("\u00a0", " ").replace("\u200b", "").replace("\ufeff", "")
+    text = re.sub(r"[ \t\f\v]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
+    return text.strip()
+
+
 def _safe(value: object) -> str:
-    return escape(str(value or ""), quote=True)
+    return escape(_normalise_render_text(value), quote=True)
 
 
 def _paragraphs(values: Iterable[str], maximum: int | None = None) -> str:
@@ -700,6 +715,22 @@ def _carryover_rows_html(result: dict) -> str:
     return "".join(rows)
 
 
+def _solar_gate_note_for_context(result: dict, context: dict) -> str:
+    solar = dict(result.get("solar_convergence") or {})
+    gate = dict(solar.get("gate_convergence") or {})
+    if not gate.get("material") or not gate.get("customer_line"):
+        return ""
+    try:
+        gate_date = datetime.fromisoformat(str(gate.get("gate_date"))).date()
+        start = datetime.fromisoformat(str(context.get("start_date"))).date()
+        end = datetime.fromisoformat(str(context.get("end_date") or context.get("start_date"))).date()
+    except (TypeError, ValueError):
+        return ""
+    if start <= gate_date <= end:
+        return str(gate.get("customer_line") or "")
+    return ""
+
+
 def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     prepared = []
     total = len(narrative.chapters)
@@ -725,6 +756,7 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
             "window": window,
             "sky_evidence": sky_evidence,
             "strategy": strategy,
+            "solar_note": _solar_gate_note_for_context(result, context),
             "event_key": (str(display_event.get("event_date") or ""), display_title),
         })
 
@@ -792,6 +824,7 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
   </div>
   <div class="luna-story-copy">
     {f'<div class="luna-sky-evidence"><span>Why Luna says this</span><p>{_safe(item["sky_evidence"])}</p></div>' if item["sky_evidence"] else ''}
+    {f'<div class="luna-solar-convergence-note"><span>Solar convergence</span><p>{_safe(item["solar_note"])}</p></div>' if item.get("solar_note") else ''}
     <h3>{_safe(chapter.hook)}</h3>
     {_paragraphs(item["paragraphs"])}
     {''.join(action_lines)}
@@ -997,15 +1030,13 @@ def build_monthly_experience_html(
     <summary>Solar clock evidence <span>+</span></summary>
     <div class="luna-detail-body">
       <p class="luna-method-note"><strong>Primary reference:</strong> the Sun establishes Luna's annual natural clock; the faster planetary pattern describes the weather occurring inside it.</p>
-      <h3>{_safe(narrative.solar_title)}</h3>
-      {_paragraphs(narrative.solar_paragraphs, maximum=2)}
       <div class="luna-evidence-grid">
         {''.join(
             f'<div><span>{_safe(label)}</span><strong>{_safe(value)}</strong></div>'
             for label, value in narrative.solar_rows
         )}
       </div>
-      <p class="luna-method-note"><strong>Nature note:</strong> The Aries-to-Pisces solar sequence is universal. The reader's location supplies the local daylight direction; planetary trajectory then describes how conditions develop inside that solar frame.</p>
+      {f'<p class="luna-solar-convergence-summary"><strong>Solar convergence:</strong> {_safe((solar.get("gate_convergence") or {}).get("summary", "The solar gate remains background context this month."))}</p>' if solar else ''}
     </div>
   </details>
 
@@ -1302,6 +1333,25 @@ def build_monthly_experience_html(
 .luna-story-timeline {{
   border-top:1px solid var(--black);
 }}
+.luna-solar-convergence-note {{
+  margin:.75rem 0 1rem;
+  padding:.8rem 1rem;
+  border-left:3px solid var(--black);
+  background:#f7f6f1;
+}}
+.luna-solar-convergence-note span {{
+  display:block;
+  margin-bottom:.35rem;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.65rem;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}}
+.luna-solar-convergence-note p,
+.luna-solar-convergence-summary {{
+  margin:.2rem 0 0;
+}}
+
 .luna-story-act {{
   display:grid;
   grid-template-columns:minmax(7rem,.34fr) minmax(0,1fr);
@@ -1718,6 +1768,21 @@ def build_monthly_experience_html(
   display:none;
 }}
 @media print {{
+  .luna-monthly-report h1,
+  .luna-monthly-report h2,
+  .luna-monthly-report h3 {{
+    letter-spacing:0 !important;
+    word-spacing:.055em !important;
+    font-variant-ligatures:none;
+  }}
+  .luna-monthly-report p,
+  .luna-monthly-report li,
+  .luna-monthly-report strong,
+  .luna-monthly-report td,
+  .luna-monthly-report th {{
+    word-spacing:.04em !important;
+    font-variant-ligatures:none;
+  }}
   body.luna-print-active > *:not(#luna-print-portal):not(style):not(script) {{
     display:none !important;
   }}

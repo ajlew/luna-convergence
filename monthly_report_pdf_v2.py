@@ -483,13 +483,14 @@ def _evidence_grid(rows: tuple[tuple[str, str], ...], styles: dict):
 
 
 def _solar(narrative, styles: dict):
-    story = _section_header("Solar convergence", "The month beneath the month", styles)
+    """Solar clock evidence only: observable Nature, no generic mini-forecast."""
+    story = _section_header("Solar clock", "The Sun sets the annual clock", styles)
     hero = Table(
         [[[
-            _p("YOUR SOLAR CONVERGENCE", styles["label_white"]),
+            _p("FIRST PRINCIPLE", styles["label_white"]),
             Spacer(1, 2 * mm),
-            _p(narrative.solar_title, styles["white_hook"]),
-            _p(narrative.solar_rule, styles["white_body"]),
+            _p("The Sun is Luna's primary natural clock", styles["white_hook"]),
+            _p("The universal Aries-to-Pisces cycle stays fixed; local geography changes only the light the reader experiences.", styles["white_body"]),
         ]]],
         colWidths=[CONTENT_WIDTH],
     )
@@ -501,32 +502,16 @@ def _solar(narrative, styles: dict):
         ("BOTTOMPADDING", (0, 0), (-1, -1), 7 * mm),
     ]))
     story.extend([hero, Spacer(1, 5 * mm)])
-    for paragraph in narrative.solar_paragraphs[:2]:
+    for paragraph in narrative.solar_paragraphs[:3]:
         story.append(_p(paragraph, styles["body"]))
-    story.extend([Spacer(1, 2 * mm), _evidence_grid(narrative.solar_rows, styles), Spacer(1, 3 * mm)])
-
-    response_rows = (
-        ("Opportunity", narrative.solar_opportunity),
-        ("Risk", narrative.solar_risk),
-        ("Strategic response", narrative.solar_action),
-    )
-    response_cards = [_small_card(label, value, styles, dark=(label == "Risk")) for label, value in response_rows]
-    response_table = Table([response_cards], colWidths=[CONTENT_WIDTH / 3] * 3)
-    response_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
     story.extend([
-        response_table,
-        Spacer(1, 4 * mm),
-        _p(f"WHY LUNA REACHED THIS CONCLUSION / {narrative.solar_equation}", styles["sans_small"]),
+        Spacer(1, 2 * mm),
+        _evidence_grid(narrative.solar_rows, styles),
+        Spacer(1, 3 * mm),
+        _p("The solar gate becomes part of the customer chronology only when it materially reinforces the independently calculated planetary trajectory.", styles["sans_small"]),
         PageBreak(),
     ])
     return story
-
 
 def _snapshot(narrative, styles: dict):
     story = _section_header("Explainable evidence", "Monthly Sky Snapshot", styles)
@@ -583,6 +568,7 @@ def _technical(result: dict, narrative, order_reference: str, styles: dict):
         ("Local light", f"{solar.get('light_direction', 'n/a')} from {solar.get('city', 'timezone estimate')}"),
         ("Activated house", f"{solar.get('activated_house', 'n/a')} - {solar.get('activated_house_name', '')}"),
         ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'n/a'))} - {solar.get('next_gate_date', '')}"),
+        ("Solar convergence", str((solar.get("gate_convergence") or {}).get("status", "BACKGROUND"))),
         ("Location basis", str(solar.get("location_basis", "n/a"))),
     ]
     story.extend([

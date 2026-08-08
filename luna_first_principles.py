@@ -18,7 +18,7 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.6"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.7"
 
 PIPELINE = (
     "Sun / Solar Clock",
@@ -38,6 +38,8 @@ FIRST_PRINCIPLES = (
     "The Aries Gate at the March Equinox is the head of Luna's solar-zodiacal cycle; the sequence remains Aries through Pisces everywhere on Earth.",
     "Location changes the reader's physical experience of light, never the order of the solar-zodiacal cycle.",
     "Local daylight is observed from the reader's location and kept separate from hemisphere-dependent season labels.",
+    "A solstice or equinox enters the customer story only when the Solar Clock materially reinforces the independently calculated planetary trajectory; otherwise it remains background context.",
+    "When the Solar Clock and planetary weather independently converge on the same life-area shift near a cardinal gate, Luna states that convergence beside the relevant chronological window.",
     "Nature before narrative.",
     "Observation before interpretation.",
     "Pattern before prediction.",
@@ -147,6 +149,8 @@ def methodology_metadata() -> dict:
         "solar_clock_policy": "sun_primary_clock_aries_gate_head_local_light_location_aware",
         "local_light_policy": "location_changes_daylight_experience_never_zodiac_order",
         "season_label_policy": "do_not_use_hemisphere_season_names_as_structural_inputs",
+        "solar_gate_convergence_policy": "cardinal_gate_customer_visible_only_when_independent_planetary_trajectory_materially_reinforces_it",
+        "solar_gate_chronology_policy": "material_gate_convergence_sits_beside_the_relevant_trajectory_window",
         "trajectory_policy": "show_build_peak_ease_or_reversal_before_story_synthesis",
         "time_sensitive_choice_policy": "window_strategy_then_monthly_synthesis_never_average_only",
         "evidence_count_policy": "deduplicated_claim_count_must_match_visible_contacts",

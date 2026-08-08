@@ -317,34 +317,31 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 {extra_html}
 """
 
-    # Page 6 - solar convergence in the same left/right homepage hero.
+    # Page 6 - Solar Clock evidence: observable Nature first, no generic mini-forecast.
     solar_rows = "".join(
         f'<div class="trust-item"><b>{_safe(label)}</b><br>{_safe(value)}</div>'
         for label, value in narrative.solar_rows
     )
+    solar_extra = narrative.solar_paragraphs[2] if len(narrative.solar_paragraphs) > 2 else ""
     page6_body = f"""
 <div class="section-hero two-column solar-hero">
   <section>
-    <div class="eyebrow">Solar convergence / local light</div>
-    <h1 class="section-title">The month beneath the month</h1>
+    <div class="eyebrow">Solar clock / local light</div>
+    <h1 class="section-title">The Sun sets the annual clock</h1>
     <div class="forecast-copy">
       <p>{_safe(narrative.solar_paragraphs[0] if narrative.solar_paragraphs else '')}</p>
       <p>{_safe(narrative.solar_paragraphs[1] if len(narrative.solar_paragraphs) > 1 else '')}</p>
+      {f'<p>{_safe(solar_extra)}</p>' if solar_extra else ''}
     </div>
   </section>
   <aside class="reading-card">
-    <div class="daily-kicker">Your Solar Convergence</div>
-    <div class="daily-headline small">{_safe(narrative.solar_title)}</div>
-    <p class="muted-white">{_safe(narrative.solar_rule)}</p>
+    <div class="daily-kicker">First principle</div>
+    <div class="daily-headline small">The Sun is Luna's primary natural clock</div>
+    <p class="muted-white">The Aries-to-Pisces solar sequence is universal. Local geography changes the observed light, never the zodiacal order.</p>
   </aside>
 </div>
 <div class="trust-strip solar-strip">{solar_rows}</div>
-<div class="three-card-grid">
-  {_card('Opportunity', 'Bring the developed work into view', narrative.solar_opportunity)}
-  {_card('Risk', 'Do not announce the destination too early', narrative.solar_risk, dark=True)}
-  {_card('Strategic response', 'Visibility must become dependable', narrative.solar_action)}
-</div>
-<div class="equation"><span>Why Luna reached this conclusion</span><strong>{_safe(narrative.solar_equation)}</strong></div>
+<div class="best-move wide"><span>Gate rule</span><strong>The solar gate enters the story only when it materially reinforces the independently calculated planetary trajectory.</strong></div>
 """
 
     # Page 7 - evidence cards use homepage's "Why this is different" layout.
@@ -368,6 +365,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
         ("Local light", f"{solar.get('light_direction', 'n/a')} from {solar.get('city', 'timezone estimate')}"),
         ("Activated house", f"{solar.get('activated_house', 'n/a')} - {solar.get('activated_house_name', '')}"),
         ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'n/a'))} - {solar.get('next_gate_date', '')}"),
+        ("Solar convergence", str((solar.get("gate_convergence") or {}).get("status", "BACKGROUND"))),
         ("Location basis", str(solar.get("location_basis", "n/a"))),
     ]
     dominant_rows = [

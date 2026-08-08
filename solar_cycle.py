@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass
 from datetime import date, timedelta
 import math
 import re
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from astrology_engine import SIGNS, positions_for_date, whole_sign_house
 from date_display import human_date
@@ -163,6 +163,167 @@ def local_light_statement(*, city: str, direction: str, change: float) -> str:
         f"In {city}, daylight {movement}. "
         "That local light direction does not alter the Aries-to-Pisces solar sequence."
     )
+
+
+SOLAR_CYCLE_COMPACT = "Aries Gate → 12-sign solar cycle → Aries Gate"
+SOLAR_GATE_CONVERGENCE_WINDOW_DAYS = 5
+
+
+def _event_value(event: object, key: str, default=None):
+    if isinstance(event, dict):
+        return event.get(key, default)
+    return getattr(event, key, default)
+
+
+def _event_date_value(event: object) -> date | None:
+    raw = _event_value(event, "event_date", "")
+    if isinstance(raw, date):
+        return raw
+    try:
+        return date.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return None
+
+
+def _event_house_values(event: object) -> set[int]:
+    values: set[int] = set()
+    for item in (_event_value(event, "houses", ()) or ()):
+        try:
+            values.add(int(item))
+        except (TypeError, ValueError):
+            continue
+    return values
+
+
+def _event_importance_value(event: object) -> float:
+    try:
+        return float(_event_value(event, "importance", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def monthly_solar_gate_convergence(
+    *,
+    solar: Mapping[str, object] | dict,
+    trajectory: Mapping[str, object] | dict,
+    events: Iterable[object],
+    period_start: date,
+    period_end: date,
+) -> dict:
+    """Test whether a cardinal solar gate materially reinforces the monthly story.
+
+    The solar gate never invents a plot. It becomes customer-visible only when:
+    1) the gate falls inside the report period; and
+    2) the Sun's post-gate life area matches a primary, bridge or result area in
+       the independently calculated planetary trajectory; and
+    3) nearby astronomical events provide concrete evidence in that same area.
+
+    This keeps the Sun as Luna's reference clock while preserving the faster
+    planetary weather as the authority on what is actually happening.
+    """
+    gate_raw = str(solar.get("next_gate_date") or "")
+    try:
+        gate_date = date.fromisoformat(gate_raw)
+    except ValueError:
+        return {"status": "NONE", "material": False, "reason": "No solar gate date was available inside the report."}
+    if not (period_start <= gate_date <= period_end):
+        return {"status": "NONE", "material": False, "reason": "No cardinal solar gate falls inside this report period."}
+
+    try:
+        gate_house = int(solar.get("end_house") or solar.get("activated_house") or 0)
+    except (TypeError, ValueError):
+        gate_house = 0
+    primary = int(trajectory.get("primary_house") or 0) if trajectory.get("primary_house") not in (None, "") else 0
+    secondary = int(trajectory.get("secondary_house") or 0) if trajectory.get("secondary_house") not in (None, "") else 0
+    bridge = dict(trajectory.get("bridge") or {})
+    bridge_house = int(bridge.get("house") or 0) if bridge.get("house") not in (None, "") else 0
+
+    if gate_house and gate_house == secondary:
+        matched_role = "result"
+        role_weight = 3
+    elif gate_house and gate_house == bridge_house:
+        matched_role = "bridge"
+        role_weight = 2
+    elif gate_house and gate_house == primary:
+        matched_role = "primary"
+        role_weight = 1
+    else:
+        matched_role = "background"
+        role_weight = 0
+
+    nearby: list[tuple[float, date, str]] = []
+    for event in events:
+        event_date = _event_date_value(event)
+        if event_date is None or abs((event_date - gate_date).days) > SOLAR_GATE_CONVERGENCE_WINDOW_DAYS:
+            continue
+        if gate_house and gate_house not in _event_house_values(event):
+            continue
+        importance = _event_importance_value(event)
+        if importance < 5.0:
+            continue
+        title = str(_event_value(event, "title", "astronomical event") or "astronomical event")
+        nearby.append((importance, event_date, title))
+
+    nearby.sort(key=lambda item: (abs((item[1] - gate_date).days), -item[0], item[1]))
+    evidence: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for _importance, event_date, title in nearby:
+        key = (event_date.isoformat(), title.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        evidence.append(f"{title} on {human_date(event_date)}")
+        if len(evidence) >= 4:
+            break
+
+    if role_weight >= 3 and len(evidence) >= 2:
+        status = "STRONG"
+    elif role_weight >= 2 and len(evidence) >= 1:
+        status = "MATERIAL"
+    elif role_weight >= 1 and len(evidence) >= 2:
+        status = "MATERIAL"
+    else:
+        status = "BACKGROUND"
+
+    material = status in {"MATERIAL", "STRONG"}
+    gate_label = solar_gate_label(str(solar.get("next_solar_gate") or "Solar gate"))
+    area = HOUSE_NAMES.get(gate_house, "the post-gate life area")
+    end_sign = str(solar.get("end_solar_sign") or solar.get("solar_sign") or "the next sign")
+
+    if matched_role == "result":
+        alignment = f"the planetary trajectory is independently moving into the same result area: {area}"
+    elif matched_role == "bridge":
+        alignment = f"the planetary trajectory independently uses {area} as the bridge between its opening and later result"
+    elif matched_role == "primary":
+        alignment = f"the planetary trajectory is already concentrated in the same primary area: {area}"
+    else:
+        alignment = f"the solar emphasis moves into {area}, but the planetary trajectory does not independently make that area central"
+
+    evidence_text = "; ".join(evidence)
+    if material:
+        customer_line = (
+            f"The Solar Clock reinforces this turn. At the {gate_label} on {human_date(gate_date)}, "
+            f"the Sun moves into {end_sign}, shifting the solar emphasis toward {area}; {alignment}."
+        )
+        if evidence_text:
+            customer_line += f" Nearby Nature confirms the timing: {evidence_text}."
+    else:
+        customer_line = ""
+
+    return {
+        "status": status,
+        "material": material,
+        "gate_date": gate_date.isoformat(),
+        "gate_label": gate_label,
+        "gate_house": gate_house,
+        "gate_area": area,
+        "matched_role": matched_role,
+        "evidence": evidence,
+        "summary": customer_line if material else f"Solar gate remains background context: {alignment}.",
+        "customer_line": customer_line,
+        "reason": alignment,
+        "window_days": SOLAR_GATE_CONVERGENCE_WINDOW_DAYS,
+    }
 
 SIGN_RULES = {
     "Aries": "Begin with a clear direction",

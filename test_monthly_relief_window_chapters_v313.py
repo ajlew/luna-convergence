@@ -29,7 +29,7 @@ def _story_articles(html: str) -> list[str]:
 
 
 def test_first_principles_v15_uses_relief_and_one_window_one_move():
-    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.6"
+    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.7"
     meta = methodology_metadata()
     assert meta["customer_relief_label"] == "Relief"
     assert meta["window_chapter_policy"] == "one_trajectory_window_one_customer_chapter_one_move"

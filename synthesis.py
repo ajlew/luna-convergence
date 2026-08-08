@@ -16,6 +16,7 @@ from interpretation_library import (
 )
 from solar_cycle import (
     monthly_solar_convergence,
+    monthly_solar_gate_convergence,
     yearly_solar_chapters,
     yearly_solar_markdown,
 )
@@ -830,6 +831,13 @@ def period_report(
             inherited_events=inherited_events,
             monthly_arc=monthly_arc,
             house_weights={house: weight for house, weight in houses},
+        )
+        solar_convergence["gate_convergence"] = monthly_solar_gate_convergence(
+            solar=solar_convergence,
+            trajectory=monthly_trajectory,
+            events=events,
+            period_start=start,
+            period_end=end,
         )
         monthly_decision = evaluate_monthly_decision(
             sign=sign,

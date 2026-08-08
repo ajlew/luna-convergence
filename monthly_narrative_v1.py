@@ -8,7 +8,7 @@ from typing import Iterable
 from date_display import human_date, human_date_range
 from scenario_engine import FOCUS_HOUSES, rank_scenarios
 from monthly_strategy_alignment import climate_aware_hook, climate_aware_storyline, strategy_do_dont, strategy_rule
-from solar_cycle import solar_gate_label
+from solar_cycle import solar_gate_label, SOLAR_CYCLE_COMPACT
 
 from luna_editorial_system import (
     GATEKEEPER_LINE,
@@ -1752,16 +1752,20 @@ def build_monthly_narrative(
         for item in (solar.get("meaning") or ())
         if str(item).strip()
     )
+    solar_gate_convergence = dict(solar.get("gate_convergence") or {})
+    if solar_gate_convergence.get("material") and solar_gate_convergence.get("customer_line"):
+        solar_paragraphs = solar_paragraphs + (_plain_customer_astrology(solar_gate_convergence.get("customer_line")),)
     solar_rows = (
         ("Your Sun", str(result.get("sign", "Sun sign"))),
         ("Current Sun", f"{solar.get('start_solar_sign', solar.get('solar_sign', 'Unavailable'))} → {solar.get('end_solar_sign', solar.get('solar_sign', 'Unavailable'))}"),
-        ("Solar clock", "Aries Gate → Pisces → Aries"),
+        ("Solar clock", SOLAR_CYCLE_COMPACT),
         ("Local light", f"{solar.get('light_direction', 'Unavailable')} from {solar.get('city', 'timezone estimate')}"),
         ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'Unavailable'))} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
         (
             "Solar life-area movement",
             f"{HOUSE_DISPLAY.get(int(solar.get('start_house', 1) or 1), 'Starting area')} → {HOUSE_DISPLAY.get(int(solar.get('end_house', 1) or 1), 'Next area')}",
         ),
+        ("Solar convergence", str(solar_gate_convergence.get("status", "BACKGROUND"))),
     )
 
     scores = [float(item.get("score", 0.0)) for item in convergences]
@@ -1813,6 +1817,7 @@ def build_monthly_narrative(
         ("Current Sun", f"{solar.get('start_solar_sign', solar.get('solar_sign', 'Unavailable'))} → {solar.get('end_solar_sign', solar.get('solar_sign', 'Unavailable'))}"),
         ("Local light", f"{solar.get('light_direction', 'Unavailable')} - {solar.get('city', 'timezone estimate')}"),
         ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'Unavailable'))} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
+        ("Solar convergence", str((solar.get("gate_convergence") or {}).get("status", "BACKGROUND"))),
     )
 
     counter_love_story = _countercurrent_love_story(result, trajectory)
@@ -1867,7 +1872,7 @@ def build_monthly_narrative(
         action_plan=action_plan,
         key_dates=key_dates,
         snapshot_rows=snapshot_rows,
-        solar_title=str(solar.get("headline", "Your Solar Convergence")),
+        solar_title="Solar clock evidence",
         solar_paragraphs=solar_paragraphs,
         solar_rows=solar_rows,
         solar_opportunity=_plain_customer_astrology(solar.get("opportunity", "Use the current solar phase deliberately.")),

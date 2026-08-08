@@ -16,7 +16,7 @@ def _visible(html: str) -> str:
 
 
 def test_sun_is_first_principle_and_first_pipeline_reference():
-    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.6"
+    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.7"
     assert FIRST_PRINCIPLES[0] == "The Sun is Luna's primary natural clock."
     assert PIPELINE[:6] == (
         "Sun / Solar Clock",
