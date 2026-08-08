@@ -30,6 +30,7 @@ from monthly_narrative_v1 import build_monthly_narrative
 from monthly_experience_v1 import render_monthly_experience
 from yearly_experience_v1 import render_yearly_experience
 from forecast_inventory import EDITORIAL_STATUSES, build_inventory, inventory_json
+from ephemeris_admin import render_ephemeris_admin
 from luna_voice import narrator_principle, voice_profile
 from solar_cycle import (
     city_input_help,
@@ -2399,6 +2400,11 @@ def forecast_library_page() -> None:
             st.write(profile.purpose)
             st.markdown(f"**Pace:** {profile.pace}")
     st.caption(narrator_principle())
+    st.page_link(
+        EPHEMERIS_ADMIN_REF,
+        label="Manage ephemeris years / run historical test",
+        use_container_width=True,
+    )
 
     report_type = st.radio(
         "Inventory type",
@@ -2514,6 +2520,20 @@ def forecast_library_page() -> None:
                 "record_count": preview.get("record_count"),
                 "first_record": (preview.get("records") or [{}])[0],
             })
+
+
+def ephemeris_admin_page() -> None:
+    set_page_metadata(
+        "Ephemeris Admin | Luna Convergence",
+        "Register durable yearly ephemeris references and run historical Luna stress tests.",
+        "/ephemeris-admin",
+    )
+    render_ephemeris_admin(
+        editor_preview_enabled=EDITOR_PREVIEW_ENABLED,
+        default_sign=DEFAULT_SIGN,
+        default_timezone=DEFAULT_TIMEZONE,
+        timezones=TIMEZONES,
+    )
 
 
 def editorial_preview_page() -> None:
@@ -3232,6 +3252,12 @@ FORECAST_LIBRARY_REF = st.Page(
     url_path="forecast-library",
     visibility="hidden",
 )
+EPHEMERIS_ADMIN_REF = st.Page(
+    ephemeris_admin_page,
+    title="Ephemeris Admin",
+    url_path="ephemeris-admin",
+    visibility="hidden",
+)
 REPORTS_PAGE_REF = st.Page(
     reports_page,
     title="Reports",
@@ -3281,6 +3307,7 @@ ALL_PAGES = [
     MONTHLY_PREVIEW_REF,
     EDITORIAL_PREVIEW_REF,
     FORECAST_LIBRARY_REF,
+    EPHEMERIS_ADMIN_REF,
     REPORTS_PAGE_REF,
     HOUSES_PAGE_REF,
     SAMPLE_PAGE_REF,
