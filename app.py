@@ -28,6 +28,10 @@ from daily_narrative_v3 import (
 )
 from monthly_narrative_v1 import build_monthly_narrative
 from monthly_experience_v1 import render_monthly_experience
+from monthly_report_pipeline import (
+    build_production_monthly_report,
+    render_production_monthly_report,
+)
 from yearly_experience_v1 import render_yearly_experience
 from forecast_inventory import EDITORIAL_STATUSES, build_inventory, inventory_json
 from ephemeris_admin import render_ephemeris_admin
@@ -2157,23 +2161,16 @@ def render_monthly_preview_workspace() -> None:
     if submitted:
         year = int(forecast_year)
         month = int(selected_month)
-        start_date = date(year, month, 1)
-        if month == 12:
-            end_date = date(year, 12, 31)
-        else:
-            end_date = date(year, month + 1, 1) - timedelta(days=1)
 
         try:
             with st.spinner(
                 f"Building {sign} — {month_name[month]} {year}..."
             ):
-                result = period_report(
-                    sign,
-                    start_date,
-                    end_date,
-                    timezone_name,
-                    f"{month_name[month]} {year}",
-                    transition_count=9,
+                narrative, result = build_production_monthly_report(
+                    sign=sign,
+                    year=year,
+                    month=month,
+                    timezone_name=timezone_name,
                     nearest_city=nearest_city,
                     main_focus=main_focus,
                 )
@@ -2183,6 +2180,7 @@ def render_monthly_preview_workspace() -> None:
             return
 
         st.session_state["monthly-preview-result"] = result
+        st.session_state["monthly-preview-narrative"] = narrative
         st.session_state["monthly-preview-focus-value"] = main_focus
         st.rerun()
 
@@ -2200,18 +2198,19 @@ def render_monthly_preview_workspace() -> None:
         "full editorial preview · no checkout"
     )
 
-    narrative = build_monthly_narrative(
-        result,
-        main_focus=st.session_state.get(
-            "monthly-preview-focus-value",
-            "General overview",
-        ),
-    )
-    render_monthly_experience(
+    narrative = st.session_state.get("monthly-preview-narrative")
+    if narrative is None:
+        narrative = build_monthly_narrative(
+            result,
+            main_focus=st.session_state.get(
+                "monthly-preview-focus-value",
+                "General overview",
+            ),
+        )
+    render_production_monthly_report(
         narrative,
         result,
         show_print=True,
-        preview=False,
     )
 
 

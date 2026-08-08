@@ -7,16 +7,17 @@ or re-implement the upload contract.
 """
 
 from calendar import month_name
-from datetime import date, timedelta
 import hmac
 
 import streamlit as st
 
 from astrology_engine import SIGNS
-from monthly_experience_v1 import render_monthly_experience
-from monthly_narrative_v1 import build_monthly_narrative
+from monthly_report_pipeline import (
+    MONTHLY_PIPELINE_VERSION,
+    build_production_monthly_report,
+    render_production_monthly_report,
+)
 from solar_cycle import representative_city_name
-from synthesis import period_report
 from ephemeris_repository import (
     EPHEMERIS_FEATURE_VERSION,
     ephemeris_data_dir,
@@ -168,9 +169,10 @@ def render_ephemeris_admin(
         return
 
     st.markdown(
-        "This uses the **same Luna monthly engine** as the customer report, but only for a "
-        "year that has passed the ephemeris registry gate. This makes old difficult periods "
-        "repeatable regression tests rather than one-off code patches."
+        "This uses the **exact same full monthly production pipeline** as the normal 2026 Monthly Preview. "
+        "The only extra rule is that a historical year must first pass the ephemeris registry gate. "
+        "That makes the result a true like-for-like comparison: same calculation, same convergence logic, "
+        "same narrator, same Love / Work / Money sections, same evidence appendix and same print renderer."
     )
 
     default_year_index = years.index(2017) if 2017 in years else len(years) - 1
@@ -197,24 +199,16 @@ def render_ephemeris_admin(
         key="ephemeris-admin-test-city",
     )
 
-    if st.button("Generate historical monthly test", type="primary", use_container_width=True):
-        start = date(int(year), int(month), 1)
-        if month == 12:
-            end = date(int(year), 12, 31)
-        else:
-            end = date(int(year), int(month) + 1, 1) - timedelta(days=1)
-        with st.spinner("Running Luna against the registered historical year..."):
-            result = period_report(
-                sign,
-                start,
-                end,
-                timezone_name,
-                f"{month_name[month]} {year}",
-                transition_count=9,
+    if st.button("Generate full monthly like-for-like test", type="primary", use_container_width=True):
+        with st.spinner("Running the full Luna monthly production pipeline..."):
+            narrative, result = build_production_monthly_report(
+                sign=sign,
+                year=int(year),
+                month=int(month),
+                timezone_name=timezone_name,
                 nearest_city=city,
                 main_focus="General overview",
             )
-            narrative = build_monthly_narrative(result, main_focus="General overview")
         st.session_state["ephemeris-admin-test-result"] = (narrative, result)
 
     stored = st.session_state.get("ephemeris-admin-test-result")
@@ -224,9 +218,12 @@ def render_ephemeris_admin(
             f"Historical stress test · {result.get('sign')} · {result.get('label')} · "
             "registered ephemeris year"
         )
-        render_monthly_experience(
+        st.caption(
+            f"Full monthly production pipeline v{MONTHLY_PIPELINE_VERSION} · "
+            "like-for-like with Monthly Preview"
+        )
+        render_production_monthly_report(
             narrative,
             result,
             show_print=True,
-            preview=True,
         )
