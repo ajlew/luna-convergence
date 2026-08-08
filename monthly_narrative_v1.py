@@ -262,6 +262,12 @@ class MonthlyNarrative:
     romance_active: str
     romance_quiet: str
     relationship_test: tuple[str, ...]
+    decision_truth: str
+    strategic_posture: str
+    strategic_rationale: str
+    romance_relevance: str
+    romance_title: str
+    romance_note: str
     at_glance: tuple[str, ...]
     focus_title: str
     focus_answer: tuple[str, ...]
@@ -839,12 +845,26 @@ def _domain_story(
 
 
 def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
-    return _domain_story(
+    decision = dict(result.get("monthly_decision") or {})
+    romance = dict((decision.get("domain_decisions") or {}).get("romance") or {})
+    relevance = str(romance.get("relevance", ""))
+    luna_line = str(romance.get("luna_line", "")).strip()
+    if relevance == "NOT MATERIAL" and luna_line:
+        return (
+            luna_line,
+            "Romance remains in the report, but it is not promoted above the convergent monthly hierarchy.",
+            "If something interesting appears anyway, treat it as a cameo until the evidence earns a larger role.",
+        )
+
+    base = _domain_story(
         result,
         "Love and relationships",
         fallback_first="A spark can open the door, but behaviour decides whether it stays open.",
         fallback_move="Judge the connection by mutual effort after the exciting moment.",
     )
+    if luna_line:
+        return (luna_line, *base[:2])
+    return base
 
 
 def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
@@ -1179,6 +1199,23 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
 
     arc = _monthly_arc(result)
     qa = dict(result.get("monthly_qa") or {})
+    decision = dict(result.get("monthly_decision") or {})
+    decision_qa = dict(result.get("monthly_decision_qa") or {})
+    domain_decisions = dict(decision.get("domain_decisions") or {})
+    romance_decision = dict(domain_decisions.get("romance") or {})
+    decision_rows = [
+        "| Decision evidence | Value |",
+        "|---|---|",
+        f"| Truth gate | {decision.get('action_truth', 'n/a')} |",
+        f"| Strategic posture | {decision.get('posture', 'n/a')} |",
+        f"| Support evidence | {float(decision.get('support_score', 0.0)):.1f} |",
+        f"| Friction evidence | {float(decision.get('friction_score', 0.0)):.1f} |",
+        f"| Uncertainty evidence | {float(decision.get('uncertainty_score', 0.0)):.1f} |",
+        f"| Volatility | {float(decision.get('volatility_score', 0.0)):.1f} |",
+        f"| Capacity pressure | {float(decision.get('capacity_pressure', 0.0)):.1f}/100 |",
+        f"| Romance hierarchy | {romance_decision.get('relevance', 'n/a')} |",
+        f"| Romance posture | {romance_decision.get('posture', 'n/a')} |",
+    ]
     scenario_rows = ["| Rank | Scenario family | Symbolic support | Examples |", "|---:|---|---|---|"]
     for rank, item in enumerate((arc.get("ranked_scenarios") or [])[:8], 1):
         examples = "; ".join(str(value) for value in (item.get("examples") or [])[:2])
@@ -1204,6 +1241,13 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             f"**Event-led selection:** {arc.get('selection_rationale', 'The strongest event clusters determine the public story.')} ",
             f"**Dates shown in:** {result.get('timezone_name', 'selected local timezone')}",
             f"**Narrative QA:** {qa.get('status', 'not run')}" + (f" — {'; '.join(qa.get('warnings') or [])}" if qa.get('warnings') else ""),
+            f"**Decision QA:** {decision_qa.get('status', 'not run')}" + (f" — {'; '.join(decision_qa.get('warnings') or [])}" if decision_qa.get('warnings') else ""),
+            "",
+            "## Strategic truth gate",
+            "",
+            *decision_rows,
+            "",
+            f"**Decision rationale:** {decision.get('rationale', 'n/a')}",
             "",
             "## Ranked scenario families",
             "",
@@ -1254,10 +1298,15 @@ def build_monthly_narrative(
 
     question = normalise_personal_question(personal_question)
     arc = _monthly_arc(result)
+    monthly_decision = dict(result.get("monthly_decision") or {})
+    domain_decisions = dict(monthly_decision.get("domain_decisions") or {})
+    romance_decision = dict(domain_decisions.get("romance") or {})
 
     if arc:
         primary_house = int(arc.get("primary_house", _dominant_house(result, 0, 1)))
         secondary_house = int(arc.get("secondary_house", _dominant_house(result, 1, primary_house)))
+        tertiary_raw = arc.get("tertiary_house")
+        tertiary_house = int(tertiary_raw) if tertiary_raw not in (None, "") else None
         hook_headline = str(arc.get("headline", _monthly_hook(main_focus, primary_house, secondary_house)))
         convergence_axis = str(
             arc.get(
@@ -1323,9 +1372,15 @@ def build_monthly_narrative(
                 )
             ),
         )
+        if str(romance_decision.get("relevance", "")) == "NOT MATERIAL":
+            relationship_test = ()
+        decision_plan = tuple(str(item) for item in (monthly_decision.get("action_plan") or ()) if str(item).strip())
+        if decision_plan:
+            action_plan = decision_plan
     else:
         primary_house = _dominant_house(result, 0, 1)
         secondary_house = _dominant_house(result, 1, primary_house)
+        tertiary_house = None
         headline, subtitle = _headline(main_focus, primary_house, secondary_house)
         hook_headline = _monthly_hook(main_focus, primary_house, secondary_house)
         convergence_axis = f"{HOUSE_DISPLAY[primary_house]} x {HOUSE_DISPLAY[secondary_house]}"
@@ -1355,9 +1410,31 @@ def build_monthly_narrative(
             "Expand one proven option.",
             "Keep only what survives the reality check.",
         )
+        decision_plan = tuple(str(item) for item in (monthly_decision.get("action_plan") or ()) if str(item).strip())
+        if decision_plan:
+            action_plan = decision_plan
 
     romance_active, romance_quiet = _romance_copy(primary_house, secondary_house)
+    romance_relevance = str(romance_decision.get("relevance", "BACKGROUND"))
+    romance_note = str(romance_decision.get("luna_line", "")).strip()
+    romance_posture = str(romance_decision.get("posture", monthly_decision.get("posture", "QUESTION")))
+    romance_truth = str(romance_decision.get("action_truth", "NOT ACT" if romance_posture != "ADVANCE" else "ACT"))
+    if romance_relevance == "NOT MATERIAL":
+        romance_title = "Romance is not running this month's meeting"
+        romance_active = romance_note or romance_active
+        romance_quiet = "That does not mean 'no romance'. It means the relationship evidence did not clear the convergent hierarchy strongly enough to become a main plot."
+    elif romance_relevance == "BACKGROUND":
+        romance_title = f"Romance stays in the background · {romance_truth} / {romance_posture}"
+        if romance_note:
+            romance_active = romance_note
+    else:
+        romance_title = f"Romance · {romance_relevance} · {romance_truth} / {romance_posture}"
+        if romance_note:
+            romance_active = romance_note
     agency_rule = GATEKEEPER_LINE
+    decision_truth = str(monthly_decision.get("action_truth", "ACT"))
+    strategic_posture = str(monthly_decision.get("posture", "ADVANCE"))
+    strategic_rationale = str(monthly_decision.get("rationale", "Follow the evidence before choosing the move."))
     validation_rule = VALIDATION_LINE
     love_hook, work_hook, money_hook = _life_area_hooks(result, primary_house, secondary_house)
     convergences = _convergences(result)
@@ -1393,8 +1470,20 @@ def build_monthly_narrative(
         f"{item.get('label', '')} ({item.get('confidence', '')})"
         for item in arc_scenarios[:3]
     ) or "No single scenario family dominates."
+    narrative_structure = (
+        "Three-house convergence" if tertiary_house else "Two-house convergence"
+    )
+    bridge_label = (
+        HOUSE_DISPLAY.get(tertiary_house, f"House {tertiary_house}")
+        if tertiary_house
+        else "No third house cleared the convergence gate"
+    )
     snapshot_rows = (
         ("Primary story", convergence_axis),
+        ("Truth gate", f"{decision_truth} · {strategic_posture}"),
+        ("Romance hierarchy", romance_relevance),
+        ("Narrative structure", narrative_structure),
+        ("Bridge current", bridge_label),
         ("Personal focus", main_focus),
         ("Relationship current", relationship_current),
         ("Ranked scenario families", top_scenario_text),
@@ -1426,6 +1515,12 @@ def build_monthly_narrative(
         romance_active=romance_active,
         romance_quiet=romance_quiet,
         relationship_test=relationship_test,
+        decision_truth=decision_truth,
+        strategic_posture=strategic_posture,
+        strategic_rationale=strategic_rationale,
+        romance_relevance=romance_relevance,
+        romance_title=romance_title,
+        romance_note=romance_note,
         at_glance=at_glance,
         focus_title=FOCUS_TITLES.get(main_focus, FOCUS_TITLES["General overview"]),
         focus_answer=_focus_answer(result, main_focus, question, primary_house, secondary_house),

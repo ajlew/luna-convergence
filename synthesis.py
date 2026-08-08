@@ -21,6 +21,7 @@ from solar_cycle import (
 )
 from monthly_arc_engine import build_monthly_arc
 from monthly_qa import validate_monthly_arc
+from monthly_decision_engine import evaluate_monthly_decision, validate_monthly_decision
 from yearly_game_engine import build_yearly_game_map
 
 
@@ -786,6 +787,8 @@ def period_report(
     solar_year_section = ""
     monthly_arc = None
     monthly_qa = None
+    monthly_decision = None
+    monthly_decision_qa = None
     yearly_game_map = None
     inherited_events = []
 
@@ -815,6 +818,14 @@ def period_report(
             main_focus=main_focus,
             house_weights={house: weight for house, weight in houses},
         ).to_dict()
+        monthly_decision = evaluate_monthly_decision(
+            sign=sign,
+            events=events,
+            inherited_events=inherited_events,
+            monthly_arc=monthly_arc,
+            house_weights={house: weight for house, weight in houses},
+        ).to_dict()
+        monthly_decision_qa = validate_monthly_decision(monthly_decision)
         monthly_qa = validate_monthly_arc(
             sign=sign,
             events=events,
@@ -952,6 +963,8 @@ The winning sequence is:
         "solar_year_chapters": solar_year_chapters,
         "monthly_arc": monthly_arc,
         "monthly_qa": monthly_qa,
+        "monthly_decision": monthly_decision,
+        "monthly_decision_qa": monthly_decision_qa,
         "yearly_game_map": yearly_game_map,
         "inherited_events": serialize(inherited_events),
         "nearest_city": nearest_city,

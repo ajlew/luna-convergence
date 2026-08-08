@@ -339,22 +339,29 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     return "".join(acts)
 
 
-def _life_rows(narrative: MonthlyNarrative) -> str:
+def _life_rows(narrative: MonthlyNarrative, result: dict) -> str:
+    decisions = dict((result.get("monthly_decision") or {}).get("domain_decisions") or {})
     sections = (
-        ("Love", narrative.love_hook, narrative.love_story[0]),
-        ("Work", narrative.work_hook, narrative.work_story[0]),
-        ("Money", narrative.money_hook, narrative.money_story[0]),
+        ("Love", "romance", narrative.love_hook, narrative.love_story[0]),
+        ("Work", "work", narrative.work_hook, narrative.work_story[0]),
+        ("Money", "money", narrative.money_hook, narrative.money_story[0]),
     )
-    return "".join(
-        f"""
+    rows = []
+    for label, key, hook, copy in sections:
+        decision = dict(decisions.get(key) or {})
+        strategy = " · ".join(
+            value for value in (str(decision.get("action_truth", "")), str(decision.get("posture", ""))) if value
+        )
+        rows.append(
+            f"""
 <article class="luna-life-row">
-  <span>{_safe(label)}</span>
+  <span>{_safe(label)}{f'<small>{_safe(strategy)}</small>' if strategy else ''}</span>
   <h3>{_safe(hook)}</h3>
   <p>{_safe(copy)}</p>
 </article>
-        """
-        for label, hook, copy in sections
-    )
+            """
+        )
+    return "".join(rows)
 
 
 def _print_controls(
@@ -406,7 +413,7 @@ def build_monthly_experience_html(
 
     instance_id = f"luna-monthly-{uuid4().hex}"
     chapters = _chapter_cards(narrative, result)
-    life_rows = _life_rows(narrative)
+    life_rows = _life_rows(narrative, result)
     story_dates = _story_date_cards(narrative)
     arc_evidence_path = _arc_evidence_path(result)
     scenario_rows = _scenario_rows_html(result)
@@ -419,6 +426,41 @@ def build_monthly_experience_html(
   <div class="luna-eyebrow">{_safe(narrator_cue("monthly", 1))}</div>
   <h2>{_safe(narrative.relationship_test[0])}</h2>
   {_paragraphs(narrative.relationship_test[1:])}
+</section>
+        """
+
+    if narrative.romance_relevance == "NOT MATERIAL":
+        romance_section = f"""
+<section class="luna-monthly-section luna-romance-section luna-romance-not">
+  <div class="luna-eyebrow">Romance and validation</div>
+  <h2>{_safe(narrative.romance_title)}</h2>
+  <div class="luna-romance-grid luna-romance-single">
+    <article>
+      <span>Not the main plot</span>
+      <p>{_safe(narrative.romance_active)}</p>
+    </article>
+    <article>
+      <span>What that means</span>
+      <p>{_safe(narrative.romance_quiet)}</p>
+    </article>
+  </div>
+</section>
+        """
+    else:
+        romance_section = f"""
+<section class="luna-monthly-section luna-romance-section">
+  <div class="luna-eyebrow">Romance and validation</div>
+  <h2>{_safe(narrative.romance_title)}</h2>
+  <div class="luna-romance-grid">
+    <article>
+      <span>When romance is active</span>
+      <p>{_safe(narrative.romance_active)}</p>
+    </article>
+    <article>
+      <span>When romance is quiet</span>
+      <p>{_safe(narrative.romance_quiet)}</p>
+    </article>
+  </div>
 </section>
         """
 
@@ -563,20 +605,7 @@ def build_monthly_experience_html(
   <div class="luna-story-date-grid">{story_dates}</div>
 </section>
 
-<section class="luna-monthly-section luna-romance-section">
-  <div class="luna-eyebrow">Romance and validation</div>
-  <h2>Whether the spark arrives—or the room stays quiet</h2>
-  <div class="luna-romance-grid">
-    <article>
-      <span>When romance is active</span>
-      <p>{_safe(narrative.romance_active)}</p>
-    </article>
-    <article>
-      <span>When romance is quiet</span>
-      <p>{_safe(narrative.romance_quiet)}</p>
-    </article>
-  </div>
-</section>
+{romance_section}
 
 <section class="luna-monthly-section">
   <div class="luna-eyebrow">Where the story lands</div>
@@ -586,7 +615,9 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-next-move">
   <div>
     <div class="luna-eyebrow">{_safe(YOUR_MOVE_LABEL)}</div>
-    <h2>{_safe(GATEKEEPER_LINE)}</h2>
+    <div class="luna-strategy-badge">{_safe(narrative.decision_truth)} · {_safe(narrative.strategic_posture)}</div>
+    <h2>From reading the future to writing it.</h2>
+    <p class="luna-strategy-rationale">{_safe(narrative.strategic_rationale)}</p>
   </div>
   <ol>
     {''.join(f'<li>{_safe(action)}</li>' for action in narrative.action_plan)}
@@ -879,10 +910,33 @@ def build_monthly_experience_html(
   padding:1rem 0;
   border-bottom:1px solid var(--black);
 }}
+.luna-life-row > span small {{
+  display:block;
+  margin-top:.25rem;
+  font-family:var(--luna-mono);
+  font-size:.62rem;
+  letter-spacing:.05em;
+  opacity:.72;
+}}
 .luna-life-row h3,
 .luna-life-row p {{
   margin:0;
 }}
+.luna-strategy-badge {{
+  display: inline-block;
+  margin: 0.55rem 0 0.8rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid currentColor;
+  font-family: var(--luna-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.luna-strategy-rationale {{
+  max-width: 46rem;
+  margin-top: 0.8rem;
+}}
+
 .luna-next-move {{
   display:grid;
   grid-template-columns:.8fr 1.2fr;
