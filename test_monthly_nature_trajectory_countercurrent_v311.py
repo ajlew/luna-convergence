@@ -25,7 +25,7 @@ def _visible_text(html: str) -> str:
 
 
 def test_first_principles_put_trajectory_between_pattern_and_convergence():
-    assert PIPELINE[:4] == ("Nature", "Pattern", "Trajectory", "Convergence")
+    assert PIPELINE[:6] == ("Sun / Solar Clock", "Local Light", "Planetary Weather", "Pattern", "Trajectory", "Convergence")
     metadata = methodology_metadata()
     assert metadata["trajectory_policy"] == "show_build_peak_ease_or_reversal_before_story_synthesis"
     assert metadata["bridge_policy"] == "optional_only_never_forced"

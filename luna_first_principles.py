@@ -18,10 +18,12 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.5"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.6"
 
 PIPELINE = (
-    "Nature",
+    "Sun / Solar Clock",
+    "Local Light",
+    "Planetary Weather",
     "Pattern",
     "Trajectory",
     "Convergence",
@@ -32,6 +34,10 @@ PIPELINE = (
 )
 
 FIRST_PRINCIPLES = (
+    "The Sun is Luna's primary natural clock.",
+    "The Aries Gate at the March Equinox is the head of Luna's solar-zodiacal cycle; the sequence remains Aries through Pisces everywhere on Earth.",
+    "Location changes the reader's physical experience of light, never the order of the solar-zodiacal cycle.",
+    "Local daylight is observed from the reader's location and kept separate from hemisphere-dependent season labels.",
     "Nature before narrative.",
     "Observation before interpretation.",
     "Pattern before prediction.",
@@ -138,6 +144,9 @@ def methodology_metadata() -> dict:
         "customer_language_policy": "plain_life_areas_no_internal_house_ids",
         "evidence_proximity_policy": "verified_claim_count_planets_aspects_near_interpretation",
         "chronology_policy": "single_authoritative_how_the_month_unfolds",
+        "solar_clock_policy": "sun_primary_clock_aries_gate_head_local_light_location_aware",
+        "local_light_policy": "location_changes_daylight_experience_never_zodiac_order",
+        "season_label_policy": "do_not_use_hemisphere_season_names_as_structural_inputs",
         "trajectory_policy": "show_build_peak_ease_or_reversal_before_story_synthesis",
         "time_sensitive_choice_policy": "window_strategy_then_monthly_synthesis_never_average_only",
         "evidence_count_policy": "deduplicated_claim_count_must_match_visible_contacts",
@@ -162,7 +171,9 @@ def build_decision_trace(
 ) -> dict:
     axis = [int(house) for house in narrative_houses]
     return {
-        "nature": "calculated astronomical events",
+        "solar_clock": "Sun establishes the annual Aries-to-Pisces reference frame",
+        "local_light": "reader location determines the observed daylight direction",
+        "planetary_weather": "calculated astronomical events within the solar clock",
         "pattern": f"houses {axis}" if axis else "calculated event pattern",
         "trajectory": "chronological pressure/support movement",
         "convergence": " -> ".join(f"H{house}" for house in axis) if axis else "dominant connected evidence",

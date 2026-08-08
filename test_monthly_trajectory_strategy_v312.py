@@ -25,7 +25,7 @@ def _visible_text(html: str) -> str:
 
 
 def test_first_principles_v14_makes_choice_time_sensitive():
-    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.5"
+    assert LUNA_FIRST_PRINCIPLES_VERSION == "1.6"
     meta = methodology_metadata()
     assert meta["time_sensitive_choice_policy"] == "window_strategy_then_monthly_synthesis_never_average_only"
     assert meta["evidence_count_policy"] == "deduplicated_claim_count_must_match_visible_contacts"
@@ -79,7 +79,9 @@ def test_solar_background_keeps_nature_and_drops_generic_mini_forecast():
     narrative, result = _report(1995)
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible_text(html)
-    assert "Late winter → spring at the September Equinox" in text
+    assert "The Sun is Luna's primary natural clock" in text
+    assert "Local season" not in text
+    assert "Libra Gate · September Equinox" in text
     assert "Nature note:" in text
     assert "Opportunity: Use career" not in text
     assert "Risk: Watch for confusing popularity" not in text

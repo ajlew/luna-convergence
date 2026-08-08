@@ -25,6 +25,7 @@ from luna_editorial_system import (
     luna_do_dont,
 )
 from luna_voice import narrator_cue
+from solar_cycle import solar_gate_label
 
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -1905,60 +1906,6 @@ def _render_css() -> None:
 [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
     padding:.25rem 0 1.25rem !important;
 }
-.st-key-daily_topic_tabs [data-baseweb="tab-list"] {
-    gap:0;
-    border-bottom:1px solid #d8d8d3;
-}
-.st-key-daily_topic_tabs [data-baseweb="tab"] {
-    flex:1 1 0;
-    justify-content:center;
-    min-width:0;
-    padding:.8rem .45rem;
-    font-family:"IBM Plex Mono","Courier New",monospace;
-    font-size:.68rem;
-    letter-spacing:.045em;
-    text-transform:uppercase;
-}
-.st-key-daily_topic_tabs [data-baseweb="tab-highlight"] {
-    background:#050505;
-    height:2px;
-}
-.daily-topic-card {
-    border-top:1px solid #050505;
-    padding:1.4rem 0 1.8rem;
-}
-.daily-topic-card h2 {
-    margin:.2rem 0 .85rem;
-    font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
-    font-size:clamp(2rem,5vw,3.7rem);
-    font-weight:400;
-    line-height:1.02;
-}
-.daily-topic-card p {
-    max-width:48rem;
-    font-size:1.02rem;
-    line-height:1.65;
-}
-.daily-topic-grid {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    border-top:1px solid #d8d8d3;
-    border-bottom:1px solid #d8d8d3;
-}
-.daily-topic-grid > div {
-    padding:1.15rem;
-}
-.daily-topic-grid > div + div {
-    border-left:1px solid #d8d8d3;
-}
-.daily-topic-grid span {
-    display:block;
-    margin-bottom:.55rem;
-    font-family:"IBM Plex Mono","Courier New",monospace;
-    font-size:.64rem;
-    letter-spacing:.045em;
-    text-transform:uppercase;
-}
 @media (max-width:700px) {
     .daily-primary {
         min-height:calc(100vh - 6.5rem);
@@ -2016,18 +1963,6 @@ def _render_css() -> None:
     .question-item {
         min-height:auto;
     }
-    .st-key-daily_topic_tabs [data-baseweb="tab"] {
-        padding:.72rem .2rem;
-        font-size:.56rem;
-        letter-spacing:.02em;
-    }
-    .daily-topic-grid {
-        grid-template-columns:1fr;
-    }
-    .daily-topic-grid > div + div {
-        border-left:none;
-        border-top:1px solid #d8d8d3;
-    }
 }
 </style>
         """,
@@ -2038,7 +1973,6 @@ def _render_css() -> None:
 def render_daily_narrative_v3(
     narrative: DailyNarrative,
     solar: dict | None = None,
-    topic_tabs: bool = False,
 ) -> None:
     import streamlit as st
 
@@ -2046,344 +1980,250 @@ def render_daily_narrative_v3(
 
     visible_story = tuple(narrative.today_story[:2])
     remaining_story = tuple(narrative.today_story[2:])
+
+    st.markdown(
+        f"""
+<section class="daily-primary" aria-label="Today's daily reading">
+  <div class="reading-card" data-hook-tone="{escape(narrative.tone_family)}">
+    <div class="daily-kicker">Free daily reading / {escape(narrative.sign)}</div>
+    <div class="daily-convergence-top">
+      <span>Today's convergence</span>
+      <strong>{escape(narrative.convergence_axis)}</strong>
+    </div>
+    <div class="daily-hook-headline">{escape(narrative.hook_headline)}</div>
+    <div class="daily-theme-line">
+      <span>Today's theme</span>
+      <strong>{escape(narrative.hook_subline)}</strong>
+    </div>
+    <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
+  </div>
+
+  <div class="sparse-story">
+    <div class="eyebrow">{escape(narrator_cue("daily", 0))}</div>
+    {_paragraph_html(visible_story)}
+  </div>
+
+  <div class="do-dont-strip">
+    <div class="do-dont-item">
+      <div class="do-dont-label">{escape(DO_LABEL)}</div>
+      <div class="do-dont-copy">{escape(narrative.action_today)}</div>
+    </div>
+    <div class="do-dont-item">
+      <div class="do-dont-label">{escape(DONT_LABEL)}</div>
+      <div class="do-dont-copy">{escape(narrative.watch_out)}</div>
+    </div>
+  </div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
     evidence = narrative.evidence
 
-    def _render_today_content() -> None:
+    with st.expander(WHY_LUNA_LABEL):
+        st.markdown("### Why this matters today")
+        evidence_rows = "".join(
+            (
+                '<div class="compact-evidence-row">'
+                f'<div class="compact-evidence-label">Evidence {index}</div>'
+                f'<div class="compact-evidence-value">{escape(point)}</div>'
+                "</div>"
+            )
+            for index, point in enumerate(narrative.why_today_points, 1)
+        )
+        st.markdown(
+            f'<div class="compact-evidence-list">{evidence_rows}</div>',
+            unsafe_allow_html=True,
+        )
+
         st.markdown(
             f"""
-    <section class="daily-primary" aria-label="Today's daily reading">
-      <div class="reading-card" data-hook-tone="{escape(narrative.tone_family)}">
-        <div class="daily-kicker">Free daily reading / {escape(narrative.sign)}</div>
-        <div class="daily-convergence-top">
-          <span>Today's convergence</span>
-          <strong>{escape(narrative.convergence_axis)}</strong>
-        </div>
-        <div class="daily-hook-headline">{escape(narrative.hook_headline)}</div>
-        <div class="daily-theme-line">
-          <span>Today's theme</span>
-          <strong>{escape(narrative.hook_subline)}</strong>
-        </div>
-        <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
-      </div>
-
-      <div class="sparse-story">
-        <div class="eyebrow">{escape(narrator_cue("daily", 0))}</div>
-        {_paragraph_html(visible_story)}
-      </div>
-
-      <div class="do-dont-strip">
-        <div class="do-dont-item">
-          <div class="do-dont-label">{escape(DO_LABEL)}</div>
-          <div class="do-dont-copy">{escape(narrative.action_today)}</div>
-        </div>
-        <div class="do-dont-item">
-          <div class="do-dont-label">{escape(DONT_LABEL)}</div>
-          <div class="do-dont-copy">{escape(narrative.watch_out)}</div>
-        </div>
-      </div>
-    </section>
+<div class="weather-climate">
+  <div>
+    <div class="eyebrow">Weather / today</div>
+    <h3>{escape(narrative.emotional_weather)}</h3>
+    <p>The faster pattern describes the next day or two.</p>
+  </div>
+  <div>
+    <div class="eyebrow">Climate / longer current</div>
+    <h3>{escape(narrative.long_term_current)}</h3>
+  </div>
+</div>
             """,
             unsafe_allow_html=True,
         )
 
-        with st.expander(WHY_LUNA_LABEL):
-            st.markdown("### Why this matters today")
-            evidence_rows = "".join(
-                (
-                    '<div class="compact-evidence-row">'
-                    f'<div class="compact-evidence-label">Evidence {index}</div>'
-                    f'<div class="compact-evidence-value">{escape(point)}</div>'
-                    "</div>"
-                )
-                for index, point in enumerate(narrative.why_today_points, 1)
-            )
-            st.markdown(
-                f'<div class="compact-evidence-list">{evidence_rows}</div>',
-                unsafe_allow_html=True,
-            )
+        st.markdown("### Hidden opportunity")
+        st.markdown(narrative.hidden_opportunity)
 
+        if solar:
+            direction = str(solar.get("light_direction", "Unavailable"))
+            change = float(solar.get("daylight_change", 0.0))
+            change_text = (
+                f"{abs(change):.1f} min/day"
+                if abs(change) >= 0.05
+                else "Near the turning point"
+            )
+            st.markdown("### Solar clock")
+            st.markdown("**The Sun is Luna's primary natural clock.**")
             st.markdown(
                 f"""
-    <div class="weather-climate">
-      <div>
-        <div class="eyebrow">Weather / today</div>
-        <h3>{escape(narrative.emotional_weather)}</h3>
-        <p>The faster pattern describes the next day or two.</p>
-      </div>
-      <div>
-        <div class="eyebrow">Climate / longer current</div>
-        <h3>{escape(narrative.long_term_current)}</h3>
-      </div>
-    </div>
+<div class="solar-inline-grid">
+  <div><span>Your Sun</span><strong>{escape(str(reading.sign))}</strong></div>
+  <div><span>Current Sun</span><strong>{escape(str(solar.get("solar_sign", "Unavailable")))}</strong></div>
+  <div><span>Local light</span><strong>{escape(direction)} / {escape(change_text)} · {escape(str(solar.get("city", "Timezone estimate")))}</strong></div>
+  <div><span>Solar gate</span><strong>{escape(solar_gate_label(str(solar.get("next_solar_gate", "Unavailable"))))} / {escape(str(solar.get("days_to_next_gate", "?")))} days</strong></div>
+  <div><span>Activated life area</span><strong>{escape(str(solar.get("activated_house_name", "")))}</strong></div>
+  <div><span>Reference frame</span><strong>Aries → Pisces · local light stays location-aware</strong></div>
+</div>
                 """,
                 unsafe_allow_html=True,
             )
+            st.markdown(str(solar.get("focus_meaning", "")))
 
-            st.markdown("### Hidden opportunity")
-            st.markdown(narrative.hidden_opportunity)
-
-            if solar:
-                direction = str(solar.get("light_direction", "Unavailable"))
-                change = float(solar.get("daylight_change", 0.0))
-                change_text = (
-                    f"{abs(change):.1f} min/day"
-                    if abs(change) >= 0.05
-                    else "Near the turning point"
-                )
-                st.markdown("### Solar position")
-                st.markdown(
-                    f"""
-    <div class="solar-inline-grid">
-      <div><span>Solar phase</span><strong>{escape(str(solar.get("solar_quarter", "Unavailable")))}</strong></div>
-      <div><span>Light movement</span><strong>{escape(direction)} / {escape(change_text)}</strong></div>
-      <div><span>Next solar gate</span><strong>{escape(str(solar.get("next_solar_gate", "Unavailable")))} / {escape(str(solar.get("days_to_next_gate", "?")))} days</strong></div>
-      <div><span>Activated house</span><strong>House {escape(str(solar.get("activated_house", "?")))} / {escape(str(solar.get("activated_house_name", "")))}</strong></div>
-      <div><span>Location</span><strong>{escape(str(solar.get("city", "Timezone estimate")))}</strong></div>
-      <div><span>Basis</span><strong>{escape(str(solar.get("location_basis", "timezone estimate")))}</strong></div>
-    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.markdown(str(solar.get("focus_meaning", "")))
-
-            st.markdown("### Sky Snapshot")
-            snapshot_rows = [
-                ("Primary theme", narrative.convergence_axis),
-                ("Emotional weather", narrative.emotional_weather),
-                ("Strongest influence", evidence.aspect_label),
-                ("Daily timing", evidence.phase),
-                ("Long-term current", narrative.long_term_current),
-                (
-                    "Convergence strength",
-                    f"{evidence.confidence_label} ({evidence.strength_score}/100)",
-                ),
-                (_aspect_window_row_label(evidence), evidence.active_window),
-                (
-                    _convergence_window_row_label(evidence.convergence_label),
-                    evidence.convergence_window,
-                ),
-            ]
-            rows = "".join(
-                (
-                    "<tr>"
-                    f"<td>{escape(label)}</td>"
-                    f'<td class="snapshot-value">{escape(value)}</td>'
-                    "</tr>"
-                )
-                for label, value in snapshot_rows
+        st.markdown("### Sky Snapshot")
+        snapshot_rows = [
+            ("Primary theme", narrative.convergence_axis),
+            ("Emotional weather", narrative.emotional_weather),
+            ("Strongest influence", evidence.aspect_label),
+            ("Daily timing", evidence.phase),
+            ("Long-term current", narrative.long_term_current),
+            (
+                "Convergence strength",
+                f"{evidence.confidence_label} ({evidence.strength_score}/100)",
+            ),
+            (_aspect_window_row_label(evidence), evidence.active_window),
+            (
+                _convergence_window_row_label(evidence.convergence_label),
+                evidence.convergence_window,
+            ),
+        ]
+        rows = "".join(
+            (
+                "<tr>"
+                f"<td>{escape(label)}</td>"
+                f'<td class="snapshot-value">{escape(value)}</td>'
+                "</tr>"
             )
-            st.markdown(
-                f'<table class="sky-snapshot"><tbody>{rows}</tbody></table>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                '<div class="confidence-note">'
-                "The strength score measures how clearly one astrological pattern "
-                "dominates today. It is not the probability that a predicted event "
-                "will occur."
-                "</div>",
-                unsafe_allow_html=True,
-            )
+            for label, value in snapshot_rows
+        )
+        st.markdown(
+            f'<table class="sky-snapshot"><tbody>{rows}</tbody></table>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="confidence-note">'
+            "The strength score measures how clearly one astrological pattern "
+            "dominates today. It is not the probability that a predicted event "
+            "will occur."
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
+    with st.expander("More context — relationships, work and money"):
         if remaining_story:
-            with st.expander("Continue today's story"):
-                for paragraph in remaining_story:
-                    st.markdown(paragraph)
+            st.markdown("### Continue today’s story")
+            for paragraph in remaining_story:
+                st.markdown(paragraph)
 
-        with st.expander("Questions to consider"):
-            question_html = "".join(
-                f'<div class="question-item">{escape(question)}</div>'
-                for question in narrative.reflection_questions
-            )
-            st.markdown(
-                f'<div class="question-list">{question_html}</div>',
-                unsafe_allow_html=True,
-            )
+        st.markdown("### Relationships")
+        st.markdown(narrative.relationship_story)
 
-        with st.expander(TECHNICAL_LABEL):
-            st.markdown(
-                "**Explainable Astrology:** the story appears first. The evidence "
-                "below preserves the full calculation without interrupting the "
-                "customer reading."
-            )
+        left, right = st.columns(2, gap="large")
+        with left:
+            st.markdown("### Work")
+            st.markdown(narrative.work_note)
+        with right:
+            st.markdown("### Money")
+            st.markdown(narrative.money_note)
 
-            orb_value = (
-                "Not applicable"
-                if evidence.orb is None
-                else f"{evidence.orb:.2f}°"
-            )
-            configured_orb = (
-                "Not applicable"
-                if evidence.configured_orb is None
-                else f"{evidence.configured_orb:g}°"
-            )
-
-            st.markdown("### Editorial translation")
-            st.markdown(f"**Emotional hook:** {narrative.hook_headline}")
-            st.markdown(f"**Interpretive theme:** {narrative.headline}")
-            st.markdown(f"**Tone family:** {narrative.tone_family}")
-
-            st.markdown("### Dominant aspect")
-            st.markdown(f"**Aspect:** {evidence.aspect_label}")
-            st.markdown(f"**Type:** {evidence.aspect_type}")
-            st.markdown(f"**Current orb:** {orb_value}")
-            st.markdown(f"**Configured aspect orb:** {configured_orb}")
-            st.markdown(f"**Timing:** {evidence.phase}")
-            st.markdown(
-                f"**Active planets:** {', '.join(evidence.active_planets)}"
-            )
-            st.markdown(
-                "**Calculated period within configured orb:** "
-                f"{evidence.active_window}"
-            )
-
-            st.markdown("### Activated houses")
-            for number, meaning in zip(
-                evidence.activated_houses,
-                evidence.house_meanings,
-            ):
-                st.markdown(f"- **House {number}:** {meaning}")
-
-            st.markdown("### Calculated daily theme")
-            st.markdown(narrative.daily_theme)
-
-            st.markdown("### Wider convergence context")
-            st.markdown(narrative.wider_context)
-
-            st.markdown("### Dominant aspects")
-            for item in narrative.technical_aspects:
-                st.markdown(item)
-
-            st.markdown("### House-based conclusion")
-            st.markdown(narrative.house_conclusion)
-
-            st.markdown("### Planetary positions")
-            position_rows = "".join(
-                (
-                    "<tr>"
-                    f"<td>{escape(planet)}</td>"
-                    f"<td>{escape(position)}</td>"
-                    f"<td>{house}</td>"
-                    f"<td>{escape(meaning)}</td>"
-                    "</tr>"
-                )
-                for planet, position, house, meaning in narrative.sky_rows
-            )
-            st.markdown(
-                '<div style="overflow-x:auto;">'
-                '<table class="technical-table">'
-                "<thead><tr><th>Body</th><th>Position</th>"
-                "<th>House</th><th>Life area</th></tr></thead>"
-                f"<tbody>{position_rows}</tbody></table></div>",
-                unsafe_allow_html=True,
-            )
-
-            st.markdown("### The 12-house reference matrix")
-            st.markdown(narrative.house_matrix)
-
-
-    if not topic_tabs:
-        _render_today_content()
-        return
-
-    today_tab, love_tab, work_tab, people_tab = st.tabs(
-        ["TODAY", "LOVE", "WORK & MONEY", "FRIENDS & FAMILY"],
-        key="daily_topic_tabs",
-    )
-
-    with today_tab:
-        _render_today_content()
-
-    with love_tab:
-        st.markdown(
-            f"""
-<section class="daily-topic-card" aria-label="Love and relationships">
-  <div class="eyebrow">Love / relationships</div>
-  <h2>{escape(narrative.relationship_story.split('.')[0] + '.' if '.' in narrative.relationship_story else narrative.relationship_story)}</h2>
-  <p>{escape(narrative.relationship_story)}</p>
-</section>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-<div class="daily-topic-grid">
-  <div><span>Best move</span>{escape(narrative.action_today)}</div>
-  <div><span>Watch for</span>{escape(narrative.watch_out)}</div>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-        relationship_questions = [
-            question
+    with st.expander("Questions to consider"):
+        question_html = "".join(
+            f'<div class="question-item">{escape(question)}</div>'
             for question in narrative.reflection_questions
-            if any(word in question.lower() for word in ("relationship", "person", "trust", "love", "attention"))
-        ]
-        if relationship_questions:
-            st.markdown("### One question worth keeping")
-            st.markdown(relationship_questions[0])
-
-    with work_tab:
+        )
         st.markdown(
-            f"""
-<section class="daily-topic-card" aria-label="Work and money">
-  <div class="eyebrow">Work / money</div>
-  <h2>{escape(narrative.convergence_axis)}</h2>
-</section>
-<div class="daily-topic-grid">
-  <div><span>Work</span>{escape(narrative.work_note)}</div>
-  <div><span>Money</span>{escape(narrative.money_note)}</div>
-</div>
-            """,
+            f'<div class="question-list">{question_html}</div>',
             unsafe_allow_html=True,
         )
-        st.markdown("### Practical move")
-        st.markdown(narrative.action_today)
 
-    with people_tab:
-        activated_houses = set(evidence.activated_houses)
-        if 4 in activated_houses and 11 in activated_houses:
-            people_headline = "Home and community are both part of today's decision"
-            people_copy = (
-                "Family, private life, friends and future plans are all active. "
-                "The useful answer is the one that can survive both intimacy and the wider group."
-            )
-        elif 4 in activated_houses:
-            people_headline = "Family and private life carry the stronger signal"
-            people_copy = (
-                "Home, family or emotional security is directly activated. "
-                "Use the people closest to you as a reality check, not as a substitute for your own decision."
-            )
-        elif 11 in activated_houses:
-            people_headline = "Friends and future plans carry the stronger signal"
-            people_copy = (
-                "Friends, community, audiences or long-term plans are directly activated. "
-                "Notice who contributes useful structure rather than noise."
-            )
-        else:
-            people_headline = "Friends and family are context, not the main event"
-            people_copy = (
-                "Neither the family house nor the friendship house is the dominant convergence today. "
-                "Listen to outside views, then return to the evidence in front of you."
-            )
-
-        relevant_meanings = [
-            meaning
-            for house, meaning in zip(evidence.activated_houses, evidence.house_meanings)
-            if house in {4, 11}
-        ]
-        meaning_text = " · ".join(relevant_meanings) if relevant_meanings else narrative.wider_context
+    with st.expander(TECHNICAL_LABEL):
         st.markdown(
-            f"""
-<section class="daily-topic-card" aria-label="Friends and family">
-  <div class="eyebrow">Friends / family</div>
-  <h2>{escape(people_headline)}</h2>
-  <p>{escape(people_copy)}</p>
-</section>
-<div class="daily-topic-grid">
-  <div><span>Current context</span>{escape(meaning_text)}</div>
-  <div><span>Emotional weather</span>{escape(narrative.emotional_weather)}</div>
-</div>
-            """,
+            "**Explainable Astrology:** the story appears first. The evidence "
+            "below preserves the full calculation without interrupting the "
+            "customer reading."
+        )
+
+        orb_value = (
+            "Not applicable"
+            if evidence.orb is None
+            else f"{evidence.orb:.2f}°"
+        )
+        configured_orb = (
+            "Not applicable"
+            if evidence.configured_orb is None
+            else f"{evidence.configured_orb:g}°"
+        )
+
+        st.markdown("### Editorial translation")
+        st.markdown(f"**Emotional hook:** {narrative.hook_headline}")
+        st.markdown(f"**Interpretive theme:** {narrative.headline}")
+        st.markdown(f"**Tone family:** {narrative.tone_family}")
+
+        st.markdown("### Dominant aspect")
+        st.markdown(f"**Aspect:** {evidence.aspect_label}")
+        st.markdown(f"**Type:** {evidence.aspect_type}")
+        st.markdown(f"**Current orb:** {orb_value}")
+        st.markdown(f"**Configured aspect orb:** {configured_orb}")
+        st.markdown(f"**Timing:** {evidence.phase}")
+        st.markdown(
+            f"**Active planets:** {', '.join(evidence.active_planets)}"
+        )
+        st.markdown(
+            "**Calculated period within configured orb:** "
+            f"{evidence.active_window}"
+        )
+
+        st.markdown("### Activated houses")
+        for number, meaning in zip(
+            evidence.activated_houses,
+            evidence.house_meanings,
+        ):
+            st.markdown(f"- **House {number}:** {meaning}")
+
+        st.markdown("### Calculated daily theme")
+        st.markdown(narrative.daily_theme)
+
+        st.markdown("### Wider convergence context")
+        st.markdown(narrative.wider_context)
+
+        st.markdown("### Dominant aspects")
+        for item in narrative.technical_aspects:
+            st.markdown(item)
+
+        st.markdown("### House-based conclusion")
+        st.markdown(narrative.house_conclusion)
+
+        st.markdown("### Planetary positions")
+        position_rows = "".join(
+            (
+                "<tr>"
+                f"<td>{escape(planet)}</td>"
+                f"<td>{escape(position)}</td>"
+                f"<td>{house}</td>"
+                f"<td>{escape(meaning)}</td>"
+                "</tr>"
+            )
+            for planet, position, house, meaning in narrative.sky_rows
+        )
+        st.markdown(
+            '<div style="overflow-x:auto;">'
+            '<table class="technical-table">'
+            "<thead><tr><th>Body</th><th>Position</th>"
+            "<th>House</th><th>Life area</th></tr></thead>"
+            f"<tbody>{position_rows}</tbody></table></div>",
             unsafe_allow_html=True,
         )
+
+        st.markdown("### The 12-house reference matrix")
+        st.markdown(narrative.house_matrix)

@@ -1,7 +1,7 @@
 from __future__ import annotations
+from solar_cycle import solar_gate_label
 
 import base64
-from io import BytesIO
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -12,13 +12,6 @@ import tempfile
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
 from monthly_report_pdf_v2 import build_monthly_editorial_pdf
-from luna_focus_reset import (
-    FOCUS_RESET_CUE,
-    FOCUS_RESET_DURATION,
-    FOCUS_RESET_LABEL,
-    FOCUS_RESET_METHOD,
-    focus_reset_data_uri,
-)
 
 
 BRAND = "Luna Convergence"
@@ -166,22 +159,9 @@ def _date_label(value: str) -> str:
     return f"{parsed.strftime('%B')} {parsed.day}"
 
 
-def _render_html(
-    result: dict,
-    narrative,
-    order_reference: str,
-    icon_uri: str,
-    *,
-    extraction_safe_fonts: bool = False,
-) -> str:
+def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -> str:
     report_right = f"{narrative.sign} / {narrative.label}"
     snapshot = dict(narrative.snapshot_rows)
-    focus_reset_uri = focus_reset_data_uri()
-    focus_reset_image = (
-        f'<img src="{focus_reset_uri}" alt="Uttarabodhi mudra circular illustration" />'
-        if focus_reset_uri
-        else ""
-    )
 
     # Page 1 - direct structural match to the Luna homepage.
     page1_body = f"""
@@ -189,7 +169,7 @@ def _render_html(
   <section class="hero-left">
     <div class="eyebrow">Monthly / timing / practical interpretation</div>
     <h1 class="editorial-title">{_safe(narrative.hook_headline)}</h1>
-    <p class="hero-subtitle">{_safe(narrative.central_storyline)}</p>
+    <p class="hero-subtitle">{_safe(narrative.at_glance[0])}</p>
     <div class="hero-rule"></div>
     <div class="form-grid">
       <div class="field"><span>Star sign</span><strong>{_safe(narrative.sign)}</strong></div>
@@ -221,16 +201,11 @@ def _render_html(
     # Page 2 - at a glance, using the homepage hero/card rhythm.
     glance_paragraphs = "".join(f"<p>{_safe(value)}</p>" for value in narrative.at_glance)
     focus_html = "".join(f"<p>{_safe(value)}</p>" for value in narrative.focus_answer[:2])
-    focus_panel = (
-        f'<div class="best-move wide"><span>{_safe(narrative.focus_title)}</span><strong>{focus_html}</strong></div>'
-        if narrative.main_focus != "General overview" or narrative.personal_question
-        else ""
-    )
     page2_body = f"""
 <div class="section-hero two-column">
   <section>
     <div class="eyebrow">Your month / at a glance</div>
-    <h1 class="section-title">The story taking shape</h1>
+    <h1 class="section-title">August wants more than a spark</h1>
     <div class="forecast-copy">{glance_paragraphs}</div>
   </section>
   <aside class="reading-card do-card">
@@ -241,10 +216,10 @@ def _render_html(
     <div class="mini-headline">{_safe(narrative.dont_line)}</div>
   </aside>
 </div>
-{focus_panel}
+<div class="best-move wide"><span>{_safe(narrative.focus_title)}</span><strong>{focus_html}</strong></div>
 <div class="trust-strip two">
-  <div class="trust-item"><b>Midmonth focus</b><br>{_safe(snapshot.get('Complication window', ''))}</div>
-  <div class="trust-item"><b>Late-month focus</b><br>{_safe(snapshot.get('Climax window', ''))}</div>
+  <div class="trust-item"><b>The opening</b><br>{_safe(snapshot.get('Strongest window', ''))}</div>
+  <div class="trust-item"><b>The reality check</b><br>{_safe(snapshot.get('Second turning point', ''))}</div>
 </div>
 """
 
@@ -254,22 +229,22 @@ def _render_html(
         evidence = " / ".join(chapter.evidence[:3])
         chapter_cards.append(
             f"""
-<article class="chapter-row">
+<article class="chapter-row {'black-feature' if index == 2 else ''}">
   <div class="chapter-number">0{index}</div>
   <div>
     <div class="mono-label">Chapter {index} / {chapter.date_range}</div>
     <h2>{_safe(chapter.hook)}</h2>
     <div class="theme-line">{_safe(chapter.title)}</div>
     <p>{_safe(chapter.paragraphs[0])}</p>
-    <div class="best-move"><span>Next move</span><strong>{_safe(chapter.action)}</strong></div>
+    <div class="best-move"><span>Your move</span><strong>{_safe(chapter.action)}</strong></div>
     <div class="evidence-line">Evidence / {_safe(evidence)}</div>
   </div>
 </article>
 """
         )
     page3_body = f"""
-<div class="eyebrow">Timing / four acts</div>
-<h1 class="section-title">The month moves in four acts</h1>
+<div class="eyebrow">Timing / three chapters</div>
+<h1 class="section-title">The month moves in three acts</h1>
 <div class="hero-rule"></div>
 <div class="chapter-list">{''.join(chapter_cards)}</div>
 """
@@ -314,7 +289,7 @@ def _render_html(
   <div class="mono-label">{_safe(item.date_label)}</div>
   <h3>{_safe(item.evidence)}</h3>
   <p>{_safe(item.consequence)}</p>
-  <div class="best-move"><span>Next move</span><strong>{_safe(item.response)}</strong></div>
+  <div class="best-move"><span>Your move</span><strong>{_safe(item.response)}</strong></div>
 </article>
 """
         for item in narrative.key_dates[:6]
@@ -327,18 +302,9 @@ def _render_html(
     page5_body = f"""
 <div class="section-hero two-column strategy-hero">
   <section>
-    <div class="eyebrow">Practical direction / next move</div>
-    <h1 class="section-title">From reading the future to writing it</h1>
+    <div class="eyebrow">Practical direction / your next move</div>
+    <h1 class="section-title">Make one opening real</h1>
     <div class="best-move wide"><span>Hidden opportunity</span><strong>{_safe(narrative.hidden_opportunity)}</strong></div>
-    <div class="focus-reset-inline">
-      {focus_reset_image}
-      <div>
-        <span>{_safe(FOCUS_RESET_LABEL)}</span>
-        <strong>{_safe(FOCUS_RESET_METHOD)}</strong>
-        <p>{_safe(FOCUS_RESET_CUE)}</p>
-      </div>
-      <small>{_safe(FOCUS_RESET_DURATION)}</small>
-    </div>
   </section>
   <aside class="reading-card">
     <div class="daily-kicker">Watch out</div>
@@ -394,24 +360,16 @@ def _render_html(
 <div class="best-move wide"><span>How to read the score</span><strong>The concentration score measures how strongly one internal astrological pattern dominates the month. It is not the probability that a predicted event will occur.</strong></div>
 """
 
-    # Page 8 - universal formula and evidence mapping.
-    arc = result.get("monthly_arc") or {}
-    formula = arc.get("evidence_formula") or {}
-    formula_rows = [
-        ("Formula version", str(formula.get("formula_version", "n/a"))),
-        ("Selected source house", str(formula.get("primary_house", "n/a"))),
-        ("Selected destination house", str(formula.get("secondary_house", "n/a"))),
-        ("Solar source / destination", f"{formula.get('solar_source_house', 'n/a')} / {formula.get('solar_destination_house', 'n/a')}"),
+    # Page 8 - technical evidence, using the same typography and thin table system.
+    solar = result.get("solar_convergence") or {}
+    solar_table_rows = [
+        ("Tropical Sun", f"{solar.get('solar_longitude', 'n/a')} deg {solar.get('solar_sign', '')}"),
+        ("Solar quarter", str(solar.get("solar_quarter", "n/a"))),
+        ("Local light", f"{solar.get('light_direction', 'n/a')} from {solar.get('city', 'timezone estimate')}"),
+        ("Activated house", f"{solar.get('activated_house', 'n/a')} - {solar.get('activated_house_name', '')}"),
+        ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'n/a'))} - {solar.get('next_gate_date', '')}"),
+        ("Location basis", str(solar.get("location_basis", "n/a"))),
     ]
-    mapping_rows = []
-    for item in arc.get("mapping_audit") or []:
-        evidence = "; ".join(str(value) for value in (item.get("evidence") or [])[:2])
-        mapping_rows.append((
-            str(item.get("role", "")),
-            str(item.get("house", "")),
-            str(item.get("scenario_label", "") or item.get("scenario_key", "")),
-            evidence,
-        ))
     dominant_rows = [
         (str(index), str(item.get("house", "")), str(item.get("topic", "")), f"{float(item.get('weight', 0)):.1f}")
         for index, item in enumerate(result.get("dominant_houses") or [], 1)
@@ -421,26 +379,17 @@ def _render_html(
         start = _date_label(item.get("start_date", ""))
         end = _date_label(item.get("end_date", ""))
         window = f"{start}-{end.split()[-1]}" if start.split()[0] == end.split()[0] else f"{start}-{end}"
-        houses = list(item.get("dominant_houses") or [])
-        if not houses:
-            houses = sorted({
-                int(value)
-                for event in item.get("events") or []
-                for value in event.get("houses") or []
-            })[:4]
-        convergence_rows.append((window, str(item.get("label", "Convergence")), f"{float(item.get('score', 0)):.0f}/100", ", ".join(str(v) for v in houses)))
+        convergence_rows.append((window, str(item.get("label", "Convergence")), f"{float(item.get('score', 0)):.0f}/100", ", ".join(str(v) for v in item.get("dominant_houses") or [])))
     page8_body = f"""
 <div class="eyebrow">For readers who want the calculation</div>
 <h1 class="section-title">Technical appendix</h1>
-<p class="hero-subtitle narrow">Every sign and month uses the same evidence formula. The result is symbolic relevance, not the probability that a predicted event will occur.</p>
-<h2 class="subsection-title">Universal Monthly Evidence Engine</h2>
-{_table(('Formula output', 'Calculated value'), formula_rows)}
-<h2 class="subsection-title">Evidence-to-story mapping</h2>
-{_table(('Role', 'House', 'Scenario family', 'Evidence'), mapping_rows)}
+<p class="hero-subtitle narrow">House numbers, event names and strength scores are the evidence trail. The main report translates them into timing, consequences and practical decisions.</p>
+<h2 class="subsection-title">Solar Convergence evidence</h2>
+{_table(('Evidence', 'Calculated value'), solar_table_rows)}
 <h2 class="subsection-title">Dominant house evidence</h2>
-{_table(('Rank', 'House', 'Customer life area', 'Weight'), dominant_rows[:4])}
+{_table(('Rank', 'House', 'Customer life area', 'Weight'), dominant_rows)}
 <h2 class="subsection-title">Convergence windows</h2>
-{_table(('Window', 'Type', 'Strength', 'Houses'), convergence_rows[:2])}
+{_table(('Window', 'Type', 'Strength', 'Houses'), convergence_rows)}
 """
 
     # Page 9 - transitions, climate and order trail.
@@ -481,22 +430,6 @@ def _render_html(
 
     local_font_css = _font_face_css()
     font_loader = local_font_css or FONT_IMPORT
-    extraction_font_css = ""
-    if extraction_safe_fonts:
-        extraction_font_css = """
-html, body { font-family: Arial, Helvetica, sans-serif !important; word-spacing:.055em; }
-h1, h2, h3, .daily-headline, .mini-headline, .chapter-number {
-  font-family: Georgia, 'Times New Roman', serif !important;
-  letter-spacing: 0 !important;
-  word-spacing: .045em;
-}
-p, .hero-subtitle, .field strong, .best-move strong, .theme-line,
-.action-row strong, .also-watch strong, table {
-  font-family: Arial, Helvetica, sans-serif !important;
-  word-spacing: .055em;
-}
-.brand-name { font-family: Arial, Helvetica, sans-serif !important; letter-spacing:.12em; }
-"""
     css = f"""
 {font_loader}
 :root {{ --white:#fff; --black:#050505; --ink:#151515; --soft:#f5f5f2; --line:#d8d8d3; --muted:#696963; }}
@@ -562,14 +495,10 @@ p {{ margin:0 0 3.2mm; font:400 8.2pt/1.48 'Josefin Sans'; }}
 .best-move strong {{ font:500 8.2pt/1.4 'Josefin Sans'; }}
 .best-move.wide {{ margin-top:7mm; grid-template-columns:36mm 1fr; }}
 .best-move.wide strong p {{ margin:0 0 2mm; }}
-.focus-reset-inline {{ display:grid; grid-template-columns:14mm minmax(0,1fr) auto; gap:3mm; align-items:center; margin-top:4mm; padding:2.3mm 0; border-top:.45pt solid var(--black); border-bottom:.45pt solid var(--black); }}
-.focus-reset-inline img {{ width:14mm; height:14mm; border-radius:50%; object-fit:cover; }}
-.focus-reset-inline span, .focus-reset-inline small {{ display:block; font:500 4.4pt/1.3 'IBM Plex Mono'; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }}
-.focus-reset-inline strong {{ display:block; margin:.7mm 0 .35mm; font:500 9.3pt/1.05 'Bodoni Moda','Libre Bodoni',Didot,Georgia,serif; color:var(--black); }}
-.focus-reset-inline p {{ margin:0; font:400 6.4pt/1.35 'Josefin Sans'; }}
-.focus-reset-inline small {{ max-width:20mm; text-align:right; }}
 .chapter-list {{ display:grid; gap:4mm; }}
-.chapter-row {{ display:grid; grid-template-columns:14mm 1fr; gap:5mm; border-top:.45pt solid var(--black); border-bottom:.45pt solid var(--black); padding:4.2mm 1mm; min-height:48mm; }}
+.chapter-row {{ display:grid; grid-template-columns:14mm 1fr; gap:5mm; border:.45pt solid var(--black); padding:4.5mm 5mm; min-height:55mm; }}
+.chapter-row.black-feature {{ background:var(--black); color:white; }}
+.chapter-row.black-feature h2, .chapter-row.black-feature .mono-label, .chapter-row.black-feature .theme-line, .chapter-row.black-feature p, .chapter-row.black-feature .evidence-line {{ color:white; }}
 .chapter-number {{ font:400 23pt 'Bodoni Moda','Libre Bodoni',serif; }}
 .chapter-row h2 {{ margin:1.6mm 0 1.4mm; font-size:17pt; }}
 .theme-line {{ font:400 7.4pt 'Josefin Sans'; color:var(--muted); }}
@@ -617,40 +546,11 @@ th {{ background:var(--soft); font:600 4.8pt 'IBM Plex Mono'; text-transform:upp
 .order-reference {{ margin-top:6mm; border:.45pt solid var(--black); padding:4mm; }}
 .order-reference span {{ display:block; margin-bottom:2mm; font:500 4.8pt 'IBM Plex Mono'; text-transform:uppercase; }}
 .order-reference strong {{ font:400 5.4pt/1.4 'IBM Plex Mono'; overflow-wrap:anywhere; }}
-{extraction_font_css}
 """
 
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>{_safe(BRAND)} - {_safe(narrative.sign)} {_safe(narrative.label)}</title><style>{css}</style></head>
 <body>{''.join(pages)}<script>document.fonts.ready.then(function(){{document.documentElement.dataset.fonts='ready';}});</script></body></html>"""
-
-
-def _pdf_text_integrity_ok(pdf_bytes: bytes, expected_headline: str) -> bool:
-    """Reject visually valid PDFs whose text layer drops word boundaries."""
-    try:
-        from pypdf import PdfReader
-
-        reader = PdfReader(BytesIO(pdf_bytes))
-        text = " ".join(
-            " ".join((page.extract_text() or "").split())
-            for page in reader.pages
-        )
-    except Exception:
-        return False
-
-    headline = " ".join(str(expected_headline).split())
-    if headline and headline.casefold() not in text.casefold():
-        return False
-    collapsed_defects = (
-        "checksthe",
-        "upgradesthe",
-        "detailsinto",
-        "whatremainsin",
-        "sparkbecomes",
-        "comesfirst",
-    )
-    lowered = text.casefold()
-    return not any(value in lowered for value in collapsed_defects)
 
 
 def _find_browser() -> str | None:
@@ -702,9 +602,7 @@ def build_monthly_homepage_pdf(
         order_reference=order_reference,
     )
     icon_uri = _asset_data_uri(Path(__file__).parent / "assets" / "saturn_hex_brand.png")
-    html = _render_html(
-        result, narrative, order_reference, icon_uri, extraction_safe_fonts=True
-    )
+    html = _render_html(result, narrative, order_reference, icon_uri)
 
     # Prefer a native HTML/CSS print engine when available. WeasyPrint is used
     # by the Linux build environment; Windows installations can use Chrome or
@@ -714,17 +612,7 @@ def build_monthly_homepage_pdf(
 
         rendered = HTML(string=html, base_url=str(Path(__file__).parent)).write_pdf()
         if rendered.startswith(b"%PDF") and len(rendered) > 10_000:
-            if _pdf_text_integrity_ok(rendered, narrative.hook_headline):
-                return rendered
-            # A visually correct PDF with a broken text layer is not deliverable.
-            # Use the isolated ReportLab generator rather than waiting for a
-            # second browser renderer to repeat the same spacing defect.
-            return build_monthly_editorial_pdf(
-                result,
-                main_focus=main_focus,
-                personal_question=personal_question,
-                order_reference=order_reference,
-            )
+            return rendered
     except Exception:
         pass
 
@@ -770,9 +658,7 @@ def build_monthly_homepage_pdf(
         except (subprocess.TimeoutExpired, OSError):
             completed = None
         if completed is not None and completed.returncode == 0 and pdf_path.exists() and pdf_path.stat().st_size > 10_000:
-            rendered = pdf_path.read_bytes()
-            if _pdf_text_integrity_ok(rendered, narrative.hook_headline):
-                return rendered
+            return pdf_path.read_bytes()
 
     return build_monthly_editorial_pdf(
         result,
@@ -795,6 +681,4 @@ def build_monthly_homepage_html(
         order_reference=order_reference,
     )
     icon_uri = _asset_data_uri(Path(__file__).parent / "assets" / "saturn_hex_brand.png")
-    return _render_html(
-        result, narrative, order_reference, icon_uri, extraction_safe_fonts=False
-    )
+    return _render_html(result, narrative, order_reference, icon_uri)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna Monthly Narrative v3 — Event-Led Story Engine"
+BUILD_LABEL = "Luna Monthly Narrative v3.14 — Solar Clock First"
 EDITOR_PREVIEW_ENABLED = True  # Set False before the paid public launch.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
@@ -20,10 +20,29 @@ TIMEZONES = [
     "Australia/Melbourne",
     "Australia/Brisbane",
     "Australia/Perth",
+    "Australia/Adelaide",
+    "Australia/Hobart",
+    "Australia/Darwin",
     "Pacific/Auckland",
     "Europe/London",
+    "Europe/Dublin",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Europe/Rome",
     "America/New_York",
+    "America/Chicago",
     "America/Los_Angeles",
+    "America/Toronto",
+    "America/Vancouver",
+    "America/Mexico_City",
+    "America/Sao_Paulo",
+    "America/Argentina/Buenos_Aires",
+    "Africa/Johannesburg",
+    "Asia/Singapore",
+    "Asia/Tokyo",
+    "Asia/Seoul",
+    "Asia/Kolkata",
+    "Asia/Dubai",
     "UTC",
 ]
 

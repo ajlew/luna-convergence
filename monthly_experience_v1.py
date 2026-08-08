@@ -23,6 +23,7 @@ from luna_editorial_system import (
 )
 from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import narrator_cue
+from solar_cycle import solar_gate_label
 
 
 PRINT_PAPERS = ("A4", "A3")
@@ -936,6 +937,23 @@ def build_monthly_experience_html(
 </section>
         """
 
+    solar = result.get("solar_convergence") or {}
+    current_sun = f"{solar.get('start_solar_sign', solar.get('solar_sign', 'Unavailable'))} → {solar.get('end_solar_sign', solar.get('solar_sign', 'Unavailable'))}"
+    gate_label = solar_gate_label(str(solar.get("next_solar_gate", "Unavailable")))
+    gate_date = human_date(solar.get("next_gate_date")) if solar.get("next_gate_date") else "Unavailable"
+    solar_clock_strip = f"""
+<section class="luna-solar-clock">
+  <div class="luna-eyebrow">First principle · The Sun is Luna's primary natural clock</div>
+  <div class="luna-solar-clock-grid">
+    <div><span>Your Sun</span><strong>{_safe(narrative.sign)}</strong></div>
+    <div><span>Current Sun</span><strong>{_safe(current_sun)}</strong></div>
+    <div><span>Solar gate</span><strong>{_safe(gate_label)} · {_safe(gate_date)}</strong></div>
+    <div><span>Local light</span><strong>{_safe(str(solar.get('light_direction', 'Unavailable')))} · {_safe(str(solar.get('city', 'timezone estimate')))}</strong></div>
+  </div>
+  <p>Local geography changes the light you experience, not the universal Aries-to-Pisces solar sequence.</p>
+</section>
+    """
+
     # v3.11: Romance remains in the domain map and, when Nature supports it,
     # appears inside the chronology as a countercurrent/relationship test.  The
     # old standalone "Romance and validation" block repeated generic copy and
@@ -976,9 +994,9 @@ def build_monthly_experience_html(
   </details>
 
   <details>
-    <summary>Solar background <span>+</span></summary>
+    <summary>Solar clock evidence <span>+</span></summary>
     <div class="luna-detail-body">
-      <p class="luna-method-note"><strong>Background current:</strong> this slower solar movement adds context; it does not replace the event-led monthly story above.</p>
+      <p class="luna-method-note"><strong>Primary reference:</strong> the Sun establishes Luna's annual natural clock; the faster planetary pattern describes the weather occurring inside it.</p>
       <h3>{_safe(narrative.solar_title)}</h3>
       {_paragraphs(narrative.solar_paragraphs, maximum=2)}
       <div class="luna-evidence-grid">
@@ -987,7 +1005,7 @@ def build_monthly_experience_html(
             for label, value in narrative.solar_rows
         )}
       </div>
-      <p class="luna-method-note"><strong>Nature note:</strong> The solar layer is kept here only as slower context — sign movement, local light and the next solar gate. The event-led monthly trajectory remains authoritative.</p>
+      <p class="luna-method-note"><strong>Nature note:</strong> The Aries-to-Pisces solar sequence is universal. The reader's location supplies the local daylight direction; planetary trajectory then describes how conditions develop inside that solar frame.</p>
     </div>
   </details>
 
@@ -1041,6 +1059,7 @@ def build_monthly_experience_html(
     body = ""
     if not preview:
         body = f"""
+{solar_clock_strip}
 <section class="luna-monthly-section luna-opening-story">
   <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
   <h2>{_safe(narrative.central_storyline)}</h2>
@@ -1086,6 +1105,7 @@ def build_monthly_experience_html(
         """
     else:
         body = f"""
+{solar_clock_strip}
 <section class="luna-monthly-section luna-opening-story">
   <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
   <h2>{_safe(narrative.central_storyline)}</h2>
@@ -1136,6 +1156,42 @@ def build_monthly_experience_html(
   line-height:1.58;
   margin:.4rem 0 .9rem;
 }}
+.luna-solar-clock {{
+  margin:0 0 1.2rem;
+  padding:1rem 1.15rem;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background:#fff;
+}}
+.luna-solar-clock-grid {{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:.75rem 1rem;
+  margin-top:.65rem;
+}}
+.luna-solar-clock-grid span {{
+  display:block;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.68rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+}}
+.luna-solar-clock-grid strong {{
+  display:block;
+  margin-top:.2rem;
+  font-size:.92rem;
+  line-height:1.35;
+}}
+.luna-solar-clock p {{
+  margin:.75rem 0 0;
+  font-size:.86rem;
+  color:var(--muted);
+}}
+@media (max-width:700px) {{
+  .luna-solar-clock-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
+}}
+
 .luna-monthly-hero {{
   display:grid;
   gap:.85rem;

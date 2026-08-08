@@ -8,6 +8,7 @@ from typing import Iterable
 from date_display import human_date, human_date_range
 from scenario_engine import FOCUS_HOUSES, rank_scenarios
 from monthly_strategy_alignment import climate_aware_hook, climate_aware_storyline, strategy_do_dont, strategy_rule
+from solar_cycle import solar_gate_label
 
 from luna_editorial_system import (
     GATEKEEPER_LINE,
@@ -1367,7 +1368,7 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             "",
             "The scenario labels are ranked symbolic event families, not measured probabilities or guaranteed events.",
             "",
-            "## Solar background evidence",
+            "## Solar clock evidence",
             "",
             *solar_rows,
             "",
@@ -1549,21 +1550,6 @@ def _countercurrent_love_story(result: dict, trajectory: dict) -> tuple[str, ...
     second = (f"The relief has real sky support: {support}." if support else "The relief is supported by direct relationship or creative evidence in the sky.")
     third = (f"Late-month pressure changes the terms — {late}. Enjoy the lift, but keep commitments reversible." if late else "Use the relief without asking it to make the month's larger decision for you.")
     return (first, second, third)
-
-
-def _customer_local_season(solar: dict) -> str:
-    season = str(solar.get("local_season", "Unavailable"))
-    hemisphere = str(solar.get("hemisphere", ""))
-    gate = str(solar.get("next_solar_gate", ""))
-    if hemisphere == "Southern" and gate == "September Equinox" and season == "Winter":
-        return "Late winter → spring at the September Equinox"
-    if hemisphere == "Southern" and gate == "March Equinox" and season == "Summer":
-        return "Late summer → autumn at the March Equinox"
-    if hemisphere == "Northern" and gate == "September Equinox" and season == "Summer":
-        return "Late summer → autumn at the September Equinox"
-    if hemisphere == "Northern" and gate == "March Equinox" and season == "Winter":
-        return "Late winter → spring at the March Equinox"
-    return season
 
 
 def build_monthly_narrative(
@@ -1767,10 +1753,11 @@ def build_monthly_narrative(
         if str(item).strip()
     )
     solar_rows = (
-        ("Solar phase", f"{solar.get('solar_quarter', 'Unavailable')} / {solar.get('solar_process', '')}"),
-        ("Local light movement", f"{solar.get('light_direction', 'Unavailable')} from {solar.get('city', 'timezone estimate')}"),
-        ("Local season", _customer_local_season(solar)),
-        ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
+        ("Your Sun", str(result.get("sign", "Sun sign"))),
+        ("Current Sun", f"{solar.get('start_solar_sign', solar.get('solar_sign', 'Unavailable'))} → {solar.get('end_solar_sign', solar.get('solar_sign', 'Unavailable'))}"),
+        ("Solar clock", "Aries Gate → Pisces → Aries"),
+        ("Local light", f"{solar.get('light_direction', 'Unavailable')} from {solar.get('city', 'timezone estimate')}"),
+        ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'Unavailable'))} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
         (
             "Solar life-area movement",
             f"{HOUSE_DISPLAY.get(int(solar.get('start_house', 1) or 1), 'Starting area')} → {HOUSE_DISPLAY.get(int(solar.get('end_house', 1) or 1), 'Next area')}",
@@ -1822,9 +1809,10 @@ def build_monthly_narrative(
         ("Climax window", second_window),
         ("Monthly concentration", _strength_label(top_score)),
         ("Long-term climate", _retrograde_climate(result)),
-        ("Solar phase", f"{solar.get('solar_quarter', 'Unavailable')} / {solar.get('solar_process', '')}"),
+        ("Your Sun", str(result.get("sign", "Sun sign"))),
+        ("Current Sun", f"{solar.get('start_solar_sign', solar.get('solar_sign', 'Unavailable'))} → {solar.get('end_solar_sign', solar.get('solar_sign', 'Unavailable'))}"),
         ("Local light", f"{solar.get('light_direction', 'Unavailable')} - {solar.get('city', 'timezone estimate')}"),
-        ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
+        ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'Unavailable'))} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
     )
 
     counter_love_story = _countercurrent_love_story(result, trajectory)
@@ -1942,7 +1930,7 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
     lines.extend([
         "[[PAGEBREAK]]",
         "",
-        "# Your Solar Convergence",
+        "# Your Solar Clock",
         "",
         f"## {narrative.solar_title}",
         "",
@@ -1957,7 +1945,7 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
         lines.append(f"| {label} | {value} |")
     lines.extend([
         "",
-        f"**The convergence:** {narrative.solar_equation}",
+        f"**The solar reference:** {narrative.solar_equation}",
         "",
         f"**Opportunity:** {narrative.solar_opportunity}",
         "",

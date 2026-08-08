@@ -41,6 +41,7 @@ from solar_cycle import (
     daily_solar_convergence,
     representative_city_name,
     resolve_location,
+    solar_gate_label,
 )
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
@@ -1497,7 +1498,7 @@ def report_cta(
                     key=f"{key_context}-monthly-timezone",
                 )
             nearest_city = st.text_input(
-                "Nearest city (optional)",
+                "Nearest city for local light",
                 value=prefill_city or "",
                 key=f"{key_context}-monthly-city",
                 placeholder=representative_city_name(timezone_name),
@@ -1666,7 +1667,7 @@ def report_cta(
                     key=f"{key_context}-yearly-timezone",
                 )
             nearest_city = st.text_input(
-                "Nearest city (optional)",
+                "Nearest city for local light",
                 value=prefill_city or "",
                 key=f"{key_context}-yearly-city",
                 placeholder=representative_city_name(timezone_name),
@@ -1825,7 +1826,7 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
         )
     with second_row[1]:
         nearest_city = st.text_input(
-            "Nearest city (optional)",
+            "Nearest city for local light",
             key=f"{prefix}-city",
             placeholder=representative_city_name(timezone_name),
             help=city_input_help(timezone_name),
@@ -2673,7 +2674,7 @@ def reports_page() -> None:
                     placeholder="Add the reference shown in Stripe or your receipt",
                 )
             nearest_city = st.text_input(
-                "Nearest city (optional)",
+                "Nearest city for local light",
                 placeholder=representative_city_name(timezone_name),
                 help=city_input_help(timezone_name),
                 key="recovery-nearest-city",
@@ -3065,12 +3066,12 @@ def solar_year_page() -> None:
     st.markdown('<div class="eyebrow">Explainable astrology / solar structure</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">The Solar<br>Convergence</div>', unsafe_allow_html=True)
     st.markdown(
-        "The tropical zodiac describes the Sun's symbolic twelve-phase cycle. "
-        "The local-light layer separately measures the customer's actual hemisphere and daylight trend. "
-        "Luna does not assume that a Sydney customer is experiencing a Northern Hemisphere season."
+        "**The Sun is Luna's primary natural clock.** The Aries Gate at the March Equinox is the head of the "
+        "universal Aries-to-Pisces solar-zodiacal cycle. Your location does not reverse that sequence; it tells Luna "
+        "what the Sun is physically doing where you stand — whether local daylight is increasing, decreasing or near a turning point."
     )
 
-    st.markdown("## The Luna Solar Wheel")
+    st.markdown("## The Luna Solar Clock")
     st.markdown(
         """
 | Solar quarter | Signs | Process | Strategic use |
@@ -3087,10 +3088,10 @@ def solar_year_page() -> None:
         """
 | Gate | Tropical ingress | Strategic question |
 |---|---|---|
-| March Equinox | Sun enters Aries | What must begin? |
-| June Solstice | Sun enters Cancer | What must be protected and sustained? |
-| September Equinox | Sun enters Libra | What must be corrected or reciprocated? |
-| December Solstice | Sun enters Capricorn | What must survive the next cycle? |
+| Aries Gate · March Equinox | Sun enters Aries | What must begin? |
+| Cancer Gate · June Solstice | Sun enters Cancer | What must be protected and sustained? |
+| Libra Gate · September Equinox | Sun enters Libra | What must be corrected or reciprocated? |
+| Capricorn Gate · December Solstice | Sun enters Capricorn | What must survive the next cycle? |
         """
     )
 
@@ -3119,7 +3120,7 @@ def solar_year_page() -> None:
             key="solar-year-timezone",
         )
     nearest_city = st.text_input(
-        "Nearest city (optional)",
+        "Nearest city for local light",
         key="solar-year-city",
         placeholder=representative_city_name(timezone_name),
         help=city_input_help(timezone_name),
@@ -3135,14 +3136,15 @@ def solar_year_page() -> None:
     st.markdown(
         f"""
 <div class="card">
-  <div class="eyebrow">Solar Convergence</div>
-  <h3>{escape(solar.headline)}</h3>
-  <p><strong>Solar phase:</strong> {escape(solar.solar_quarter)} / {escape(solar.solar_process)}</p>
-  <p><strong>Local light:</strong> {escape(solar.light_direction)} from {escape(solar.city)} ({escape(solar.local_season)})</p>
-  <p><strong>Next gate:</strong> {escape(solar.next_solar_gate)} in {solar.days_to_next_gate} days</p>
-  <p><strong>Activated house:</strong> House {solar.activated_house} - {escape(solar.activated_house_name)}</p>
+  <div class="eyebrow">First principle · Solar Clock</div>
+  <h3>The Sun is Luna's primary natural clock.</h3>
+  <p><strong>Your Sun:</strong> {escape(sign)}</p>
+  <p><strong>Current Sun:</strong> {escape(solar.solar_sign)} · {escape(solar.solar_quarter)} / {escape(solar.solar_process)}</p>
+  <p><strong>Local light:</strong> {escape(solar.light_direction)} from {escape(solar.city)}</p>
+  <p><strong>Next gate:</strong> {escape(solar_gate_label(solar.next_solar_gate))} in {solar.days_to_next_gate} days</p>
+  <p><strong>Activated life area:</strong> {escape(solar.activated_house_name)}</p>
+  <p><strong>Reference frame:</strong> Local light changes with location; the Aries-to-Pisces solar sequence does not.</p>
   <p><strong>Meaning:</strong> {escape(solar.focus_meaning)}</p>
-  <p><strong>Solar rule:</strong> {escape(solar.solar_rule)}</p>
 </div>
         """,
         unsafe_allow_html=True,
@@ -3150,8 +3152,8 @@ def solar_year_page() -> None:
 
     st.markdown("## Historical symbolism and factual boundary")
     st.markdown(
-        "Many cultures organised calendars, symbols and stories around the Sun, seasonal decline and return. "
-        "Luna uses the astronomical structure - twelve solar phases, four gates and local light - without claiming "
+        "Many cultures organised calendars, symbols and stories around the Sun, its annual decline and return of light. "
+        "Luna uses the astronomical structure - twelve solar phases, four gates and location-aware local light - without claiming "
         "that culturally distinct religions are secretly identical or that symbolic resemblance proves direct historical copying."
     )
 

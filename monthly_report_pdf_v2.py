@@ -1,4 +1,5 @@
 from __future__ import annotations
+from solar_cycle import solar_gate_label
 
 from datetime import date
 from io import BytesIO
@@ -13,7 +14,6 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
     HRFlowable,
-    Image as RLImage,
     KeepTogether,
     NextPageTemplate,
     PageBreak,
@@ -25,13 +25,6 @@ from reportlab.platypus import (
 )
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
-from luna_focus_reset import (
-    FOCUS_RESET_ASSET,
-    FOCUS_RESET_CUE,
-    FOCUS_RESET_DURATION,
-    FOCUS_RESET_LABEL,
-    FOCUS_RESET_METHOD,
-)
 
 
 BRAND = "Luna Convergence"
@@ -120,7 +113,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ),
         "body_compact": ParagraphStyle(
             "BodyCompact", parent=base["BodyText"], fontName="Times-Roman",
-            fontSize=8.4, leading=11.3, textColor=INK,
+            fontSize=9.3, leading=13.3, textColor=INK,
         ),
         "sans": ParagraphStyle(
             "Sans", parent=base["BodyText"], fontName="Helvetica",
@@ -128,7 +121,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ),
         "sans_small": ParagraphStyle(
             "SansSmall", parent=base["BodyText"], fontName="Helvetica",
-            fontSize=6.6, leading=8.8, textColor=INK,
+            fontSize=7.3, leading=10.1, textColor=INK,
         ),
         "label": ParagraphStyle(
             "Label", parent=base["Normal"], fontName="Helvetica-Bold",
@@ -140,7 +133,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ),
         "card_hook": ParagraphStyle(
             "CardHook", parent=base["Heading2"], fontName="Times-Bold",
-            fontSize=13.5, leading=15.2, textColor=INK, spaceAfter=1.2 * mm,
+            fontSize=15, leading=17.5, textColor=INK, spaceAfter=1.8 * mm,
         ),
         "date_title": ParagraphStyle(
             "DateTitle", parent=base["Heading3"], fontName="Times-Bold",
@@ -148,7 +141,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ),
         "card_action": ParagraphStyle(
             "CardAction", parent=base["BodyText"], fontName="Helvetica-Bold",
-            fontSize=7.4, leading=9.8, textColor=INK,
+            fontSize=8.2, leading=11.5, textColor=INK,
         ),
         "white_hook": ParagraphStyle(
             "WhiteHook", parent=base["Heading2"], fontName="Times-Bold",
@@ -228,41 +221,11 @@ def _small_card(label: str, value: str, styles: dict, dark: bool = False):
         ("BOX", (0, 0), (-1, -1), 0.6, BLACK if not dark else colors.HexColor("#2B2B2B")),
         ("LEFTPADDING", (0, 0), (-1, -1), 4 * mm),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
-        ("TOPPADDING", (0, 0), (-1, -1), 2.4 * mm),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2.4 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5 * mm),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5 * mm),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     return card
-
-
-def _focus_reset_card(styles: dict):
-    image_cell = Spacer(18 * mm, 18 * mm)
-    if FOCUS_RESET_ASSET.exists():
-        image_cell = RLImage(str(FOCUS_RESET_ASSET), width=18 * mm, height=18 * mm)
-
-    copy = [
-        _p(FOCUS_RESET_LABEL.upper(), styles["label"]),
-        Spacer(1, .7 * mm),
-        _p(FOCUS_RESET_METHOD, styles["card_hook"]),
-        _p(FOCUS_RESET_CUE, styles["sans_small"]),
-    ]
-    duration = _p(FOCUS_RESET_DURATION.upper(), styles["label"])
-    table = Table(
-        [[image_cell, copy, duration]],
-        colWidths=[23 * mm, CONTENT_WIDTH - 49 * mm, 26 * mm],
-        hAlign="LEFT",
-    )
-    table.setStyle(TableStyle([
-        ("LINEABOVE", (0, 0), (-1, 0), .6, INK),
-        ("LINEBELOW", (0, 0), (-1, -1), .6, INK),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 2 * mm),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
-        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
-        ("ALIGN", (2, 0), (2, 0), "RIGHT"),
-    ]))
-    return KeepTogether([table])
 
 
 def _cover(narrative, styles: dict):
@@ -279,7 +242,7 @@ def _cover(narrative, styles: dict):
         _p(narrative.hook_headline, styles["cover_hook"]),
         _p(f"**THEME** / {narrative.headline}", styles["cover_theme"]),
         Spacer(1, 10 * mm),
-        _p(narrative.central_storyline, styles["cover_deck"]),
+        _p(narrative.at_glance[0], styles["cover_deck"]),
         Spacer(1, 15 * mm),
         HRFlowable(width="100%", thickness=0.6, color=colors.HexColor("#474747"), spaceAfter=5 * mm),
         _p(f"MONTHLY STRATEGIC REPORT\n{narrative.sign} / {narrative.label}\nFOCUS / {focus_line}", styles["cover_meta"]),
@@ -289,8 +252,8 @@ def _cover(narrative, styles: dict):
 
 
 def _at_glance(narrative, styles: dict):
-    strongest = dict(narrative.snapshot_rows).get("Complication window", "")
-    second = dict(narrative.snapshot_rows).get("Climax window", "")
+    strongest = dict(narrative.snapshot_rows).get("Strongest window", "")
+    second = dict(narrative.snapshot_rows).get("Second turning point", "")
     left = [
         _p(narrative.headline, styles["hook"]),
         _p(narrative.subtitle, styles["theme"]),
@@ -298,7 +261,7 @@ def _at_glance(narrative, styles: dict):
     ]
     for paragraph in narrative.at_glance:
         left.append(_p(paragraph, styles["body"]))
-    if narrative.focus_answer and (narrative.main_focus != "General overview" or narrative.personal_question):
+    if narrative.focus_answer:
         left.extend([
             Spacer(1, 2 * mm),
             _p(narrative.focus_title.upper(), styles["kicker"]),
@@ -310,9 +273,9 @@ def _at_glance(narrative, styles: dict):
         Spacer(1, 4 * mm),
         _small_card("Don't", narrative.dont_line, styles),
         Spacer(1, 4 * mm),
-        _small_card("Midmonth focus", strongest, styles),
+        _small_card("The opening", strongest, styles),
         Spacer(1, 4 * mm),
-        _small_card("Late-month focus", second, styles),
+        _small_card("The reality check", second, styles),
     ]
     layout = Table(
         [[left, right]],
@@ -335,34 +298,34 @@ def _chapter_card(chapter, number: int, styles: dict):
     evidence = " / ".join(chapter.evidence[:3]) or "Calculated monthly transitions"
     body = [
         _p(f"CHAPTER {number} / {chapter.date_range}", styles["label"]),
-        Spacer(1, 0.8 * mm),
+        Spacer(1, 1.5 * mm),
         _p(chapter.hook, styles["card_hook"]),
         _p(chapter.title, styles["theme"]),
-        Spacer(1, 1.2 * mm),
+        Spacer(1, 2.5 * mm),
         _p(chapter.paragraphs[0], styles["body_compact"]),
-        Spacer(1, 1.1 * mm),
-        _p(f"**NEXT MOVE** / {chapter.action}", styles["card_action"]),
-        Spacer(1, 1.1 * mm),
+        Spacer(1, 2 * mm),
+        _p(f"**YOUR MOVE** / {chapter.action}", styles["card_action"]),
+        Spacer(1, 2 * mm),
         _p(f"EVIDENCE / {evidence}", styles["sans_small"]),
     ]
     table = Table([[[*body]]], colWidths=[CONTENT_WIDTH])
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), PAPER if number % 2 else WHITE),
-        ("LINEABOVE", (0, 0), (-1, 0), 0.65, INK),
-        ("LINEBELOW", (0, -1), (-1, -1), 0.65, INK),
-        ("LEFTPADDING", (0, 0), (-1, -1), 1 * mm),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 1 * mm),
-        ("TOPPADDING", (0, 0), (-1, -1), 3.5 * mm),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5 * mm),
+        ("BOX", (0, 0), (-1, -1), 0.7, INK),
+        ("LINEBEFORE", (0, 0), (0, -1), 4, BLACK),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 5 * mm),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5 * mm),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     return table
 
 
 def _chapters(narrative, styles: dict):
-    story = _section_header("Timing", "The month in four acts", styles)
+    story = _section_header("Timing", "The month in three chapters", styles)
     for index, chapter in enumerate(narrative.chapters, 1):
-        story.extend([_chapter_card(chapter, index, styles), Spacer(1, 2 * mm)])
+        story.extend([_chapter_card(chapter, index, styles), Spacer(1, 4 * mm)])
     story.append(PageBreak())
     return story
 
@@ -411,7 +374,7 @@ def _key_date_card(item, styles: dict):
         _p(item.evidence, styles["date_title"]),
         _p(item.consequence, styles["sans_small"]),
         Spacer(1, 1.2 * mm),
-        _p(f"**NEXT MOVE** / {item.response}", styles["sans_small"]),
+        _p(f"**YOUR MOVE** / {item.response}", styles["sans_small"]),
     ]
     card = Table([[[*content]]], colWidths=[(CONTENT_WIDTH - 8 * mm) / 3])
     card.setStyle(TableStyle([
@@ -427,7 +390,7 @@ def _key_date_card(item, styles: dict):
 
 
 def _strategy(narrative, styles: dict):
-    story = _section_header("Practical direction", "From reading the future to writing it", styles)
+    story = _section_header("Practical direction", "Your monthly strategy", styles)
     top = Table(
         [[
             _small_card("Hidden opportunity", narrative.hidden_opportunity, styles),
@@ -459,13 +422,7 @@ def _strategy(narrative, styles: dict):
         ("TOPPADDING", (0, 0), (-1, -1), 4 * mm),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4 * mm),
     ]))
-    story.extend([
-        _p("THREE MOVES FOR THE MONTH", styles["kicker"]),
-        action_box,
-        Spacer(1, 3 * mm),
-        _focus_reset_card(styles),
-        Spacer(1, 4 * mm),
-    ])
+    story.extend([_p("THREE MOVES FOR THE MONTH", styles["kicker"]), action_box, Spacer(1, 5 * mm)])
     story.append(_p("Key dates", styles["hook"]))
 
     featured_dates = list(narrative.key_dates[:6])
@@ -619,33 +576,18 @@ def _technical(result: dict, narrative, order_reference: str, styles: dict):
         styles["body"],
     ))
 
-    arc = result.get("monthly_arc") or {}
-    formula = arc.get("evidence_formula") or {}
-    formula_rows = [
-        ("Formula version", str(formula.get("formula_version", "n/a"))),
-        ("Selected source house", str(formula.get("primary_house", "n/a"))),
-        ("Selected destination house", str(formula.get("secondary_house", "n/a"))),
-        ("Solar source / destination", f"{formula.get('solar_source_house', 'n/a')} / {formula.get('solar_destination_house', 'n/a')}"),
+    solar = result.get("solar_convergence") or {}
+    solar_rows = [
+        ("Tropical Sun", f"{solar.get('solar_longitude', 'n/a')} deg {solar.get('solar_sign', '')}"),
+        ("Solar quarter", str(solar.get("solar_quarter", "n/a"))),
+        ("Local light", f"{solar.get('light_direction', 'n/a')} from {solar.get('city', 'timezone estimate')}"),
+        ("Activated house", f"{solar.get('activated_house', 'n/a')} - {solar.get('activated_house_name', '')}"),
+        ("Solar gate", f"{solar_gate_label(solar.get('next_solar_gate', 'n/a'))} - {solar.get('next_gate_date', '')}"),
+        ("Location basis", str(solar.get("location_basis", "n/a"))),
     ]
-    mapping_rows = []
-    for item in arc.get("mapping_audit") or []:
-        evidence = "; ".join(str(value) for value in (item.get("evidence") or [])[:2])
-        mapping_rows.append((
-            str(item.get("role", "")),
-            str(item.get("house", "")),
-            str(item.get("scenario_label", "") or item.get("scenario_key", "")),
-            evidence,
-        ))
     story.extend([
-        _p("Universal Monthly Evidence Engine", styles["tech_h"]),
-        _tech_table(("Formula output", "Calculated value"), formula_rows, [55 * mm, CONTENT_WIDTH - 55 * mm], styles),
-        _p("Evidence-to-story mapping", styles["tech_h"]),
-        _tech_table(
-            ("Role", "House", "Scenario family", "Evidence"),
-            mapping_rows,
-            [30 * mm, 14 * mm, 55 * mm, CONTENT_WIDTH - 99 * mm],
-            styles,
-        ),
+        _p("Solar Convergence evidence", styles["tech_h"]),
+        _tech_table(("Evidence", "Calculated value"), solar_rows, [55 * mm, CONTENT_WIDTH - 55 * mm], styles),
     ])
 
     dominant_rows = []
@@ -671,18 +613,11 @@ def _technical(result: dict, narrative, order_reference: str, styles: dict):
             window = f"{start}-{end.split()[-1]}"
         else:
             window = f"{start}-{end}"
-        houses = list(item.get("dominant_houses") or [])
-        if not houses:
-            houses = sorted({
-                int(value)
-                for event in item.get("events") or []
-                for value in event.get("houses") or []
-            })[:4]
         convergence_rows.append((
             window,
             str(item.get("label", "Convergence")),
             f"{float(item.get('score', 0.0)):.0f}/100",
-            ", ".join(str(value) for value in houses),
+            ", ".join(str(value) for value in item.get("dominant_houses") or []),
         ))
     story.extend([
         _p("Convergence windows", styles["tech_h"]),

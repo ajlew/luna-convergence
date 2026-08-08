@@ -19,7 +19,7 @@ def main() -> None:
     assert sydney.solar_quarter == "Expression"
     assert sydney.activated_house == 9
     assert sydney.hemisphere == "Southern"
-    assert sydney.local_season == "Winter"
+    assert sydney.local_season == "Location-aware light cycle"
     assert sydney.light_direction == "Increasing"
     assert sydney.next_solar_gate == "September Equinox"
 
@@ -30,7 +30,7 @@ def main() -> None:
         nearest_city="London",
     )
     assert london.hemisphere == "Northern"
-    assert london.local_season == "Summer"
+    assert london.local_season == "Location-aware light cycle"
     assert london.light_direction == "Decreasing"
 
     monthly = monthly_solar_convergence(

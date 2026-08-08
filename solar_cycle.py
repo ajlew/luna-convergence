@@ -138,6 +138,32 @@ GATES = (
     ("December Solstice", 270, "Capricorn", "What must survive the next cycle?"),
 )
 
+SOLAR_CLOCK_PRINCIPLE = "The Sun is Luna's primary natural clock."
+SOLAR_SEQUENCE = "Aries → Taurus → Gemini → Cancer → Leo → Virgo → Libra → Scorpio → Sagittarius → Capricorn → Aquarius → Pisces"
+GATE_LABELS = {
+    "March Equinox": "Aries Gate · March Equinox",
+    "June Solstice": "Cancer Gate · June Solstice",
+    "September Equinox": "Libra Gate · September Equinox",
+    "December Solstice": "Capricorn Gate · December Solstice",
+}
+
+
+def solar_gate_label(gate_name: str) -> str:
+    return GATE_LABELS.get(str(gate_name), str(gate_name))
+
+
+def local_light_statement(*, city: str, direction: str, change: float) -> str:
+    if direction == "Near a solar turning point":
+        movement = "is near a solar turning point"
+    elif abs(change) < 0.05:
+        movement = "is almost steady"
+    else:
+        movement = f"is {direction.lower()} by approximately {abs(change):.1f} minutes per day"
+    return (
+        f"In {city}, daylight {movement}. "
+        "That local light direction does not alter the Aries-to-Pisces solar sequence."
+    )
+
 SIGN_RULES = {
     "Aries": "Begin with a clear direction",
     "Taurus": "make the beginning stable",
@@ -395,8 +421,8 @@ def representative_city_name(timezone_name: str) -> str:
 def city_input_help(timezone_name: str) -> str:
     default = representative_city_name(timezone_name)
     return (
-        f"Optional. Enter a nearest major city, for example {default}. "
-        "No address is required. Unsupported or blank cities use the timezone's representative city."
+        f"Enter the nearest major city, for example {default}, so Luna can observe local daylight accurately. "
+        "No street address is required. Unsupported or blank cities use the timezone's representative city as an estimate."
     )
 
 
@@ -461,7 +487,7 @@ def _light_direction(change: float) -> str:
         return "Increasing"
     if change < -0.25:
         return "Decreasing"
-    return "Near a seasonal turning point"
+    return "Near a solar turning point"
 
 
 def _hemisphere(latitude: float) -> str:
@@ -473,23 +499,12 @@ def _hemisphere(latitude: float) -> str:
 
 
 def _local_season(quarter: str, hemisphere: str) -> str:
-    north = {
-        "Emergence": "Spring",
-        "Expression": "Summer",
-        "Rebalancing": "Autumn",
-        "Gestation": "Winter",
-    }
-    south = {
-        "Emergence": "Autumn",
-        "Expression": "Winter",
-        "Rebalancing": "Spring",
-        "Gestation": "Summer",
-    }
-    if hemisphere == "Northern":
-        return north[quarter]
-    if hemisphere == "Southern":
-        return south[quarter]
-    return "Equatorial light cycle"
+    """Backward-compatible field value. Luna no longer uses hemisphere season names.
+
+    The physical observation is local daylight direction; the universal solar clock
+    remains Aries through Pisces in both hemispheres.
+    """
+    return "Location-aware light cycle"
 
 
 def _gate_date(year: int, gate_index: int, timezone_name: str) -> date:
@@ -547,7 +562,7 @@ def _solar_headline(light_direction: str, end_house: int) -> str:
     light = {
         "Increasing": "Returning light",
         "Decreasing": "Diminishing light",
-        "Near a seasonal turning point": "A solar turning point",
+        "Near a solar turning point": "A solar turning point",
     }[light_direction]
     outcome = {
         1: "reshapes personal direction",
@@ -588,11 +603,10 @@ def daily_solar_convergence(
     focus_text = _focus_text(main_focus, quarter)
     phase = PHASE_ACTIONS[quarter]
     meaning = (
-        f"The tropical Sun is in {sun.sign}, the {process.lower()} stage of the {quarter} quarter. "
+        f"{SOLAR_CLOCK_PRINCIPLE} The current Sun is in {sun.sign}, moving through the universal Aries-to-Pisces solar-zodiacal cycle. "
         f"For {native_sign}, this activates house {house}: {HOUSE_NAMES[house]}.",
-        f"From {location.name}, daylight is {direction.lower()} at approximately "
-        f"{abs(change):.1f} minutes per day. The local season is {_local_season(quarter, hemisphere).lower()}.",
-        f"The next solar gate is the {next_gate[0]} on {human_date(next_gate_date)}, "
+        local_light_statement(city=location.name, direction=direction, change=change),
+        f"The next solar gate is the {solar_gate_label(next_gate[0])} on {human_date(next_gate_date)}, "
         f"{max(0, (next_gate_date - d).days)} days away.",
     )
     return SolarConvergence(
@@ -670,7 +684,7 @@ def monthly_solar_convergence(
         if month_change > 5
         else "Decreasing"
         if month_change < -5
-        else "Near a seasonal turning point"
+        else "Near a solar turning point"
     )
 
     gate_in_month = ""
@@ -678,8 +692,8 @@ def monthly_solar_convergence(
         gate_day = _gate_date(year, gate_index, timezone_name)
         if start <= gate_day <= end:
             gate_in_month = (
-                f"The month crosses the {gate[0]} on {gate_day.strftime('%B %d')}, "
-                f"moving the annual process into {SOLAR_QUARTERS[gate[2]][0]}."
+                f"The month crosses the {solar_gate_label(gate[0])} on {gate_day.strftime('%B %d')}, "
+                f"one of the four cardinal gates of Luna's solar clock."
             )
             break
 
@@ -691,15 +705,14 @@ def monthly_solar_convergence(
         else f"{start_sun.sign}: {SOLAR_QUARTERS[start_sun.sign][1].lower()} remains the monthly solar process."
     )
     meaning = (
-        f"During {start.strftime('%B')}, the Sun moves from {start_sun.sign} into {end_sun.sign}. "
+        f"{SOLAR_CLOCK_PRINCIPLE} During {start.strftime('%B')}, the current Sun moves from {start_sun.sign} into {end_sun.sign}. "
         f"For {native_sign}, the emphasis moves from house {start_house} - {HOUSE_NAMES[start_house]} - "
         f"into house {end_house} - {HOUSE_NAMES[end_house]}.",
-        f"From {location.name}, daylight is {direction.lower()}. "
-        f"The month changes from approximately {daylight_start / 60:.1f} to {daylight_end / 60:.1f} hours of daylight, "
-        f"so the local environmental story is not assumed from Northern Hemisphere seasons.",
+        f"In {location.name}, daylight is {direction.lower()}, changing from approximately {daylight_start / 60:.1f} to {daylight_end / 60:.1f} hours across the month. "
+        "That local light direction does not alter the Aries-to-Pisces solar sequence.",
         gate_in_month
         or (
-            f"The next solar gate is the {base.next_solar_gate} on "
+            f"The next solar gate is the {solar_gate_label(base.next_solar_gate)} on "
             f"{human_date(base.next_gate_date)}, "
             f"{base.days_to_next_gate} days from the middle of the month."
         ),
@@ -795,7 +808,9 @@ def yearly_solar_chapters(
                 end_date=end.isoformat(),
                 signs=signs,
                 houses=houses,
-                local_season=_local_season(quarter, _hemisphere(location.latitude)),
+                local_season=(
+                    f"{_light_direction(daylight_change_minutes(start + (end - start) // 2, location.latitude))} from {location.name}"
+                ),
                 process=" -> ".join(SOLAR_QUARTERS[sign][1] for sign in signs),
                 strategic_question=question,
                 focus_direction=_focus_text(main_focus, quarter),
@@ -806,9 +821,9 @@ def yearly_solar_chapters(
 
 def yearly_solar_markdown(chapters: Iterable[SolarYearChapter]) -> str:
     lines = [
-        "# The Solar Wheel - four strategic chapters",
+        "# The Solar Clock - four cardinal gates",
         "",
-        "The tropical zodiac describes the symbolic solar phase. The local-light layer separately describes the customer's actual hemisphere and daylight trend.",
+        "The Sun is Luna's primary natural clock. The Aries Gate at the March Equinox is the head of the universal Aries-to-Pisces solar cycle; local geography changes the observed light, never the zodiacal order.",
         "",
     ]
     for chapter in chapters:
@@ -816,14 +831,14 @@ def yearly_solar_markdown(chapters: Iterable[SolarYearChapter]) -> str:
         end = date.fromisoformat(chapter.end_date)
         lines.extend(
             [
-                f"## {chapter.name} - {chapter.gate}",
+                f"## {chapter.name} - {solar_gate_label(chapter.gate)}",
                 f"**Window:** {start.strftime('%B %d')} to {end.strftime('%B %d')}",
                 "",
                 f"**Solar process:** {chapter.process}",
                 "",
                 f"**Activated houses:** {', '.join(str(item) for item in chapter.houses)}",
                 "",
-                f"**Local season:** {chapter.local_season}",
+                f"**Local light:** {chapter.local_season}",
                 "",
                 f"**Strategic question:** {chapter.strategic_question}",
                 "",
