@@ -18,11 +18,12 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.2"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.3"
 
 PIPELINE = (
     "Nature",
     "Pattern",
+    "Trajectory",
     "Convergence",
     "Meaning",
     "Choice",
@@ -48,6 +49,10 @@ FIRST_PRINCIPLES = (
     "Customer-facing astrology uses plain life areas, not internal house identifiers.",
     "When a pattern is verified, state it plainly: give the count, planets and aspect evidence close to the claim.",
     "One customer chronology is authoritative; duplicate date-by-date retellings are compressed into that chronology.",
+    "Trajectory matters: Luna must show what begins, builds, peaks, eases or reverses rather than hiding the month inside an average score.",
+    "A narrative role is never forced. If Nature does not supply a strong bridge, Luna does not invent one.",
+    "A supportive secondary current may be a countercurrent or relief rather than another main plot; its evidence and limits must be named.",
+    "Customer prose earns its place by bringing Nature, consequence or choice to the table; generic filler is removed.",
     "Engineering errors are corrected; interpretive errors are studied.",
     "Historical tests remain blind; expected answers are never hard-coded.",
     "The purpose is better observation and choice, not dependence on Luna.",
@@ -130,6 +135,10 @@ def methodology_metadata() -> dict:
         "customer_language_policy": "plain_life_areas_no_internal_house_ids",
         "evidence_proximity_policy": "verified_claim_count_planets_aspects_near_interpretation",
         "chronology_policy": "single_authoritative_how_the_month_unfolds",
+        "trajectory_policy": "show_build_peak_ease_or_reversal_before_story_synthesis",
+        "bridge_policy": "optional_only_never_forced",
+        "countercurrent_policy": "supportive_relief_may_offset_main_pressure_without_becoming_main_plot",
+        "nature_only_editorial_policy": "remove_customer_copy_that_adds_neither_evidence_consequence_nor_choice",
     }
 
 
@@ -147,6 +156,7 @@ def build_decision_trace(
     return {
         "nature": "calculated astronomical events",
         "pattern": f"houses {axis}" if axis else "calculated event pattern",
+        "trajectory": "chronological pressure/support movement",
         "convergence": " -> ".join(f"H{house}" for house in axis) if axis else "dominant connected evidence",
         "meaning": climate_label(support, friction, uncertainty),
         "choice": f"{action_truth} / {posture}",

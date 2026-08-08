@@ -833,40 +833,11 @@ def build_monthly_experience_html(
 </section>
         """
 
-    if narrative.romance_relevance == "NOT MATERIAL":
-        romance_section = f"""
-<section class="luna-monthly-section luna-romance-section luna-romance-not">
-  <div class="luna-eyebrow">Romance and validation</div>
-  <h2>{_safe(narrative.romance_title)}</h2>
-  <div class="luna-romance-grid luna-romance-single">
-    <article>
-      <span>Not the main plot</span>
-      <p>{_safe(narrative.romance_active)}</p>
-    </article>
-    <article>
-      <span>What that means</span>
-      <p>{_safe(narrative.romance_quiet)}</p>
-    </article>
-  </div>
-</section>
-        """
-    else:
-        romance_section = f"""
-<section class="luna-monthly-section luna-romance-section">
-  <div class="luna-eyebrow">Romance and validation</div>
-  <h2>{_safe(narrative.romance_title)}</h2>
-  <div class="luna-romance-grid">
-    <article>
-      <span>When romance is active</span>
-      <p>{_safe(narrative.romance_active)}</p>
-    </article>
-    <article>
-      <span>When romance is quiet</span>
-      <p>{_safe(narrative.romance_quiet)}</p>
-    </article>
-  </div>
-</section>
-        """
+    # v3.11: Romance remains in the domain map and, when Nature supports it,
+    # appears inside the chronology as a countercurrent/relationship test.  The
+    # old standalone "Romance and validation" block repeated generic copy and
+    # could float free of the actual sky, so it is no longer customer-rendered.
+    romance_section = ""
 
     focus_section = ""
     if (
@@ -892,9 +863,9 @@ def build_monthly_experience_html(
     <summary>{_safe(WHY_LUNA_LABEL)} <span>+</span></summary>
     <div class="luna-detail-body">
       <p>{_safe(narrative.central_storyline)}</p>
-      <p><strong>Theme:</strong> {_safe(narrative.headline)}</p>
-      <p><strong>Convergence:</strong> {_safe(narrative.convergence_axis)}</p>
       <p><strong>Intensity:</strong> {_safe((result.get("monthly_arc") or {}).get("intensity_rating", "Steady"))}</p>
+      {f'<p><strong>Trajectory:</strong> {_safe((result.get("monthly_trajectory") or {}).get("trajectory_reason", ""))}</p>' if result.get("monthly_trajectory") else ''}
+      {f'<p><strong>Countercurrent:</strong> {_safe(((result.get("monthly_trajectory") or {}).get("countercurrent") or {}).get("summary", ""))}</p>' if ((result.get("monthly_trajectory") or {}).get("countercurrent") or {}) else ''}
       <h3>Evidence path</h3>
       <div class="luna-evidence-path">{arc_evidence_path}</div>
       <p><strong>Rule:</strong> {_safe(narrative.validation_rule)}</p>
@@ -930,14 +901,6 @@ def build_monthly_experience_html(
           <tbody>{carryover_rows}</tbody>
         </table>
       </div>
-      <h3>Ranked scenario families</h3>
-      <div class="luna-table-wrap">
-        <table>
-          <thead><tr><th>Event family</th><th>Support level</th><th>Possible manifestations</th></tr></thead>
-          <tbody>{scenario_rows}</tbody>
-        </table>
-      </div>
-      <p class="luna-method-note">These are ranked symbolic event families, not measured probabilities or guarantees.</p>
       <h3>Narrative evidence ledger</h3>
       <p class="luna-method-note">Every event used publicly is traceable here. The direct area comes from the event itself; connected areas come from the wider event cluster; the story area is the life area Luna selected for that narrative role.</p>
       <div class="luna-table-wrap">
@@ -952,13 +915,6 @@ def build_monthly_experience_html(
         <table>
           <thead><tr><th>Decision measure</th><th>Result</th></tr></thead>
           <tbody>{_decision_evidence_rows(result)}</tbody>
-        </table>
-      </div>
-      <h3>Monthly background weight</h3>
-      <div class="luna-table-wrap">
-        <table>
-          <thead><tr><th>Life area</th><th>Calculated topic</th><th>Weight</th></tr></thead>
-          <tbody>{_technical_rows(result)}</tbody>
         </table>
       </div>
       <h3>Major transitions</h3>

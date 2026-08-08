@@ -23,6 +23,7 @@ from monthly_arc_engine import build_monthly_arc
 from monthly_qa import validate_monthly_arc
 from monthly_decision_engine import evaluate_monthly_decision, validate_monthly_decision
 from monthly_strategy_alignment import align_monthly_arc_with_decision
+from monthly_trajectory_engine import build_monthly_trajectory
 from luna_first_principles import methodology_metadata
 from yearly_game_engine import build_yearly_game_map
 
@@ -791,6 +792,7 @@ def period_report(
     monthly_qa = None
     monthly_decision = None
     monthly_decision_qa = None
+    monthly_trajectory = None
     yearly_game_map = None
     inherited_events = []
 
@@ -820,12 +822,22 @@ def period_report(
             main_focus=main_focus,
             house_weights={house: weight for house, weight in houses},
         ).to_dict()
+        monthly_trajectory = build_monthly_trajectory(
+            sign=sign,
+            start=start,
+            end=end,
+            events=events,
+            inherited_events=inherited_events,
+            monthly_arc=monthly_arc,
+            house_weights={house: weight for house, weight in houses},
+        )
         monthly_decision = evaluate_monthly_decision(
             sign=sign,
             events=events,
             inherited_events=inherited_events,
             monthly_arc=monthly_arc,
             house_weights={house: weight for house, weight in houses},
+            monthly_trajectory=monthly_trajectory,
         ).to_dict()
         monthly_decision_qa = validate_monthly_decision(monthly_decision)
         # First-principles authority: customer-facing beat responses are aligned
@@ -970,6 +982,7 @@ The winning sequence is:
         "monthly_arc": monthly_arc,
         "monthly_qa": monthly_qa,
         "monthly_decision": monthly_decision,
+        "monthly_trajectory": monthly_trajectory,
         "monthly_decision_qa": monthly_decision_qa,
         "luna_first_principles": methodology_metadata(),
         "yearly_game_map": yearly_game_map,

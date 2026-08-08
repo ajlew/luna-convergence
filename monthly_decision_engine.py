@@ -300,6 +300,22 @@ def _climate_components(
     }
 
 
+def calculate_climate_components(
+    sign: str,
+    events: Sequence[object],
+    inherited_events: Sequence[object],
+    monthly_arc: Mapping[str, object] | None,
+    house_weights: Mapping[int, float],
+) -> dict[str, float]:
+    """Public deterministic climate calculation used by trajectory + decision layers."""
+    return _climate_components(sign, events, inherited_events, monthly_arc, house_weights)
+
+
+def choose_posture(components: Mapping[str, float]) -> str:
+    """Public truth-gate helper for chronological trajectory windows."""
+    return _choose_posture(components)
+
+
 def _choose_posture(components: Mapping[str, float]) -> str:
     support = float(components["support"])
     friction = float(components["friction"])
@@ -485,7 +501,7 @@ def _domain_posture(
 def _portfolio_strategy(domains: Sequence[DomainDecision], fallback_posture: str) -> tuple[str, str, tuple[str, ...]]:
     material = [
         item for item in domains
-        if item.relevance in {"PRIMARY", "SECONDARY", "BRIDGE", "ACTIVE"}
+        if item.relevance in {"PRIMARY", "SECONDARY", "BRIDGE", "ACTIVE"} and item.hierarchy_role != "COUNTERCURRENT"
     ]
     primary = next((item for item in material if item.hierarchy_role == "PRIMARY"), None)
     secondary = [item for item in material if item.hierarchy_role in {"SECONDARY", "BRIDGE"}]
@@ -594,6 +610,7 @@ def evaluate_monthly_decision(
     inherited_events: Sequence[object] = (),
     monthly_arc: Mapping[str, object] | None = None,
     house_weights: Mapping[int, float] | None = None,
+    monthly_trajectory: Mapping[str, object] | None = None,
 ) -> MonthlyDecision:
     weights = {int(key): float(value) for key, value in (house_weights or {}).items()}
     components = _climate_components(sign, events, inherited_events, monthly_arc, weights)
@@ -601,26 +618,51 @@ def evaluate_monthly_decision(
     action_truth = "ACT" if posture == "ADVANCE" else "NOT ACT"
     narrative_houses = _narrative_houses(monthly_arc)
 
+    trajectory = dict(monthly_trajectory or {})
+    countercurrent = dict(trajectory.get("countercurrent") or {})
+    countercurrent_domain = str(countercurrent.get("domain", ""))
+
     domains: list[DomainDecision] = []
     for domain in ("romance", "work", "money", "home"):
         relevance, relevance_score, relevance_reason = _domain_relevance(
             domain, sign, events, monthly_arc, weights
         )
-        if relevance == "NOT MATERIAL":
-            domain_posture = "PASS"
+        hierarchy_role = _domain_role(domain, monthly_arc)[0]
+
+        # A verified countercurrent is nature-led relief, not a forced bridge.
+        # It may matter emotionally without becoming the month's main strategic bet.
+        if domain == countercurrent_domain:
+            relevance = "COUNTERCURRENT"
+            hierarchy_role = "COUNTERCURRENT"
+            relevance_score = max(float(relevance_score), 64.0)
+            domain_posture = str(countercurrent.get("recommended_posture") or "QUESTION")
+            evidence = "; ".join(str(item) for item in (countercurrent.get("support_evidence") or ()))
+            late = "; ".join(str(item) for item in (countercurrent.get("late_pressure_evidence") or ()))
+            relevance_reason = str(countercurrent.get("summary") or relevance_reason)
+            luna_line = (
+                "Romance, creativity or pleasure offers real relief from the main pressure"
+                + (f" — {evidence}" if evidence else "")
+                + ". Enjoy the lift without asking it to solve the main problem."
+                + (f" Late-month pressure changes the terms — {late}. Keep commitments reversible." if late else "")
+            )
         else:
-            domain_posture = _domain_posture(domain, posture, components, sign, events, weights, monthly_arc)
+            if relevance == "NOT MATERIAL":
+                domain_posture = "PASS"
+            else:
+                domain_posture = _domain_posture(domain, posture, components, sign, events, weights, monthly_arc)
+            luna_line = _domain_luna_line(domain, relevance, domain_posture, monthly_arc)
+
         domain_truth = "ACT" if domain_posture == "ADVANCE" else "NOT ACT"
         domains.append(
             DomainDecision(
                 domain=domain,
                 relevance=relevance,
                 relevance_score=relevance_score,
-                hierarchy_role=_domain_role(domain, monthly_arc)[0],
+                hierarchy_role=hierarchy_role,
                 posture=domain_posture,
                 action_truth=domain_truth,
                 rationale=relevance_reason,
-                luna_line=_domain_luna_line(domain, relevance, domain_posture, monthly_arc),
+                luna_line=luna_line,
             )
         )
 

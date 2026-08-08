@@ -26,8 +26,8 @@ def test_2017_main_story_advances_instead_of_repeating_full_manifestation_list()
     main = " ".join(narrative.luna_says).lower()
     repeated_phrase = "a manager, leader or key colleague leaving unexpectedly"
     assert main.count(repeated_phrase) <= 1
-    assert "that professional shift becomes concrete" in main
-    assert "the closing decision is therefore" in main
+    assert "the pattern is easier to see in nature itself" in main
+    assert "late month is the decisive part of the story" in main
     assert "act on the strongest supported opportunity" not in main
     assert "act on the strongest supported opportunity" not in " ".join(item.response.lower() for item in narrative.key_dates)
 

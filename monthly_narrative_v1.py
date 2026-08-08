@@ -1366,6 +1366,124 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
     )
 
 
+
+def _trajectory_action(posture: str) -> str:
+    return {
+        "ADVANCE": "Use the clean support while it is present, but keep timing and terms visible.",
+        "QUESTION": "Enjoy what opens, but verify the missing fact before increasing commitment.",
+        "NEGOTIATE": "Keep the essential part, but change the terms before accepting more exposure.",
+        "HOLD": "Do what is necessary and preserve optionality while the pressure is still moving.",
+        "PASS": "Let the optional demand pass; protect time, money and freedom of movement.",
+    }.get(str(posture).upper(), "Let the evidence determine the next move.")
+
+
+def _trajectory_aligned_chapters(
+    chapters: tuple[MonthlyChapter, ...],
+    trajectory: dict,
+) -> tuple[MonthlyChapter, ...]:
+    """Make the chronology tell one nature-led story instead of independent cards.
+
+    The trajectory is intentionally capped at three customer chapters: opening,
+    concentration, and late result. Extra internal arc roles remain available in
+    the evidence ledger but are not allowed to manufacture another public scene.
+    """
+    windows = list(trajectory.get("windows") or [])
+    if not chapters or not windows:
+        return chapters
+
+    # Preserve the astronomy/evidence anchors from the original arc while
+    # compressing narrative-only roles that do not add a new natural condition.
+    if len(chapters) >= 3:
+        sources = [chapters[0], chapters[1], chapters[-1]]
+    else:
+        sources = list(chapters)
+
+    primary_area = str(trajectory.get("primary_area", "the main area"))
+    secondary_area = str(trajectory.get("secondary_area", "the later consequence"))
+    trajectory_kind = str(trajectory.get("trajectory", "oscillating"))
+    countercurrent = dict(trajectory.get("countercurrent") or {})
+    counter_window = str(countercurrent.get("window_label", ""))
+    aligned: list[MonthlyChapter] = []
+
+    for index, chapter in enumerate(sources):
+        window = windows[min(index, len(windows) - 1)]
+        support = float(window.get("support", 0.0))
+        friction = float(window.get("friction", 0.0))
+        pressure = "; ".join(str(item) for item in (window.get("pressure_aspects") or [])[:4])
+        supportive = "; ".join(str(item) for item in (window.get("support_aspects") or [])[:3])
+        posture = str(window.get("posture", "QUESTION"))
+
+        if index == 0:
+            hook = "The first signal: movement arrives before the whole picture is settled"
+            paragraphs = [
+                f"The month first shows itself through {primary_area}. Support and friction are still competing ({support:.0f} support / {friction:.0f} friction), so the opening is evidence, not a final verdict."
+            ]
+            if pressure:
+                paragraphs.append(
+                    f"The early warning is visible in the sky: {pressure}."
+                    + (f" Support is present too: {supportive}." if supportive else "")
+                )
+
+        elif index == len(sources) - 1:
+            hook = (
+                "The storm peaks: the original problem starts affecting the rest of the month"
+                if trajectory_kind in {"late_storm", "pressure_builds"}
+                else "The late-month result shows what the earlier pattern can actually carry"
+            )
+            paragraphs = [
+                f"By late month the balance has changed to {support:.0f} support / {friction:.0f} friction. The original pressure around {primary_area} now has consequences for {secondary_area}."
+            ]
+            if pressure:
+                paragraphs.append(
+                    f"This is not vague atmosphere: the hard contacts include {pressure}."
+                    + (f" Counter-support remains through {supportive}." if supportive else "")
+                )
+            paragraphs.append(
+                "The task is no longer to answer every signal. It is to protect the commitments that still make sense after the pressure has exposed their real cost."
+            )
+
+        else:
+            hook = "The pattern concentrates: the main issue becomes harder to treat as a one-off"
+            paragraphs = [
+                f"Mid-month keeps returning attention to {primary_area}. The sky still contains support ({support:.0f}) as well as friction ({friction:.0f}), so this is not a simple failure story; it is the point where the terms, limits and responsibilities become visible."
+            ]
+            if pressure:
+                paragraphs.append(
+                    f"The pressure is explicit: {pressure}."
+                    + (f" Supportive contacts such as {supportive} keep another route open." if supportive else "")
+                )
+            if countercurrent and str(window.get("label", "")) == counter_window:
+                evidence = "; ".join(str(item) for item in (countercurrent.get("support_evidence") or [])[:3])
+                relief = f"At the same time, {countercurrent.get('label', 'another part of life')} provides a genuine countercurrent"
+                if evidence:
+                    relief += f", supported by {evidence}"
+                relief += ". Let it give you perspective and relief without making it responsible for solving the main problem."
+                paragraphs.append(relief)
+
+        aligned.append(MonthlyChapter(
+            label=("Act I" if index == 0 else "Act II" if index == 1 else "Act III"),
+            date_range=chapter.date_range,
+            hook=hook,
+            title=chapter.title,
+            paragraphs=tuple(paragraphs),
+            action=_trajectory_action(posture),
+            evidence=chapter.evidence,
+        ))
+    return tuple(aligned)
+
+
+def _countercurrent_love_story(result: dict, trajectory: dict) -> tuple[str, ...] | None:
+    counter = dict(trajectory.get("countercurrent") or {})
+    if str(counter.get("domain", "")) != "romance":
+        return None
+    support = "; ".join(str(item) for item in (counter.get("support_evidence") or [])[:3])
+    late = "; ".join(str(item) for item in (counter.get("late_pressure_evidence") or [])[:3])
+    first = "Romance, creativity or pleasure is not the cause of the main problem; it is a countercurrent that can give you somewhere else to breathe."
+    second = (f"The relief has real sky support: {support}." if support else "The relief is supported by direct relationship or creative evidence in the sky.")
+    third = (f"Late-month pressure changes the terms — {late}. Enjoy the lift, but keep commitments reversible." if late else "Use the relief without asking it to make the month's larger decision for you.")
+    return (first, second, third)
+
+
 def build_monthly_narrative(
     result: dict,
     main_focus: str = "General overview",
@@ -1377,6 +1495,7 @@ def build_monthly_narrative(
 
     question = normalise_personal_question(personal_question)
     arc = _monthly_arc(result)
+    trajectory = dict(result.get("monthly_trajectory") or {})
     monthly_decision = dict(result.get("monthly_decision") or {})
     domain_decisions = dict(monthly_decision.get("domain_decisions") or {})
     romance_decision = dict(domain_decisions.get("romance") or {})
@@ -1493,18 +1612,34 @@ def build_monthly_narrative(
         if decision_plan:
             action_plan = decision_plan
 
-    central_storyline = climate_aware_storyline(
-        central_storyline,
-        monthly_decision,
-        primary_house=primary_house,
-        secondary_house=secondary_house,
-    )
-    hook_headline = climate_aware_hook(
-        hook_headline,
-        monthly_decision,
-        primary_house=primary_house,
-        secondary_house=secondary_house,
-    )
+    # Nature-led authority: once the trajectory layer has compared the month's
+    # chronological windows, it supplies the master story. The older arc remains
+    # intact as evidence/provenance, but it no longer gets to force a bridge or
+    # subplot that Nature did not strongly support.
+    if trajectory:
+        hook_headline = str(trajectory.get("headline") or hook_headline)
+        central_storyline = str(trajectory.get("central_storyline") or central_storyline)
+        subtitle = central_storyline
+        trajectory_story = tuple(str(item) for item in (trajectory.get("story_paragraphs") or ()) if str(item).strip())
+        if trajectory_story:
+            luna_says = trajectory_story
+            at_glance = trajectory_story[:3]
+        chapters = _trajectory_aligned_chapters(chapters, trajectory)
+
+    if not trajectory:
+        central_storyline = climate_aware_storyline(
+            central_storyline,
+            monthly_decision,
+            primary_house=primary_house,
+            secondary_house=secondary_house,
+        )
+    if not trajectory:
+        hook_headline = climate_aware_hook(
+            hook_headline,
+            monthly_decision,
+            primary_house=primary_house,
+            secondary_house=secondary_house,
+        )
     subtitle = central_storyline
 
     romance_active, romance_quiet = _romance_copy(primary_house, secondary_house)
@@ -1512,7 +1647,12 @@ def build_monthly_narrative(
     romance_note = str(romance_decision.get("luna_line", "")).strip()
     romance_posture = str(romance_decision.get("posture", monthly_decision.get("posture", "QUESTION")))
     romance_truth = str(romance_decision.get("action_truth", "NOT ACT" if romance_posture != "ADVANCE" else "ACT"))
-    if romance_relevance == "NOT MATERIAL":
+    if romance_relevance == "COUNTERCURRENT":
+        romance_title = f"Romance & creativity · COUNTERCURRENT · {romance_truth} / {romance_posture}"
+        if romance_note:
+            romance_active = romance_note
+        romance_quiet = "Relief is useful precisely because it does not have to solve the main problem. Enjoy what is supportive and keep the timing honest."
+    elif romance_relevance == "NOT MATERIAL":
         romance_title = "Romance is not running this month's meeting"
         romance_active = romance_note or romance_active
         romance_quiet = "That does not mean 'no romance'. It means the relationship evidence did not clear the convergent hierarchy strongly enough to become a main plot."
@@ -1572,8 +1712,11 @@ def build_monthly_narrative(
         f"{item.get('label', '')} ({item.get('confidence', '')})"
         for item in arc_scenarios[:3]
     ) or "No single scenario family dominates."
+    countercurrent = dict(trajectory.get("countercurrent") or {})
     narrative_structure = (
-        "Three-house convergence" if tertiary_house else "Two-house convergence"
+        "Two-house convergence + countercurrent" if countercurrent and not tertiary_house
+        else "Three-house convergence" if tertiary_house
+        else "Two-house convergence"
     )
     bridge_label = (
         HOUSE_DISPLAY.get(tertiary_house, f"House {tertiary_house}")
@@ -1586,7 +1729,9 @@ def build_monthly_narrative(
         ("Portfolio strategy", portfolio_posture or strategic_posture),
         ("Romance hierarchy", romance_relevance),
         ("Narrative structure", narrative_structure),
+        ("Trajectory", str(trajectory.get("trajectory_reason", "Event-led sequence")) if trajectory else "Event-led sequence"),
         ("Bridge current", bridge_label),
+        ("Countercurrent", str(countercurrent.get("summary", "None verified")) if countercurrent else "None verified"),
         ("Personal focus", main_focus),
         ("Relationship current", relationship_current),
         ("Ranked scenario families", top_scenario_text),
@@ -1600,6 +1745,8 @@ def build_monthly_narrative(
         ("Local light", f"{solar.get('light_direction', 'Unavailable')} - {solar.get('city', 'timezone estimate')}"),
         ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
     )
+
+    counter_love_story = _countercurrent_love_story(result, trajectory)
 
     return MonthlyNarrative(
         sign=str(result.get("sign", "")),
@@ -1630,7 +1777,7 @@ def build_monthly_narrative(
         focus_title=FOCUS_TITLES.get(main_focus, FOCUS_TITLES["General overview"]),
         focus_answer=_focus_answer(result, main_focus, question, primary_house, secondary_house),
         chapters=chapters,
-        love_story=_love_story(result, primary_house, secondary_house),
+        love_story=counter_love_story or _love_story(result, primary_house, secondary_house),
         work_story=_work_story(result, primary_house, secondary_house),
         money_story=_money_story(result, primary_house, secondary_house),
         do_line=do_line,
