@@ -16,6 +16,15 @@ from dataclasses import dataclass
 from typing import Mapping, Sequence
 
 from scenario_engine import SIGN_RULERS, event_importance_score
+from luna_first_principles import (
+    CORRESPONDENCE_NOTE,
+    LUNA_FIRST_PRINCIPLES_VERSION,
+    build_decision_trace,
+    capacity_label,
+    climate_label,
+    evidence_balance,
+    validate_first_principles_contract,
+)
 
 
 POSTURES = ("ADVANCE", "QUESTION", "NEGOTIATE", "HOLD", "PASS")
@@ -97,6 +106,12 @@ class MonthlyDecision:
     action_plan: tuple[str, ...]
     domain_decisions: tuple[DomainDecision, ...]
     equation: str
+    climate_label: str = ""
+    capacity_label: str = ""
+    evidence_balance: float = 0.0
+    first_principles_version: str = LUNA_FIRST_PRINCIPLES_VERSION
+    correspondence_note: str = CORRESPONDENCE_NOTE
+    first_principles_trace: Mapping[str, object] | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -111,6 +126,12 @@ class MonthlyDecision:
             "action_plan": list(self.action_plan),
             "domain_decisions": {item.domain: item.to_dict() for item in self.domain_decisions},
             "equation": self.equation,
+            "climate_label": self.climate_label,
+            "capacity_label": self.capacity_label,
+            "evidence_balance": round(self.evidence_balance, 1),
+            "first_principles_version": self.first_principles_version,
+            "correspondence_note": self.correspondence_note,
+            "first_principles_trace": dict(self.first_principles_trace or {}),
         }
 
 
@@ -497,8 +518,22 @@ def evaluate_monthly_decision(
         action_plan=_posture_plan(posture),
         domain_decisions=tuple(domains),
         equation=(
-            "Convergent evidence -> support/friction/uncertainty/volatility -> capacity pressure -> "
+            "Nature -> pattern -> convergence -> symbolic meaning -> capacity-aware choice -> "
             "ACT or NOT ACT truth gate -> ADVANCE / QUESTION / NEGOTIATE / HOLD / PASS"
+        ),
+        climate_label=climate_label(components["support"], components["friction"], components["uncertainty"]),
+        capacity_label=capacity_label(components["capacity"]),
+        evidence_balance=evidence_balance(components["support"], components["friction"]),
+        first_principles_version=LUNA_FIRST_PRINCIPLES_VERSION,
+        correspondence_note=CORRESPONDENCE_NOTE,
+        first_principles_trace=build_decision_trace(
+            narrative_houses=narrative_houses,
+            support=components["support"],
+            friction=components["friction"],
+            uncertainty=components["uncertainty"],
+            capacity_pressure=components["capacity"],
+            posture=posture,
+            action_truth=action_truth,
         ),
     )
 
@@ -521,8 +556,13 @@ def validate_monthly_decision(decision: Mapping[str, object]) -> dict:
     if romance.get("relevance") == "NOT MATERIAL" and "Maybe next month" not in str(romance.get("luna_line", "")):
         warnings.append("Romance NOT state is missing the light Luna close")
 
+    principle_qa = validate_first_principles_contract(decision)
+    critical.extend(str(item) for item in principle_qa.get("critical", ()))
+    warnings.extend(str(item) for item in principle_qa.get("warnings", ()))
+
     return {
         "status": "fail" if critical else ("warning" if warnings else "pass"),
         "critical": critical,
         "warnings": warnings,
+        "first_principles": principle_qa,
     }

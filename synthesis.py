@@ -22,6 +22,7 @@ from solar_cycle import (
 from monthly_arc_engine import build_monthly_arc
 from monthly_qa import validate_monthly_arc
 from monthly_decision_engine import evaluate_monthly_decision, validate_monthly_decision
+from luna_first_principles import methodology_metadata
 from yearly_game_engine import build_yearly_game_map
 
 
@@ -965,6 +966,7 @@ The winning sequence is:
         "monthly_qa": monthly_qa,
         "monthly_decision": monthly_decision,
         "monthly_decision_qa": monthly_decision_qa,
+        "luna_first_principles": methodology_metadata(),
         "yearly_game_map": yearly_game_map,
         "inherited_events": serialize(inherited_events),
         "nearest_city": nearest_city,
