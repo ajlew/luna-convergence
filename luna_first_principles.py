@@ -18,7 +18,7 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.1"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.2"
 
 PIPELINE = (
     "Nature",
@@ -45,6 +45,9 @@ FIRST_PRINCIPLES = (
     "Evidence may recur; interpretation must advance.",
     "Choice preserves domain asymmetry; the monthly synthesis must not flatten distinct domain moves.",
     "Every public claim must trace back to evidence.",
+    "Customer-facing astrology uses plain life areas, not internal house identifiers.",
+    "When a pattern is verified, state it plainly: give the count, planets and aspect evidence close to the claim.",
+    "One customer chronology is authoritative; duplicate date-by-date retellings are compressed into that chronology.",
     "Engineering errors are corrected; interpretive errors are studied.",
     "Historical tests remain blind; expected answers are never hard-coded.",
     "The purpose is better observation and choice, not dependence on Luna.",
@@ -124,6 +127,9 @@ def methodology_metadata() -> dict:
         "narrator_authority": "explain_only_never_override_calculation",
         "narrative_progression_rule": list(NARRATIVE_PROGRESSION_RULE),
         "portfolio_policy": "preserve_domain_asymmetry_before_monthly_synthesis",
+        "customer_language_policy": "plain_life_areas_no_internal_house_ids",
+        "evidence_proximity_policy": "verified_claim_count_planets_aspects_near_interpretation",
+        "chronology_policy": "single_authoritative_how_the_month_unfolds",
     }
 
 

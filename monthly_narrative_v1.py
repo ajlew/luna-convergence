@@ -74,6 +74,20 @@ HOUSE_NATURAL = {
 }
 
 
+def _plain_customer_astrology(value: object) -> str:
+    """Translate internal house-number notation into customer life-area language."""
+    text = str(value or "")
+    # Prefer removing the technical number when the upstream text already supplies
+    # a plain-English gloss: "house 10 - career..." -> "career...".
+    for house in range(1, 13):
+        text = re.sub(rf"\bhouse\s+{house}\s*[-–—:]\s*", "", text, flags=re.I)
+    for house, label in HOUSE_PROSE.items():
+        text = re.sub(rf"\bhouse\s+{house}\b", label, text, flags=re.I)
+        text = re.sub(rf"\bH{house}\b", label, text, flags=re.I)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+
 HOUSE_SCENARIOS = {
     1: (
         "a personal reinvention",
@@ -1198,40 +1212,52 @@ def _retrograde_climate(result: dict) -> str:
 
 
 def _technical_appendix(result: dict, order_reference: str) -> str:
-    dominant_rows = ["| Rank | House | Customer life area | Weight |", "|---:|---:|---|---:|"]
+    def area_list(values) -> str:
+        labels = []
+        for value in values or []:
+            try:
+                label = HOUSE_PROSE[int(value)]
+            except (KeyError, TypeError, ValueError):
+                continue
+            if label not in labels:
+                labels.append(label)
+        return "; ".join(labels) or "n/a"
+
+    dominant_rows = ["| Rank | Life area | Weight |", "|---:|---|---:|"]
     for rank, item in enumerate((result.get("dominant_houses") or [])[:6], 1):
         house = int(item.get("house", 1))
         dominant_rows.append(
-            f"| {rank} | {house} | {HOUSE_PROSE[house]} | {float(item.get('weight', 0.0)):.1f} |"
+            f"| {rank} | {HOUSE_PROSE[house]} | {float(item.get('weight', 0.0)):.1f} |"
         )
 
-    convergence_rows = ["| Window | Type | Strength | Dominant houses |", "|---|---|---:|---|"]
+    convergence_rows = ["| Window | Type | Strength | Dominant life areas |", "|---|---|---:|---|"]
     for item in _convergences(result)[:4]:
         houses = sorted({int(h) for event in item.get("events", []) for h in event.get("houses", [])})[:3]
         convergence_rows.append(
-            f"| {_date_range(item['start_date'], item['end_date'])} | {item.get('title', 'Convergence')} | {float(item.get('score', 0.0)):.0f}/100 | {', '.join(map(str, houses)) or 'n/a'} |"
+            f"| {_date_range(item['start_date'], item['end_date'])} | {item.get('title', 'Convergence')} | {float(item.get('score', 0.0)):.0f}/100 | {area_list(houses)} |"
         )
 
-    event_rows = ["| Date | Evidence | Houses |", "|---|---|---|"]
+    event_rows = ["| Date | Evidence | Life areas |", "|---|---|---|"]
     for item in _events(result):
         event_rows.append(
-            f"| {_date_label(item['event_date'])} | {item.get('title', 'Transition')} | {', '.join(map(str, item.get('houses') or []))} |"
+            f"| {_date_label(item['event_date'])} | {item.get('title', 'Transition')} | {area_list(item.get('houses') or [])} |"
         )
 
-    retro_rows = ["| Planet | Retrograde | Direct | Houses |", "|---|---|---|---|"]
+    retro_rows = ["| Planet | Retrograde | Direct | Life areas |", "|---|---|---|---|"]
     for item in _retrogrades(result):
         retro_rows.append(
-            f"| {item.get('planet', '')} | {_date_label(item['retrograde_start'])} | {_date_label(item['direct_date'])} | {', '.join(map(str, item.get('houses') or []))} |"
+            f"| {item.get('planet', '')} | {_date_label(item['retrograde_start'])} | {_date_label(item['direct_date'])} | {area_list(item.get('houses') or [])} |"
         )
 
     solar = result.get("solar_convergence") or {}
+    activated_house = solar.get("activated_house")
     solar_rows = [
         "| Solar evidence | Calculated value |",
         "|---|---|",
         f"| Tropical Sun | {solar.get('solar_longitude', 'n/a')}° {solar.get('solar_sign', '')} |",
         f"| Solar quarter | {solar.get('solar_quarter', 'n/a')} |",
         f"| Local light | {solar.get('light_direction', 'n/a')} from {solar.get('city', 'timezone estimate')} |",
-        f"| Activated house | {solar.get('activated_house', 'n/a')} - {solar.get('activated_house_name', '')} |",
+        f"| Activated life area | {HOUSE_PROSE.get(int(activated_house), solar.get('activated_house_name', 'n/a')) if activated_house not in (None, '') else solar.get('activated_house_name', 'n/a')} |",
         f"| Next solar gate | {solar.get('next_solar_gate', 'n/a')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'n/a'} |",
         f"| Location basis | {solar.get('location_basis', 'n/a')} |",
     ]
@@ -1266,10 +1292,10 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             f"| {rank} | {item.get('label', '')} | {item.get('confidence', '')} | {examples} |"
         )
 
-    inherited_rows = ["| Carryover date | Evidence | Houses |", "|---|---|---|"]
+    inherited_rows = ["| Carryover date | Evidence | Life areas |", "|---|---|---|"]
     for item in arc.get("inherited_events") or []:
         inherited_rows.append(
-            f"| {_date_label(item['event_date'])} | {item.get('title', '')} | {', '.join(map(str, item.get('houses') or []))} |"
+            f"| {_date_label(item['event_date'])} | {item.get('title', '')} | {area_list(item.get('houses') or [])} |"
         )
 
     order_line = f"\n\n**Order reference:** `{order_reference}`" if order_reference else ""
@@ -1277,11 +1303,11 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
         [
             "# Technical appendix",
             "",
-            "This appendix contains the calculation trail supporting the customer narrative. House numbers and event names are evidence; the main report above translates them into consequences, timing and practical decisions.",
+            "This appendix contains the calculation trail supporting the customer narrative. Planetary events remain exact; internal house numbers are translated into the life areas they represent.",
             "",
             "## Narrative selection",
             "",
-            f"**Event-led selection:** {arc.get('selection_rationale', 'The strongest event clusters determine the public story.')} ",
+            f"**Event-led selection:** {_plain_customer_astrology(arc.get('selection_rationale', 'The strongest event clusters determine the public story.'))} ",
             f"**Dates shown in:** {result.get('timezone_name', 'selected local timezone')}",
             f"**Narrative QA:** {qa.get('status', 'not run')}" + (f" — {'; '.join(qa.get('warnings') or [])}" if qa.get('warnings') else ""),
             f"**Decision QA:** {decision_qa.get('status', 'not run')}" + (f" — {'; '.join(decision_qa.get('warnings') or [])}" if decision_qa.get('warnings') else ""),
@@ -1292,13 +1318,14 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             "",
             "Support, friction and uncertainty are normalized symbolic evidence shares, not probabilities. Capacity pressure is a separate 0-100 decision-load index.",
             "",
-            f"**Decision rationale:** {decision.get('rationale', 'n/a')}",
+            f"**Decision rationale:** {_plain_customer_astrology(decision.get('rationale', 'n/a'))}",
             "",
             "## Luna first-principles contract",
             "",
             "**Method:** Nature → Pattern → Convergence → Meaning → Choice → Experience → Learning.",
             f"**Interpretive boundary:** {decision.get('correspondence_note', 'Astrological scenarios are symbolic correspondences, not guaranteed literal events.')}",
             "**Authority rule:** the narrator may explain the calculation but may not overrule the calculated evidence or strategic posture.",
+            "**Evidence rule:** when Luna states a strong pattern, the count, planets and aspects must sit beside the interpretation rather than being hidden elsewhere.",
             "**Calibration rule:** historical tests remain blind; mismatches are studied as calibration evidence rather than repaired with year/sign hard-codes.",
             "",
             "## Ranked scenario families",
@@ -1333,7 +1360,7 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
             "",
             "## Method",
             "",
-            "Tropical geocentric planetary positions are calculated with Swiss Ephemeris and interpreted using whole-sign houses. Strength labels describe the concentration of the internal astrological pattern; they are not probabilities or guarantees of events.",
+            "Tropical geocentric planetary positions are calculated with Swiss Ephemeris and interpreted using whole-sign houses internally. The customer report translates that structure into ordinary life areas. Strength labels describe concentration in the astrological pattern; they are not probabilities or guarantees of events.",
             order_line,
         ]
     )
@@ -1513,7 +1540,7 @@ def build_monthly_narrative(
 
     solar = result.get("solar_convergence") or {}
     solar_paragraphs = tuple(
-        str(item)
+        _plain_customer_astrology(item)
         for item in (solar.get("meaning") or ())
         if str(item).strip()
     )
@@ -1522,7 +1549,10 @@ def build_monthly_narrative(
         ("Local light movement", f"{solar.get('light_direction', 'Unavailable')} from {solar.get('city', 'timezone estimate')}"),
         ("Local season", str(solar.get("local_season", "Unavailable"))),
         ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
-        ("Solar house movement", f"House {solar.get('start_house', '?')} to house {solar.get('end_house', '?')}"),
+        (
+            "Solar life-area movement",
+            f"{HOUSE_DISPLAY.get(int(solar.get('start_house', 1) or 1), 'Starting area')} → {HOUSE_DISPLAY.get(int(solar.get('end_house', 1) or 1), 'Next area')}",
+        ),
         ("Customer focus", str(solar.get("focus_meaning", "Unavailable"))),
     )
 
@@ -1624,11 +1654,11 @@ def build_monthly_narrative(
         solar_title=str(solar.get("headline", "Your Solar Convergence")),
         solar_paragraphs=solar_paragraphs,
         solar_rows=solar_rows,
-        solar_opportunity=str(solar.get("opportunity", "Use the current solar phase deliberately.")),
-        solar_risk=str(solar.get("risk", "Do not force a phase that the evidence does not support.")),
-        solar_action=str(solar.get("action", "Match the action to the current solar phase.")),
-        solar_rule=str(solar.get("solar_rule", "Begin, develop, evaluate and consolidate in sequence.")),
-        solar_equation=str(solar.get("equation", "Tropical Sun + local light + activated house = Solar Convergence")),
+        solar_opportunity=_plain_customer_astrology(solar.get("opportunity", "Use the current solar phase deliberately.")),
+        solar_risk=_plain_customer_astrology(solar.get("risk", "Do not force a phase that the evidence does not support.")),
+        solar_action=_plain_customer_astrology(solar.get("action", "Match the action to the current solar phase.")),
+        solar_rule=_plain_customer_astrology(solar.get("solar_rule", "Begin, develop, evaluate and consolidate in sequence.")),
+        solar_equation=_plain_customer_astrology(solar.get("equation", "Tropical Sun + local light + activated life area = Solar Convergence")),
         technical_appendix_markdown=_technical_appendix(result, order_reference),
     )
 

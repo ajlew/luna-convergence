@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import escape
+import re
 from typing import Iterable
 from zoneinfo import ZoneInfo
 from uuid import uuid4
@@ -26,6 +27,311 @@ from luna_voice import narrator_cue
 
 PRINT_PAPERS = ("A4", "A3")
 PRINT_ORIENTATIONS = ("portrait", "landscape")
+
+
+ZODIAC_SIGNS = (
+    "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+    "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+)
+
+PUBLIC_LIFE_AREAS = {
+    1: "identity, energy and personal direction",
+    2: "income, possessions, pricing and personal security",
+    3: "communication, decisions, learning and everyday movement",
+    4: "home, family and private foundations",
+    5: "romance, creativity, children and pleasure",
+    6: "workload, wellbeing, routines and practical systems",
+    7: "relationships, clients, agreements and significant partnerships",
+    8: "shared money, trust, debt and joint responsibilities",
+    9: "travel, education, publishing, law and the wider world",
+    10: "career, reputation, authority and visible results",
+    11: "friends, networks, audiences and future plans",
+    12: "rest, closure, private matters and unfinished business",
+}
+
+SIGN_RULERS = {
+    "Aries": ("Mars",),
+    "Taurus": ("Venus",),
+    "Gemini": ("Mercury",),
+    "Cancer": ("Moon",),
+    "Leo": ("Sun",),
+    "Virgo": ("Mercury",),
+    "Libra": ("Venus",),
+    "Scorpio": ("Pluto", "Mars"),
+    "Sagittarius": ("Jupiter",),
+    "Capricorn": ("Saturn",),
+    "Aquarius": ("Uranus", "Saturn"),
+    "Pisces": ("Neptune", "Jupiter"),
+}
+
+
+def _whole_sign_name(sign: str, house: int | None) -> str:
+    if house in (None, ""):
+        return ""
+    try:
+        start = ZODIAC_SIGNS.index(str(sign))
+        return ZODIAC_SIGNS[(start + int(house) - 1) % 12]
+    except (ValueError, TypeError):
+        return ""
+
+
+def _plain_life_area(house: int | None) -> str:
+    try:
+        return PUBLIC_LIFE_AREAS[int(house)]
+    except (KeyError, TypeError, ValueError):
+        return "the active part of life"
+
+
+def _plain_area_list(houses) -> str:
+    values = []
+    for house in houses or []:
+        label = _plain_life_area(house)
+        if label not in values:
+            values.append(label)
+    return "; ".join(values) if values else "—"
+
+
+def _event_orb(event: dict) -> str:
+    match = re.search(r"approximately\s+([0-9.]+)°", str(event.get("detail") or ""), flags=re.I)
+    return f"~{match.group(1)}°" if match else ""
+
+
+def _event_short(event: dict, *, include_date: bool = False) -> str:
+    title = str(event.get("title") or "planetary contact")
+    orb = _event_orb(event)
+    text = f"{title}{f' ({orb})' if orb else ''}"
+    if include_date and event.get("event_date"):
+        text += f" on {human_date(event.get('event_date'))}"
+    return text
+
+
+def _beat_for_chapter(result: dict, chapter) -> dict:
+    arc = result.get("monthly_arc") or {}
+    beats = list(arc.get("beats") or [])
+    title = str(chapter.title or "").strip()
+    matching = [beat for beat in beats if str(beat.get("title") or "").strip() == title]
+    if matching:
+        # Prefer a beat with a real narrative house and the strongest score.
+        return max(matching, key=lambda beat: (beat.get("narrative_house") not in (None, ""), float(beat.get("score", 0.0) or 0.0)))
+    return {}
+
+
+def _window_events(result: dict, beat: dict, *, lookback_days: int = 7) -> list[dict]:
+    if not beat.get("start_date"):
+        return []
+    try:
+        start = datetime.fromisoformat(str(beat.get("start_date"))).date() - timedelta(days=lookback_days)
+        end = datetime.fromisoformat(str(beat.get("end_date") or beat.get("start_date"))).date()
+    except ValueError:
+        return []
+    selected = []
+    for event in result.get("events") or []:
+        try:
+            event_date = datetime.fromisoformat(str(event.get("event_date"))).date()
+        except (TypeError, ValueError):
+            continue
+        if start <= event_date <= end and float(event.get("importance", 0.0) or 0.0) >= 5.2:
+            if set(event.get("planets") or []) == {"Moon"} and event.get("kind") not in {"lunation", "eclipse"}:
+                continue
+            selected.append(event)
+    return selected
+
+
+def _month_to_date_focus_events(result: dict, beat: dict, narrative_house: int | None) -> list[dict]:
+    if narrative_house in (None, "") or not beat.get("end_date"):
+        return []
+    try:
+        end = datetime.fromisoformat(str(beat.get("end_date"))).date()
+        month_start = end.replace(day=1)
+    except ValueError:
+        return []
+    selected = []
+    for event in result.get("events") or []:
+        try:
+            event_date = datetime.fromisoformat(str(event.get("event_date"))).date()
+        except (TypeError, ValueError):
+            continue
+        if not month_start <= event_date <= end:
+            continue
+        if int(narrative_house) not in [int(value) for value in (event.get("houses") or [])]:
+            continue
+        if event.get("kind") not in {"ingress", "lunation", "eclipse", "station"}:
+            continue
+        if float(event.get("importance", 0.0) or 0.0) < 5.5:
+            continue
+        selected.append(event)
+    return selected
+
+
+def _chapter_context(result: dict, index: int, total: int) -> dict:
+    arc = result.get("monthly_arc") or {}
+    beats = {str(item.get("role") or "").lower(): dict(item) for item in (arc.get("beats") or [])}
+    primary = arc.get("primary_house")
+    secondary = arc.get("secondary_house")
+    tertiary = arc.get("tertiary_house")
+
+    if index == 0:
+        selected = [beat for beat in (beats.get("inherited state"), beats.get("inciting event")) if beat]
+        target_house = primary
+        role = "opening"
+    elif index == 1:
+        selected = [beat for beat in (beats.get("complication"),) if beat]
+        target_house = primary
+        role = "complication"
+    elif total >= 4 and index == 2:
+        selected = [beat for beat in (beats.get("pivot"), beats.get("relationship test")) if beat]
+        target_house = tertiary or (selected[0].get("narrative_house") if selected else secondary)
+        role = "bridge"
+    else:
+        selected = [beat for beat in (beats.get("climax"), beats.get("resolution")) if beat]
+        target_house = secondary
+        role = "resolution"
+
+    dates = [str(beat.get("start_date")) for beat in selected if beat.get("start_date")]
+    ends = [str(beat.get("end_date") or beat.get("start_date")) for beat in selected if beat.get("start_date")]
+    return {
+        "role": role,
+        "target_house": int(target_house) if target_house not in (None, "") else None,
+        "start_date": min(dates) if dates else "",
+        "end_date": max(ends) if ends else (min(dates) if dates else ""),
+        "beats": selected,
+    }
+
+
+def _direct_story_event(result: dict, context: dict) -> dict:
+    target_house = context.get("target_house")
+    if target_house in (None, "") or not context.get("start_date"):
+        return {}
+    try:
+        start = datetime.fromisoformat(str(context.get("start_date"))).date() - timedelta(days=7)
+        end = datetime.fromisoformat(str(context.get("end_date") or context.get("start_date"))).date() + timedelta(days=2)
+    except ValueError:
+        return {}
+
+    candidates = []
+    for event in result.get("events") or []:
+        try:
+            event_date = datetime.fromisoformat(str(event.get("event_date"))).date()
+        except (TypeError, ValueError):
+            continue
+        if not start <= event_date <= end:
+            continue
+        if int(target_house) not in [int(value) for value in (event.get("houses") or [])]:
+            continue
+        if float(event.get("importance", 0.0) or 0.0) < 5.2:
+            continue
+        if set(event.get("planets") or []) == {"Moon"} and event.get("kind") not in {"lunation", "eclipse"}:
+            continue
+        candidates.append(event)
+    if not candidates:
+        return {}
+
+    role = str(context.get("role") or "")
+    def key(event: dict):
+        kind = str(event.get("kind") or "")
+        polarity = str(event.get("polarity") or "")
+        role_bonus = 0.0
+        if role in {"complication", "resolution"} and kind in {"lunation", "eclipse"}:
+            role_bonus += 1.2
+        if role == "opening" and polarity in {"pressure", "opportunity"}:
+            role_bonus += 0.4
+        return float(event.get("importance", 0.0) or 0.0) + role_bonus
+    return max(candidates, key=key)
+
+
+def _context_for_evidence(context: dict, display_event: dict) -> dict:
+    beats = list(context.get("beats") or [])
+    best = max(beats, key=lambda beat: float(beat.get("score", 0.0) or 0.0)) if beats else {}
+    return {
+        "start_date": context.get("start_date") or display_event.get("event_date") or "",
+        "end_date": context.get("end_date") or display_event.get("event_date") or "",
+        "narrative_house": context.get("target_house"),
+        "strategy_posture": best.get("strategy_posture") or "",
+    }
+
+
+def _sky_evidence_for_chapter(narrative: MonthlyNarrative, result: dict, chapter, *, context: dict | None = None) -> str:
+    """Plain-language evidence placed beside the customer interpretation.
+
+    House numbers stay internal. If Luna has verified a concentrated pattern, it
+    states the count and names the planets/aspects instead of hiding behind vague
+    phrases such as 'several signals'.
+    """
+    beat = dict(context or _beat_for_chapter(result, chapter) or {})
+    if not beat:
+        evidence = list(chapter.evidence or ())
+        return "; ".join(evidence[:3])
+
+    narrative_house = beat.get("narrative_house")
+    area = _plain_life_area(narrative_house)
+    zodiac_area = _whole_sign_name(narrative.sign, narrative_house)
+    window_events = _window_events(result, beat)
+    focus_events = _month_to_date_focus_events(result, beat, narrative_house)
+
+    parts: list[str] = []
+    if zodiac_area and narrative_house not in (None, ""):
+        parts.append(
+            f"For {narrative.sign}, {zodiac_area} describes {area}."
+        )
+
+    # If several bodies have accumulated in the same life area, say exactly how
+    # many and name the events that establish the concentration.
+    if len(focus_events) >= 3:
+        planets = []
+        for event in focus_events:
+            for planet in event.get("planets") or []:
+                if planet not in planets:
+                    planets.append(str(planet))
+        event_list = "; ".join(_event_short(event, include_date=True) for event in focus_events[-5:])
+        parts.append(
+            f"The concentration is visible in the sky: {len(planets)} planets are involved in {len(focus_events)} major movements in this same area by this point — {event_list}."
+        )
+
+    pressure = [
+        event for event in window_events
+        if event.get("kind") == "aspect" and str(event.get("polarity") or "") == "pressure"
+    ]
+    supportive = [
+        event for event in window_events
+        if event.get("kind") == "aspect" and str(event.get("polarity") or "") == "opportunity"
+    ]
+
+    if pressure:
+        pressure_planets = []
+        for event in pressure:
+            for planet in event.get("planets") or []:
+                if planet not in pressure_planets and planet not in {"Moon", "True Node"}:
+                    pressure_planets.append(str(planet))
+        examples = "; ".join(_event_short(event) for event in pressure[:4])
+        noun = "pressure contact" if len(pressure) == 1 else "pressure contacts"
+        parts.append(
+            f"The pressure is explicit, not inferred: {len(pressure_planets)} planets are involved in {len(pressure)} exact {noun} in this build-up — {examples}."
+        )
+
+    if supportive:
+        examples = "; ".join(_event_short(event) for event in supportive[:3])
+        if pressure:
+            parts.append(f"Support is present too — {examples}.")
+        else:
+            parts.append(f"The supportive evidence is equally concrete — {examples}.")
+
+    rulers = set(SIGN_RULERS.get(narrative.sign, ()))
+    ruler_events = [event for event in window_events if set(event.get("planets") or []) & rulers]
+    if ruler_events:
+        ruler_names = ", ".join(sorted(rulers & {str(p) for event in ruler_events for p in (event.get("planets") or [])}))
+        if ruler_names:
+            parts.append(f"{ruler_names}, the ruling planet{'s' if ',' in ruler_names else ''} for {narrative.sign}, {'are' if ',' in ruler_names else 'is'} part of the evidence in this window.")
+
+    if not parts:
+        evidence = list(chapter.evidence or ())
+        return "; ".join(evidence[:3])
+    return " ".join(parts)
+
+
+def _chapter_strategy_label(result: dict, chapter, *, context: dict | None = None) -> str:
+    beat = dict(context or _beat_for_chapter(result, chapter) or {})
+    posture = str(beat.get("strategy_posture") or "").strip().upper() if beat else ""
+    return posture
 
 
 def _safe(value: object) -> str:
@@ -143,9 +449,10 @@ def _story_date_cards(narrative: MonthlyNarrative) -> str:
 def _technical_rows(result: dict) -> str:
     rows = []
     for item in (result.get("dominant_houses") or [])[:6]:
+        house = item.get("house")
         rows.append(
             "<tr>"
-            f"<td>House {_safe(item.get('house'))}</td>"
+            f"<td>{_safe(_plain_life_area(house))}</td>"
             f"<td>{_safe(item.get('topic'))}</td>"
             f"<td>{float(item.get('weight', 0.0)):.1f}</td>"
             "</tr>"
@@ -164,20 +471,39 @@ def _story_driver_rows(result: dict) -> str:
         role = str(beat.get("role") or "").lower()
         if role not in public_roles or float(beat.get("score", 0.0) or 0.0) <= 0:
             continue
-        direct = ", ".join(f"H{int(value)}" for value in (beat.get("direct_houses") or [])) or "—"
-        connected = ", ".join(f"H{int(value)}" for value in (beat.get("connected_houses") or [])) or "—"
+        direct = _plain_area_list(beat.get("direct_houses") or [])
+        connected = _plain_area_list(beat.get("connected_houses") or [])
         narrative_house = beat.get("narrative_house")
-        narrative = f"H{int(narrative_house)}" if narrative_house not in (None, "") else "—"
+        narrative = _plain_life_area(narrative_house) if narrative_house not in (None, "") else "—"
         path = f"{direct} → {narrative}"
         if connected != "—":
-            path += f" · connected {connected}"
+            path += f" · connected with {connected}"
+        raw_reason = str(beat.get("connection_reason") or "direct event / cluster evidence")
+        if raw_reason == "direct event house":
+            reason = "directly activated by this event"
+        elif "promoted through" in raw_reason:
+            reason = "promoted because the wider event cluster connects this life area to the main story"
+        else:
+            reason = raw_reason.replace("house", "life area")
         rows.append(
             "<tr>"
             f"<td>{_safe(role.replace('_', ' ').title())}</td>"
             f"<td>{_safe(beat.get('title'))}</td>"
             f"<td>{_safe(path)}</td>"
-            f"<td>{_safe(beat.get('connection_reason') or 'direct event / cluster evidence')}</td>"
+            f"<td>{_safe(reason)}</td>"
             f"<td>{float(beat.get('score', 0.0)):.1f}</td>"
+            "</tr>"
+        )
+    # Make the convergent bridge auditable in plain customer language.
+    tertiary = arc.get("tertiary_house")
+    if tertiary not in (None, ""):
+        rows.append(
+            "<tr>"
+            "<td>Bridge</td>"
+            f"<td>{_safe(_plain_life_area(tertiary))}</td>"
+            f"<td>{_safe(_plain_life_area(arc.get('primary_house')))} → {_safe(_plain_life_area(tertiary))} → {_safe(_plain_life_area(arc.get('secondary_house')))}</td>"
+            f"<td>{_safe('Promoted because this life area is present in both the opening and result event clusters, linking ' + _plain_life_area(arc.get('primary_house')) + ' with ' + _plain_life_area(arc.get('secondary_house')) + '.')}</td>"
+            f"<td>{float(arc.get('convergence_score', 0.0) or 0.0):.1f}</td>"
             "</tr>"
         )
     return "".join(rows)
@@ -190,7 +516,7 @@ def _transition_rows(result: dict) -> str:
             "<tr>"
             f"<td>{_safe(human_date(item.get('event_date')))}</td>"
             f"<td>{_safe(item.get('title'))}</td>"
-            f"<td>{_safe(', '.join(map(str, item.get('houses') or [])))}</td>"
+            f"<td>{_safe(_plain_area_list(item.get('houses') or []))}</td>"
             "</tr>"
         )
     return "".join(rows)
@@ -221,7 +547,7 @@ def _retrograde_rows(result: dict) -> str:
             f"<td>{_safe(item.get('planet'))}</td>"
             f"<td>{_safe(human_date(item.get('retrograde_start')))}</td>"
             f"<td>{_safe(human_date(item.get('direct_date')))}</td>"
-            f"<td>{_safe(', '.join(map(str, item.get('houses') or [])))}</td>"
+            f"<td>{_safe(_plain_area_list(item.get('houses') or []))}</td>"
             "</tr>"
         )
     return "".join(rows)
@@ -322,34 +648,84 @@ def _carryover_rows_html(result: dict) -> str:
             "<tr>"
             f"<td>{_safe(human_date(item.get('event_date')))}</td>"
             f"<td>{_safe(item.get('title'))}</td>"
-            f"<td>{_safe(', '.join(map(str, item.get('houses') or [])))}</td>"
+            f"<td>{_safe(_plain_area_list(item.get('houses') or []))}</td>"
             "</tr>"
         )
     return "".join(rows)
 
 
 def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
-    exact_dates: dict[str, str] = {}
-    for item in result.get("events") or []:
-        title = str(item.get("title") or "").strip()
-        event_date = item.get("event_date")
-        if title and event_date and title not in exact_dates:
-            exact_dates[title] = human_date(event_date)
+    prepared = []
+    total = len(narrative.chapters)
+    for index, chapter in enumerate(narrative.chapters):
+        context = _chapter_context(result, index, total)
+        display_event = _direct_story_event(result, context)
+        evidence_context = _context_for_evidence(context, display_event)
+        display_title = str(display_event.get("title") or chapter.title)
+        exact_date = human_date(display_event.get("event_date")) if display_event.get("event_date") else ""
+        window = chapter.date_range
+        sky_evidence = _sky_evidence_for_chapter(narrative, result, chapter, context=evidence_context)
+        strategy = _chapter_strategy_label(result, chapter, context=evidence_context)
+        prepared.append({
+            "chapter": chapter,
+            "context": context,
+            "display_title": display_title,
+            "exact_date": exact_date,
+            "window": window,
+            "sky_evidence": sky_evidence,
+            "strategy": strategy,
+            "event_key": (str(display_event.get("event_date") or ""), display_title),
+        })
+
+    # If the bridge and resolution genuinely use the same astronomical event,
+    # tell the story once and let the interpretation progress inside that card.
+    merged = []
+    for item in prepared:
+        if merged and item["event_key"] != ("", "") and item["event_key"] == merged[-1]["event_key"]:
+            previous = merged[-1]
+            previous["paragraphs"].extend(list(item["chapter"].paragraphs))
+            previous["actions"].append((item["strategy"], item["chapter"].action))
+            previous_house = previous["context"].get("target_house")
+            current_house = item["context"].get("target_house")
+            if current_house not in (None, "") and current_house != previous_house:
+                current_area = _plain_life_area(current_house)
+                previous["sky_evidence"] += (
+                    f" The same astronomical event also directly connects with {current_area}, "
+                    "which is why Luna uses it again as the closing test rather than inventing a separate event."
+                )
+            continue
+        merged.append({
+            **item,
+            "paragraphs": list(item["chapter"].paragraphs),
+            "actions": [(item["strategy"], item["chapter"].action)],
+        })
 
     acts = []
-    for chapter in narrative.chapters:
-        exact_date = exact_dates.get(str(chapter.title).strip(), "")
-        if exact_date and exact_date != chapter.date_range:
+    for item in merged:
+        chapter = item["chapter"]
+        exact_date = item["exact_date"]
+        if exact_date and exact_date != item["window"]:
             date_html = (
                 f'<span>{_safe(exact_date)}</span>'
-                f'<small>{_safe(chapter.title)}</small>'
-                f'<em>Influence window: {_safe(chapter.date_range)}</em>'
+                f'<small>{_safe(item["display_title"])}</small>'
+                f'<em>Influence window: {_safe(item["window"])}</em>'
             )
         else:
             date_html = (
-                f'<span>{_safe(chapter.date_range)}</span>'
-                f'<small>{_safe(chapter.title)}</small>'
+                f'<span>{_safe(item["window"])}</span>'
+                f'<small>{_safe(item["display_title"])}</small>'
             )
+
+        action_lines = []
+        seen_actions = set()
+        for strategy, action in item["actions"]:
+            key = (strategy, action)
+            if key in seen_actions:
+                continue
+            seen_actions.add(key)
+            move_label = f"Luna's move — {strategy}" if strategy else "Luna's move"
+            action_lines.append(f'<p class="luna-chapter-move"><strong>{_safe(move_label)}:</strong> {_safe(action)}</p>')
+
         acts.append(
             f"""
 <article class="luna-story-act">
@@ -357,8 +733,10 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     {date_html}
   </div>
   <div class="luna-story-copy">
+    {f'<div class="luna-sky-evidence"><span>Why Luna says this</span><p>{_safe(item["sky_evidence"])}</p></div>' if item["sky_evidence"] else ''}
     <h3>{_safe(chapter.hook)}</h3>
-    {_paragraphs(chapter.paragraphs)}
+    {_paragraphs(item["paragraphs"])}
+    {''.join(action_lines)}
   </div>
 </article>
             """
@@ -441,7 +819,6 @@ def build_monthly_experience_html(
     instance_id = f"luna-monthly-{uuid4().hex}"
     chapters = _chapter_cards(narrative, result)
     life_rows = _life_rows(narrative, result)
-    story_dates = _story_date_cards(narrative)
     arc_evidence_path = _arc_evidence_path(result)
     scenario_rows = _scenario_rows_html(result)
     carryover_rows = _carryover_rows_html(result)
@@ -542,12 +919,6 @@ def build_monthly_experience_html(
     </div>
   </details>
 
-  <details>
-    <summary>{_safe(TIMING_LABEL)} <span>+</span></summary>
-    <div class="luna-detail-body">
-      <div class="luna-date-grid">{_key_date_cards(narrative)}</div>
-    </div>
-  </details>
 
   <details>
     <summary>{_safe(TECHNICAL_LABEL)} <span>+</span></summary>
@@ -555,7 +926,7 @@ def build_monthly_experience_html(
       <h3>Carryover evidence</h3>
       <div class="luna-table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Evidence</th><th>Houses</th></tr></thead>
+          <thead><tr><th>Date</th><th>Evidence</th><th>Life areas</th></tr></thead>
           <tbody>{carryover_rows}</tbody>
         </table>
       </div>
@@ -568,10 +939,10 @@ def build_monthly_experience_html(
       </div>
       <p class="luna-method-note">These are ranked symbolic event families, not measured probabilities or guarantees.</p>
       <h3>Narrative evidence ledger</h3>
-      <p class="luna-method-note">Every event used publicly is traceable here. Direct houses come from the event itself; connected houses come from the event cluster; the story house is the house Luna selected for that narrative role.</p>
+      <p class="luna-method-note">Every event used publicly is traceable here. The direct area comes from the event itself; connected areas come from the wider event cluster; the story area is the life area Luna selected for that narrative role.</p>
       <div class="luna-table-wrap">
         <table>
-          <thead><tr><th>Role</th><th>Event</th><th>Direct → story</th><th>Why connected</th><th>Score</th></tr></thead>
+          <thead><tr><th>Role</th><th>Event</th><th>Direct area → story area</th><th>Why connected</th><th>Score</th></tr></thead>
           <tbody>{_story_driver_rows(result)}</tbody>
         </table>
       </div>
@@ -586,21 +957,21 @@ def build_monthly_experience_html(
       <h3>Monthly background weight</h3>
       <div class="luna-table-wrap">
         <table>
-          <thead><tr><th>House</th><th>Life area</th><th>Weight</th></tr></thead>
+          <thead><tr><th>Life area</th><th>Calculated topic</th><th>Weight</th></tr></thead>
           <tbody>{_technical_rows(result)}</tbody>
         </table>
       </div>
       <h3>Major transitions</h3>
       <div class="luna-table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Evidence</th><th>Houses</th></tr></thead>
+          <thead><tr><th>Date</th><th>Evidence</th><th>Life areas</th></tr></thead>
           <tbody>{_transition_rows(result)}</tbody>
         </table>
       </div>
       <h3>Retrograde climate</h3>
       <div class="luna-table-wrap">
         <table>
-          <thead><tr><th>Planet</th><th>Retrograde</th><th>Direct</th><th>Houses</th></tr></thead>
+          <thead><tr><th>Planet</th><th>Retrograde</th><th>Direct</th><th>Life areas</th></tr></thead>
           <tbody>{_retrograde_rows(result)}</tbody>
         </table>
       </div>
@@ -634,11 +1005,6 @@ def build_monthly_experience_html(
 
 {relationship_test_section}
 
-<section class="luna-monthly-section luna-story-dates-section">
-  <div class="luna-eyebrow">Dates worth circling</div>
-  <h2>The moments that move the story</h2>
-  <div class="luna-story-date-grid">{story_dates}</div>
-</section>
 
 {romance_section}
 
@@ -859,6 +1225,32 @@ def build_monthly_experience_html(
   margin:.35rem 0 .8rem;
   line-height:1.62;
 }}
+.luna-sky-evidence {{
+  margin:0 0 1rem;
+  padding:.8rem .95rem;
+  border-left:3px solid var(--black);
+  background:var(--soft);
+}}
+.luna-sky-evidence span {{
+  display:block;
+  margin-bottom:.35rem;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.62rem;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+}}
+.luna-sky-evidence p {{
+  margin:0;
+  font-size:.93rem;
+  line-height:1.52;
+}}
+.luna-chapter-move {{
+  margin-top:1rem !important;
+  padding-top:.75rem;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+}}
+.luna-chapter-move strong {{ color:var(--black); }}
 .luna-relationship-test {{
   background:var(--soft);
 }}
