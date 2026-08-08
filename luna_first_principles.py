@@ -18,7 +18,7 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.3"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.4"
 
 PIPELINE = (
     "Nature",
@@ -50,6 +50,9 @@ FIRST_PRINCIPLES = (
     "When a pattern is verified, state it plainly: give the count, planets and aspect evidence close to the claim.",
     "One customer chronology is authoritative; duplicate date-by-date retellings are compressed into that chronology.",
     "Trajectory matters: Luna must show what begins, builds, peaks, eases or reverses rather than hiding the month inside an average score.",
+    "The monthly average may describe climate, but trajectory controls timing; a worsening month and a recovering month must not receive the same strategic synthesis merely because their averages are similar.",
+    "Choice is time-sensitive: Luna may hold early and advance later when Nature has materially changed the conditions.",
+    "Evidence counts are exact and deduplicated; a claimed number of hard or supportive contacts must match the contacts shown beside the claim.",
     "A narrative role is never forced. If Nature does not supply a strong bridge, Luna does not invent one.",
     "A supportive secondary current may be a countercurrent or relief rather than another main plot; its evidence and limits must be named.",
     "Customer prose earns its place by bringing Nature, consequence or choice to the table; generic filler is removed.",
@@ -136,6 +139,8 @@ def methodology_metadata() -> dict:
         "evidence_proximity_policy": "verified_claim_count_planets_aspects_near_interpretation",
         "chronology_policy": "single_authoritative_how_the_month_unfolds",
         "trajectory_policy": "show_build_peak_ease_or_reversal_before_story_synthesis",
+        "time_sensitive_choice_policy": "window_strategy_then_monthly_synthesis_never_average_only",
+        "evidence_count_policy": "deduplicated_claim_count_must_match_visible_contacts",
         "bridge_policy": "optional_only_never_forced",
         "countercurrent_policy": "supportive_relief_may_offset_main_pressure_without_becoming_main_plot",
         "nature_only_editorial_policy": "remove_customer_copy_that_adds_neither_evidence_consequence_nor_choice",

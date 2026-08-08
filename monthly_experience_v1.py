@@ -165,6 +165,33 @@ def _month_to_date_focus_events(result: dict, beat: dict, narrative_house: int |
 
 def _chapter_context(result: dict, index: int, total: int) -> dict:
     arc = result.get("monthly_arc") or {}
+    trajectory = result.get("monthly_trajectory") or {}
+    windows = list(trajectory.get("windows") or [])
+
+    # Nature-led chronology: when the trajectory engine is present, chapter
+    # evidence comes from the actual chronological window and the life area the
+    # story is tracking in that window.  This prevents an arc beat from being
+    # attached to a life-area explanation it does not directly support.
+    if windows and index < len(windows):
+        window = windows[index]
+        primary = trajectory.get("primary_house") or arc.get("primary_house")
+        secondary = trajectory.get("secondary_house") or arc.get("secondary_house") or primary
+        target_house = primary if index < len(windows) - 1 else secondary
+        role = "opening" if index == 0 else "complication" if index < len(windows) - 1 else "resolution"
+        start = str(result.get("start") or "")
+        year_month = start[:7] if len(start) >= 7 else ""
+        start_day = int(window.get("start_day") or 1)
+        end_day = int(window.get("end_day") or start_day)
+        return {
+            "role": role,
+            "target_house": int(target_house) if target_house not in (None, "") else None,
+            "start_date": f"{year_month}-{start_day:02d}" if year_month else "",
+            "end_date": f"{year_month}-{end_day:02d}" if year_month else "",
+            "beats": [],
+            "strategy_posture": str(window.get("posture") or ""),
+            "trajectory_window": str(window.get("label") or ""),
+        }
+
     beats = {str(item.get("role") or "").lower(): dict(item) for item in (arc.get("beats") or [])}
     primary = arc.get("primary_house")
     secondary = arc.get("secondary_house")
@@ -231,8 +258,10 @@ def _direct_story_event(result: dict, context: dict) -> dict:
         kind = str(event.get("kind") or "")
         polarity = str(event.get("polarity") or "")
         role_bonus = 0.0
+        if kind in {"lunation", "eclipse"}:
+            role_bonus += 0.8
         if role in {"complication", "resolution"} and kind in {"lunation", "eclipse"}:
-            role_bonus += 1.2
+            role_bonus += 0.4
         if role == "opening" and polarity in {"pressure", "opportunity"}:
             role_bonus += 0.4
         return float(event.get("importance", 0.0) or 0.0) + role_bonus
@@ -246,7 +275,8 @@ def _context_for_evidence(context: dict, display_event: dict) -> dict:
         "start_date": context.get("start_date") or display_event.get("event_date") or "",
         "end_date": context.get("end_date") or display_event.get("event_date") or "",
         "narrative_house": context.get("target_house"),
-        "strategy_posture": best.get("strategy_posture") or "",
+        "strategy_posture": context.get("strategy_posture") or best.get("strategy_posture") or "",
+        "trajectory_window": context.get("trajectory_window") or "",
     }
 
 
@@ -265,7 +295,7 @@ def _sky_evidence_for_chapter(narrative: MonthlyNarrative, result: dict, chapter
     narrative_house = beat.get("narrative_house")
     area = _plain_life_area(narrative_house)
     zodiac_area = _whole_sign_name(narrative.sign, narrative_house)
-    window_events = _window_events(result, beat)
+    window_events = _window_events(result, beat, lookback_days=0 if beat.get("trajectory_window") else 7)
     focus_events = _month_to_date_focus_events(result, beat, narrative_house)
 
     parts: list[str] = []
@@ -287,14 +317,25 @@ def _sky_evidence_for_chapter(narrative: MonthlyNarrative, result: dict, chapter
             f"The concentration is visible in the sky: {len(planets)} planets are involved in {len(focus_events)} major movements in this same area by this point — {event_list}."
         )
 
-    pressure = [
+    def _unique_aspects(values: list[dict]) -> list[dict]:
+        seen = set()
+        unique = []
+        for event in values:
+            key = str(event.get("title") or "").strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(event)
+        return unique
+
+    pressure = _unique_aspects([
         event for event in window_events
         if event.get("kind") == "aspect" and str(event.get("polarity") or "") == "pressure"
-    ]
-    supportive = [
+    ])
+    supportive = _unique_aspects([
         event for event in window_events
         if event.get("kind") == "aspect" and str(event.get("polarity") or "") == "opportunity"
-    ]
+    ])
 
     if pressure:
         pressure_planets = []
@@ -302,10 +343,11 @@ def _sky_evidence_for_chapter(narrative: MonthlyNarrative, result: dict, chapter
             for planet in event.get("planets") or []:
                 if planet not in pressure_planets and planet not in {"Moon", "True Node"}:
                     pressure_planets.append(str(planet))
-        examples = "; ".join(_event_short(event) for event in pressure[:4])
+        examples = "; ".join(_event_short(event) for event in pressure[:5])
         noun = "pressure contact" if len(pressure) == 1 else "pressure contacts"
+        planet_noun = "planet is" if len(pressure_planets) == 1 else "planets are"
         parts.append(
-            f"The pressure is explicit, not inferred: {len(pressure_planets)} planets are involved in {len(pressure)} exact {noun} in this build-up — {examples}."
+            f"The pressure is explicit, not inferred: {len(pressure_planets)} {planet_noun} involved in {len(pressure)} exact {noun} in this build-up — {examples}."
         )
 
     if supportive:
@@ -531,8 +573,8 @@ def _decision_evidence_rows(result: dict) -> str:
         ("Uncertainty share", f"{float(decision.get('uncertainty_score', 0.0)):.1f}"),
         ("Support minus friction", f"{float(decision.get('evidence_balance', 0.0)):+.1f}"),
         ("Capacity", f"{decision.get('capacity_label', 'n/a')} ({float(decision.get('capacity_pressure', 0.0)):.1f}/100)"),
-        ("Truth gate", f"{decision.get('action_truth', 'n/a')} · {decision.get('posture', 'n/a')}"),
-        ("Portfolio strategy", decision.get("portfolio_posture", "n/a")),
+        ("Monthly-average truth gate", f"{decision.get('action_truth', 'n/a')} · {decision.get('posture', 'n/a')}"),
+        ("Trajectory strategy", decision.get("portfolio_posture", "n/a")),
     )
     return "".join(
         f"<tr><td>{_safe(label)}</td><td>{_safe(value)}</td></tr>" for label, value in rows
@@ -884,9 +926,7 @@ def build_monthly_experience_html(
             for label, value in narrative.solar_rows
         )}
       </div>
-      <p><strong>Opportunity:</strong> {_safe(narrative.solar_opportunity)}</p>
-      <p><strong>Risk:</strong> {_safe(narrative.solar_risk)}</p>
-      <p><strong>Response:</strong> {_safe(narrative.solar_action)}</p>
+      <p class="luna-method-note"><strong>Nature note:</strong> The solar layer is kept here only as slower context — sign movement, local light and the next solar gate. The event-led monthly trajectory remains authoritative.</p>
     </div>
   </details>
 

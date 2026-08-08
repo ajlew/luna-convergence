@@ -850,6 +850,7 @@ def _domain_story(
     fallback_first: str,
     fallback_move: str,
     required_houses: set[int] | None = None,
+    posture: str = "",
 ) -> tuple[str, ...]:
     ranked = _domain_scenarios(result, focus, maximum=3, required_houses=required_houses)
     if not ranked:
@@ -878,8 +879,32 @@ def _domain_story(
         if top.dominant_polarity == "friction"
         else "Use behaviour and practical evidence to decide which version of the scenario is actually developing."
     )
+    posture = str(posture or "").upper()
+    if posture == "PASS":
+        first_line = (
+            f"The strongest {focus.lower()} pattern centres on {top.label}. Even if it appears through {example_text}, "
+            "the headline alone is not a reason to chase it; the present risk/reward does not justify extra exposure."
+        )
+    elif posture == "HOLD":
+        first_line = (
+            f"The strongest {focus.lower()} pattern centres on {top.label}. If it appears through {example_text}, "
+            "keep the position reversible while timing, responsibility and capacity are still moving."
+        )
+    elif posture == "NEGOTIATE":
+        first_line = (
+            f"The strongest {focus.lower()} pattern centres on {top.label}. If it appears through {example_text}, "
+            "the opportunity is not the whole answer; improve the amount, timing, ownership or obligation before agreeing."
+        )
+    elif posture == "QUESTION":
+        first_line = (
+            f"The strongest {focus.lower()} pattern centres on {top.label}. If it appears through {example_text}, "
+            "verify the missing fact before turning the signal into a commitment."
+        )
+    else:
+        first_line = f"The strongest {focus.lower()} pattern centres on {top.label}. It may show up through {example_text}."
+
     return (
-        f"The strongest {focus.lower()} pattern centres on {top.label}. It may show up through {example_text}.",
+        first_line,
         f"The supporting evidence concentrates around {evidence_text}." if evidence_text else polarity_line,
         polarity_line if evidence_text else fallback_move,
     )
@@ -898,12 +923,14 @@ def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple
         )
 
     love_house = _narrative_domain_house(primary_house, secondary_house, {5, 7})
+    love_posture = str(romance.get("posture", ""))
     base = _domain_story(
         result,
         "Love and relationships",
         fallback_first="A spark can open the door, but behaviour decides whether it stays open.",
         fallback_move="Judge the connection by mutual effort after the exciting moment.",
         required_houses={love_house} if love_house else None,
+        posture=love_posture,
     )
     if luna_line:
         return (luna_line, *base[:2])
@@ -912,28 +939,30 @@ def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple
 
 def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
     work_house = _narrative_domain_house(primary_house, secondary_house, {6, 10})
+    decision = dict(((result.get("monthly_decision") or {}).get("domain_decisions") or {}).get("work") or {})
     base = _domain_story(
         result,
         "Career and work",
         fallback_first="A professional opening gains value when the result, responsibility and next step are visible.",
         fallback_move="Finish one supported result before opening another direction.",
         required_houses={work_house} if work_house else None,
+        posture=str(decision.get("posture", "")),
     )
-    decision = dict(((result.get("monthly_decision") or {}).get("domain_decisions") or {}).get("work") or {})
     line = str(decision.get("luna_line", "")).strip()
     return (f"{base[0]} {line}".strip(), *base[1:]) if line else base
 
 
 def _money_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
     money_house = _narrative_domain_house(primary_house, secondary_house, {2, 8})
+    decision = dict(((result.get("monthly_decision") or {}).get("domain_decisions") or {}).get("money") or {})
     base = _domain_story(
         result,
         "Money and security",
         fallback_first="Money becomes easier to judge when price, ownership and obligations are separated from excitement.",
         fallback_move="Choose from visible numbers and enough room to live, not pressure or fantasy.",
         required_houses={money_house} if money_house else None,
+        posture=str(decision.get("posture", "")),
     )
-    decision = dict(((result.get("monthly_decision") or {}).get("domain_decisions") or {}).get("money") or {})
     line = str(decision.get("luna_line", "")).strip()
     return (f"{base[0]} {line}".strip(), *base[1:]) if line else base
 
@@ -1377,6 +1406,19 @@ def _trajectory_action(posture: str) -> str:
     }.get(str(posture).upper(), "Let the evidence determine the next move.")
 
 
+def _trajectory_window_date_range(trajectory: dict, window: dict, fallback: str) -> str:
+    start_raw = str(trajectory.get("period_start") or "")
+    if len(start_raw) < 7:
+        return fallback
+    year_month = start_raw[:7]
+    try:
+        start_iso = f"{year_month}-{int(window.get('start_day') or 1):02d}"
+        end_iso = f"{year_month}-{int(window.get('end_day') or window.get('start_day') or 1):02d}"
+        return human_date_range(start_iso, end_iso)
+    except Exception:
+        return fallback
+
+
 def _trajectory_aligned_chapters(
     chapters: tuple[MonthlyChapter, ...],
     trajectory: dict,
@@ -1409,14 +1451,24 @@ def _trajectory_aligned_chapters(
         window = windows[min(index, len(windows) - 1)]
         support = float(window.get("support", 0.0))
         friction = float(window.get("friction", 0.0))
-        pressure = "; ".join(str(item) for item in (window.get("pressure_aspects") or [])[:4])
+        balance = support - friction
+        pressure = "; ".join(str(item) for item in (window.get("pressure_aspects") or [])[:5])
         supportive = "; ".join(str(item) for item in (window.get("support_aspects") or [])[:3])
         posture = str(window.get("posture", "QUESTION"))
+        balance_phrase = (
+            "support clearly outweighs friction" if balance >= 10
+            else "friction clearly outweighs support" if balance <= -10
+            else "support and friction are close enough that timing matters"
+        )
 
         if index == 0:
-            hook = "The first signal: movement arrives before the whole picture is settled"
+            hook = (
+                "The difficult opening: protect room to move before deciding"
+                if trajectory_kind in {"recovery", "easing"} and balance < 0
+                else "The first signal: movement arrives before the whole picture is settled"
+            )
             paragraphs = [
-                f"The month first shows itself through {primary_area}. Support and friction are still competing ({support:.0f} support / {friction:.0f} friction), so the opening is evidence, not a final verdict."
+                f"The month first shows itself through {primary_area}. Here, {balance_phrase}, so the opening is evidence, not a final verdict."
             ]
             if pressure:
                 paragraphs.append(
@@ -1428,24 +1480,39 @@ def _trajectory_aligned_chapters(
             hook = (
                 "The storm peaks: the original problem starts affecting the rest of the month"
                 if trajectory_kind in {"late_storm", "pressure_builds"}
+                else "The recovery holds: later conditions give you more room to choose"
+                if trajectory_kind in {"recovery", "easing"}
                 else "The late-month result shows what the earlier pattern can actually carry"
             )
             paragraphs = [
-                f"By late month the balance has changed to {support:.0f} support / {friction:.0f} friction. The original pressure around {primary_area} now has consequences for {secondary_area}."
+                f"By late month, {balance_phrase}. The earlier pressure around {primary_area} now has consequences for {secondary_area}."
             ]
             if pressure:
                 paragraphs.append(
                     f"This is not vague atmosphere: the hard contacts include {pressure}."
                     + (f" Counter-support remains through {supportive}." if supportive else "")
                 )
-            paragraphs.append(
-                "The task is no longer to answer every signal. It is to protect the commitments that still make sense after the pressure has exposed their real cost."
-            )
+            if trajectory_kind in {"late_storm", "pressure_builds"}:
+                paragraphs.append(
+                    "The task is no longer to answer every signal. Protect the commitments that still make sense after the pressure has exposed their real cost."
+                )
+            elif trajectory_kind in {"recovery", "easing"}:
+                paragraphs.append(
+                    "The task is to notice that Nature has changed the conditions. Do not carry an early defensive posture forward after support has materially improved."
+                )
+            else:
+                paragraphs.append(
+                    "The task is to judge the later window on its own evidence rather than on the month's opening mood."
+                )
 
         else:
-            hook = "The pattern concentrates: the main issue becomes harder to treat as a one-off"
+            hook = (
+                "The weather turns: support begins to outrun the difficult opening"
+                if trajectory_kind in {"recovery", "easing"} and balance >= 10
+                else "The pattern concentrates: the main issue becomes harder to treat as a one-off"
+            )
             paragraphs = [
-                f"Mid-month keeps returning attention to {primary_area}. The sky still contains support ({support:.0f}) as well as friction ({friction:.0f}), so this is not a simple failure story; it is the point where the terms, limits and responsibilities become visible."
+                f"Mid-month keeps returning attention to {primary_area}. Here, {balance_phrase}; this is where the terms, limits and responsibilities become easier to judge."
             ]
             if pressure:
                 paragraphs.append(
@@ -1462,7 +1529,7 @@ def _trajectory_aligned_chapters(
 
         aligned.append(MonthlyChapter(
             label=("Act I" if index == 0 else "Act II" if index == 1 else "Act III"),
-            date_range=chapter.date_range,
+            date_range=_trajectory_window_date_range(trajectory, window, chapter.date_range),
             hook=hook,
             title=chapter.title,
             paragraphs=tuple(paragraphs),
@@ -1482,6 +1549,21 @@ def _countercurrent_love_story(result: dict, trajectory: dict) -> tuple[str, ...
     second = (f"The relief has real sky support: {support}." if support else "The relief is supported by direct relationship or creative evidence in the sky.")
     third = (f"Late-month pressure changes the terms — {late}. Enjoy the lift, but keep commitments reversible." if late else "Use the relief without asking it to make the month's larger decision for you.")
     return (first, second, third)
+
+
+def _customer_local_season(solar: dict) -> str:
+    season = str(solar.get("local_season", "Unavailable"))
+    hemisphere = str(solar.get("hemisphere", ""))
+    gate = str(solar.get("next_solar_gate", ""))
+    if hemisphere == "Southern" and gate == "September Equinox" and season == "Winter":
+        return "Late winter → spring at the September Equinox"
+    if hemisphere == "Southern" and gate == "March Equinox" and season == "Summer":
+        return "Late summer → autumn at the March Equinox"
+    if hemisphere == "Northern" and gate == "September Equinox" and season == "Summer":
+        return "Late summer → autumn at the September Equinox"
+    if hemisphere == "Northern" and gate == "March Equinox" and season == "Winter":
+        return "Late winter → spring at the March Equinox"
+    return season
 
 
 def build_monthly_narrative(
@@ -1687,13 +1769,12 @@ def build_monthly_narrative(
     solar_rows = (
         ("Solar phase", f"{solar.get('solar_quarter', 'Unavailable')} / {solar.get('solar_process', '')}"),
         ("Local light movement", f"{solar.get('light_direction', 'Unavailable')} from {solar.get('city', 'timezone estimate')}"),
-        ("Local season", str(solar.get("local_season", "Unavailable"))),
+        ("Local season", _customer_local_season(solar)),
         ("Next solar gate", f"{solar.get('next_solar_gate', 'Unavailable')} - {human_date(solar.get('next_gate_date')) if solar.get('next_gate_date') else 'Unavailable'}"),
         (
             "Solar life-area movement",
             f"{HOUSE_DISPLAY.get(int(solar.get('start_house', 1) or 1), 'Starting area')} → {HOUSE_DISPLAY.get(int(solar.get('end_house', 1) or 1), 'Next area')}",
         ),
-        ("Customer focus", str(solar.get("focus_meaning", "Unavailable"))),
     )
 
     scores = [float(item.get("score", 0.0)) for item in convergences]

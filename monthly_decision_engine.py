@@ -28,7 +28,7 @@ from luna_first_principles import (
 
 
 POSTURES = ("ADVANCE", "QUESTION", "NEGOTIATE", "HOLD", "PASS")
-PORTFOLIO_POSTURES = ("FULL ADVANCE", "SELECTIVE ADVANCE", "PROBE", "RENEGOTIATE", "DEFENSIVE HOLD", "PASS")
+PORTFOLIO_POSTURES = ("FULL ADVANCE", "SELECTIVE ADVANCE", "TIMED ADVANCE", "PROBE", "RENEGOTIATE", "DEFENSIVE HOLD", "PASS")
 
 # Direct domain houses. Romance is deliberately strict: H8 can colour intimacy
 # and shared stakes, but it cannot by itself make romance a main plot.
@@ -667,6 +667,19 @@ def evaluate_monthly_decision(
         )
 
     portfolio_posture, portfolio_rationale, portfolio_plan = _portfolio_strategy(domains, posture)
+
+    # Trajectory sits above the monthly average.  If Nature has clearly shown
+    # deterioration, recovery or reversal over time, preserve that timing in the
+    # final portfolio strategy rather than flattening the month back into one
+    # average posture.  The underlying truth-gate values remain available in the
+    # technical evidence as the monthly-average climate.
+    trajectory_posture = str(trajectory.get("portfolio_posture") or "").strip()
+    if trajectory_posture in PORTFOLIO_POSTURES:
+        portfolio_posture = trajectory_posture
+        portfolio_rationale = str(trajectory.get("portfolio_rationale") or portfolio_rationale)
+        trajectory_plan = tuple(str(item) for item in (trajectory.get("portfolio_action_plan") or ()) if str(item).strip())
+        if trajectory_plan:
+            portfolio_plan = trajectory_plan
 
     return MonthlyDecision(
         action_truth=action_truth,

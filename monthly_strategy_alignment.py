@@ -100,6 +100,7 @@ def strategy_rule(decision: Mapping[str, object] | None) -> str:
     rules = {
         "FULL ADVANCE": "Follow the evidence that keeps strengthening; increase commitment only where the terms remain visible.",
         "SELECTIVE ADVANCE": "Advance where support is clean. Negotiate mixed terms. Let poor-risk/reward demands pass.",
+        "TIMED ADVANCE": "Preserve optionality through the difficult window, then move when the sky has materially improved.",
         "PROBE": "Use the month to improve information before you improve commitment.",
         "RENEGOTIATE": "Visibility is leverage, not permission. Change the terms before you change your exposure.",
         "DEFENSIVE HOLD": "Protect capacity and optionality; essential action only until the pressure separates.",
@@ -155,6 +156,8 @@ def climate_aware_hook(
         return "Visibility rises; capacity decides what deserves a response"
     if portfolio == "RENEGOTIATE":
         return "The opening matters, but the terms decide what is worth keeping"
+    if portfolio == "TIMED ADVANCE":
+        return "The difficult opening does not own the whole month; wait for the cleaner window"
     if portfolio == "PROBE":
         return "The next answer matters more than the first signal"
     return original
@@ -175,6 +178,10 @@ def strategy_do_dont(
         "SELECTIVE ADVANCE": (
             "Advance the domain that has earned it; keep the other decisions separate.",
             "Turn one green light into permission everywhere.",
+        ),
+        "TIMED ADVANCE": (
+            "Keep the difficult opening reversible, then use the cleaner window when support has earned it.",
+            "Carry an early defensive posture forward after the conditions have materially improved.",
         ),
         "PROBE": (
             "Ask the question that would materially change the decision.",

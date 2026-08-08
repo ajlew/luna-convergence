@@ -537,11 +537,11 @@ def _select_tertiary_house(
     )
     # A third house should only become customer-facing when the convergence is
     # strong enough to improve the story. Otherwise it remains background.
-    if score < 0.68:
+    if score < 0.75:
         return (
             None,
             score,
-            f"No tertiary house: strongest bridge candidate H{house} scored {score:.2f}, below the 0.68 convergence threshold.",
+            f"No tertiary house: strongest bridge candidate H{house} scored {score:.2f}, below the 0.75 convergence threshold.",
         )
 
     rationale = (

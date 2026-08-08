@@ -21,7 +21,7 @@ from typing import Mapping, Sequence
 from monthly_decision_engine import calculate_climate_components, choose_posture
 from scenario_engine import event_importance_score
 
-TRAJECTORY_VERSION = "1.0"
+TRAJECTORY_VERSION = "1.1"
 
 LIFE_AREAS = {
     1: "identity, energy and personal direction",
@@ -115,13 +115,30 @@ def _is_support_aspect(event: object) -> bool:
     )
 
 
-def _top_aspects(events: Sequence[object], sign: str, house_weights: Mapping[int, float], *, pressure: bool, maximum: int = 4) -> list[str]:
+def _top_aspects(events: Sequence[object], sign: str, house_weights: Mapping[int, float], *, pressure: bool, maximum: int = 5) -> list[str]:
+    """Return the strongest unique aspects for a window.
+
+    The evidence sentence and the counted contacts must refer to the same unique
+    events.  Duplicate aspect rows can appear upstream when an event contributes
+    to more than one cluster; customer evidence must never count the same aspect
+    twice.
+    """
     predicate = _is_pressure_aspect if pressure else _is_support_aspect
     selected = sorted(
         (event for event in events if predicate(event)),
         key=lambda event: (-_importance(event, sign, house_weights), str(_value(event, "event_date", ""))),
     )
-    return [_aspect_label(event) for event in selected[:maximum]]
+    values: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for event in selected:
+        key = str(_value(event, "title", "")).strip().lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        values.append(_aspect_label(event))
+        if len(values) >= maximum:
+            break
+    return values
 
 
 def _major_primary_movements(events: Sequence[object], primary_house: int, sign: str, house_weights: Mapping[int, float], maximum: int = 5) -> list[str]:
@@ -190,19 +207,123 @@ def _trajectory_label(windows: Sequence[Mapping[str, object]]) -> tuple[str, str
     late_balance = float(late.get("balance", 0.0))
     first_balance = float(first.get("balance", 0.0))
     middle_balance = float(middle.get("balance", 0.0))
+    best_later = max(middle_balance, late_balance)
 
     if late_friction >= 60 and late_balance <= -20 and late_balance <= min(first_balance, middle_balance) - 20:
         return "late_storm", "Conditions deteriorate sharply late in the month; the final window carries the month's clearest pressure concentration."
-    if first_balance <= -15 and late_balance >= 10:
-        return "easing", "Pressure is strongest early and improves as the month develops."
+    if first_balance <= -15 and best_later >= 10 and late_balance >= first_balance + 15 and late_friction < 55:
+        return "recovery", "The month opens under pressure, then materially improves; timing matters because the cleaner opportunity arrives after the difficult start."
+    if first_balance <= -10 and late_balance >= 0 and late_balance >= first_balance + 10:
+        return "easing", "Pressure is strongest early and eases as the month develops; later choices have more room than the opening did."
     if first_balance >= 10 and middle_balance >= 10 and late_balance >= 10:
         return "support_builds", "Support remains stronger than friction across the month."
     if late_balance <= -10 and late_balance < first_balance - 10:
         return "pressure_builds", "Pressure strengthens as the month progresses."
     if late_balance >= 10 and late_balance > first_balance + 10:
         return "support_strengthens", "Support strengthens as the month progresses."
+    if first_balance * late_balance < 0:
+        return "reversal", "The balance reverses during the month; the correct move changes with the timing rather than with the monthly average."
     return "oscillating", "The month changes polarity rather than moving in one straight line; timing matters more than an average score."
 
+
+
+def _window_posture(trajectory: str, windows: Sequence[Mapping[str, object]], index: int) -> str:
+    """Choose the move for a window using both present conditions and direction of travel.
+
+    A strong current window is not treated identically when a storm is clearly
+    approaching, and a difficult opening is not allowed to dictate the whole
+    month when the evidence is materially improving.
+    """
+    window = windows[index]
+    balance = float(window.get("balance", 0.0))
+    support = float(window.get("support", 0.0))
+    friction = float(window.get("friction", 0.0))
+
+    if trajectory == "late_storm":
+        if index == len(windows) - 1:
+            return "HOLD" if support >= 15 else "PASS"
+        return "HOLD"
+    if trajectory == "pressure_builds":
+        return "NEGOTIATE" if index == 0 and balance > -10 else "HOLD"
+    if trajectory in {"recovery", "easing"}:
+        if index == 0 and balance < 0:
+            return "NEGOTIATE" if friction < 70 else "HOLD"
+        if balance >= 10:
+            return "ADVANCE"
+        if balance >= 0:
+            return "QUESTION"
+        return "HOLD"
+    if trajectory in {"support_builds", "support_strengthens"}:
+        return "ADVANCE" if balance >= 0 else "QUESTION"
+    if trajectory == "reversal":
+        if balance >= 10:
+            return "ADVANCE"
+        if balance <= -10:
+            return "HOLD"
+        return "QUESTION"
+    return str(window.get("posture") or "QUESTION")
+
+
+def _trajectory_portfolio(trajectory: str) -> tuple[str, str, tuple[str, ...]]:
+    if trajectory in {"recovery", "easing"}:
+        return (
+            "TIMED ADVANCE",
+            "Do not let the difficult opening dictate the whole month. Preserve optionality early, then use the cleaner window once support has materially improved.",
+            (
+                "Keep the opening reversible while the pressure is still dominant.",
+                "Reassess when the evidence improves; advance only in the window that has earned it.",
+                "Do not carry an early defensive posture forward after Nature has changed the conditions.",
+            ),
+        )
+    if trajectory == "late_storm":
+        return (
+            "DEFENSIVE HOLD",
+            "Use the cleaner early or middle window for essentials, then reduce exposure before the late pressure peak.",
+            (
+                "Complete essential moves before the pressure peak where possible.",
+                "Renegotiate unavoidable commitments as the difficult cluster builds.",
+                "Let optional exposure pass until the hard contacts separate.",
+            ),
+        )
+    if trajectory == "pressure_builds":
+        return (
+            "DEFENSIVE HOLD",
+            "Pressure strengthens through the month, so preserve room to move rather than adding exposure into a worsening trend.",
+            (
+                "Use early information without overcommitting.",
+                "Tighten terms as friction increases.",
+                "Protect capacity near the strongest pressure window.",
+            ),
+        )
+    if trajectory in {"support_builds", "support_strengthens"}:
+        return (
+            "SELECTIVE ADVANCE",
+            "Support strengthens or remains consistently cleaner than friction; use the strongest supported window without generalising that permission to every domain.",
+            (
+                "Advance the cleanest supported move.",
+                "Keep cost, timing and ownership visible as momentum grows.",
+                "Preserve optionality in any domain that does not share the supportive pattern.",
+            ),
+        )
+    if trajectory == "reversal":
+        return (
+            "PROBE",
+            "The month's polarity reverses, so timing is more important than a single monthly verdict; test each window before increasing commitment.",
+            (
+                "Use the smallest reversible move that improves information.",
+                "Change posture when the evidence changes instead of defending an earlier decision.",
+                "Commit only after the new direction has held long enough to become credible.",
+            ),
+        )
+    return (
+        "PROBE",
+        "The month oscillates; use timing and local evidence rather than forcing one posture across every window.",
+        (
+            "Treat each major window as a fresh decision point.",
+            "Advance only where support clearly outweighs friction.",
+            "Keep the rest reversible until the pattern settles.",
+        ),
+    )
 
 def _countercurrent(
     *,
@@ -333,6 +454,10 @@ def build_monthly_trajectory(
         ))
 
     trajectory, trajectory_reason = _trajectory_label(windows)
+    for index, window in enumerate(windows):
+        window["raw_posture"] = str(window.get("posture") or "QUESTION")
+        window["posture"] = _window_posture(trajectory, windows, index)
+    trajectory_portfolio, trajectory_portfolio_reason, trajectory_portfolio_plan = _trajectory_portfolio(trajectory)
     peak = max(windows, key=lambda item: (float(item.get("friction", 0.0)), float(item.get("capacity", 0.0))))
     countercurrent = _countercurrent(
         sign=sign,
@@ -353,8 +478,12 @@ def build_monthly_trajectory(
         headline = f"Pressure builds around {primary_short}; protect room to move before the peak"
     elif trajectory in {"support_builds", "support_strengthens"}:
         headline = f"Support gathers around {primary_short}; use the cleanest opening first"
+    elif trajectory == "recovery":
+        headline = f"A difficult opening around {primary_short} begins to loosen; the second half gives you more room to move"
     elif trajectory == "easing":
         headline = f"The pressure around {primary_short} begins to ease as the month develops"
+    elif trajectory == "reversal":
+        headline = f"The balance around {primary_short} reverses; timing matters more than the monthly average"
     else:
         headline = f"The month changes gear around {primary_short}; timing matters more than momentum"
 
@@ -371,6 +500,14 @@ def build_monthly_trajectory(
         central_storyline = (
             f"Support gathers around {primary_short}, with {secondary_area} showing where the opening can become useful."
         )
+    elif trajectory in {"recovery", "easing"}:
+        central_storyline = (
+            f"{primary_short.capitalize()} carry the difficult opening, but the balance improves as the month develops; later conditions give {secondary_area} more room than the opening did."
+        )
+    elif trajectory == "reversal":
+        central_storyline = (
+            f"The balance around {primary_short} changes direction during the month, so {secondary_area} must be judged by the window in which it arrives rather than by the monthly average."
+        )
     else:
         central_storyline = (
             f"The balance around {primary_short} changes through the month, so timing determines how {secondary_area} should be handled."
@@ -382,9 +519,15 @@ def build_monthly_trajectory(
     middle = windows[1] if len(windows) > 1 else windows[0]
     late = windows[-1]
 
+    early_balance = float(early.get("balance", 0.0))
+    early_phrase = (
+        "support is cleaner than friction" if early_balance >= 10
+        else "friction is stronger than support" if early_balance <= -10
+        else "support and friction are still competing"
+    )
     paragraphs.append(
         f"{month} is not one flat condition. The main story concentrates around {primary_area}. "
-        f"Early in the month support and friction are still competing ({early['support']:.0f} support / {early['friction']:.0f} friction), so movement is information before it is a verdict."
+        f"Early in the month {early_phrase}, so movement is information before it is a verdict."
     )
 
     primary_movements = _major_primary_movements(events, primary_house, sign, weights)
@@ -418,23 +561,29 @@ def build_monthly_trajectory(
     pressure_late = "; ".join(list(late.get("pressure_aspects") or [])[:4])
     if trajectory in {"late_storm", "pressure_builds"}:
         paragraphs.append(
-            f"Late month is the decisive part of the story. Friction rises to {late['friction']:.0f} while support falls to {late['support']:.0f}. "
+            "Late month is the decisive part of the story. Friction rises to a clearly dominant level while support falls away. "
             + (f"The pressure is explicit: {pressure_late}. " if pressure_late else "")
             + f"The original {primary_short} issue can now spill into {secondary_area}. The task is not to answer every demand; it is to protect the position that still makes sense when the pressure peaks."
         )
 
     if trajectory == "late_storm":
-        strategy = "Protect essentials, renegotiate what cannot be avoided, and let optional exposure pass. No clean easing appears inside the final September window, so preserving room to move is part of the strategy."
+        strategy = "Protect essentials, renegotiate what cannot be avoided, and let optional exposure pass. No clean easing appears inside the final window, so preserving room to move is part of the strategy."
     elif trajectory == "pressure_builds":
         strategy = "Reduce optional exposure as pressure strengthens; negotiate the essential parts and keep the rest reversible."
+    elif trajectory in {"recovery", "easing"}:
+        strategy = "Do not let the difficult opening dictate the whole month. Preserve optionality early, then use the cleaner window once support has materially improved."
     elif trajectory in {"support_builds", "support_strengthens"}:
         strategy = "Advance where support remains clean, but keep terms visible so momentum does not outrun evidence."
+    elif trajectory == "reversal":
+        strategy = "The correct move changes with the timing. Keep early decisions reversible and change posture when the sky has genuinely changed direction."
     else:
         strategy = "Treat timing as part of the decision: act in supportive windows and preserve optionality when the balance turns against you."
     paragraphs.append(strategy)
 
     return {
         "version": TRAJECTORY_VERSION,
+        "period_start": start.isoformat(),
+        "period_end": end.isoformat(),
         "trajectory": trajectory,
         "trajectory_reason": trajectory_reason,
         "headline": headline,
@@ -446,6 +595,9 @@ def build_monthly_trajectory(
         "windows": windows,
         "peak_window": {key: value for key, value in peak.items() if key != "events"},
         "countercurrent": countercurrent,
+        "portfolio_posture": trajectory_portfolio,
+        "portfolio_rationale": trajectory_portfolio_reason,
+        "portfolio_action_plan": trajectory_portfolio_plan,
         "story_paragraphs": paragraphs,
         "nature_rule": "The narrator follows the changing astronomical conditions; it does not force a bridge, subplot or positive ending that the evidence does not support.",
     }
