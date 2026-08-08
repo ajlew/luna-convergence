@@ -7,6 +7,7 @@ from typing import Iterable
 
 from date_display import human_date, human_date_range
 from scenario_engine import FOCUS_HOUSES, rank_scenarios
+from monthly_strategy_alignment import climate_aware_hook, climate_aware_storyline, strategy_do_dont, strategy_rule
 
 from luna_editorial_system import (
     GATEKEEPER_LINE,
@@ -265,6 +266,8 @@ class MonthlyNarrative:
     decision_truth: str
     strategic_posture: str
     strategic_rationale: str
+    portfolio_posture: str
+    portfolio_rationale: str
     romance_relevance: str
     romance_title: str
     romance_note: str
@@ -483,27 +486,33 @@ def _house_weight_map(result: dict) -> dict[int, float]:
     return values
 
 
-def _domain_scenarios(result: dict, focus: str, maximum: int = 4):
+def _domain_scenarios(
+    result: dict,
+    focus: str,
+    maximum: int = 4,
+    *,
+    required_houses: set[int] | None = None,
+):
     house_weights = _house_weight_map(result)
     focus_houses = FOCUS_HOUSES.get(focus)
-    required_houses = None
-    if focus_houses and house_weights:
+    selected_houses = set(required_houses) if required_houses else None
+    if selected_houses is None and focus_houses and house_weights:
         ranked_relevant = [
             house
             for house, _weight in sorted(house_weights.items(), key=lambda item: -item[1])
             if house in focus_houses
         ]
         if ranked_relevant:
-            # Each Love / Work / Money card gets its own strongest relevant house
-            # rather than borrowing a broad scenario family from another domain.
-            required_houses = {ranked_relevant[0]}
+            # Fallback only: when the convergent story has not supplied a domain
+            # house, use that domain's strongest monthly house.
+            selected_houses = {ranked_relevant[0]}
     return rank_scenarios(
         _all_events(result),
         str(result.get("sign", "")),
         focus,
         maximum=maximum,
         house_weights=house_weights,
-        required_houses=required_houses,
+        required_houses=selected_houses,
     )
 
 
@@ -530,18 +539,35 @@ DOMAIN_HOOKS = {
 }
 
 
-def _domain_hook(result: dict, focus: str, fallback: str) -> str:
-    ranked = _domain_scenarios(result, focus, maximum=2)
+def _domain_hook(
+    result: dict,
+    focus: str,
+    fallback: str,
+    *,
+    required_houses: set[int] | None = None,
+) -> str:
+    ranked = _domain_scenarios(result, focus, maximum=2, required_houses=required_houses)
     if not ranked:
         return fallback
     return DOMAIN_HOOKS.get(ranked[0].key, fallback)
 
 
+def _narrative_domain_house(primary_house: int, secondary_house: int, allowed: set[int]) -> int | None:
+    if primary_house in allowed:
+        return primary_house
+    if secondary_house in allowed:
+        return secondary_house
+    return None
+
+
 def _life_area_hooks(result: dict, primary_house: int, secondary_house: int) -> tuple[str, str, str]:
+    love_house = _narrative_domain_house(primary_house, secondary_house, {5, 7})
+    work_house = _narrative_domain_house(primary_house, secondary_house, {6, 10})
+    money_house = _narrative_domain_house(primary_house, secondary_house, {2, 8})
     return (
-        _domain_hook(result, "Love and relationships", "Attention is flattering. Consistency is evidence"),
-        _domain_hook(result, "Career and work", "Busy is not the same as visible"),
-        _domain_hook(result, "Money and security", "The numbers deserve their own conversation"),
+        _domain_hook(result, "Love and relationships", "Attention is flattering. Consistency is evidence", required_houses={love_house} if love_house else None),
+        _domain_hook(result, "Career and work", "Busy is not the same as visible", required_houses={work_house} if work_house else None),
+        _domain_hook(result, "Money and security", "The numbers deserve their own conversation", required_houses={money_house} if money_house else None),
     )
 
 
@@ -809,8 +835,9 @@ def _domain_story(
     *,
     fallback_first: str,
     fallback_move: str,
+    required_houses: set[int] | None = None,
 ) -> tuple[str, ...]:
-    ranked = _domain_scenarios(result, focus, maximum=3)
+    ranked = _domain_scenarios(result, focus, maximum=3, required_houses=required_houses)
     if not ranked:
         return (fallback_first, "No single event family dominates this area.", fallback_move)
 
@@ -856,11 +883,13 @@ def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple
             "If something interesting appears anyway, treat it as a cameo until the evidence earns a larger role.",
         )
 
+    love_house = _narrative_domain_house(primary_house, secondary_house, {5, 7})
     base = _domain_story(
         result,
         "Love and relationships",
         fallback_first="A spark can open the door, but behaviour decides whether it stays open.",
         fallback_move="Judge the connection by mutual effort after the exciting moment.",
+        required_houses={love_house} if love_house else None,
     )
     if luna_line:
         return (luna_line, *base[:2])
@@ -868,21 +897,31 @@ def _love_story(result: dict, primary_house: int, secondary_house: int) -> tuple
 
 
 def _work_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
-    return _domain_story(
+    work_house = _narrative_domain_house(primary_house, secondary_house, {6, 10})
+    base = _domain_story(
         result,
         "Career and work",
         fallback_first="A professional opening gains value when the result, responsibility and next step are visible.",
         fallback_move="Finish one supported result before opening another direction.",
+        required_houses={work_house} if work_house else None,
     )
+    decision = dict(((result.get("monthly_decision") or {}).get("domain_decisions") or {}).get("work") or {})
+    line = str(decision.get("luna_line", "")).strip()
+    return (f"{base[0]} {line}".strip(), *base[1:]) if line else base
 
 
 def _money_story(result: dict, primary_house: int, secondary_house: int) -> tuple[str, ...]:
-    return _domain_story(
+    money_house = _narrative_domain_house(primary_house, secondary_house, {2, 8})
+    base = _domain_story(
         result,
         "Money and security",
         fallback_first="Money becomes easier to judge when price, ownership and obligations are separated from excitement.",
         fallback_move="Choose from visible numbers and enough room to live, not pressure or fantasy.",
+        required_houses={money_house} if money_house else None,
     )
+    decision = dict(((result.get("monthly_decision") or {}).get("domain_decisions") or {}).get("money") or {})
+    line = str(decision.get("luna_line", "")).strip()
+    return (f"{base[0]} {line}".strip(), *base[1:]) if line else base
 
 
 def _headline(focus: str, primary_house: int, secondary_house: int) -> tuple[str, str]:
@@ -1208,6 +1247,7 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
         "|---|---|",
         f"| Truth gate | {decision.get('action_truth', 'n/a')} |",
         f"| Strategic posture | {decision.get('posture', 'n/a')} |",
+        f"| Portfolio strategy | {decision.get('portfolio_posture', 'n/a')} |",
         f"| Overall climate | {decision.get('climate_label', 'n/a')} |",
         f"| Support share | {float(decision.get('support_score', 0.0)):.1f} |",
         f"| Friction share | {float(decision.get('friction_score', 0.0)):.1f} |",
@@ -1426,6 +1466,20 @@ def build_monthly_narrative(
         if decision_plan:
             action_plan = decision_plan
 
+    central_storyline = climate_aware_storyline(
+        central_storyline,
+        monthly_decision,
+        primary_house=primary_house,
+        secondary_house=secondary_house,
+    )
+    hook_headline = climate_aware_hook(
+        hook_headline,
+        monthly_decision,
+        primary_house=primary_house,
+        secondary_house=secondary_house,
+    )
+    subtitle = central_storyline
+
     romance_active, romance_quiet = _romance_copy(primary_house, secondary_house)
     romance_relevance = str(romance_decision.get("relevance", "BACKGROUND"))
     romance_note = str(romance_decision.get("luna_line", "")).strip()
@@ -1447,7 +1501,13 @@ def build_monthly_narrative(
     decision_truth = str(monthly_decision.get("action_truth", "ACT"))
     strategic_posture = str(monthly_decision.get("posture", "ADVANCE"))
     strategic_rationale = str(monthly_decision.get("rationale", "Follow the evidence before choosing the move."))
-    validation_rule = VALIDATION_LINE
+    portfolio_posture = str(monthly_decision.get("portfolio_posture", ""))
+    portfolio_rationale = str(monthly_decision.get("portfolio_rationale", ""))
+    portfolio_plan = tuple(str(item) for item in (monthly_decision.get("portfolio_action_plan") or ()) if str(item).strip())
+    if portfolio_plan:
+        action_plan = portfolio_plan
+    validation_rule = strategy_rule(monthly_decision)
+    do_line, dont_line = strategy_do_dont(do_line, dont_line, monthly_decision)
     love_hook, work_hook, money_hook = _life_area_hooks(result, primary_house, secondary_house)
     convergences = _convergences(result)
 
@@ -1493,6 +1553,7 @@ def build_monthly_narrative(
     snapshot_rows = (
         ("Primary story", convergence_axis),
         ("Truth gate", f"{decision_truth} · {strategic_posture}"),
+        ("Portfolio strategy", portfolio_posture or strategic_posture),
         ("Romance hierarchy", romance_relevance),
         ("Narrative structure", narrative_structure),
         ("Bridge current", bridge_label),
@@ -1530,6 +1591,8 @@ def build_monthly_narrative(
         decision_truth=decision_truth,
         strategic_posture=strategic_posture,
         strategic_rationale=strategic_rationale,
+        portfolio_posture=portfolio_posture,
+        portfolio_rationale=portfolio_rationale,
         romance_relevance=romance_relevance,
         romance_title=romance_title,
         romance_note=romance_note,

@@ -22,6 +22,7 @@ from solar_cycle import (
 from monthly_arc_engine import build_monthly_arc
 from monthly_qa import validate_monthly_arc
 from monthly_decision_engine import evaluate_monthly_decision, validate_monthly_decision
+from monthly_strategy_alignment import align_monthly_arc_with_decision
 from luna_first_principles import methodology_metadata
 from yearly_game_engine import build_yearly_game_map
 
@@ -827,6 +828,10 @@ def period_report(
             house_weights={house: weight for house, weight in houses},
         ).to_dict()
         monthly_decision_qa = validate_monthly_decision(monthly_decision)
+        # First-principles authority: customer-facing beat responses are aligned
+        # only after the strategy is calculated. Astronomy and scenario evidence
+        # are left untouched; only advice copy is constrained by the truth gate.
+        monthly_arc = align_monthly_arc_with_decision(monthly_arc, monthly_decision)
         monthly_qa = validate_monthly_arc(
             sign=sign,
             events=events,

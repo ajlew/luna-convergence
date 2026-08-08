@@ -155,18 +155,28 @@ def _technical_rows(result: dict) -> str:
 
 def _story_driver_rows(result: dict) -> str:
     arc = result.get("monthly_arc") or {}
-    preferred_roles = {"complication", "pivot", "climax", "resolution"}
+    public_roles = {
+        "inherited state", "inciting event", "complication", "pivot",
+        "relationship test", "climax", "resolution",
+    }
     rows = []
     for beat in arc.get("beats") or []:
         role = str(beat.get("role") or "").lower()
-        if role not in preferred_roles:
+        if role not in public_roles or float(beat.get("score", 0.0) or 0.0) <= 0:
             continue
-        houses = ", ".join(f"H{int(value)}" for value in (beat.get("houses") or [])[:3])
+        direct = ", ".join(f"H{int(value)}" for value in (beat.get("direct_houses") or [])) or "—"
+        connected = ", ".join(f"H{int(value)}" for value in (beat.get("connected_houses") or [])) or "—"
+        narrative_house = beat.get("narrative_house")
+        narrative = f"H{int(narrative_house)}" if narrative_house not in (None, "") else "—"
+        path = f"{direct} → {narrative}"
+        if connected != "—":
+            path += f" · connected {connected}"
         rows.append(
             "<tr>"
             f"<td>{_safe(role.replace('_', ' ').title())}</td>"
             f"<td>{_safe(beat.get('title'))}</td>"
-            f"<td>{_safe(houses)}</td>"
+            f"<td>{_safe(path)}</td>"
+            f"<td>{_safe(beat.get('connection_reason') or 'direct event / cluster evidence')}</td>"
             f"<td>{float(beat.get('score', 0.0)):.1f}</td>"
             "</tr>"
         )
@@ -184,6 +194,23 @@ def _transition_rows(result: dict) -> str:
             "</tr>"
         )
     return "".join(rows)
+
+
+def _decision_evidence_rows(result: dict) -> str:
+    decision = dict(result.get("monthly_decision") or {})
+    rows = (
+        ("Overall climate", decision.get("climate_label", "n/a")),
+        ("Support share", f"{float(decision.get('support_score', 0.0)):.1f}"),
+        ("Friction share", f"{float(decision.get('friction_score', 0.0)):.1f}"),
+        ("Uncertainty share", f"{float(decision.get('uncertainty_score', 0.0)):.1f}"),
+        ("Support minus friction", f"{float(decision.get('evidence_balance', 0.0)):+.1f}"),
+        ("Capacity", f"{decision.get('capacity_label', 'n/a')} ({float(decision.get('capacity_pressure', 0.0)):.1f}/100)"),
+        ("Truth gate", f"{decision.get('action_truth', 'n/a')} · {decision.get('posture', 'n/a')}"),
+        ("Portfolio strategy", decision.get("portfolio_posture", "n/a")),
+    )
+    return "".join(
+        f"<tr><td>{_safe(label)}</td><td>{_safe(value)}</td></tr>" for label, value in rows
+    )
 
 
 def _retrograde_rows(result: dict) -> str:
@@ -493,7 +520,7 @@ def build_monthly_experience_html(
       <p><strong>Intensity:</strong> {_safe((result.get("monthly_arc") or {}).get("intensity_rating", "Steady"))}</p>
       <h3>Evidence path</h3>
       <div class="luna-evidence-path">{arc_evidence_path}</div>
-      <p><strong>Rule:</strong> {_safe(VALIDATION_LINE)}</p>
+      <p><strong>Rule:</strong> {_safe(narrative.validation_rule)}</p>
     </div>
   </details>
 
@@ -540,12 +567,20 @@ def build_monthly_experience_html(
         </table>
       </div>
       <p class="luna-method-note">These are ranked symbolic event families, not measured probabilities or guarantees.</p>
-      <h3>Story-driver events</h3>
-      <p class="luna-method-note">These are the event clusters that control the public narrative. Their scores are not the same thing as the broader monthly house weights below.</p>
+      <h3>Narrative evidence ledger</h3>
+      <p class="luna-method-note">Every event used publicly is traceable here. Direct houses come from the event itself; connected houses come from the event cluster; the story house is the house Luna selected for that narrative role.</p>
       <div class="luna-table-wrap">
         <table>
-          <thead><tr><th>Role</th><th>Event</th><th>Houses</th><th>Score</th></tr></thead>
+          <thead><tr><th>Role</th><th>Event</th><th>Direct → story</th><th>Why connected</th><th>Score</th></tr></thead>
           <tbody>{_story_driver_rows(result)}</tbody>
+        </table>
+      </div>
+      <h3>Decision evidence</h3>
+      <p class="luna-method-note">Support, friction and uncertainty are normalized symbolic evidence shares, not probabilities. Capacity is a separate decision-load index.</p>
+      <div class="luna-table-wrap">
+        <table>
+          <thead><tr><th>Decision measure</th><th>Result</th></tr></thead>
+          <tbody>{_decision_evidence_rows(result)}</tbody>
         </table>
       </div>
       <h3>Monthly background weight</h3>
@@ -615,9 +650,9 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-next-move">
   <div>
     <div class="luna-eyebrow">{_safe(YOUR_MOVE_LABEL)}</div>
-    <div class="luna-strategy-badge">{_safe(narrative.decision_truth)} · {_safe(narrative.strategic_posture)}</div>
+    <div class="luna-strategy-badge">{_safe(narrative.portfolio_posture or (narrative.decision_truth + ' · ' + narrative.strategic_posture))}</div>
     <h2>From reading the future to writing it.</h2>
-    <p class="luna-strategy-rationale">{_safe(narrative.strategic_rationale)}</p>
+    <p class="luna-strategy-rationale">{_safe(narrative.portfolio_rationale or narrative.strategic_rationale)}</p>
   </div>
   <ol>
     {''.join(f'<li>{_safe(action)}</li>' for action in narrative.action_plan)}

@@ -18,7 +18,7 @@ calculated strategy but must never overrule it.
 from typing import Mapping, Sequence
 
 
-LUNA_FIRST_PRINCIPLES_VERSION = "1.0"
+LUNA_FIRST_PRINCIPLES_VERSION = "1.1"
 
 PIPELINE = (
     "Nature",
@@ -42,10 +42,20 @@ FIRST_PRINCIPLES = (
     "Unknown is a legitimate answer.",
     "Cycles repeat structurally, never identically.",
     "The narrator may explain the calculation but never overrule it.",
+    "Evidence may recur; interpretation must advance.",
+    "Choice preserves domain asymmetry; the monthly synthesis must not flatten distinct domain moves.",
     "Every public claim must trace back to evidence.",
     "Engineering errors are corrected; interpretive errors are studied.",
     "Historical tests remain blind; expected answers are never hard-coded.",
     "The purpose is better observation and choice, not dependence on Luna.",
+)
+
+
+NARRATIVE_PROGRESSION_RULE = (
+    "State a scenario family once.",
+    "Do not repeat its full manifestation list in later narrative roles.",
+    "Every subsequent paragraph must add new evidence, a new domain, a changed condition, a changed polarity, or a changed strategic implication.",
+    "If a paragraph adds none of those, delete or compress it.",
 )
 
 CORRESPONDENCE_NOTE = (
@@ -67,7 +77,7 @@ def climate_label(support: float, friction: float, uncertainty: float) -> str:
     uncertainty = float(uncertainty)
     if uncertainty >= 35:
         return "Unsettled / information-led"
-    difference = support - friction
+    difference = round(support - friction, 1)
     if difference >= 15:
         return "Supportive"
     if difference >= 5:
@@ -112,6 +122,8 @@ def methodology_metadata() -> dict:
         "learning_note": LEARNING_NOTE,
         "historical_test_policy": "blind_no_expected_answer_hardcodes",
         "narrator_authority": "explain_only_never_override_calculation",
+        "narrative_progression_rule": list(NARRATIVE_PROGRESSION_RULE),
+        "portfolio_policy": "preserve_domain_asymmetry_before_monthly_synthesis",
     }
 
 

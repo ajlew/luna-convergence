@@ -32,6 +32,39 @@ HOUSE_SHORT = {
     12: "rest, closure and private matters",
 }
 
+HOUSE_THEME = {
+    1: "Identity & direction",
+    2: "Money & value",
+    3: "Communication & decisions",
+    4: "Home & private life",
+    5: "Romance & creativity",
+    6: "Work & wellbeing",
+    7: "Relationships & agreements",
+    8: "Trust & shared resources",
+    9: "Travel & wider horizons",
+    10: "Career & visibility",
+    11: "Friends & future plans",
+    12: "Rest & private renewal",
+}
+
+# A tertiary house is never a third competing forecast. It is only promoted
+# when it is astronomically present in BOTH the primary and secondary event
+# clusters, making it a genuine bridge between the two main plots.
+HOUSE_BRIDGE_COPY = {
+    1: "Your own agency is the bridge: what begins and what follows only belong together if the choice still feels like yours.",
+    2: "Money and value are the bridge: the opening and outcome only belong together if the cost and return make sense.",
+    3: "Communication is the bridge: a message, document, conversation or decision connects the opening to the outcome.",
+    4: "Home and private reality are the bridge: the larger plan only works if it has somewhere workable to land.",
+    5: "Desire and creativity are the bridge: what you genuinely want to make, enjoy or pursue determines how the story joins up.",
+    6: "Daily capacity is the bridge: the opportunity and outcome only belong together if the workload, routine and wellbeing can carry them.",
+    7: "Another person is the bridge: a partner, client, collaborator or agreement connects the opening to what happens next.",
+    8: "Shared stakes are the bridge: ownership, trust, debt, funding or responsibility connects the opening to the outcome.",
+    9: "The wider-world path is the bridge: travel, study, publishing, legal or international matters connect the opening to the result.",
+    10: "Career and visibility are the bridge: the part that becomes public or professionally consequential connects the opening to the outcome.",
+    11: "Networks and future plans are the bridge: the people, audience or alliance around you determine how the opening can move forward.",
+    12: "Private reality is the bridge: what must be finished, protected or released first determines how the opening can become an outcome.",
+}
+
 
 @dataclass(frozen=True)
 class ArcBeat:
@@ -47,6 +80,10 @@ class ArcBeat:
     scenarios: tuple[str, ...]
     scenario_provenance: tuple[dict, ...]
     evidence: tuple[str, ...]
+    direct_houses: tuple[int, ...] = ()
+    connected_houses: tuple[int, ...] = ()
+    narrative_house: int | None = None
+    connection_reason: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -62,6 +99,10 @@ class ArcBeat:
             "scenarios": list(self.scenarios),
             "scenario_provenance": list(self.scenario_provenance),
             "evidence": list(self.evidence),
+            "direct_houses": list(self.direct_houses),
+            "connected_houses": list(self.connected_houses),
+            "narrative_house": self.narrative_house,
+            "connection_reason": self.connection_reason,
         }
 
 
@@ -74,6 +115,17 @@ class MonthlyArc:
     theme_axis: str
     primary_house: int
     secondary_house: int
+    tertiary_house: int | None
+    narrative_houses: tuple[int, ...]
+    convergence_score: float
+    convergence_rationale: str
+    primary_scenario_provenance: tuple[dict, ...]
+    secondary_scenario_provenance: tuple[dict, ...]
+    tertiary_scenario_provenance: tuple[dict, ...]
+    primary_plot_houses: tuple[int, ...]
+    secondary_plot_houses: tuple[int, ...]
+    primary_plot_evidence: tuple[str, ...]
+    secondary_plot_evidence: tuple[str, ...]
     supporting_house: int
     selection_rationale: str
     intensity_rating: str
@@ -101,6 +153,17 @@ class MonthlyArc:
             "theme_axis": self.theme_axis,
             "primary_house": self.primary_house,
             "secondary_house": self.secondary_house,
+            "tertiary_house": self.tertiary_house,
+            "narrative_houses": list(self.narrative_houses),
+            "convergence_score": round(self.convergence_score, 3),
+            "convergence_rationale": self.convergence_rationale,
+            "primary_scenario_provenance": list(self.primary_scenario_provenance),
+            "secondary_scenario_provenance": list(self.secondary_scenario_provenance),
+            "tertiary_scenario_provenance": list(self.tertiary_scenario_provenance),
+            "primary_plot_houses": list(self.primary_plot_houses),
+            "secondary_plot_houses": list(self.secondary_plot_houses),
+            "primary_plot_evidence": list(self.primary_plot_evidence),
+            "secondary_plot_evidence": list(self.secondary_plot_evidence),
             "supporting_house": self.supporting_house,
             "selection_rationale": self.selection_rationale,
             "intensity_rating": self.intensity_rating,
@@ -382,6 +445,112 @@ def _cluster_dominant_house(
         raw_bonus = 2.2 * (float((house_weights or {}).get(house, 0.0)) / maximum_house_weight)
         scored.append((event_support + raw_bonus, house))
     return max(scored, key=lambda item: (item[0], -item[1]))[1]
+
+
+def _cluster_house_support(
+    cluster: dict | None,
+    house: int,
+    sign: str,
+    house_weights: Mapping[int, float] | None,
+) -> float:
+    """Weighted event support for one house inside one narrative cluster."""
+    if not cluster:
+        return 0.0
+    values = sorted(
+        (
+            _event_weight(event, sign, house_weights)
+            for event in cluster.get("events", ())
+            if house in {int(value) for value in (_value(event, "houses", ()) or ())}
+        ),
+        reverse=True,
+    )[:3]
+    return sum(value * factor for value, factor in zip(values, (1.0, 0.55, 0.30)))
+
+
+def _select_tertiary_house(
+    primary_plot: dict | None,
+    secondary_plot: dict | None,
+    sign: str,
+    house_weights: Mapping[int, float] | None,
+    primary_house: int,
+    secondary_house: int,
+) -> tuple[int | None, float, str]:
+    """Select an optional third *convergent* narrative house.
+
+    The third house is deliberately stricter than the primary/secondary pair.
+    It must be present in BOTH major plot clusters and carry meaningful event
+    support in each. This prevents a high raw monthly house weight from becoming
+    a disconnected third forecast. The role is therefore a bridge/modifier, not
+    another competing plot.
+    """
+    if not primary_plot or not secondary_plot:
+        return None, 0.0, "No tertiary house: both major plot clusters are required."
+
+    primary_houses = {int(value) for value in primary_plot.get("houses", ())}
+    secondary_houses = {int(value) for value in secondary_plot.get("houses", ())}
+    candidates = sorted(
+        (primary_houses & secondary_houses) - {primary_house, secondary_house}
+    )
+    if not candidates:
+        return None, 0.0, "No tertiary house: no third house is shared by both major plot clusters."
+
+    p_supports = {
+        house: _cluster_house_support(primary_plot, house, sign, house_weights)
+        for house in primary_houses
+    }
+    s_supports = {
+        house: _cluster_house_support(secondary_plot, house, sign, house_weights)
+        for house in secondary_houses
+    }
+    p_max = max(p_supports.values(), default=1.0) or 1.0
+    s_max = max(s_supports.values(), default=1.0) or 1.0
+    max_house_weight = max((float(value) for value in (house_weights or {}).values()), default=1.0) or 1.0
+    rulers = set(SIGN_RULERS.get(sign, ()))
+
+    ranked: list[tuple[float, int, float, float, float, bool]] = []
+    combined_events = list(primary_plot.get("events", ())) + list(secondary_plot.get("events", ()))
+    for house in candidates:
+        p_norm = p_supports.get(house, 0.0) / p_max
+        s_norm = s_supports.get(house, 0.0) / s_max
+        # A bridge must be meaningfully present on both sides of the story.
+        if min(p_norm, s_norm) < 0.35:
+            continue
+        weight_norm = float((house_weights or {}).get(house, 0.0)) / max_house_weight
+        ruler_link = any(
+            house in {int(value) for value in (_value(event, "houses", ()) or ())}
+            and bool(set(str(value) for value in (_value(event, "planets", ()) or ())) & rulers)
+            for event in combined_events
+        )
+        score = (
+            0.40 * p_norm
+            + 0.40 * s_norm
+            + 0.15 * weight_norm
+            + 0.05 * (1.0 if ruler_link else 0.0)
+        )
+        ranked.append((score, house, p_norm, s_norm, weight_norm, ruler_link))
+
+    if not ranked:
+        return None, 0.0, "No tertiary house: shared houses did not carry enough evidence in both plot clusters."
+
+    score, house, p_norm, s_norm, weight_norm, ruler_link = max(
+        ranked, key=lambda item: (item[0], -item[1])
+    )
+    # A third house should only become customer-facing when the convergence is
+    # strong enough to improve the story. Otherwise it remains background.
+    if score < 0.58:
+        return (
+            None,
+            score,
+            f"No tertiary house: strongest bridge candidate H{house} scored {score:.2f}, below the 0.58 convergence threshold.",
+        )
+
+    rationale = (
+        f"House {house} is present in both major event clusters "
+        f"(primary support {p_norm:.2f}, secondary support {s_norm:.2f}, "
+        f"monthly weight {weight_norm:.2f}{', ruler-linked' if ruler_link else ''}). "
+        "It is promoted only as the bridge joining the two main plots."
+    )
+    return house, score, rationale
 
 
 def _cluster_label(cluster: dict | None) -> str:
@@ -739,6 +908,20 @@ def _beat(
                 for item in scenarios
             ),
             evidence=evidence,
+            direct_houses=tuple(int(item) for item in (_value(strongest, "houses", ()) or ())),
+            connected_houses=tuple(
+                int(item)
+                for item in cluster.get("houses", ())
+                if int(item) not in {int(value) for value in (_value(strongest, "houses", ()) or ())}
+            ),
+            narrative_house=int(required_house) if required_house not in (None, "") else None,
+            connection_reason=(
+                "direct event house"
+                if required_house in {int(value) for value in (_value(strongest, "houses", ()) or ())}
+                else "promoted through the connected event cluster / convergence graph"
+                if required_house not in (None, "")
+                else "cluster evidence"
+            ),
         )
     return ArcBeat(
         role=role,
@@ -931,6 +1114,9 @@ def _july_style_story(
     complication_date: str,
     pivot_date: str,
     climax_date: str,
+    *,
+    primary_house: int | None = None,
+    secondary_house: int | None = None,
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str]:
     inherited_keys = _scenario_keys(inherited_scenarios)
     complication_keys = _scenario_keys(complication_scenarios)
@@ -948,7 +1134,16 @@ def _july_style_story(
         )
     )
 
-    if financial_open and paperwork_mid and expansion_close:
+    # This bespoke financial-to-expansion arc is only valid when the event-led
+    # story itself selects H8 -> H9. Scenario-key overlap alone must never
+    # smuggle House 9 language into a different ending (for example H8 -> H3).
+    if (
+        financial_open
+        and paperwork_mid
+        and expansion_close
+        and primary_house == 8
+        and secondary_house == 9
+    ):
         opening = (
             f"{month} begins inside a financial consequence that formed just before the month opened. "
             f"Around {inherited_date}, a bill, salary discussion, promised payment or shared expense may "
@@ -1069,6 +1264,47 @@ def _expansion_public_private_story(
     )
 
 
+def _scenario_signature(results: Sequence[ScenarioResult]) -> set[str]:
+    return {str(item.key) for item in results}
+
+
+def _scenario_overlap(left: Sequence[ScenarioResult], right: Sequence[ScenarioResult]) -> bool:
+    a = _scenario_signature(left)
+    b = _scenario_signature(right)
+    return bool(a and b and (a & b))
+
+
+HOUSE_PROGRESS_REFERENCE = {
+    1: "that personal shift",
+    2: "that money or value question",
+    3: "that message, document or decision",
+    4: "that home or family condition",
+    5: "that romantic or creative opening",
+    6: "that workload or routine condition",
+    7: "that relationship or agreement",
+    8: "that shared-money or responsibility question",
+    9: "that wider-world path",
+    10: "that professional shift",
+    11: "that network or future-plan change",
+    12: "that private or unfinished matter",
+}
+
+HOUSE_CLIMAX_PROGRESS = {
+    1: "the personal consequence becomes difficult to delegate to anyone else",
+    2: "the real number becomes clear enough to change the decision",
+    3: "the decisive message, document or conversation becomes usable",
+    4: "the private reality shows what the larger plan can actually carry",
+    5: "desire, creativity or a child-related matter reveals what the earlier movement is really for",
+    6: "the workload, routine or wellbeing reality shows what is sustainable",
+    7: "the other person's response or the agreement itself reveals the workable terms",
+    8: "ownership, trust or shared responsibility exposes the real cost of the arrangement",
+    9: "the wider-world path becomes concrete enough to choose or reject",
+    10: "the professional change becomes public enough to measure rather than merely anticipate",
+    11: "the network, audience or future plan shows which version has durable support",
+    12: "the private ending or unfinished matter shows what no longer deserves further energy",
+}
+
+
 def _generic_story(
     month: str,
     inherited: dict | None,
@@ -1085,6 +1321,7 @@ def _generic_story(
     *,
     primary_house: int,
     secondary_house: int,
+    tertiary_house: int | None = None,
     house_weights: Mapping[int, float] | None = None,
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str]:
     fallback_house = int(max((house_weights or {1: 1.0}).items(), key=lambda item: item[1])[0])
@@ -1113,6 +1350,17 @@ def _generic_story(
     relationship_results = scenarios(relationship_test)
     primary_results = scenarios(primary_plot, primary_house)
     secondary_results = scenarios(secondary_plot, secondary_house)
+    bridge_results: tuple[ScenarioResult, ...] = ()
+    if tertiary_house:
+        bridge_events = list((primary_plot or {}).get("events", ())) + list((secondary_plot or {}).get("events", ()))
+        bridge_results = _top_scenarios(
+            bridge_events,
+            sign,
+            main_focus,
+            maximum=3,
+            house_weights=house_weights,
+            required_houses={tertiary_house},
+        )
 
     def examples(results: Sequence[ScenarioResult], maximum: int = 3) -> str:
         values: list[str] = []
@@ -1186,14 +1434,20 @@ def _generic_story(
 
     opening = (
         f"{primary_leads.get(primary_house, month + ' reveals its main opening')}: {examples(opening_basis)}. "
-        "The early movement is useful because it shows where the month is gathering force, not because it guarantees the final outcome.",
+        "The early movement identifies the pattern; it is evidence of where the month is gathering force, not a guarantee of the final outcome.",
     )
 
     complication_window = _date_range_label(complication['start'], complication['end']) if complication else f"mid-{month}"
-    complication_text = (
-        f"Around {complication_window}, the opening has to deal with {examples(complication_results)}. "
-        "That detail changes the terms: what looked attractive now has to become workable.",
-    )
+    if _scenario_overlap(opening_basis, complication_results):
+        complication_text = (
+            f"Around {complication_window}, {HOUSE_PROGRESS_REFERENCE.get(primary_house, 'that opening')} becomes concrete. "
+            "Responsibilities, timing, ownership or practical terms now need to be defined. What first looked like movement has to become workable.",
+        )
+    else:
+        complication_text = (
+            f"Around {complication_window}, a new condition enters through {examples(complication_results)}. "
+            "It changes the terms of the opening rather than simply repeating it.",
+        )
 
     pivot_window = _date_range_label(pivot['start'], pivot['end']) if pivot else f"the middle of {month}"
     pivot_subject = examples(pivot_results)
@@ -1211,24 +1465,46 @@ def _generic_story(
         11: "a network, audience or future plan becomes easier to trust once the useful people keep showing up",
         12: "a private or unfinished matter becomes easier to release once you know what no longer needs your energy",
     }
-    if pivot_results:
-        pivot_clause = pivot_subject
+    if tertiary_house:
+        bridge_clause = HOUSE_BRIDGE_COPY.get(
+            tertiary_house,
+            f"House {tertiary_house} is the bridge that connects the opening to the outcome.",
+        )
+        bridge_examples = examples(bridge_results, maximum=2)
+        bridge_manifestation = (
+            f" In practice, this may show up through {bridge_examples}."
+            if bridge_results and bridge_examples
+            else ""
+        )
+        pivot_text = (
+            f"{bridge_clause}{bridge_manifestation} That is the hinge between the opening and the late-month result.",
+        )
     else:
-        pivot_clause = pivot_house_lines.get(primary_house, "the stalled part of the story begins to clear")
-    pivot_text = (
-        f"Around {pivot_window}, {pivot_clause}. The new information does not erase the earlier condition; it gives you a better way to respond to it.",
-    )
+        if pivot_results and not _scenario_overlap(complication_results or opening_basis, pivot_results):
+            pivot_clause = pivot_subject
+        else:
+            pivot_clause = pivot_house_lines.get(primary_house, "the stalled part of the story begins to clear")
+        pivot_text = (
+            f"Around {pivot_window}, {pivot_clause}. This adds new information to the pattern instead of restarting the story.",
+        )
 
     climax_window = _date_range_label((secondary_plot or climax or resolution)['start'], (secondary_plot or climax or resolution)['end']) if (secondary_plot or climax or resolution) else f"late {month}"
-    climax_text = (
-        f"{secondary_leads.get(secondary_house, 'By late month, the second plot takes control')}. Around {climax_window}, this can look like {examples(climax_basis)}. "
-        "The point is not to predict one literal event; it is to show where the month's consequence becomes hardest to ignore.",
-    )
+    repeated_climax = secondary_house == primary_house or _scenario_overlap(opening_basis, climax_basis)
+    if repeated_climax:
+        climax_text = (
+            f"{secondary_leads.get(secondary_house, 'By late month, the second plot takes control')}. Around {climax_window}, "
+            f"{HOUSE_CLIMAX_PROGRESS.get(secondary_house, 'the earlier pattern becomes concrete enough to judge')}. "
+            "The question is no longer whether the pattern exists, but what the accumulated evidence now requires.",
+        )
+    else:
+        climax_text = (
+            f"{secondary_leads.get(secondary_house, 'By late month, the second plot takes control')}. Around {climax_window}, "
+            f"this new domain may show up through {examples(climax_basis)}. It changes the consequence of the opening rather than repeating it.",
+        )
 
-    resolution_basis = resolution_results or secondary_results or climax_results
     resolution_text = (
         f"The closing decision is therefore about {HOUSE_SHORT.get(secondary_house, 'what the second plot requires')}. "
-        f"Use {examples(resolution_basis, maximum=2)} as possible manifestations, then keep the version that remains coherent with the evidence already visible.",
+        "By this point, the useful question is which version survives the practical test once the month's other conditions are visible.",
     )
     relationship_text = _relationship_test_copy(relationship_test, sign)
     return (
@@ -1449,15 +1725,29 @@ def build_monthly_arc(
         cluster for cluster in monthly_clusters
         if cluster["start"] <= max(start, end - timedelta(days=8))
     ] or list(monthly_clusters)
+    # Major eclipses have first claim on the primary plot even when they occur
+    # early in the month. This prevents a later ordinary lunation from pushing
+    # an eclipse into the appendix simply because it sits closer to the
+    # conventional mid-month complication window.
+    eclipse_primary_candidates = [
+        cluster
+        for cluster in primary_candidates
+        if any(str(_value(item, "kind", "")) == "eclipse" for item in cluster.get("events", ()))
+    ]
     complication_has_major_lunation = bool(
         complication
         and any(str(_value(item, "kind", "")) in {"eclipse", "lunation"} for item in complication.get("events", ()))
     )
-    primary_plot = (
-        complication
-        if complication_has_major_lunation
-        else max(primary_candidates, key=lambda item: item["score"], default=complication or inciting or inherited)
-    )
+    if eclipse_primary_candidates:
+        primary_plot = max(eclipse_primary_candidates, key=lambda item: item["score"])
+    elif complication_has_major_lunation:
+        primary_plot = complication
+    else:
+        primary_plot = max(
+            primary_candidates,
+            key=lambda item: item["score"],
+            default=complication or inciting or inherited,
+        )
 
     resolution_has_eclipse = bool(
         resolution
@@ -1471,6 +1761,44 @@ def build_monthly_arc(
     fallback_house = int(max((house_weights or {1: 1.0}).items(), key=lambda item: item[1])[0])
     primary_house = _cluster_dominant_house(primary_plot, sign, house_weights, fallback_house)
     secondary_house = _cluster_dominant_house(secondary_plot, sign, house_weights, primary_house)
+
+    # If the opening and ending clusters resolve to the same house, do not
+    # manufacture an HxH story. Search for the strongest genuinely distinct
+    # cluster that is still material to the month. Prefer a later cluster, then
+    # fall back to the strongest remaining one. If none exists, Luna is allowed
+    # to tell a one-house story.
+    if secondary_house == primary_house:
+        alternatives: list[tuple[int, float, dict]] = []
+        primary_start = (primary_plot or {}).get("start", start)
+        for cluster in monthly_clusters:
+            if cluster is primary_plot:
+                continue
+            house = _cluster_dominant_house(cluster, sign, house_weights, primary_house)
+            if house == primary_house:
+                continue
+            later_bonus = 1 if cluster.get("start", start) >= primary_start else 0
+            alternatives.append((later_bonus, float(cluster.get("score", 0.0)), cluster))
+        if alternatives:
+            _later, _score, secondary_plot = max(
+                alternatives, key=lambda item: (item[0], item[1])
+            )
+            secondary_house = _cluster_dominant_house(
+                secondary_plot, sign, house_weights, primary_house
+            )
+
+    primary_has_eclipse = bool(
+        primary_plot
+        and any(str(_value(item, "kind", "")) == "eclipse" for item in primary_plot.get("events", ()))
+    )
+    if (
+        primary_has_eclipse
+        and primary_plot
+        and primary_plot.get("start", start) <= start + timedelta(days=7)
+    ):
+        # When an eclipse opens the month, make it the visible inciting event so
+        # the customer narrative and evidence path cannot silently omit it.
+        inciting = primary_plot
+
     raw_ranked_houses = [
         int(house) for house, _weight in sorted((house_weights or {}).items(), key=lambda item: -item[1])
     ]
@@ -1478,6 +1806,17 @@ def build_monthly_arc(
         (house for house in raw_ranked_houses if house not in {primary_house, secondary_house}),
         primary_house,
     )
+    tertiary_house, convergence_score, convergence_rationale = _select_tertiary_house(
+        primary_plot,
+        secondary_plot,
+        sign,
+        house_weights,
+        primary_house,
+        secondary_house,
+    )
+    narrative_houses = tuple(dict.fromkeys(
+        house for house in (primary_house, secondary_house, tertiary_house) if house is not None
+    ))
 
     primary_plot_scenarios = _cluster_scenarios(
         primary_plot,
@@ -1493,6 +1832,39 @@ def build_monthly_arc(
         house_weights=house_weights,
         required_house=secondary_house,
     )
+    tertiary_plot_scenarios: tuple[ScenarioResult, ...] = ()
+    if tertiary_house:
+        tertiary_events = list((primary_plot or {}).get("events", ())) + list((secondary_plot or {}).get("events", ()))
+        tertiary_plot_scenarios = _top_scenarios(
+            tertiary_events,
+            sign,
+            main_focus,
+            maximum=3,
+            house_weights=house_weights,
+            required_houses={tertiary_house},
+        )
+
+    def scenario_provenance(results: Sequence[ScenarioResult]) -> tuple[dict, ...]:
+        return tuple(
+            {
+                "key": item.key,
+                "scenario_houses": list(item.scenario_houses),
+                "matched_houses": list(item.matched_houses),
+            }
+            for item in results
+        )
+
+    primary_scenario_provenance = scenario_provenance(primary_plot_scenarios)
+    secondary_scenario_provenance = scenario_provenance(secondary_plot_scenarios)
+    tertiary_scenario_provenance = scenario_provenance(tertiary_plot_scenarios)
+    primary_plot_houses = tuple(int(value) for value in (primary_plot or {}).get("houses", ()))
+    secondary_plot_houses = tuple(int(value) for value in (secondary_plot or {}).get("houses", ()))
+    primary_plot_evidence = tuple(
+        _event_label(item) for item in sorted((primary_plot or {}).get("events", ()), key=_date_value)
+    )
+    secondary_plot_evidence = tuple(
+        _event_label(item) for item in sorted((secondary_plot or {}).get("events", ()), key=_date_value)
+    )
     month = label.split()[0]
     headline, central, axis = _headline_and_axis(
         month,
@@ -1501,6 +1873,11 @@ def build_monthly_arc(
         primary_house=primary_house,
         secondary_house=secondary_house,
     )
+    if tertiary_house:
+        bridge_sentence = HOUSE_BRIDGE_COPY.get(tertiary_house, "")
+        if bridge_sentence:
+            central = f"{central.rstrip('.')}. {bridge_sentence}"
+        axis = f"{axis} · Bridge: {HOUSE_THEME.get(tertiary_house, HOUSE_SHORT.get(tertiary_house, f'House {tertiary_house}'))}"
 
     inherited_date = _date_range_label(inherited["start"], inherited["end"]) if inherited else f"early {month}"
     complication_date = _date_range_label(complication["start"], complication["end"]) if complication else f"mid-{month}"
@@ -1510,13 +1887,15 @@ def build_monthly_arc(
     story = _july_style_story(
         month,
         inherited_scenarios,
-        complication_scenarios,
+        primary_plot_scenarios or complication_scenarios,
         pivot,
-        climax_scenarios,
+        secondary_plot_scenarios or climax_scenarios,
         inherited_date,
         complication_date,
         pivot_date,
         climax_date,
+        primary_house=primary_house,
+        secondary_house=secondary_house,
     )
     # v3 intentionally avoids a universal expansion/relationship template.
     # If the calibrated July pattern does not apply, assemble the story from
@@ -1537,6 +1916,7 @@ def build_monthly_arc(
             secondary_plot,
             primary_house=primary_house,
             secondary_house=secondary_house,
+            tertiary_house=tertiary_house,
             house_weights=house_weights,
         )
 
@@ -1620,7 +2000,7 @@ def build_monthly_arc(
             sign,
             main_focus,
             climax_text[0],
-            "Act on the strongest supported opportunity while the evidence is visible.",
+            "Use the visible result as evidence before choosing the move.",
             end - timedelta(days=2),
             house_weights=house_weights,
             required_house=secondary_house if climax is secondary_plot else (_cluster_dominant_house(climax, sign, house_weights, secondary_house) if climax else secondary_house),
@@ -1631,7 +2011,7 @@ def build_monthly_arc(
             sign,
             main_focus,
             resolution_text[0],
-            "Keep the outcome that survives both excitement and practical reality.",
+            "Let the full sequence determine which version deserves commitment.",
             end,
             house_weights=house_weights,
             required_house=secondary_house,
@@ -1674,11 +2054,23 @@ def build_monthly_arc(
         theme_axis=axis,
         primary_house=primary_house,
         secondary_house=secondary_house,
+        tertiary_house=tertiary_house,
+        narrative_houses=narrative_houses,
+        convergence_score=convergence_score,
+        convergence_rationale=convergence_rationale,
+        primary_scenario_provenance=primary_scenario_provenance,
+        secondary_scenario_provenance=secondary_scenario_provenance,
+        tertiary_scenario_provenance=tertiary_scenario_provenance,
+        primary_plot_houses=primary_plot_houses,
+        secondary_plot_houses=secondary_plot_houses,
+        primary_plot_evidence=primary_plot_evidence,
+        secondary_plot_evidence=secondary_plot_evidence,
         supporting_house=supporting_house,
         selection_rationale=(
             f"Primary plot: {_cluster_label(primary_plot)} / house {primary_house}. "
             f"Secondary plot: {_cluster_label(secondary_plot)} / house {secondary_house}. "
-            f"House {supporting_house} retained as strongest additional monthly evidence."
+            + (f"Convergent bridge: house {tertiary_house}. " if tertiary_house else "No third house cleared the convergence gate. ")
+            + f"House {supporting_house} remains background monthly evidence unless independently promoted."
         ),
         intensity_rating=intensity_rating,
         rulership_amplified=rulership_amplified,
@@ -1696,6 +2088,6 @@ def build_monthly_arc(
         inherited_events=tuple(_event_dict(item) for item in carryover),
         equation=(
             "Normalized event importance + sign-ruler relevance + house evidence + "
-            "event clustering + deterministic scenario ranking + temporal roles = monthly narrative graph"
+            "event clustering + convergent 1-3 house narrative roles + deterministic scenario provenance + temporal roles = monthly narrative graph"
         ),
     )

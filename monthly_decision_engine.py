@@ -28,6 +28,7 @@ from luna_first_principles import (
 
 
 POSTURES = ("ADVANCE", "QUESTION", "NEGOTIATE", "HOLD", "PASS")
+PORTFOLIO_POSTURES = ("FULL ADVANCE", "SELECTIVE ADVANCE", "PROBE", "RENEGOTIATE", "DEFENSIVE HOLD", "PASS")
 
 # Direct domain houses. Romance is deliberately strict: H8 can colour intimacy
 # and shared stakes, but it cannot by itself make romance a main plot.
@@ -109,6 +110,9 @@ class MonthlyDecision:
     climate_label: str = ""
     capacity_label: str = ""
     evidence_balance: float = 0.0
+    portfolio_posture: str = ""
+    portfolio_rationale: str = ""
+    portfolio_action_plan: tuple[str, ...] = ()
     first_principles_version: str = LUNA_FIRST_PRINCIPLES_VERSION
     correspondence_note: str = CORRESPONDENCE_NOTE
     first_principles_trace: Mapping[str, object] | None = None
@@ -129,6 +133,9 @@ class MonthlyDecision:
             "climate_label": self.climate_label,
             "capacity_label": self.capacity_label,
             "evidence_balance": round(self.evidence_balance, 1),
+            "portfolio_posture": self.portfolio_posture,
+            "portfolio_rationale": self.portfolio_rationale,
+            "portfolio_action_plan": list(self.portfolio_action_plan),
             "first_principles_version": self.first_principles_version,
             "correspondence_note": self.correspondence_note,
             "first_principles_trace": dict(self.first_principles_trace or {}),
@@ -420,25 +427,136 @@ def _domain_relevance(
     return relevance, score, rationale
 
 
+def _blend_components(
+    overall: Mapping[str, float],
+    local: Mapping[str, float],
+    *,
+    overall_weight: float,
+) -> dict[str, float]:
+    local_weight = 1.0 - overall_weight
+    return {
+        key: overall_weight * float(overall.get(key, 0.0)) + local_weight * float(local.get(key, 0.0))
+        for key in ("support", "friction", "uncertainty", "volatility", "capacity", "total_base")
+    }
+
+
 def _domain_posture(
     domain: str,
     overall_posture: str,
+    overall_components: Mapping[str, float],
     sign: str,
     events: Sequence[object],
     house_weights: Mapping[int, float],
+    monthly_arc: Mapping[str, object] | None,
 ) -> str:
     domain_houses = DOMAIN_HOUSES[domain]
     domain_events = [event for event in events if _event_houses(event) & domain_houses]
     if not domain_events:
         return overall_posture
-    components = _climate_components(
+
+    role, _ = _domain_role(domain, monthly_arc)
+    selected_house = next(
+        (house for house in _narrative_houses(monthly_arc) if house in domain_houses),
+        next(iter(domain_houses)),
+    )
+    local = _climate_components(
         sign,
         domain_events,
         (),
-        {"primary_house": next(iter(domain_houses)), "secondary_house": next(iter(domain_houses)), "tertiary_house": None},
+        {"primary_house": selected_house, "secondary_house": selected_house, "tertiary_house": None},
         house_weights,
     )
-    return _choose_posture(components)
+
+    # A primary domain belongs to the overriding convergent story, so its local
+    # decision must be interpreted in the context of the whole month. Secondary
+    # and bridge domains keep more of their own local asymmetry. This prevents a
+    # primary H10 career story from collapsing to PASS simply because one subset
+    # of work events is adverse.
+    overall_weight = {
+        "PRIMARY": 0.60,
+        "SECONDARY": 0.35,
+        "BRIDGE": 0.30,
+        "BACKGROUND": 0.15,
+    }.get(role, 0.15)
+    blended = _blend_components(overall_components, local, overall_weight=overall_weight)
+    return _choose_posture(blended)
+
+
+def _portfolio_strategy(domains: Sequence[DomainDecision], fallback_posture: str) -> tuple[str, str, tuple[str, ...]]:
+    material = [
+        item for item in domains
+        if item.relevance in {"PRIMARY", "SECONDARY", "BRIDGE", "ACTIVE"}
+    ]
+    primary = next((item for item in material if item.hierarchy_role == "PRIMARY"), None)
+    secondary = [item for item in material if item.hierarchy_role in {"SECONDARY", "BRIDGE"}]
+
+    if primary is None:
+        posture = {
+            "ADVANCE": "FULL ADVANCE",
+            "QUESTION": "PROBE",
+            "NEGOTIATE": "RENEGOTIATE",
+            "HOLD": "DEFENSIVE HOLD",
+            "PASS": "PASS",
+        }[fallback_posture]
+    elif primary.posture == "ADVANCE":
+        posture = "FULL ADVANCE" if all(item.posture == "ADVANCE" for item in secondary) else "SELECTIVE ADVANCE"
+    elif primary.posture == "QUESTION":
+        posture = "PROBE"
+    elif primary.posture == "NEGOTIATE":
+        posture = "RENEGOTIATE"
+    elif primary.posture == "HOLD":
+        posture = "DEFENSIVE HOLD"
+    else:
+        posture = "PASS"
+
+    move_text = {
+        "FULL ADVANCE": "The main convergent domains support forward movement; make the strongest move concrete without hiding the terms.",
+        "SELECTIVE ADVANCE": "Advance where support is clean, negotiate where conditions are mixed, and leave the poor-risk/reward area alone.",
+        "PROBE": "The month rewards information before commitment; test the opening without making the position irreversible.",
+        "RENEGOTIATE": "The main story remains viable only if the terms improve; change the game before agreeing to play it.",
+        "DEFENSIVE HOLD": "Protect capacity and optionality while the main pressure is still moving; essential action only.",
+        "PASS": "The main downside is too asymmetric to justify extra exposure; preserve the position and let the optional contest pass.",
+    }[posture]
+
+    domain_bits = []
+    for item in material:
+        label = item.domain.title()
+        domain_bits.append(f"{label}: {item.posture.lower()}")
+    rationale = move_text + (" Domain map — " + "; ".join(domain_bits) + "." if domain_bits else "")
+
+    plans = {
+        "FULL ADVANCE": (
+            "Make the strongest supported move concrete.",
+            "Keep timing, ownership and cost visible as momentum increases.",
+            "Add exposure only where the next response confirms the original support.",
+        ),
+        "SELECTIVE ADVANCE": (
+            "Push the domain that has earned ADVANCE; do not generalise that permission to the rest of the month.",
+            "Renegotiate mixed domains before increasing commitment.",
+            "Let PASS areas pass through to the keeper; preserve resources for the clean opening.",
+        ),
+        "PROBE": (
+            "Ask the question or make the smallest reversible move that improves information.",
+            "Do not convert curiosity into commitment before the missing fact arrives.",
+            "Re-score the decision when the answer, number or behaviour becomes visible.",
+        ),
+        "RENEGOTIATE": (
+            "Do not accept the current terms as the only game available.",
+            "Name the cost, timing, ownership or responsibility that needs to change.",
+            "Proceed only if the revised terms improve the risk/reward rather than merely reduce discomfort.",
+        ),
+        "DEFENSIVE HOLD": (
+            "Do what is essential and protect the resources already committed.",
+            "Delay optional expansion while pressure and information are still moving.",
+            "Re-enter only when the balance or available capacity materially improves.",
+        ),
+        "PASS": (
+            "Let the non-essential demand pass through to the keeper; not every ball needs a shot.",
+            "Do not chase explanation, approval or commitment when the downside is larger than the likely gain.",
+            "Preserve time, money and freedom of movement for a cleaner opening.",
+        ),
+    }
+    return posture, rationale, plans[posture]
 
 
 def _domain_luna_line(
@@ -491,7 +609,7 @@ def evaluate_monthly_decision(
         if relevance == "NOT MATERIAL":
             domain_posture = "PASS"
         else:
-            domain_posture = _domain_posture(domain, posture, sign, events, weights)
+            domain_posture = _domain_posture(domain, posture, components, sign, events, weights, monthly_arc)
         domain_truth = "ACT" if domain_posture == "ADVANCE" else "NOT ACT"
         domains.append(
             DomainDecision(
@@ -505,6 +623,8 @@ def evaluate_monthly_decision(
                 luna_line=_domain_luna_line(domain, relevance, domain_posture, monthly_arc),
             )
         )
+
+    portfolio_posture, portfolio_rationale, portfolio_plan = _portfolio_strategy(domains, posture)
 
     return MonthlyDecision(
         action_truth=action_truth,
@@ -524,6 +644,9 @@ def evaluate_monthly_decision(
         climate_label=climate_label(components["support"], components["friction"], components["uncertainty"]),
         capacity_label=capacity_label(components["capacity"]),
         evidence_balance=evidence_balance(components["support"], components["friction"]),
+        portfolio_posture=portfolio_posture,
+        portfolio_rationale=portfolio_rationale,
+        portfolio_action_plan=portfolio_plan,
         first_principles_version=LUNA_FIRST_PRINCIPLES_VERSION,
         correspondence_note=CORRESPONDENCE_NOTE,
         first_principles_trace=build_decision_trace(
@@ -548,6 +671,10 @@ def validate_monthly_decision(decision: Mapping[str, object]) -> dict:
     expected_truth = "ACT" if posture == "ADVANCE" else "NOT ACT"
     if truth != expected_truth:
         critical.append("ACT/NOT ACT truth gate disagrees with posture")
+
+    portfolio = str(decision.get("portfolio_posture", ""))
+    if portfolio and portfolio not in PORTFOLIO_POSTURES:
+        critical.append("Unknown portfolio strategy")
 
     domains = dict(decision.get("domain_decisions") or {})
     romance = dict(domains.get("romance") or {})
