@@ -442,7 +442,23 @@ def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict
         except Exception:
             period_key = month_label.replace(" ", "-")
     safe_sign = "".join(ch for ch in sign_label if ch.isalnum() or ch in ("-", "_")) or "Report"
+
+    # Keep the sortable base name, but append the reader's resolved city so
+    # saved reports remain distinguishable when the same sign/month is tested
+    # across locations (for example London vs Sydney). The on-page report
+    # already shows the full timezone; the filename only needs the city label.
+    solar_context = result.get("solar_convergence") or {}
+    city_label = str(solar_context.get("city") or "").strip()
+    safe_city = "".join(
+        ch if ch.isalnum() or ch in ("-", "_") else "_"
+        for ch in city_label
+    ).strip("_")
+    while "__" in safe_city:
+        safe_city = safe_city.replace("__", "_")
+
     file_title = f"{period_key}_{safe_sign}_Monthly"
+    if safe_city:
+        file_title = f"{file_title}_{safe_city}"
     generated_date = f"{now.day} {now.strftime('%B %Y')}"
     zone_short = now.tzname() or timezone_name
 
