@@ -32,6 +32,12 @@ def human_date_range(start: object, end: object) -> str:
     first = _coerce_date(start)
     last = _coerce_date(end)
 
+    # Customer-facing safety: never print a backwards range. The monthly QA
+    # layer still flags inverted source windows so the underlying data is not
+    # silently treated as correct.
+    if first > last:
+        first, last = last, first
+
     if first == last:
         return human_date(first)
 

@@ -311,6 +311,7 @@ class MonthlyNarrative:
     solar_action: str
     solar_rule: str
     solar_equation: str
+    problem_horizon: dict
     technical_appendix_markdown: str
 
 
@@ -1880,6 +1881,7 @@ def build_monthly_narrative(
         solar_action=_plain_customer_astrology(solar.get("action", "Match the action to the current solar phase.")),
         solar_rule=_plain_customer_astrology(solar.get("solar_rule", "Begin, develop, evaluate and consolidate in sequence.")),
         solar_equation=_plain_customer_astrology(solar.get("equation", "Tropical Sun + local light + activated life area = Solar Convergence")),
+        problem_horizon=dict(result.get("problem_horizon") or {}),
         technical_appendix_markdown=_technical_appendix(result, order_reference),
     )
 
@@ -1909,6 +1911,53 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
         "",
         f"**Don't:** {narrative.dont_line}",
         "",
+    ])
+
+    horizon = narrative.problem_horizon or {}
+    if horizon:
+        lines.extend([
+            "# The problem",
+            "",
+            str(horizon.get("problem", "")),
+            "",
+            "## If you ignore it",
+            "",
+            str(horizon.get("if_ignored", "")),
+            "",
+            "## Your move",
+            "",
+            str(horizon.get("highest_leverage_move", "")),
+            "",
+            "## How long this stays live",
+            "",
+            str(horizon.get("timing", "")),
+            "",
+            "## What keeps this active",
+            "",
+        ])
+        for force in horizon.get("forces") or []:
+            lines.extend([
+                f"### {force.get('planet', '')} · {force.get('area', '')}",
+                "",
+                str(force.get("problem", "")),
+                "",
+                f"**If left alone:** {force.get('if_ignored', '')}",
+                "",
+                f"**Your move:** {force.get('leverage', '')}",
+                "",
+                f"**Active since:** {force.get('active_since', '')}",
+                "",
+                f"**Current phase:** {force.get('current_phase', '')}",
+                "",
+                f"**Peak:** {force.get('peak', '')}",
+                "",
+                f"**Next change:** {force.get('changes', '')}",
+                "",
+                f"**Long shift:** {force.get('structural_shift', '')}",
+                "",
+            ])
+
+    lines.extend([
         "# Your month at a glance",
         "",
     ])

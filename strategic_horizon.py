@@ -18,73 +18,73 @@ from date_display import human_date
 SLOW_PLANETS = ("Jupiter", "Saturn", "Uranus", "Neptune", "Pluto")
 
 HOUSE_PROBLEM = {
-    1: "Your direction is changing faster than the identity built around the old one.",
-    2: "Money, price and security are forcing a real value decision.",
-    3: "A message, contract or decision cannot stay vague.",
+    1: "The old identity no longer fits the direction opening ahead.",
+    2: "Money is forcing a decision about what you will pay, charge or protect.",
+    3: "A message, agreement or decision has reached the point where vagueness costs you.",
     4: "Home or family pressure is setting the limit on everything else.",
-    5: "Desire, romance or creative risk needs proof before commitment.",
-    6: "The workload is testing what your system can actually sustain.",
-    7: "A relationship or agreement is asking for terms, not hints.",
+    5: "Attraction, pleasure or creative risk is asking for proof before commitment.",
+    6: "The workload has reached the point where something must give.",
+    7: "A relationship or agreement needs terms, not hints.",
     8: "Shared money, trust or obligation is exposing who carries the risk.",
-    9: "A wider opportunity is demanding a cost, route and destination.",
-    10: "Responsibility and visibility are rising together.",
-    11: "The future depends on which people and plans still deserve access.",
-    12: "Unfinished pressure is consuming capacity behind the scenes.",
+    9: "A wider opportunity is becoming expensive before it is secure.",
+    10: "Responsibility is rising faster than authority or reward.",
+    11: "Old alliances are occupying space needed by the next direction.",
+    12: "Something unfinished is draining capacity behind the scenes.",
 }
 
 HOUSE_IF_IGNORED = {
-    1: "Do nothing and other people keep defining the version of you that the next phase has already outgrown.",
-    2: "Do nothing and extra value gets absorbed by extra cost, obligation or under-pricing.",
-    3: "Do nothing and ambiguity becomes the decision by default.",
-    4: "Do nothing and the private strain keeps setting the ceiling on public progress.",
-    5: "Do nothing and excitement gets mistaken for proof.",
-    6: "Do nothing and overload becomes the new normal.",
-    7: "Do nothing and an undefined arrangement hardens into the relationship or contract you actually have.",
-    8: "Do nothing and dependence gives someone else more leverage over the outcome.",
-    9: "Do nothing and the bigger possibility starts costing money, time or freedom before it has earned the investment.",
-    10: "Do nothing and extra responsibility becomes permanent before authority, recognition or compensation catches up.",
-    11: "Do nothing and old alliances keep consuming space needed by the next direction.",
-    12: "Do nothing and private fatigue, fear or unfinished business keeps making decisions from the shadows.",
+    1: "Leave this untouched and other people keep defining a version of you that the next phase has already outgrown.",
+    2: "Leave it alone and extra value gets absorbed by extra cost, obligation or under-pricing.",
+    3: "Leave it vague and the silence becomes the decision.",
+    4: "Ignore the private strain and it keeps setting the ceiling on public progress.",
+    5: "Leave it untested and excitement gets mistaken for proof.",
+    6: "Carry everything and overload becomes the new normal.",
+    7: "Leave the terms undefined and the temporary arrangement hardens into the relationship or contract you actually have.",
+    8: "Leave the dependence hidden and someone else gains more leverage over the outcome.",
+    9: "Commit too early and the bigger possibility starts costing money, time or freedom before it has earned the investment.",
+    10: "Accept the load unchanged and extra responsibility becomes permanent before authority, recognition or compensation catches up.",
+    11: "Keep every old alliance and they consume the space needed by the next direction.",
+    12: "Ignore the hidden drain and fatigue, fear or unfinished business keeps making decisions from the shadows.",
 }
 
 HOUSE_MOVE = {
-    1: "Choose the direction first. Make approval secondary.",
-    2: "Name the number. Keep the gain only if it improves security or control.",
-    3: "Get the fact, answer or agreement into words before acting on assumptions.",
-    4: "Repair the private base before expanding the public load.",
-    5: "Let behaviour prove the promise before you enlarge the commitment.",
-    6: "Cut the unsustainable part before adding another responsibility.",
+    1: "Choose the direction first. Let approval catch up later.",
+    2: "Name the number. Keep the gain only if it buys more security or control.",
+    3: "Get the fact, answer or agreement into writing. Then act.",
+    4: "Fix the private base before expanding the public load.",
+    5: "Make behaviour prove the promise before you enlarge the commitment.",
+    6: "Cut the unsustainable part before you accept another responsibility.",
     7: "State the terms. Judge the response, not the charm.",
-    8: "Make ownership, debt, trust and exit conditions visible before committing.",
+    8: "Put ownership, debt, trust and exit conditions on the table before committing.",
     9: "Price the larger possibility before you build your life around it.",
-    10: "Tie responsibility to authority, compensation, ownership or a visible result.",
-    11: "Back the people and plans that increase future options; reduce access for the rest.",
+    10: "Tie every new responsibility to authority, compensation, ownership or a visible result.",
+    11: "Back the people and plans that widen the future. Reduce access for the rest.",
     12: "Remove the hidden drain before forcing a visible answer.",
 }
 
 PLANET_ROLE = {
     "Jupiter": {
-        "pressure": "Opportunity is expanding in {area}. More is available, but more is not automatically better.",
-        "risk": "Expansion turns into waste when every opening receives the same yes.",
-        "leverage": "Use the expansion to increase resources, reach or future options without locking in unnecessary cost.",
+        "pressure": "Opportunity is widening in {area}. More is available now, but excess can turn the advantage into a burden.",
+        "risk": "Say yes to everything and expansion turns into waste, cost or overload.",
+        "leverage": "Take the opening that increases resources, reach or future options. Refuse the cost that does not improve your position.",
     },
     "Saturn": {
-        "pressure": "The terms are hardening in {area}. What was temporary is becoming measurable and binding.",
+        "pressure": "The terms are hardening in {area}. What looked temporary is becoming measurable and binding.",
         "risk": "Responsibility can become permanent before the reward, authority or exit terms are settled.",
-        "leverage": "Define scope, cost, authority, timing and exit conditions before the structure hardens.",
+        "leverage": "Set scope, cost, authority, timing and exit conditions before the structure hardens.",
     },
     "Uranus": {
-        "pressure": "The old arrangement is losing stability in {area}. A different route is becoming possible.",
+        "pressure": "The old arrangement is losing stability in {area}. A different route is opening.",
         "risk": "A sudden reaction can destroy useful options before the replacement is ready.",
         "leverage": "Keep the exit open, test the alternative and move when the new route proves itself.",
     },
     "Neptune": {
         "pressure": "Important facts remain blurred in {area}. The story is moving faster than the proof.",
         "risk": "Hope, fear or idealisation can hide the real cost until commitment narrows the exit.",
-        "leverage": "Verify the number, date, promise, ownership and practical obligation before binding yourself.",
+        "leverage": "Verify the number, date, promise, ownership and obligation before you bind yourself.",
     },
     "Pluto": {
-        "pressure": "Control is shifting in {area}. Dependence and leverage matter more than appearances.",
+        "pressure": "Control is shifting in {area}. Dependence and leverage now matter more than appearances.",
         "risk": "Hidden dependence can give another person, institution or obligation control over the result.",
         "leverage": "Identify who owns the resource, who can say no and what becomes difficult to reverse.",
     },
@@ -112,6 +112,7 @@ class ProblemHorizon:
     problem: str
     if_ignored: str
     highest_leverage_move: str
+    timing: str
     horizon_rule: str
     forces: tuple[StrategicForce, ...]
 
@@ -292,6 +293,7 @@ def build_problem_horizon(
     midpoint = start + timedelta(days=max(0, (end - start).days // 2))
     midpoint_positions = positions_for_date(midpoint, timezone_name)
     forces: list[StrategicForce] = []
+    force_meta: dict[str, dict[str, object]] = {}
 
     for planet in SLOW_PLANETS:
         position = midpoint_positions[planet]
@@ -320,24 +322,33 @@ def build_problem_horizon(
             else f"{planet} was already active here before this report window."
         )
 
+        station_date = next_station[0] if next_station else None
+        station_kind = next_station[1] if next_station else ""
+        ingress_is_first = bool(next_ingress and (station_date is None or next_ingress <= station_date))
+
         if cycle:
             current_phase = (
                 f"The review phase intensified when {planet} turned retrograde on "
                 f"{human_date(cycle.retrograde_start)} and changes direction on {human_date(cycle.direct_date)}."
             )
+        elif ingress_is_first and next_ingress:
+            current_phase = f"The present phase changes when {planet} leaves this sign on {human_date(next_ingress)}."
         elif next_station:
-            station_date, station_kind = next_station
             current_phase = (
                 f"The next review point arrives when {planet} turns {station_kind} on {human_date(station_date)}."
             )
         else:
-            current_phase = "No station changes this background inside the next 18 months."
+            current_phase = "This long current holds its direction inside the next 18 months."
 
-        if next_station:
-            station_date, station_kind = next_station
-            changes = f"The pressure changes on {human_date(station_date)} when {planet} turns {station_kind}."
+        if ingress_is_first and next_ingress:
+            next_position = positions_for_date(next_ingress, timezone_name)[planet]
+            changes = (
+                f"The next phase starts on {human_date(next_ingress)} when {planet} moves into {next_position.sign}."
+            )
+        elif next_station:
+            changes = f"The next phase starts on {human_date(station_date)} when {planet} turns {station_kind}."
         else:
-            changes = "No station changes the direction inside the next 18 months."
+            changes = "No station or durable sign exit changes this long current inside the next 18 months."
 
         if next_ingress:
             new_position = positions_for_date(next_ingress, timezone_name)[planet]
@@ -351,6 +362,14 @@ def build_problem_horizon(
                 f"This background does not leave {area} inside the next three years; "
                 "treat it as a long-cycle condition rather than a one-month problem."
             )
+
+        force_meta[planet] = {
+            "next_station": next_station,
+            "next_ingress": next_ingress,
+            "next_change_date": next_ingress if ingress_is_first else station_date,
+            "next_change_kind": "sign" if ingress_is_first else (station_kind if next_station else ""),
+            "house": house,
+        }
 
         forces.append(
             StrategicForce(
@@ -374,12 +393,58 @@ def build_problem_horizon(
 
     problem = HOUSE_PROBLEM[primary_house]
     if secondary_house != primary_house:
-        problem += f" The consequence is spreading into {HOUSE_NAMES[secondary_house]}."
+        problem += f" This now reaches {HOUSE_NAMES[secondary_house]}."
+
+    # Month-end never cuts off a live condition. The next station is the first
+    # material change; the sign exit is the slower structural shift. We report
+    # both so the reader can distinguish an immediate turn from a long background.
+    change_candidates: list[tuple[date, str, str]] = []
+    related_exit_candidates: list[tuple[date, str]] = []
+    related_without_exit: list[str] = []
+    selected_planets = {force.planet for force in selected}
+    for force in selected:
+        meta = force_meta.get(force.planet, {})
+        change_date = meta.get("next_change_date")
+        change_kind = str(meta.get("next_change_kind") or "")
+        if change_date and change_date > end:
+            change_candidates.append((change_date, force.planet, change_kind))
+        if force.house in {primary_house, secondary_house}:
+            ingress = meta.get("next_ingress")
+            if ingress:
+                related_exit_candidates.append((ingress, force.planet))
+            else:
+                related_without_exit.append(force.planet)
+
+    timing_parts = [f"Month-end is not the finish line for this condition."]
+    if change_candidates:
+        change_date, change_planet, change_kind = min(change_candidates, key=lambda item: item[0])
+        if change_kind == "sign":
+            next_position = positions_for_date(change_date, timezone_name)[change_planet]
+            timing_parts.append(
+                f"The next material change arrives on {human_date(change_date)} when {change_planet} moves into {next_position.sign}."
+            )
+        else:
+            timing_parts.append(
+                f"The next material change arrives on {human_date(change_date)} when {change_planet} turns {change_kind}."
+            )
+    if related_without_exit:
+        names = ", ".join(related_without_exit[:2])
+        timing_parts.append(
+            f"The wider background carried by {names} remains in the same life area beyond the next three years; the immediate phase changes sooner, but the underlying theme does not fully leave."
+        )
+    elif related_exit_candidates:
+        exit_date, exit_planet = max(related_exit_candidates, key=lambda item: item[0])
+        timing_parts.append(
+            f"The longer structure does not fully leave this area before {human_date(exit_date)}, when {exit_planet} makes its durable sign exit."
+        )
+    else:
+        timing_parts.append("The immediate trigger can pass before the larger background does; judge the next station before calling the problem finished.")
 
     return ProblemHorizon(
         problem=problem,
         if_ignored=HOUSE_IF_IGNORED[primary_house],
         highest_leverage_move=HOUSE_MOVE[primary_house],
+        timing=" ".join(timing_parts),
         horizon_rule=(
             "A warning does not end at the page boundary. Luna follows the active condition until it changes, "
             "even when the next decisive station or structural shift falls next month or next year."
@@ -404,7 +469,11 @@ def describe_slow_planet_horizon(
     next_ingress = _find_final_exit(planet, reference, timezone_name)
 
     parts = [f"{planet} keeps {area} in the long cycle."]
-    if next_station:
+    station_date = next_station[0] if next_station else None
+    if next_ingress and (station_date is None or next_ingress <= station_date):
+        next_position = positions_for_date(next_ingress, timezone_name)[planet]
+        parts.append(f"The next change arrives {human_date(next_ingress)} when {planet} moves into {next_position.sign}.")
+    elif next_station:
         station_date, station_kind = next_station
         parts.append(f"The next change arrives {human_date(station_date)} when {planet} turns {station_kind}.")
     if next_ingress:

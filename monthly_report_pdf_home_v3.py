@@ -205,7 +205,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 <div class="section-hero two-column">
   <section>
     <div class="eyebrow">Your month / at a glance</div>
-    <h1 class="section-title">August wants more than a spark</h1>
+    <h1 class="section-title">What matters now</h1>
     <div class="forecast-copy">{glance_paragraphs}</div>
   </section>
   <aside class="reading-card do-card">
@@ -221,6 +221,33 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
   <div class="trust-item"><b>The opening</b><br>{_safe(snapshot.get('Strongest window', ''))}</div>
   <div class="trust-item"><b>The reality check</b><br>{_safe(snapshot.get('Second turning point', ''))}</div>
 </div>
+"""
+
+    # Strategic Horizon - problem first, consequence and timing before the chronology.
+    horizon = narrative.problem_horizon or {}
+    horizon_cards = []
+    for force in (horizon.get("forces") or [])[:4]:
+        horizon_cards.append(
+            f"""
+<article class="horizon-card">
+  <div class="mono-label">{_safe(force.get('planet'))} / {_safe(force.get('area'))}</div>
+  <h3>{_safe(force.get('problem'))}</h3>
+  <p><b>Your move:</b> {_safe(force.get('leverage'))}</p>
+  <p class="horizon-clock"><b>Next change:</b> {_safe(force.get('changes'))}<br><b>Long shift:</b> {_safe(force.get('structural_shift'))}</p>
+</article>
+"""
+        )
+    horizon_page = f"""
+<div class="eyebrow">Problem / consequence / timing</div>
+<h1 class="section-title">What needs attention now</h1>
+<p class="hero-subtitle narrow">{_safe(horizon.get('problem'))}</p>
+<div class="problem-duo">
+  <div class="card"><div class="mono-label">If you ignore it</div><h3>{_safe(horizon.get('if_ignored'))}</h3></div>
+  <div class="card black-card"><div class="mono-label">Your move</div><h3>{_safe(horizon.get('highest_leverage_move'))}</h3></div>
+</div>
+<div class="best-move wide"><span>How long this stays live</span><strong>{_safe(horizon.get('timing'))}</strong></div>
+<h2 class="subsection-title">What keeps this active</h2>
+<div class="horizon-grid">{''.join(horizon_cards)}</div>
 """
 
     # Page 3 - chapters styled as homepage cards, not report blocks.
@@ -414,16 +441,21 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 {order_html}
 """
 
+    page_bodies = [
+        (page1_body, "homepage-page"),
+        (page2_body, ""),
+        (horizon_page, ""),
+        (page3_body, ""),
+        (page4_body, ""),
+        (page5_body, ""),
+        (page6_body, ""),
+        (page7_body, ""),
+        (page8_body, ""),
+        (page9_body, ""),
+    ]
     pages = [
-        _page(page1_body, icon_uri, report_right, 1, "homepage-page"),
-        _page(page2_body, icon_uri, report_right, 2),
-        _page(page3_body, icon_uri, report_right, 3),
-        _page(page4_body, icon_uri, report_right, 4),
-        _page(page5_body, icon_uri, report_right, 5),
-        _page(page6_body, icon_uri, report_right, 6),
-        _page(page7_body, icon_uri, report_right, 7),
-        _page(page8_body, icon_uri, report_right, 8),
-        _page(page9_body, icon_uri, report_right, 9),
+        _page(body, icon_uri, report_right, index, extra_class)
+        for index, (body, extra_class) in enumerate(page_bodies, 1)
     ]
 
     local_font_css = _font_face_css()
@@ -502,6 +534,14 @@ p {{ margin:0 0 3.2mm; font:400 8.2pt/1.48 'Josefin Sans'; }}
 .theme-line {{ font:400 7.4pt 'Josefin Sans'; color:var(--muted); }}
 .chapter-row p {{ margin-top:3mm; font-size:7.7pt; line-height:1.45; }}
 .evidence-line {{ margin-top:2.5mm; font:400 4.8pt/1.4 'IBM Plex Mono'; text-transform:uppercase; }}
+.problem-duo {{ display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-top:6mm; }}
+.black-card {{ background:var(--black); color:white; }}
+.black-card h3, .black-card .mono-label {{ color:white; }}
+.horizon-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:3.5mm; margin-top:4mm; }}
+.horizon-card {{ border:.45pt solid var(--black); padding:4mm; min-height:48mm; }}
+.horizon-card h3 {{ margin:2mm 0 2.4mm; font-size:11.5pt; }}
+.horizon-card p {{ font-size:6.9pt; line-height:1.35; margin-bottom:1.7mm; }}
+.horizon-clock {{ color:var(--muted); }}
 .life-grid {{ display:grid; grid-template-columns:1.05fr .95fr; gap:5mm; margin-top:6mm; }}
 .life-secondary {{ display:grid; gap:5mm; }}
 .card {{ background:white; border:.45pt solid var(--black); padding:5.3mm; }}

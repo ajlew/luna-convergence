@@ -20,6 +20,7 @@ def main() -> None:
     assert horizon.get("problem")
     assert horizon.get("if_ignored")
     assert horizon.get("highest_leverage_move")
+    assert horizon.get("timing")
     forces = horizon.get("forces") or []
     assert forces
     assert any(item.get("planet") == "Jupiter" for item in forces)
@@ -40,8 +41,9 @@ def main() -> None:
     html = build_monthly_experience_html(narrative, result, show_print=False)
     assert "The problem" in html
     assert "If you ignore it" in html
-    assert "Structural shift" in html
-    assert "The long pressure behind it" in html
+    assert "Long shift" in html
+    assert "What keeps this active" in html
+    assert "How long this stays live" in html
     assert "game theory" not in html.lower()
     assert "terms of the game" not in html.lower()
     assert "equilibrium" not in html.lower()

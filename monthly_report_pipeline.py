@@ -15,7 +15,7 @@ from monthly_experience_v1 import render_monthly_experience
 from monthly_narrative_v1 import build_monthly_narrative
 from synthesis import period_report
 
-MONTHLY_PIPELINE_VERSION = "1.2"
+MONTHLY_PIPELINE_VERSION = "1.3"
 
 
 def month_date_range(year: int, month: int) -> tuple[date, date]:

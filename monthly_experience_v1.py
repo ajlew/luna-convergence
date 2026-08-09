@@ -442,23 +442,7 @@ def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict
         except Exception:
             period_key = month_label.replace(" ", "-")
     safe_sign = "".join(ch for ch in sign_label if ch.isalnum() or ch in ("-", "_")) or "Report"
-
-    # Keep the sortable base name, but append the reader's resolved city so
-    # saved reports remain distinguishable when the same sign/month is tested
-    # across locations (for example London vs Sydney). The on-page report
-    # already shows the full timezone; the filename only needs the city label.
-    solar_context = result.get("solar_convergence") or {}
-    city_label = str(solar_context.get("city") or "").strip()
-    safe_city = "".join(
-        ch if ch.isalnum() or ch in ("-", "_") else "_"
-        for ch in city_label
-    ).strip("_")
-    while "__" in safe_city:
-        safe_city = safe_city.replace("__", "_")
-
     file_title = f"{period_key}_{safe_sign}_Monthly"
-    if safe_city:
-        file_title = f"{file_title}_{safe_city}"
     generated_date = f"{now.day} {now.strftime('%B %Y')}"
     zone_short = now.tzname() or timezone_name
 
@@ -675,19 +659,20 @@ def _arc_evidence_path(result: dict) -> str:
             str(relationship.get("title", "Attention meets standards")),
         ))
     if ending_items:
-        first = ending_items[0]
-        last = ending_items[-1]
         titles = []
+        starts = []
+        ends = []
         for item in ending_items:
             title = str(item.get("title", "")).strip()
             if title and title not in titles:
                 titles.append(title)
+            if item.get("start_date"):
+                starts.append(item.get("start_date"))
+            if item.get("end_date") or item.get("start_date"):
+                ends.append(item.get("end_date") or item.get("start_date"))
         anchors.append((
             "Release and result",
-            human_date_range(
-                first.get("start_date"),
-                last.get("end_date", last.get("start_date")),
-            ),
+            human_date_range(min(starts), max(ends)),
             ", ".join(titles),
         ))
 
@@ -876,6 +861,58 @@ def _life_rows(narrative: MonthlyNarrative, result: dict) -> str:
     return "".join(rows)
 
 
+def _problem_horizon_html(narrative: MonthlyNarrative) -> str:
+    horizon = narrative.problem_horizon or {}
+    if not horizon:
+        return ""
+
+    force_cards = []
+    for force in horizon.get("forces") or []:
+        force_cards.append(
+            f"""
+<article class="luna-force-card">
+  <div class="luna-force-top">
+    <span>{_safe(force.get('planet'))}</span>
+    <small>{_safe(force.get('area'))}</small>
+  </div>
+  <h3>{_safe(force.get('problem'))}</h3>
+  <p><strong>If left alone:</strong> {_safe(force.get('if_ignored'))}</p>
+  <p><strong>Your move:</strong> {_safe(force.get('leverage'))}</p>
+  <div class="luna-force-clock">
+    <div><span>Active since</span><p>{_safe(force.get('active_since'))}</p></div>
+    <div><span>Current phase</span><p>{_safe(force.get('current_phase'))}</p></div>
+    <div><span>Peak</span><p>{_safe(force.get('peak'))}</p></div>
+    <div><span>Next change</span><p>{_safe(force.get('changes'))}</p></div>
+    <div><span>Long shift</span><p>{_safe(force.get('structural_shift'))}</p></div>
+  </div>
+</article>
+            """
+        )
+
+    return f"""
+<section class="luna-monthly-section luna-problem-horizon">
+  <div class="luna-eyebrow">The problem</div>
+  <h2>{_safe(horizon.get('problem'))}</h2>
+  <div class="luna-problem-grid">
+    <article>
+      <span>If you ignore it</span>
+      <p>{_safe(horizon.get('if_ignored'))}</p>
+    </article>
+    <article>
+      <span>Your move</span>
+      <p>{_safe(horizon.get('highest_leverage_move'))}</p>
+    </article>
+  </div>
+  <div class="luna-horizon-timing">
+    <span>How long this stays live</span>
+    <p>{_safe(horizon.get('timing'))}</p>
+  </div>
+  <div class="luna-eyebrow luna-long-pressure-label">What keeps this active</div>
+  <div class="luna-force-list">{''.join(force_cards)}</div>
+</section>
+    """
+
+
 def _print_controls(
     default_paper: str,
     default_orientation: str,
@@ -965,6 +1002,7 @@ def build_monthly_experience_html(
     arc_evidence_path = _arc_evidence_path(result)
     scenario_rows = _scenario_rows_html(result)
     carryover_rows = _carryover_rows_html(result)
+    problem_horizon_section = _problem_horizon_html(narrative)
 
     relationship_test_section = ""
     if narrative.relationship_test:
@@ -1118,6 +1156,8 @@ def build_monthly_experience_html(
     <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
   </div>
 </section>
+
+{problem_horizon_section}
 
 {focus_section}
 
@@ -1345,6 +1385,86 @@ def build_monthly_experience_html(
 }}
 .luna-do-dont-light span {{
   color:var(--muted);
+}}
+.luna-problem-horizon {{
+  background:#fff;
+}}
+.luna-problem-horizon > h2 {{
+  max-width:780px;
+  margin:.45rem 0 1.35rem;
+  font-size:clamp(2.2rem,5vw,4.3rem);
+  line-height:.98;
+}}
+.luna-problem-grid {{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-top:1px solid var(--black);
+  border-left:1px solid var(--black);
+  margin:1.1rem 0 2.1rem;
+}}
+.luna-problem-grid article {{
+  padding:1rem;
+  border-right:1px solid var(--black);
+  border-bottom:1px solid var(--black);
+}}
+.luna-problem-grid span,
+.luna-force-top span,
+.luna-force-clock span {{
+  display:block;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.63rem;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--muted);
+}}
+.luna-problem-grid p {{
+  font-family:"Bodoni Moda",Georgia,serif;
+  font-size:clamp(1.2rem,2.2vw,1.65rem);
+  line-height:1.22;
+}}
+.luna-long-pressure-label {{ margin-top:1.7rem; }}
+.luna-force-list {{
+  border-top:1px solid var(--black);
+}}
+.luna-force-card {{
+  padding:1.35rem 0 1.55rem;
+  border-bottom:1px solid var(--black);
+}}
+.luna-force-top {{
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  align-items:center;
+}}
+.luna-force-top small {{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.63rem;
+  text-transform:uppercase;
+  color:var(--muted);
+}}
+.luna-force-card h3 {{
+  max-width:760px;
+  margin:.55rem 0 .8rem;
+  font-size:clamp(1.65rem,3vw,2.45rem);
+  line-height:1.05;
+}}
+.luna-force-card > p {{ max-width:760px; }}
+.luna-force-clock {{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  border-top:1px solid var(--line);
+  border-left:1px solid var(--line);
+  margin-top:1rem;
+}}
+.luna-force-clock > div {{
+  padding:.85rem;
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}}
+.luna-force-clock p {{
+  margin:.35rem 0 0;
+  font-size:.92rem;
+  line-height:1.45;
 }}
 .luna-story-timeline {{
   border-top:1px solid var(--black);
@@ -1783,6 +1903,11 @@ def build_monthly_experience_html(
 #luna-print-portal {{
   display:none;
 }}
+@media (max-width:720px) {{
+  .luna-problem-grid,
+  .luna-force-clock {{ grid-template-columns:1fr; }}
+}}
+
 @media print {{
   .luna-monthly-report h1,
   .luna-monthly-report h2,

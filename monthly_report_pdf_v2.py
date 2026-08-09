@@ -322,6 +322,34 @@ def _chapter_card(chapter, number: int, styles: dict):
     return table
 
 
+def _problem_horizon(narrative, styles: dict):
+    horizon = narrative.problem_horizon or {}
+    if not horizon:
+        return []
+    story = _section_header("Problem / consequence / timing", "What needs attention now", styles)
+    story.extend([
+        _p(horizon.get("problem", ""), styles["hook"]),
+        _small_card("If you ignore it", horizon.get("if_ignored", ""), styles),
+        Spacer(1, 3 * mm),
+        _small_card("Your move", horizon.get("highest_leverage_move", ""), styles, dark=True),
+        Spacer(1, 4 * mm),
+        _p("HOW LONG THIS STAYS LIVE", styles["kicker"]),
+        _p(horizon.get("timing", ""), styles["body"]),
+        _p("WHAT KEEPS THIS ACTIVE", styles["kicker"]),
+    ])
+    for force in (horizon.get("forces") or [])[:4]:
+        label = f"{force.get('planet', '')} / {force.get('area', '')}"
+        copy = (
+            f"{force.get('problem', '')} "
+            f"Your move: {force.get('leverage', '')} "
+            f"Next change: {force.get('changes', '')} "
+            f"Long shift: {force.get('structural_shift', '')}"
+        )
+        story.extend([_small_card(label, copy, styles), Spacer(1, 2.5 * mm)])
+    story.append(PageBreak())
+    return story
+
+
 def _chapters(narrative, styles: dict):
     story = _section_header("Timing", "The month in three chapters", styles)
     for index, chapter in enumerate(narrative.chapters, 1):
@@ -708,6 +736,7 @@ def build_monthly_editorial_pdf(
     story = []
     story.extend(_cover(narrative, styles))
     story.extend(_at_glance(narrative, styles))
+    story.extend(_problem_horizon(narrative, styles))
     story.extend(_chapters(narrative, styles))
     story.extend(_life_areas(narrative, styles))
     story.extend(_strategy(narrative, styles))
