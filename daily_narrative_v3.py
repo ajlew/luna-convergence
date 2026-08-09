@@ -26,6 +26,7 @@ from luna_editorial_system import (
 )
 from luna_voice import narrator_cue
 from solar_cycle import solar_gate_label
+from strategic_horizon import describe_slow_planet_horizon
 
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -261,7 +262,7 @@ STORY_BRIDGE_TEMPLATES = {
 HOUSE_RELATIONSHIP_GUIDANCE = {
     1: "Choose the person who can meet your confidence without asking you to become smaller.",
     2: "Let desire prove itself through consistent behaviour rather than promises or attention alone.",
-    3: "Slow the response enough to turn the tension into an honest discussion rather than another guessing game.",
+    3: "Slow the response enough to turn the tension into an honest discussion rather than another cycle of guessing.",
     4: "Bring the attraction into the open gently. Feeling safe enough to be honest matters more than preserving appearances.",
     5: "Give {archetype} room to grow, but let the other person's response—not fantasy—show what is possible.",
     6: "Notice whether the attraction supports daily life or merely makes an already crowded routine more dramatic.",
@@ -341,7 +342,7 @@ HOUSE_QUESTIONS = {
     ),
     5: (
         "Is this interest being matched by clear effort?",
-        "What would pleasure look like without emotional games?",
+        "What would pleasure look like without emotional manoeuvring?",
         "Which creative or romantic risk is worth expressing plainly?",
     ),
     6: (
@@ -1503,9 +1504,15 @@ def _long_term_current(reading, sign: str, reading_date: date, timezone_name: st
         selected = "Jupiter"
     house = reading.houses[selected]
     verb = SLOW_CLIMATE_VERBS[selected]
+    horizon = describe_slow_planet_horizon(
+        selected,
+        sign,
+        reading_date,
+        timezone_name,
+    )
     return (
         f"{selected} is {verb} {HOUSE_CLIMATE[house]}. "
-        "This is the climate: it lasts longer than today's trigger."
+        f"{horizon}"
     )
 
 
@@ -2069,7 +2076,7 @@ def render_daily_narrative_v3(
             st.markdown(
                 f"""
 <div class="solar-inline-grid">
-  <div><span>Your Sun</span><strong>{escape(str(reading.sign))}</strong></div>
+  <div><span>Your Sun</span><strong>{escape(str(narrative.sign))}</strong></div>
   <div><span>Current Sun</span><strong>{escape(str(solar.get("solar_sign", "Unavailable")))}</strong></div>
   <div><span>Local light</span><strong>{escape(direction)} / {escape(change_text)} · {escape(str(solar.get("city", "Timezone estimate")))}</strong></div>
   <div><span>Solar gate</span><strong>{escape(solar_gate_label(str(solar.get("next_solar_gate", "Unavailable"))))} / {escape(str(solar.get("days_to_next_gate", "?")))} days</strong></div>
