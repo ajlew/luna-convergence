@@ -1,8 +1,13 @@
-Luna Convergence monthly preview fallback
+Luna Convergence v3.17 Google Ads base-tag hotfix
 
-Upload app.py to the root of the GitHub repository and replace the existing app.py.
-After Streamlit redeploys, open:
-https://luna-convergence.streamlit.app/reports?preview=monthly
+Replace app.py only.
 
-This uses the existing /reports route, avoiding Page Not Found on /monthly-preview.
-The original /monthly-preview route remains in the app as well.
+Adds Google Ads destination AW-18379683881 alongside the existing GA4 destination G-TE5HPKV94D.
+Existing Daily renderer hotfix remains preserved.
+
+Optional Streamlit secret:
+GOOGLE_ADS_ID = "AW-18379683881"
+
+If omitted, app.py defaults to AW-18379683881.
+
+This connects the base Google Ads tag only. A purchase conversion event/label is a separate next step.

@@ -98,6 +98,7 @@ REPORT_REQUEST_URL = secret("REPORT_REQUEST_URL")
 NEWSLETTER_URL = secret("NEWSLETTER_URL")
 CONTACT_EMAIL = secret("CONTACT_EMAIL", "your-email@example.com")
 GA_MEASUREMENT_ID = secret("GA_MEASUREMENT_ID", "G-TE5HPKV94D")
+GOOGLE_ADS_ID = secret("GOOGLE_ADS_ID", "AW-18379683881")
 STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
@@ -1215,6 +1216,7 @@ def install_google_analytics(page_title: str, page_path: str) -> None:
 <script>
 (() => {{
   const measurementId = {json.dumps(GA_MEASUREMENT_ID)};
+  const googleAdsId = {json.dumps(GOOGLE_ADS_ID)};
   if (!window.dataLayer) window.dataLayer = [];
   if (!window.gtag) {{
     window.gtag = function() {{ window.dataLayer.push(arguments); }};
@@ -1232,6 +1234,9 @@ def install_google_analytics(page_title: str, page_path: str) -> None:
     page_path: {json.dumps(page_path)},
     page_title: {json.dumps(page_title)}
   }});
+  if (googleAdsId && googleAdsId.startsWith('AW-')) {{
+    window.gtag('config', googleAdsId);
+  }}
   if ({str(send_page_view).lower()}) {{
     window.gtag('event', 'page_view', {{
       page_path: {json.dumps(page_path)},
