@@ -1907,7 +1907,7 @@ def render_free_reading(
         timezone_name,
         nearest_city,
     )
-    render_daily_narrative_v3(narrative, solar=solar, topic_tabs=True)
+    render_daily_narrative_v3(narrative, solar=solar)
 
 
 def home_page() -> None:
