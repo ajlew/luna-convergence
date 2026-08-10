@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.17.2 — Public Evidence Cleanup"
-EDITOR_PREVIEW_ENABLED = True  # Set False before the paid public launch.
+BUILD_LABEL = "Luna v3.18 — Instant Fulfilment"
+EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
     "Daily, monthly and yearly astrology explained through planetary transitions, "

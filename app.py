@@ -48,15 +48,23 @@ from order_capture import (
     QUESTION_MAX_CHARS,
     YEARLY_FOCUS_CHOICES,
     build_order_reference,
-    build_stripe_checkout_url,
     default_month_label,
     default_year,
     month_choices,
-    order_details_mailto,
-    order_payload_json,
     valid_email,
     year_choices,
 )
+from stripe_checkout import (
+    StripeCheckoutError,
+    checkout_amount,
+    checkout_email,
+    checkout_is_paid,
+    checkout_metadata,
+    create_checkout_session,
+    resolve_price_id,
+    retrieve_checkout_session,
+)
+from email_delivery import send_report_email
 from site_config import (
     BRAND_NAME,
     BUILD_LABEL,
@@ -94,11 +102,20 @@ def secret(name: str, default: str = "") -> str:
 
 MONTHLY_PAYMENT_URL = secret("STRIPE_MONTHLY_URL")
 YEARLY_PAYMENT_URL = secret("STRIPE_YEARLY_URL")
+STRIPE_SECRET_KEY = secret("STRIPE_SECRET_KEY")
+STRIPE_MONTHLY_PRICE_ID = secret("STRIPE_MONTHLY_PRICE_ID")
+STRIPE_YEARLY_PRICE_ID = secret("STRIPE_YEARLY_PRICE_ID")
+RESEND_API_KEY = secret("RESEND_API_KEY")
+RESEND_FROM = secret("RESEND_FROM")
+SMTP_USER = secret("SMTP_USER")
+SMTP_APP_PASSWORD = secret("SMTP_APP_PASSWORD")
+SMTP_FROM = secret("SMTP_FROM")
 REPORT_REQUEST_URL = secret("REPORT_REQUEST_URL")
 NEWSLETTER_URL = secret("NEWSLETTER_URL")
 CONTACT_EMAIL = secret("CONTACT_EMAIL", "your-email@example.com")
 GA_MEASUREMENT_ID = secret("GA_MEASUREMENT_ID", "G-TE5HPKV94D")
 GOOGLE_ADS_ID = secret("GOOGLE_ADS_ID", "AW-18379683881")
+GOOGLE_ADS_PURCHASE_LABEL = secret("GOOGLE_ADS_PURCHASE_LABEL")
 STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
@@ -1386,13 +1403,227 @@ def _order_summary(
   <div class="order-label">Delivery email</div>
   <div class="order-value">{escape(delivery_email)}</div>
   <div class="order-label">Delivery</div>
-  <div class="order-value">Personalised PDF by email within 24 hours after payment</div>
+  <div class="order-value">Instant access after payment + immediate email link + monthly PDF download</div>
   <div class="order-label">Order reference</div>
   <div class="order-value">{escape(reference)}</div>
 </div>
         """,
         unsafe_allow_html=True,
     )
+
+
+@lru_cache(maxsize=4)
+def _stripe_price_id(product_code: str) -> str:
+    code = str(product_code or "").upper()
+    if code == "MONTHLY":
+        return resolve_price_id(
+            STRIPE_SECRET_KEY,
+            explicit_price_id=STRIPE_MONTHLY_PRICE_ID,
+            payment_link_url=MONTHLY_PAYMENT_URL,
+        )
+    if code in {"YEAR", "YEARLY"}:
+        return resolve_price_id(
+            STRIPE_SECRET_KEY,
+            explicit_price_id=STRIPE_YEARLY_PRICE_ID,
+            payment_link_url=YEARLY_PAYMENT_URL,
+        )
+    return ""
+
+
+def _create_instant_checkout(order: dict, product_code: str) -> str:
+    """Create a fresh Stripe Checkout Session carrying exact fulfilment metadata."""
+    if not STRIPE_SECRET_KEY.startswith("sk_"):
+        raise StripeCheckoutError(
+            "Instant checkout needs STRIPE_SECRET_KEY in Streamlit Secrets."
+        )
+    price_id = _stripe_price_id(product_code)
+    if not price_id:
+        raise StripeCheckoutError(
+            "Luna could not resolve the Stripe Price ID. Add STRIPE_MONTHLY_PRICE_ID "
+            "or STRIPE_YEARLY_PRICE_ID to Streamlit Secrets."
+        )
+    order = dict(order)
+    order["product_code"] = product_code
+    session = create_checkout_session(
+        STRIPE_SECRET_KEY,
+        price_id=price_id,
+        order=order,
+        public_site_url=PUBLIC_SITE_URL,
+    )
+    url = str(session.get("url") or "")
+    if not url.startswith("https://"):
+        raise StripeCheckoutError("Stripe did not return a secure Checkout URL.")
+    return url
+
+
+def _send_purchase_events(session: dict) -> None:
+    """Record the paid order in GA4 and optional Google Ads conversion tracking."""
+    session_id = str(session.get("id") or "")
+    state_key = f"purchase-events::{session_id}"
+    if not session_id or st.session_state.get(state_key):
+        return
+    amount, currency = checkout_amount(session)
+    metadata = checkout_metadata(session)
+    track_event(
+        "purchase",
+        {
+            "transaction_id": session_id,
+            "value": amount,
+            "currency": currency,
+            "items": [
+                {
+                    "item_name": metadata.get("report_name", "Luna report"),
+                    "item_category": metadata.get("product_code", "REPORT"),
+                    "item_variant": metadata.get("sign", ""),
+                    "price": amount,
+                    "quantity": 1,
+                }
+            ],
+        },
+    )
+    if GOOGLE_ADS_PURCHASE_LABEL and GOOGLE_ADS_ID.startswith("AW-"):
+        send_to = f"{GOOGLE_ADS_ID}/{GOOGLE_ADS_PURCHASE_LABEL}"
+        st.html(
+            f"""
+<script>
+if (window.gtag) {{
+  window.gtag('event', 'conversion', {{
+    'send_to': {json.dumps(send_to)},
+    'value': {amount},
+    'currency': {json.dumps(currency)},
+    'transaction_id': {json.dumps(session_id)}
+  }});
+}}
+</script>
+            """,
+            unsafe_allow_javascript=True,
+        )
+    st.session_state[state_key] = True
+
+
+def _email_paid_report(session: dict) -> None:
+    session_id = str(session.get("id") or "")
+    state_key = f"fulfilment-email::{session_id}"
+    if not session_id or st.session_state.get(state_key):
+        return
+    metadata = checkout_metadata(session)
+    recipient = checkout_email(session)
+    report_url = f"{PUBLIC_SITE_URL}/payment-success?session_id={session_id}"
+    result = send_report_email(
+        to_email=recipient,
+        report_name=metadata.get("report_name", "Luna report"),
+        sign=metadata.get("sign", "Your sign"),
+        period=metadata.get("period", metadata.get("period_code", "")),
+        report_url=report_url,
+        order_reference=metadata.get(
+            "order_reference", str(session.get("client_reference_id") or "")
+        ),
+        idempotency_key=f"luna-fulfil-{session_id}",
+        resend_api_key=RESEND_API_KEY,
+        resend_from=RESEND_FROM,
+        smtp_user=SMTP_USER,
+        smtp_app_password=SMTP_APP_PASSWORD,
+        smtp_from=SMTP_FROM,
+    )
+    st.session_state[state_key] = result.sent
+    if result.sent:
+        st.success(f"A private return link has been emailed to {recipient}.")
+    else:
+        st.info(
+            "Your report is available below now. Automatic email is not yet connected "
+            "on this deployment, so keep this page open or download the report."
+        )
+
+
+def payment_success_page() -> None:
+    set_page_metadata(
+        "Your Luna Report Is Ready | Luna Convergence",
+        "Secure paid-report fulfilment for Luna Convergence.",
+        "/payment-success",
+    )
+    st.markdown('<div class="eyebrow">Payment confirmed</div>', unsafe_allow_html=True)
+    st.markdown("# Your Luna report is ready")
+
+    session_id = str(st.query_params.get("session_id", "")).strip()
+    if not session_id:
+        st.error("This private report link is missing its Stripe session reference.")
+        return
+    try:
+        session = retrieve_checkout_session(STRIPE_SECRET_KEY, session_id)
+    except Exception as exc:
+        st.error("Luna could not verify this payment with Stripe.")
+        st.caption(str(exc))
+        return
+    if not checkout_is_paid(session):
+        st.warning("Stripe has not marked this Checkout Session as paid yet.")
+        return
+
+    metadata = checkout_metadata(session)
+    product_code = metadata.get("product_code", "").upper()
+    sign = metadata.get("sign", "")
+    period_code = metadata.get("period_code", "")
+    timezone_name = metadata.get("timezone", DEFAULT_TIMEZONE)
+    nearest_city = metadata.get("nearest_city", "")
+    main_focus = metadata.get("main_focus", "General overview")
+    personal_question = metadata.get("personal_question", "")
+    order_reference = metadata.get(
+        "order_reference", str(session.get("client_reference_id") or "")
+    )
+
+    st.markdown(
+        f"**{escape(sign)} · {escape(metadata.get('period', period_code))}**  "
+        f"  \nOrder reference: `{escape(order_reference)}`"
+    )
+    _send_purchase_events(session)
+    _email_paid_report(session)
+    st.caption(
+        "This is a private paid-report link. Keep the email or bookmark this page; "
+        "do not share the link."
+    )
+
+    try:
+        if product_code == "MONTHLY":
+            year_text, month_text = period_code.split("-", 1)
+            narrative, result = build_production_monthly_report(
+                sign=sign,
+                year=int(year_text),
+                month=int(month_text),
+                timezone_name=timezone_name,
+                nearest_city=nearest_city,
+                main_focus=main_focus,
+                personal_question=personal_question,
+            )
+            render_production_monthly_report(
+                narrative,
+                result,
+                show_print=True,
+                order_reference=order_reference,
+            )
+        elif product_code in {"YEAR", "YEARLY"}:
+            year = int(period_code)
+            result = period_report(
+                sign,
+                date(year, 1, 1),
+                date(year, 12, 31),
+                timezone_name,
+                str(year),
+                transition_count=9,
+                nearest_city=nearest_city,
+                main_focus=main_focus,
+            )
+            render_yearly_experience(
+                result,
+                show_print=True,
+                order_reference=order_reference,
+            )
+        else:
+            st.error("The paid order does not contain a recognised Luna report type.")
+    except Exception as exc:
+        st.error(
+            "Payment is confirmed, but Luna could not generate the report on this run. "
+            "Use the order reference above for support."
+        )
+        st.exception(exc)
 
 
 def report_cta(
@@ -1414,9 +1645,9 @@ def report_cta(
         "Use your Sun sign unless you know and prefer your rising sign."
     )
     st.markdown(
-        '<div class="delivery-notice"><strong>Launch delivery</strong><br>'
-        "Your personalised PDF is currently prepared and emailed manually after payment. "
-        "Please allow up to 24 hours for delivery."
+        '<div class="delivery-notice"><strong>Instant delivery</strong><br>'
+        "After Stripe confirms payment, your complete report opens immediately. "
+        "Luna also emails a private return link straight away."
         "</div>",
         unsafe_allow_html=True,
     )
@@ -1432,7 +1663,7 @@ def report_cta(
   <span class="pill">One star sign</span>
   <span class="pill">One month</span>
   <span class="pill">Personalised PDF</span>
-  <span class="pill">Within 24 hours</span>
+  <span class="pill">Instant access</span>
 </div>
             """,
             unsafe_allow_html=True,
@@ -1447,7 +1678,7 @@ def report_cta(
   <span class="pill">One star sign</span>
   <span class="pill">Calendar year</span>
   <span class="pill">Personalised PDF</span>
-  <span class="pill">Within 24 hours</span>
+  <span class="pill">Instant access</span>
 </div>
             """,
             unsafe_allow_html=True,
@@ -1520,10 +1751,10 @@ def report_cta(
                 key=f"{key_context}-monthly-question",
                 max_chars=QUESTION_MAX_CHARS,
                 placeholder="What would you most like clarity about this month?",
-                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters so the question can travel with the Stripe order reference.",
+                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
             st.caption(
-                "Manual delivery during launch: your personalised PDF is emailed within 24 hours after payment."
+                "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link."
             )
             submitted = st.form_submit_button(
                 f"Prepare monthly checkout — {MONTHLY_PRICE}",
@@ -1548,17 +1779,12 @@ def report_cta(
                     personal_question=personal_question,
                     nearest_city=nearest_city,
                 )
-                checkout_url = build_stripe_checkout_url(
-                    MONTHLY_PAYMENT_URL,
-                    delivery_email,
-                    reference,
-                    f"monthly-{period_code}-{sign}",
-                )
                 location, location_basis = resolve_location(
                     nearest_city,
                     timezone_name,
                 )
-                st.session_state[state_key] = {
+                order = {
+                    "product_code": "MONTHLY",
                     "report_name": "Monthly Strategic Report",
                     "email": delivery_email.strip(),
                     "sign": sign,
@@ -1570,17 +1796,23 @@ def report_cta(
                     "main_focus": main_focus,
                     "personal_question": personal_question.strip(),
                     "reference": reference,
-                    "checkout_url": checkout_url,
                 }
-                track_event(
-                    "monthly_order_prepared",
-                    {
-                        "zodiac_sign": sign,
-                        "report_period": period_code,
-                        "timezone": timezone_name,
-                        "main_focus": main_focus,
-                    },
-                )
+                try:
+                    order["checkout_url"] = _create_instant_checkout(order, "MONTHLY")
+                except Exception as exc:
+                    st.error(f"Secure checkout is not ready: {exc}")
+                    st.session_state.pop(state_key, None)
+                else:
+                    st.session_state[state_key] = order
+                    track_event(
+                        "monthly_order_prepared",
+                        {
+                            "zodiac_sign": sign,
+                            "report_period": period_code,
+                            "timezone": timezone_name,
+                            "main_focus": main_focus,
+                        },
+                    )
 
         order = st.session_state.get(state_key)
         if order:
@@ -1596,23 +1828,6 @@ def report_cta(
                 order["personal_question"],
                 order["reference"],
             )
-            record_columns = st.columns(2)
-            with record_columns[0]:
-                st.download_button(
-                    "Download order details",
-                    data=order_payload_json(order),
-                    file_name=f"{order['reference']}.json",
-                    mime="application/json",
-                    use_container_width=True,
-                    key=f"{key_context}-monthly-order-download",
-                )
-            with record_columns[1]:
-                if CONTACT_EMAIL != "your-email@example.com":
-                    st.link_button(
-                        "Email order details to Luna",
-                        order_details_mailto(CONTACT_EMAIL, order),
-                        use_container_width=True,
-                    )
             payment_button(
                 f"Continue to secure payment — {MONTHLY_PRICE}",
                 order["checkout_url"],
@@ -1626,9 +1841,9 @@ def report_cta(
             )
             st.markdown(
                 '<div class="checkout-note">'
-                "Stripe opens in a new tab. Your sign, period, timezone, focus and the readable "
-                "personal-question fragment are attached through the order reference shown above. "
-                "The PDF is manually prepared and emailed within 24 hours after payment."
+                "Stripe opens in a new tab. After payment, Stripe returns you to Luna's private "
+                "report page. The complete report opens immediately and Luna emails the same "
+                "private return link straight away."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -1689,10 +1904,10 @@ def report_cta(
                 key=f"{key_context}-yearly-question",
                 max_chars=QUESTION_MAX_CHARS,
                 placeholder="Is there a major decision, relationship or transition to consider?",
-                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters so the request can travel with the Stripe order reference.",
+                help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
             st.caption(
-                "Manual delivery during launch: your personalised PDF is emailed within 24 hours after payment."
+                "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link."
             )
             submitted = st.form_submit_button(
                 f"Prepare year-ahead checkout — {YEARLY_PRICE}",
@@ -1717,17 +1932,12 @@ def report_cta(
                     personal_question=personal_question,
                     nearest_city=nearest_city,
                 )
-                checkout_url = build_stripe_checkout_url(
-                    YEARLY_PAYMENT_URL,
-                    delivery_email,
-                    reference,
-                    f"year-{period_code}-{sign}",
-                )
                 location, location_basis = resolve_location(
                     nearest_city,
                     timezone_name,
                 )
-                st.session_state[state_key] = {
+                order = {
+                    "product_code": "YEAR",
                     "report_name": "Year-Ahead Strategic Report",
                     "email": delivery_email.strip(),
                     "sign": sign,
@@ -1739,17 +1949,23 @@ def report_cta(
                     "main_focus": main_focus,
                     "personal_question": personal_question.strip(),
                     "reference": reference,
-                    "checkout_url": checkout_url,
                 }
-                track_event(
-                    "yearly_order_prepared",
-                    {
-                        "zodiac_sign": sign,
-                        "report_period": period_code,
-                        "timezone": timezone_name,
-                        "main_focus": main_focus,
-                    },
-                )
+                try:
+                    order["checkout_url"] = _create_instant_checkout(order, "YEAR")
+                except Exception as exc:
+                    st.error(f"Secure checkout is not ready: {exc}")
+                    st.session_state.pop(state_key, None)
+                else:
+                    st.session_state[state_key] = order
+                    track_event(
+                        "yearly_order_prepared",
+                        {
+                            "zodiac_sign": sign,
+                            "report_period": period_code,
+                            "timezone": timezone_name,
+                            "main_focus": main_focus,
+                        },
+                    )
 
         order = st.session_state.get(state_key)
         if order:
@@ -1765,23 +1981,6 @@ def report_cta(
                 order["personal_question"],
                 order["reference"],
             )
-            record_columns = st.columns(2)
-            with record_columns[0]:
-                st.download_button(
-                    "Download order details",
-                    data=order_payload_json(order),
-                    file_name=f"{order['reference']}.json",
-                    mime="application/json",
-                    use_container_width=True,
-                    key=f"{key_context}-yearly-order-download",
-                )
-            with record_columns[1]:
-                if CONTACT_EMAIL != "your-email@example.com":
-                    st.link_button(
-                        "Email order details to Luna",
-                        order_details_mailto(CONTACT_EMAIL, order),
-                        use_container_width=True,
-                    )
             payment_button(
                 f"Continue to secure payment — {YEARLY_PRICE}",
                 order["checkout_url"],
@@ -1795,9 +1994,8 @@ def report_cta(
             )
             st.markdown(
                 '<div class="checkout-note">'
-                "Stripe opens in a new tab. Your sign, year, timezone, focus and the readable "
-                "personal-question fragment are attached through the order reference shown above. "
-                "The PDF is manually prepared and emailed within 24 hours after payment."
+                "Stripe opens in a new tab. After payment, Stripe returns you to Luna's private "
+                "report page and Luna emails the same private return link straight away."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -2604,7 +2802,7 @@ def reports_page() -> None:
     st.markdown("# Choose the depth you need")
     st.markdown(
         "Choose your star sign and report period before entering Stripe. "
-        "Reports are generated with the calculation engine and checked before manual delivery."
+        "After payment, Luna verifies the Stripe session and generates the complete report immediately."
     )
     if EDITOR_PREVIEW_ENABLED:
         st.warning(
@@ -2632,7 +2830,7 @@ def reports_page() -> None:
         ),
         (
             "3. Receive",
-            "The personalised PDF is checked and emailed manually within 24 hours after payment.",
+            "Stripe returns you to Luna immediately. Read the full report online, download the monthly PDF and use the emailed private return link.",
         ),
     ]
     for column, (title, body) in zip((c1, c2, c3), steps):
@@ -2887,8 +3085,8 @@ as causal prediction and should not replace financial, medical, legal or other p
 
     st.markdown("## Privacy during the MVP")
     st.markdown(
-        "The public daily reading requires no account. Paid orders initially use manual fulfilment, "
-        "so the site only needs the minimum details required to deliver the report."
+        "The public daily reading requires no account. Paid orders use Stripe-verified instant fulfilment, "
+        "and Luna only uses the minimum details required to generate and deliver the purchased report."
     )
 
 
@@ -3185,9 +3383,10 @@ Payments are processed by **Stripe**. Luna Convergence does not receive or
 store complete card details. Stripe supplies the payment status, customer
 email and any checkout information the customer submits.
 
-Paid reports are currently fulfilled manually. Information such as name,
-email, zodiac sign, requested period, timezone and optional nearest city is used
-only to prepare, deliver and support the purchased report. A city is used to
+Paid reports use automated fulfilment after Stripe confirms payment. Information such as
+email, zodiac sign, requested period, timezone, optional nearest city, selected focus and
+optional question is stored in Stripe Checkout metadata and used only to generate, deliver
+and support the purchased report. A city is used to
 estimate latitude, hemisphere and daylight; a street address is not requested.
 
 To request correction or deletion of order information, use the contact
@@ -3200,7 +3399,8 @@ email displayed during checkout or in the report-delivery message.
 - page views;
 - free daily reading generation;
 - monthly report checkout clicks;
-- year-ahead report checkout clicks.
+- year-ahead report checkout clicks;
+- confirmed paid-report purchases.
         """
     )
 
@@ -3295,6 +3495,12 @@ PRIVACY_PAGE_REF = st.Page(
     url_path="privacy",
     visibility="hidden",
 )
+PAYMENT_SUCCESS_REF = st.Page(
+    payment_success_page,
+    title="Your Report",
+    url_path="payment-success",
+    visibility="hidden",
+)
 
 MONTHLY_PAGE_REFS = {
     sign: st.Page(
@@ -3320,6 +3526,7 @@ ALL_PAGES = [
     SOLAR_YEAR_PAGE_REF,
     METHOD_PAGE_REF,
     PRIVACY_PAGE_REF,
+    PAYMENT_SUCCESS_REF,
     *MONTHLY_PAGE_REFS.values(),
 ]
 

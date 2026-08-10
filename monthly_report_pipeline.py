@@ -40,6 +40,7 @@ def build_production_monthly_report(
     timezone_name: str,
     nearest_city: str,
     main_focus: str = "General overview",
+    personal_question: str = "",
 ) -> tuple[Any, dict]:
     """Run the exact calculation+narrative pipeline used for full monthlys."""
     start_date, end_date = month_date_range(year, month)
@@ -53,7 +54,11 @@ def build_production_monthly_report(
         nearest_city=nearest_city,
         main_focus=main_focus,
     )
-    narrative = build_monthly_narrative(result, main_focus=main_focus)
+    narrative = build_monthly_narrative(
+        result,
+        main_focus=main_focus,
+        personal_question=personal_question,
+    )
     return narrative, result
 
 

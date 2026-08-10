@@ -247,8 +247,8 @@ def order_payload_json(order: dict) -> str:
         "main_focus": order.get("main_focus", ""),
         "personal_question": order.get("personal_question", ""),
         "order_reference": order.get("reference", ""),
-        "delivery_method": "Personalised PDF by email",
-        "delivery_timeframe": "Within 24 hours after payment",
+        "delivery_method": "Instant private web report with monthly PDF download",
+        "delivery_timeframe": "Immediately after Stripe confirms payment",
     }
     return json.dumps(ordered, indent=2, ensure_ascii=False)
 
@@ -272,7 +272,7 @@ def order_details_mailto(
                 f"Personal question: {order.get('personal_question', '') or 'None supplied'}",
                 f"Order reference: {order.get('reference', '')}",
                 "",
-                "The personalised PDF will be prepared manually and emailed within 24 hours after payment.",
+                "After Stripe confirms payment, Luna opens the private report immediately and emails the return link.",
             ]
         )
     )

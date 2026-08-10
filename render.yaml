@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: luna-instant-fulfilment
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn fulfilment_service:application
+    healthCheckPath: /health
+    envVars:
+      - key: PUBLIC_SITE_URL
+        value: https://luna-convergence.streamlit.app
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_APP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
