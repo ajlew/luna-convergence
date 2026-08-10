@@ -7,6 +7,7 @@ Gmail App Password SMTP is a practical beta fallback for lunaconvergence@gmail.c
 """
 
 from dataclasses import dataclass
+import base64
 from email.message import EmailMessage
 from html import escape
 import smtplib
@@ -31,6 +32,7 @@ def build_report_email_html(
     period: str,
     report_url: str,
     order_reference: str,
+    pdf_attached: bool = False,
 ) -> str:
     return f"""
 <!doctype html>
@@ -45,7 +47,7 @@ def build_report_email_html(
       Read your report now
     </a>
   </p>
-  <p>The private report page also contains the PDF download when available.</p>
+  <p>{"Your personalised PDF is attached to this email. The button above also reopens your paid report." if pdf_attached else "The private report page also contains the PDF download when available."}</p>
   <p style="font-size:12px;color:#696963;">Order reference: {escape(order_reference)}</p>
   <p style="font-size:12px;color:#696963;">Keep this email so you can return to your report. Do not share the private report link.</p>
 </body>
@@ -67,6 +69,8 @@ def send_report_email(
     smtp_user: str = "",
     smtp_app_password: str = "",
     smtp_from: str = "",
+    attachment_bytes: bytes | None = None,
+    attachment_filename: str = "",
 ) -> EmailResult:
     recipient = str(to_email or "").strip()
     if not recipient or "@" not in recipient:
@@ -79,6 +83,7 @@ def send_report_email(
         period=period,
         report_url=report_url,
         order_reference=order_reference,
+        pdf_attached=bool(attachment_bytes),
     )
 
     resend_key = str(resend_api_key or "").strip()
@@ -97,6 +102,12 @@ def send_report_email(
                     "to": [recipient],
                     "subject": subject,
                     "html": html,
+                    **({
+                        "attachments": [{
+                            "filename": str(attachment_filename or "luna-report.pdf"),
+                            "content": base64.b64encode(attachment_bytes).decode("ascii"),
+                        }]
+                    } if attachment_bytes else {}),
                 },
                 timeout=20,
             )
@@ -124,6 +135,13 @@ def send_report_email(
                 f"Your Luna report is ready: {report_url}\n\nOrder reference: {order_reference}"
             )
             message.add_alternative(html, subtype="html")
+            if attachment_bytes:
+                message.add_attachment(
+                    attachment_bytes,
+                    maintype="application",
+                    subtype="pdf",
+                    filename=str(attachment_filename or "luna-report.pdf"),
+                )
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context, timeout=20) as server:
                 server.login(smtp_username, smtp_password)

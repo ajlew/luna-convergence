@@ -65,6 +65,7 @@ from stripe_checkout import (
     retrieve_checkout_session,
 )
 from email_delivery import send_report_email
+from report_pdf import build_report_pdf, report_filename
 from site_config import (
     BRAND_NAME,
     BUILD_LABEL,
@@ -1509,7 +1510,12 @@ if (window.gtag) {{
     st.session_state[state_key] = True
 
 
-def _email_paid_report(session: dict) -> None:
+def _email_paid_report(
+    session: dict,
+    *,
+    attachment_bytes: bytes | None = None,
+    attachment_filename: str = "",
+) -> None:
     session_id = str(session.get("id") or "")
     state_key = f"fulfilment-email::{session_id}"
     if not session_id or st.session_state.get(state_key):
@@ -1532,10 +1538,18 @@ def _email_paid_report(session: dict) -> None:
         smtp_user=SMTP_USER,
         smtp_app_password=SMTP_APP_PASSWORD,
         smtp_from=SMTP_FROM,
+        attachment_bytes=attachment_bytes,
+        attachment_filename=attachment_filename,
     )
     st.session_state[state_key] = result.sent
     if result.sent:
-        st.success(f"A private return link has been emailed to {recipient}.")
+        if attachment_bytes:
+            st.success(
+                f"Your personalised PDF has been emailed to {recipient}. "
+                "A link to reopen this paid report is included too."
+            )
+        else:
+            st.success(f"A link to reopen this paid report has been emailed to {recipient}.")
     else:
         st.info(
             "Your report is available below now. Automatic email is not yet connected "
@@ -1583,7 +1597,6 @@ def payment_success_page() -> None:
         f"  \nOrder reference: `{escape(order_reference)}`"
     )
     _send_purchase_events(session)
-    _email_paid_report(session)
     st.caption(
         "This is a private paid-report link. Keep the email or bookmark this page; "
         "do not share the link."
@@ -1600,6 +1613,26 @@ def payment_success_page() -> None:
                 nearest_city=nearest_city,
                 main_focus=main_focus,
                 personal_question=personal_question,
+            )
+            pdf_bytes = build_report_pdf(
+                result,
+                main_focus=main_focus,
+                personal_question=personal_question,
+                order_reference=order_reference,
+            )
+            pdf_name = report_filename(result)
+            st.download_button(
+                "Download your personalised PDF",
+                data=pdf_bytes,
+                file_name=pdf_name,
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"paid-pdf-{session_id}",
+            )
+            _email_paid_report(
+                session,
+                attachment_bytes=pdf_bytes,
+                attachment_filename=pdf_name,
             )
             render_production_monthly_report(
                 narrative,
@@ -1618,6 +1651,26 @@ def payment_success_page() -> None:
                 transition_count=9,
                 nearest_city=nearest_city,
                 main_focus=main_focus,
+            )
+            pdf_bytes = build_report_pdf(
+                result,
+                main_focus=main_focus,
+                personal_question=personal_question,
+                order_reference=order_reference,
+            )
+            pdf_name = report_filename(result)
+            st.download_button(
+                "Download your personalised PDF",
+                data=pdf_bytes,
+                file_name=pdf_name,
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"paid-pdf-{session_id}",
+            )
+            _email_paid_report(
+                session,
+                attachment_bytes=pdf_bytes,
+                attachment_filename=pdf_name,
             )
             render_yearly_experience(
                 result,
