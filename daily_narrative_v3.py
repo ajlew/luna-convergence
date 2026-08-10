@@ -2155,12 +2155,6 @@ def render_daily_narrative_v3(
         )
 
     with st.expander(TECHNICAL_LABEL):
-        st.markdown(
-            "**Explainable Astrology:** the story appears first. The evidence "
-            "below preserves the full calculation without interrupting the "
-            "customer reading."
-        )
-
         orb_value = (
             "Not applicable"
             if evidence.orb is None
@@ -2171,11 +2165,6 @@ def render_daily_narrative_v3(
             if evidence.configured_orb is None
             else f"{evidence.configured_orb:g}°"
         )
-
-        st.markdown("### Editorial translation")
-        st.markdown(f"**Emotional hook:** {narrative.hook_headline}")
-        st.markdown(f"**Interpretive theme:** {narrative.headline}")
-        st.markdown(f"**Tone family:** {narrative.tone_family}")
 
         st.markdown("### Dominant aspect")
         st.markdown(f"**Aspect:** {evidence.aspect_label}")
