@@ -2290,3 +2290,40 @@ def render_monthly_experience(
         ),
         unsafe_allow_javascript=True,
     )
+
+    # Browser print is useful on desktop, but most Luna traffic is mobile and
+    # browser print dialogs can be inconsistent inside hosted apps. When the
+    # full report is authorised for printing, also provide a server-generated
+    # PDF as a native Streamlit download. This uses the same customer-facing
+    # monthly narrative and falls back to ReportLab if an HTML print engine is
+    # unavailable on the server.
+    if show_print and not preview:
+        try:
+            from monthly_report_pdf_home_v3 import build_monthly_homepage_pdf
+
+            pdf_bytes = build_monthly_homepage_pdf(
+                result,
+                main_focus=narrative.main_focus,
+                personal_question=narrative.personal_question,
+                order_reference=order_reference,
+            )
+            file_title = _generated_report_details(narrative, result)["file_title"]
+            st.download_button(
+                "Download complete monthly PDF",
+                data=pdf_bytes,
+                file_name=f"{file_title}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"{file_title}-native-pdf-download",
+            )
+            st.caption(
+                "On phones and tablets, use Download PDF. On desktop, "
+                "Print / Save PDF remains available above."
+            )
+        except Exception as exc:
+            st.warning(
+                "The browser Print / Save PDF control remains available, but "
+                "Luna could not prepare the direct PDF download on this run."
+            )
+            if hasattr(st, "exception"):
+                st.exception(exc)
