@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.18 — Instant Fulfilment"
+BUILD_LABEL = "Luna v3.18.2 — Checkout Simplification"
 EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
@@ -9,7 +9,7 @@ SUBTITLE = (
     "whole-sign houses, retrogrades and convergence points."
 )
 
-MONTHLY_PRICE = "A$4.95"
+MONTHLY_PRICE = "A$3.30"
 YEARLY_PRICE = "A$14.95"
 
 DEFAULT_SIGN = "Sagittarius"

@@ -598,17 +598,25 @@ a {
 }
 
 .pill {
-    display:inline-block;
-    border-radius:0;
-    padding:.34rem .55rem;
-    margin:.25rem .28rem .1rem 0;
-    border:1px solid var(--black);
-    background:var(--white);
-    color:var(--black);
+    display:inline;
+    padding:0;
+    margin:0;
+    border:0;
+    background:transparent;
+    color:var(--muted);
     font-family:"IBM Plex Mono", "Courier New", monospace;
     font-size:.67rem;
     font-weight:500;
+    letter-spacing:.025em;
     text-transform:uppercase;
+}
+
+.pill + .pill::before {
+    content:"·";
+    display:inline-block;
+    margin:0 .55rem;
+    color:var(--muted);
+    font-weight:400;
 }
 
 .trust-strip {
@@ -1639,51 +1647,6 @@ def report_cta(
     ).strip("-") or "general"
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("## Choose and personalise your report")
-    st.markdown(
-        "Select the star sign, report period, timezone and personal focus **before payment**. "
-        "Use your Sun sign unless you know and prefer your rising sign."
-    )
-    st.markdown(
-        '<div class="delivery-notice"><strong>Instant delivery</strong><br>'
-        "After Stripe confirms payment, your complete report opens immediately. "
-        "Luna also emails a private return link straight away."
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="eyebrow">Monthly strategic report</div>
-  <div class="price">{MONTHLY_PRICE}</div>
-  <p>Major transitions, convergence points, retrogrades, work, money, relationships and important dates.</p>
-  <span class="pill">One star sign</span>
-  <span class="pill">One month</span>
-  <span class="pill">Personalised PDF</span>
-  <span class="pill">Instant access</span>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="eyebrow">Year-ahead strategic report</div>
-  <div class="price">{YEARLY_PRICE}</div>
-  <p>Nine strategic chapters, eclipse sequence, full retrograde cycles, convergence windows and a month-by-month map.</p>
-  <span class="pill">One star sign</span>
-  <span class="pill">Calendar year</span>
-  <span class="pill">Personalised PDF</span>
-  <span class="pill">Instant access</span>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
     monthly_tab, yearly_tab = st.tabs(
         [
             f"Monthly report — {MONTHLY_PRICE}",
