@@ -2240,24 +2240,26 @@ def _daily_narrative_for_landing(
     reading_date: date,
     timezone_name: str,
 ):
-    cache_key = ("lean", sign, reading_date.isoformat(), timezone_name)
-    if st.session_state.get("lean_daily_cache_key") != cache_key:
-        reading = free_daily_reading(sign, reading_date, timezone_name)
-        previous_texts = _previous_daily_texts(
-            sign,
-            reading_date.isoformat(),
-            timezone_name,
-        )
-        st.session_state.lean_daily_narrative = build_daily_narrative(
-            reading,
-            sign=sign,
-            reading_date=reading_date,
-            timezone_name=timezone_name,
-            house_voice=HOUSE_VOICE,
-            previous_texts=previous_texts,
-        )
-        st.session_state.lean_daily_cache_key = cache_key
-    return st.session_state.lean_daily_narrative
+    """Build the lean Daily directly for the currently selected sign.
+
+    The landing page deliberately does not cache the narrative in session_state.
+    A zodiac-sign change must always rebuild the house map and narrative on the
+    same rerun so one sign can never inherit another sign's Daily copy.
+    """
+    reading = free_daily_reading(sign, reading_date, timezone_name)
+    previous_texts = _previous_daily_texts(
+        sign,
+        reading_date.isoformat(),
+        timezone_name,
+    )
+    return build_daily_narrative(
+        reading,
+        sign=sign,
+        reading_date=reading_date,
+        timezone_name=timezone_name,
+        house_voice=HOUSE_VOICE,
+        previous_texts=previous_texts,
+    )
 
 
 def _render_lean_daily(path: str) -> None:
