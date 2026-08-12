@@ -977,12 +977,17 @@ a {
 
 .related-signs a {
     border:1px solid var(--black);
-    padding:.42rem .62rem;
+    padding:.3rem .48rem;
     color:var(--black) !important;
     text-decoration:none !important;
     font-family:"IBM Plex Mono", "Courier New", monospace;
-    font-size:.66rem;
+    font-size:.61rem;
     text-transform:uppercase;
+}
+
+.monthly-other-signs-label {
+    margin-top:1.35rem;
+    font-size:.62rem;
 }
 
 .related-signs a:hover {
@@ -3221,6 +3226,37 @@ def monthly_index_page() -> None:
     )
 
 
+AUGUST_2026_PREVIEW_HOOKS = {
+    "Aries": "Make room for pleasure without promising more than August can hold",
+    "Taurus": "Home sets the terms for the future you are building",
+    "Gemini": "The right conversation can change the direction of your work",
+    "Cancer": "Money gets clearer when the bigger plan has a real price",
+    "Leo": "Choose the version of yourself that can carry the next commitment",
+    "Virgo": "Protect the quiet; relationships reveal what should stay",
+    "Libra": "Your future circle is changing; keep the plans that support real life",
+    "Scorpio": "Visibility rises; make sure the work can carry the attention",
+    "Sagittarius": "The wider road is opening, but home still sets the terms",
+    "Capricorn": "Shared money needs cleaner terms before the next decision",
+    "Aquarius": "Relationships get clearer when values and expectations are named",
+    "Pisces": "Your routines decide how much of the new direction you can sustain",
+}
+
+
+def _august_preview_narrative(narrative):
+    """Give each public August sign page its own concise editorial lead.
+
+    The paid narrative and its evidence remain untouched.  This replacement is
+    only for the free August 2026 sign preview, where repeating the same
+    'pressure builds' sentence across signs makes the product feel templated.
+    """
+    from dataclasses import replace
+
+    hook = AUGUST_2026_PREVIEW_HOOKS.get(narrative.sign)
+    if not hook:
+        return narrative
+    return replace(narrative, hook_headline=hook)
+
+
 def monthly_sign_page(sign: str) -> None:
     data = monthly_seo_data(sign)
     narrative = build_monthly_narrative(
@@ -3248,13 +3284,16 @@ def monthly_sign_page(sign: str) -> None:
         )
     else:
         render_monthly_experience(
-            narrative,
+            _august_preview_narrative(narrative),
             data,
             show_print=False,
             preview=True,
         )
 
-    st.markdown("## Read another August 2026 sign")
+    st.markdown(
+        '<div class="eyebrow monthly-other-signs-label">Read another August 2026 sign</div>',
+        unsafe_allow_html=True,
+    )
     links = [
         f'<a href="/august-2026-{sign_slug(item)}">{escape(item)}</a>'
         for item in SIGNS

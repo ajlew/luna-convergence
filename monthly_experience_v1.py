@@ -1336,6 +1336,28 @@ def build_monthly_experience_html(
   font-weight:400;
   line-height:1.35;
 }}
+/* Public monthly sign previews should read like a horoscope, not a large
+   campaign panel. Keep the paid/full report hierarchy unchanged. */
+.luna-monthly-preview .luna-monthly-hero {{
+  gap:.55rem;
+  padding:clamp(.8rem,1.8vw,1.15rem);
+}}
+.luna-monthly-preview .luna-monthly-meta {{
+  padding-bottom:.45rem;
+  font-size:.6rem;
+}}
+.luna-monthly-preview .luna-monthly-hero h1 {{
+  max-width:680px;
+  margin:.2rem 0 .1rem;
+  font-size:clamp(1.8rem,4vw,2.8rem);
+  line-height:1.02;
+}}
+.luna-monthly-preview .luna-hero-theme {{
+  gap:.5rem;
+}}
+.luna-monthly-preview .luna-hero-theme strong {{
+  font-size:.86rem;
+}}
 .luna-monthly-section {{
   padding:clamp(2.25rem,5vw,4.3rem) clamp(1rem,4vw,3.2rem);
   border-bottom:1px solid var(--black);
@@ -2101,7 +2123,7 @@ def build_monthly_experience_html(
 </style>
 
 <div
-  class="luna-monthly-report"
+  class="luna-monthly-report{' luna-monthly-preview' if preview else ''}"
   id="{instance_id}-report"
   data-luna-report
   data-print-paper="{_safe(default_paper)}"
