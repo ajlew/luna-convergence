@@ -753,6 +753,94 @@ a {
     box-shadow:inset 0 0 0 .23rem var(--black);
 }
 
+.lean-daily {
+    max-width:760px;
+    margin:0 auto;
+    padding:1.3rem 0 4.5rem;
+}
+
+.lean-daily-meta {
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:1rem;
+    margin:1.4rem 0 2.8rem;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.72rem;
+    letter-spacing:.035em;
+    text-transform:uppercase;
+}
+
+.lean-daily h1 {
+    max-width:720px;
+    margin:0 0 2.35rem !important;
+    font-size:clamp(3.5rem, 8vw, 6.5rem) !important;
+    line-height:.94 !important;
+}
+
+.lean-daily-story {
+    max-width:680px;
+    margin-bottom:3.25rem;
+}
+
+.lean-daily-story p {
+    margin:0 0 1.35rem;
+    font-size:clamp(1.08rem, 2vw, 1.24rem);
+    line-height:1.72;
+}
+
+.lean-daily-move {
+    max-width:680px;
+    padding:1.55rem 0 1.35rem;
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--line);
+}
+
+.lean-daily-label,
+.lean-daily-reset {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.69rem;
+    letter-spacing:.045em;
+    text-transform:uppercase;
+}
+
+.lean-daily-move p {
+    margin:.55rem 0 0;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:clamp(1.45rem, 3vw, 2.05rem);
+    line-height:1.25;
+}
+
+.lean-daily-question {
+    max-width:660px;
+    margin:2.9rem 0 2.7rem;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:clamp(1.45rem, 3vw, 2.1rem);
+    font-style:italic;
+    line-height:1.3;
+}
+
+.lean-daily-reset {
+    margin:0 0 2.8rem;
+    color:var(--muted);
+}
+
+.lean-monthly-link {
+    display:inline-block;
+    padding:.75rem 0 .35rem;
+    border-bottom:1px solid var(--black);
+    color:var(--black) !important;
+    text-decoration:none !important;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.76rem;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
+.lean-monthly-link:hover {
+    opacity:.62;
+}
+
 .payment-link {
     display:flex;
     justify-content:center;
@@ -1094,6 +1182,25 @@ hr {
         width:1.95rem;
         height:1.95rem;
     }
+    .lean-daily {
+        padding:.35rem 0 3.75rem;
+    }
+    .lean-daily-meta {
+        margin:1rem 0 2rem;
+        align-items:flex-start;
+        flex-direction:column;
+        gap:.3rem;
+    }
+    .lean-daily h1 {
+        font-size:clamp(3.15rem, 15vw, 4.75rem) !important;
+        margin-bottom:1.9rem !important;
+    }
+    .lean-daily-story {
+        margin-bottom:2.65rem;
+    }
+    .lean-daily-question {
+        margin:2.35rem 0 2.2rem;
+    }
     .card, .reading-card {
         padding:1.15rem;
     }
@@ -1123,7 +1230,6 @@ def brand_header() -> None:
     <img class="brand-icon" src="data:image/png;base64,{encoded_icon}" alt="Saturn hexagon mark">
     <div class="brand-name">{escape(BRAND_NAME)}</div>
   </div>
-  <div class="brand-note">Strategic astrology / planetary timing / convergence</div>
 </div>
         """,
         unsafe_allow_html=True,
@@ -1132,31 +1238,27 @@ def brand_header() -> None:
 
 def top_navigation(current_path: str) -> None:
     path = current_path or ""
+    nav_path = path
+    if path == "daily-horoscope":
+        nav_path = ""
+    elif path.startswith("august-2026-"):
+        nav_path = "august-2026-horoscopes"
+    # Public navigation is intentionally minimal. Routes used for checkout,
+    # fulfilment, previews and administration still exist but stay out of sight.
     items = [
-        ("", "Home"),
-        ("daily-horoscope", "Daily horoscope"),
-        ("august-2026-horoscopes", "August 2026"),
-        ("reports", "Reports"),
-        ("house-guide", "House guide"),
-        ("sample-report", "Sample report"),
-        ("solar-year", "Solar year"),
-        ("how-it-works", "How it works"),
+        ("", "Daily Horoscope"),
+        ("august-2026-horoscopes", "This Month"),
+        ("house-guide", "House Guide"),
+        ("solar-year", "Solar Year"),
     ]
-    if path == "monthly-preview":
-        # Keep the editorial Monthly Preview unlisted everywhere else, but show
-        # its active location while the owner is using the direct route.
-        items.insert(3, ("monthly-preview", "Monthly preview"))
-    if EDITOR_PREVIEW_ENABLED:
-        items.insert(3, ("editorial-preview", "Editorial preview"))
-        items.insert(4, ("forecast-library", "Forecast library"))
 
     desktop_links: list[str] = []
     mobile_links: list[str] = []
-    current_label = "Home"
+    current_label = "Daily Horoscope"
 
     for item_path, label in items:
-        active = " active" if path == item_path else ""
-        if path == item_path:
+        active = " active" if nav_path == item_path else ""
+        if nav_path == item_path:
             current_label = label
         href = "/" if not item_path else f"/{item_path}"
 
@@ -2129,190 +2231,100 @@ def render_free_reading(
     render_daily_narrative_v3(narrative, solar=solar)
 
 
-def home_page() -> None:
+def _daily_date_label(reading_date: date) -> str:
+    return reading_date.strftime("%A, %d %B").replace(", 0", ", ")
+
+
+def _daily_narrative_for_landing(
+    sign: str,
+    reading_date: date,
+    timezone_name: str,
+):
+    cache_key = ("lean", sign, reading_date.isoformat(), timezone_name)
+    if st.session_state.get("lean_daily_cache_key") != cache_key:
+        reading = free_daily_reading(sign, reading_date, timezone_name)
+        previous_texts = _previous_daily_texts(
+            sign,
+            reading_date.isoformat(),
+            timezone_name,
+        )
+        st.session_state.lean_daily_narrative = build_daily_narrative(
+            reading,
+            sign=sign,
+            reading_date=reading_date,
+            timezone_name=timezone_name,
+            house_voice=HOUSE_VOICE,
+            previous_texts=previous_texts,
+        )
+        st.session_state.lean_daily_cache_key = cache_key
+    return st.session_state.lean_daily_narrative
+
+
+def _render_lean_daily(path: str) -> None:
     set_page_metadata(
-        "Luna Convergence | Strategic Astrology",
-        "Free daily horoscopes and detailed monthly and year-ahead astrology reports using whole-sign houses, retrogrades and convergence analysis.",
-        "/",
+        "Daily Horoscope | Luna Convergence",
+        "Read today's Luna Convergence horoscope for your zodiac sign, with one clear interpretation and one practical move.",
+        path,
     )
-    left, right = st.columns([1.2, .8], gap="large")
-    with left:
-        st.markdown('<div class="eyebrow">Astrology / timing / practical interpretation</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="editorial-title">{escape(TAGLINE)}</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(f'<div class="hero-subtitle">{escape(SUBTITLE)}</div>', unsafe_allow_html=True)
-        st.markdown('<div class="hero-rule"></div>', unsafe_allow_html=True)
 
-        sign = st.selectbox(
-            "Choose your sign",
-            SIGNS,
-            index=SIGNS.index(DEFAULT_SIGN),
-            key="home-sign",
-        )
-        if st.button("Read today's free horoscope", type="primary", use_container_width=True):
-            st.session_state["daily-sign"] = sign
-            track_event(
-                "daily_reading_start",
-                {"source": "homepage", "zodiac_sign": sign},
-            )
-            if DAILY_PAGE_REF is not None:
-                st.switch_page(DAILY_PAGE_REF)
+    sign = st.selectbox(
+        "Your zodiac sign",
+        SIGNS,
+        index=SIGNS.index(DEFAULT_SIGN),
+        key="landing-daily-sign",
+        label_visibility="collapsed",
+    )
+    st.session_state["daily-sign"] = sign
 
-    with right:
-        try:
-            reading = free_daily_reading(DEFAULT_SIGN, browser_local_date(), browser_timezone_name())
-            st.markdown(
-                f"""
-<div class="reading-card">
-  <div class="daily-kicker">Today's example / {DEFAULT_SIGN}</div>
-  <div class="daily-headline" style="font-size:clamp(2.2rem,4vw,4.4rem);">
-    {escape(reading.headline)}
-  </div>
-  <p class="muted-white">{escape(reading.forecast_paragraphs[0])}</p>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-        except Exception:
-            st.markdown(
-                """
-<div class="reading-card">
-  <div class="eyebrow" >Today's reading</div>
-  <h3>Clear astrology, practical meaning</h3>
-  <p>See the active houses, opportunity, caution and wider transition in one clean reading.</p>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
+    last_sign = st.session_state.get("tracked_landing_daily_sign")
+    if last_sign != sign:
+        track_event(
+            "daily_reading_generated",
+            {"zodiac_sign": sign, "source": "daily_landing"},
+        )
+        st.session_state["tracked_landing_daily_sign"] = sign
+
+    reading_date = browser_local_date()
+    timezone_name = browser_timezone_name()
+    narrative = _daily_narrative_for_landing(sign, reading_date, timezone_name)
+
+    story = tuple(narrative.today_story[:2])
+    story_html = "".join(
+        f"<p>{escape(paragraph)}</p>" for paragraph in story if paragraph
+    )
+    question = narrative.reflection_questions[0] if narrative.reflection_questions else ""
+    monthly_href = f"/august-2026-{sign_slug(sign)}"
 
     st.markdown(
-        """
-<div class="trust-strip">
-  <div class="trust-item">Swiss Ephemeris calculations</div>
-  <div class="trust-item">Whole-sign house explanations</div>
-  <div class="trust-item">Retrograde-cycle analysis</div>
-  <div class="trust-item">Convergence-point interpretation</div>
-</div>
+        f"""
+<section class="lean-daily" aria-label="Today's horoscope">
+  <div class="lean-daily-meta">
+    <strong>{escape(sign)}</strong>
+    <span>{escape(_daily_date_label(reading_date))}</span>
+  </div>
+  <h1>{escape(narrative.hook_headline)}</h1>
+  <div class="lean-daily-story">{story_html}</div>
+  <div class="lean-daily-move">
+    <div class="lean-daily-label">Your move</div>
+    <p>{escape(narrative.action_today)}</p>
+  </div>
+  {f'<div class="lean-daily-question">{escape(question)}</div>' if question else ''}
+  <div class="lean-daily-reset">Focus Reset</div>
+  <a class="lean-monthly-link" href="{monthly_href}">See your August forecast →</a>
+</section>
         """,
         unsafe_allow_html=True,
     )
 
-    report_cta(context="home")
 
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("## Why this is different")
-    c1, c2, c3 = st.columns(3, gap="large")
-    items = [
-        (
-            "The story comes first",
-            "The reading begins with the consequence for the customer—not a list of planets, degrees or technical terms.",
-        ),
-        (
-            "The evidence remains visible",
-            "A compact Sky Snapshot shows the active life areas, strongest influence, timing window and signal strength.",
-        ),
-        (
-            "Weather is separated from climate",
-            "Fast daily influences explain what changes now; slower planetary patterns explain why a theme may continue for months.",
-        ),
-    ]
-    for column, (title, body) in zip((c1, c2, c3), items):
-        with column:
-            st.markdown(
-                f'<div class="card"><h3>{escape(title)}</h3><p>{escape(body)}</p></div>',
-                unsafe_allow_html=True,
-            )
-
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("## Learn the twelve houses while you read")
-    st.markdown(
-        "For Sagittarius, for example, house 2 concerns income and pricing, house 7 concerns "
-        "partners and contracts, and house 9 concerns travel, publishing and foreign markets."
-    )
-    st.markdown(house_reference_matrix(DEFAULT_SIGN, {2, 7, 9}))
-
-    if NEWSLETTER_URL:
-        st.markdown("## Receive the monthly forecast")
-        st.link_button("Join the forecast email list", NEWSLETTER_URL)
+def home_page() -> None:
+    _render_lean_daily("/")
 
 
 def daily_page() -> None:
-    set_page_metadata(
-        "Free Daily Horoscope | Luna Convergence",
-        "Read a consequence-first daily horoscope with the full astrological evidence available in optional sections.",
-        "/daily-horoscope",
-    )
-
-    active_request = st.session_state.get("active_daily_request")
-
-    if not active_request:
-        st.markdown(
-            '<div class="eyebrow">Free daily horoscope</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown("# Your day, clearly")
-        st.markdown(
-            "One concise story first. The complete astrology remains available "
-            "when you choose to open it."
-        )
-
-    with st.expander(
-        "Change sign, date or location",
-        expanded=not bool(active_request),
-    ):
-        with st.form(
-            "daily-reading-settings",
-            clear_on_submit=False,
-            border=False,
-        ):
-            sign, reading_date, timezone_name, nearest_city = daily_controls()
-            submitted = st.form_submit_button(
-                "Show my daily reading",
-                type="primary",
-                use_container_width=True,
-            )
-
-        if submitted:
-            st.session_state["active_daily_request"] = {
-                "sign": sign,
-                "reading_date": reading_date.isoformat(),
-                "timezone": timezone_name,
-                "nearest_city": nearest_city.strip(),
-            }
-            st.session_state.force_daily = True
-            track_event(
-                "daily_reading_generated",
-                {
-                    "zodiac_sign": sign,
-                    "reading_date": reading_date.isoformat(),
-                    "timezone": timezone_name,
-                },
-            )
-            st.rerun()
-
-    request = st.session_state.get("active_daily_request")
-    if request:
-        sign = request["sign"]
-        reading_date = date.fromisoformat(request["reading_date"])
-        timezone_name = request["timezone"]
-        nearest_city = request.get("nearest_city", "")
-
-        render_free_reading(
-            sign,
-            reading_date,
-            timezone_name,
-            nearest_city,
-        )
-
-        location, _basis = resolve_location(nearest_city, timezone_name)
-        with st.expander("Want the wider monthly story?", expanded=False):
-            report_cta(
-                context=f"daily-{sign.lower()}",
-                prefill_sign=sign,
-                prefill_city=location.name,
-            )
+    # Keep the established /daily-horoscope URL alive for bookmarks and links,
+    # while showing the same stripped-back Daily experience as the homepage.
+    _render_lean_daily("/daily-horoscope")
 
 
 def render_monthly_preview_workspace() -> None:
@@ -3427,12 +3439,9 @@ def footer() -> None:
     st.markdown(
         f"""
 <div class="small-note">
-<strong>{escape(BRAND_NAME)}</strong> — tropical geocentric astrology using whole-sign houses.
-Astrology is a symbolic interpretive framework and is not a substitute for professional advice.
+<strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 {"<br><strong>Preview build:</strong> " + escape(BUILD_LABEL) if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/privacy">Privacy and analytics</a> ·
-<a href="/solar-year">The Solar Year</a> ·
-<a href="/august-2026-horoscopes">August 2026 horoscopes</a>
+<br><a href="/privacy">Privacy</a>
 </div>
         """,
         unsafe_allow_html=True,
