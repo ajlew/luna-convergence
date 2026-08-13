@@ -825,6 +825,25 @@ a {
     color:var(--muted);
 }
 
+.lean-august-window {
+    display:flex;
+    align-items:baseline;
+    gap:.75rem;
+    margin:2rem 0 1.35rem;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    letter-spacing:.035em;
+    text-transform:uppercase;
+}
+
+.lean-august-window span {
+    color:var(--muted);
+}
+
+.lean-august-window strong {
+    font-weight:600;
+}
+
 .lean-monthly-link {
     display:inline-block;
     padding:.75rem 0 .35rem;
@@ -1243,16 +1262,30 @@ def brand_header() -> None:
 
 def top_navigation(current_path: str) -> None:
     path = current_path or ""
-    nav_path = path
-    if path == "daily-horoscope":
+    # The root, /daily-horoscope and the legacy Google Ads URL all render the
+    # same Daily experience.  Monthly sign pages remain the only public
+    # destination for This Month.
+    if path in {"", "daily-horoscope", "august-2026-horoscopes"}:
         nav_path = ""
     elif path.startswith("august-2026-"):
-        nav_path = "august-2026-horoscopes"
+        nav_path = "this-month"
+    else:
+        nav_path = path
+
+    remembered_sign = (
+        st.session_state.get("landing-daily-sign")
+        or st.session_state.get("daily-sign")
+        or DEFAULT_SIGN
+    )
+    if remembered_sign not in SIGNS:
+        remembered_sign = DEFAULT_SIGN
+    monthly_path = f"august-2026-{sign_slug(remembered_sign)}"
+
     # Public navigation is intentionally minimal. Routes used for checkout,
     # fulfilment, previews and administration still exist but stay out of sight.
     items = [
         ("", "Daily Horoscope"),
-        ("august-2026-horoscopes", "This Month"),
+        (monthly_path, "This Month"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
     ]
@@ -1262,8 +1295,9 @@ def top_navigation(current_path: str) -> None:
     current_label = "Daily Horoscope"
 
     for item_path, label in items:
-        active = " active" if nav_path == item_path else ""
-        if nav_path == item_path:
+        item_is_active = nav_path == item_path or (label == "This Month" and nav_path == "this-month")
+        active = " active" if item_is_active else ""
+        if item_is_active:
             current_label = label
         href = "/" if not item_path else f"/{item_path}"
 
@@ -3174,56 +3208,13 @@ def focus_paragraph(data: dict, target_houses: set[int], label: str) -> str:
 
 
 def monthly_index_page() -> None:
-    set_page_metadata(
-        "August 2026 Horoscopes for Every Zodiac Sign | Luna Convergence",
-        "Read the free August 2026 horoscope overview for Aries through Pisces, including active houses, important dates, opportunities and cautions.",
-        "/august-2026-horoscopes",
-    )
-    st.markdown('<div class="eyebrow">Monthly horoscope library</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="editorial-title">August 2026<br>horoscopes</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "Choose your Sun sign or rising sign. Each page uses the same planetary sky "
-        "but maps it into a different whole-sign house pattern, producing a distinct "
-        "focus for work, money, relationships, home and long-term direction."
-    )
+    """Legacy August ad URL: render the Daily only.
 
-    cards = []
-    for sign in SIGNS:
-        data = monthly_seo_data(sign)
-        primary = data["dominant_houses"][0]
-        key_event = data["major_transitions"][0]
-        cards.append(
-            f"""
-<a class="sign-card" href="/august-2026-{sign_slug(sign)}">
-  <div class="eyebrow">{escape(sign)}</div>
-  <div class="sign-card-title">House {primary['house']}</div>
-  <div class="sign-card-copy"><strong>{escape(primary['topic'].capitalize())}</strong></div>
-  <div class="sign-card-copy">{escape(key_event['title'])}</div>
-</a>
-            """
-        )
-    st.markdown(
-        '<div class="sign-grid">' + "".join(cards) + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("## What the free monthly overview includes")
-    st.markdown(
-        """
-- the two strongest active houses;
-- major ingresses, eclipses and lunations;
-- work, money and relationship implications;
-- the leading convergence period;
-- a direct opportunity, caution and practical conclusion.
-        """
-    )
-    report_cta(
-        context="august-2026-index",
-        prefill_month=f"{SEO_MONTH_NAME} {SEO_YEAR}",
-    )
+    Google Ads and old bookmarks may still point to /august-2026-horoscopes.
+    That URL must not expose the old monthly library, twelve-card grid or
+    checkout.  It now renders the exact same lean Daily experience as /.
+    """
+    _render_lean_daily("/august-2026-horoscopes")
 
 
 AUGUST_2026_PREVIEW_HOOKS = {
