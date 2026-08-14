@@ -9,14 +9,16 @@ def _landing_source() -> str:
     return APP[start:end]
 
 
-def test_daily_selector_starts_neutral():
+def test_daily_selector_starts_neutral_without_saved_or_bookmarked_sign():
     source = _landing_source()
-    assert 'index=None' in source
+    assert 'saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()' in source
+    assert 'saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None' in source
+    assert 'index=saved_index' in source
     assert 'placeholder="Choose your star sign"' in source
     assert 'key="landing-daily-sign-v3195"' in source
     assert 'persist_state="session"' in source
     assert 'if sign is None:' in source
-    assert 'Choose your star sign to open today\\\'s horoscope.' in source
+    assert 'Choose your star sign to open today' in source
 
 
 def test_no_default_sagittarius_daily_is_generated_before_choice():

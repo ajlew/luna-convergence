@@ -37,12 +37,14 @@ from forecast_inventory import EDITORIAL_STATUSES, build_inventory, inventory_js
 from ephemeris_admin import render_ephemeris_admin
 from luna_voice import narrator_principle, voice_profile
 from solar_cycle import (
+    CITY_LOCATIONS,
     city_input_help,
     daily_solar_convergence,
     representative_city_name,
     resolve_location,
     solar_gate_label,
 )
+from natal_snapshot import build_natal_snapshot, natal_wheel_svg
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -119,6 +121,8 @@ GOOGLE_ADS_ID = secret("GOOGLE_ADS_ID", "AW-18379683881")
 GOOGLE_ADS_PURCHASE_LABEL = secret("GOOGLE_ADS_PURCHASE_LABEL")
 STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
+LUNA_YOUTUBE_CHANNEL_URL = secret("LUNA_YOUTUBE_CHANNEL_URL")
+LUNA_YOUTUBE_FEATURED_VIDEO_URL = secret("LUNA_YOUTUBE_FEATURED_VIDEO_URL")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 DAILY_PAGE_REF = None
 
@@ -866,6 +870,82 @@ a {
 
 .lean-monthly-link:hover {
     opacity:.62;
+}
+
+.lean-bookmark-note {
+    max-width:680px;
+    margin:1.35rem 0 0;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.66rem;
+    line-height:1.55;
+    letter-spacing:.02em;
+}
+
+.luna-video-slot {
+    max-width:760px;
+    margin:1rem auto 4rem;
+    padding-top:1.6rem;
+    border-top:1px solid var(--line);
+}
+
+.natal-shell {
+    max-width:820px;
+    margin:0 auto;
+    padding:1.2rem 0 4rem;
+}
+
+.natal-intro {
+    max-width:680px;
+    margin:0 0 2.2rem;
+    font-size:1.1rem;
+    line-height:1.7;
+}
+
+.natal-theme {
+    padding:1.5rem 0 1.6rem;
+    border-top:1px solid var(--black);
+}
+
+.natal-theme h3 {
+    margin:.3rem 0 .75rem !important;
+}
+
+.natal-evidence {
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.66rem;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
+.natal-signature {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:1rem;
+    margin:1.6rem 0 2rem;
+}
+
+.natal-signature > div {
+    border-top:1px solid var(--line);
+    padding-top:.8rem;
+}
+
+.natal-signature span {
+    display:block;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.64rem;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+.natal-signature strong {
+    display:block;
+    margin-top:.35rem;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:1.6rem;
+    font-weight:400;
 }
 
 .payment-link {
@@ -2309,6 +2389,40 @@ def _daily_narrative_for_landing(
     )
 
 
+def _query_daily_sign() -> str | None:
+    try:
+        raw = str(st.query_params.get("sign", "") or "").strip().lower()
+    except Exception:
+        raw = ""
+    if not raw:
+        return None
+    for item in SIGNS:
+        if sign_slug(item) == raw:
+            return item
+    return None
+
+
+def _remember_daily_sign_in_url(sign: str) -> None:
+    try:
+        st.query_params["sign"] = sign_slug(sign)
+    except Exception:
+        pass
+
+
+def _render_optional_luna_video() -> None:
+    if not LUNA_YOUTUBE_FEATURED_VIDEO_URL:
+        return
+    st.markdown('<section class="luna-video-slot">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Luna short</div>', unsafe_allow_html=True)
+    st.video(LUNA_YOUTUBE_FEATURED_VIDEO_URL)
+    if LUNA_YOUTUBE_CHANNEL_URL:
+        st.markdown(
+            f'<a class="lean-monthly-link" href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">Luna on YouTube →</a>',
+            unsafe_allow_html=True,
+        )
+    st.markdown('</section>', unsafe_allow_html=True)
+
+
 def _render_lean_daily(path: str) -> None:
     set_page_metadata(
         "Daily Horoscope | Luna Convergence",
@@ -2316,10 +2430,12 @@ def _render_lean_daily(path: str) -> None:
         path,
     )
 
+    saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()
+    saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
     sign = st.selectbox(
         "Your zodiac sign",
         SIGNS,
-        index=None,
+        index=saved_index,
         placeholder="Choose your star sign",
         key="landing-daily-sign-v3195",
         label_visibility="collapsed",
@@ -2337,6 +2453,7 @@ def _render_lean_daily(path: str) -> None:
         return
 
     st.session_state["daily-sign"] = sign
+    _remember_daily_sign_in_url(sign)
 
     last_sign = st.session_state.get("tracked_landing_daily_sign")
     if last_sign != sign:
@@ -2373,10 +2490,12 @@ def _render_lean_daily(path: str) -> None:
   {f'<div class="lean-daily-question">{escape(question)}</div>' if question else ''}
   <div class="lean-daily-reset">Focus Reset</div>
   <a class="lean-monthly-link" href="{monthly_href}">See your August forecast →</a>
+  <div class="lean-bookmark-note">Bookmark this page in your browser and Luna will reopen on {escape(sign)}.</div>
 </section>
         """,
         unsafe_allow_html=True,
     )
+    _render_optional_luna_video()
 
 
 def home_page() -> None:
@@ -3341,6 +3460,149 @@ def make_monthly_page(sign: str):
     return page
 
 
+def natal_snapshot_page() -> None:
+    set_page_metadata(
+        "Free Natal Snapshot | Luna Convergence",
+        "Create a free Luna natal snapshot from your birth date, time and location. Story first, chart evidence available.",
+        "/natal-snapshot",
+    )
+    st.markdown('<section class="natal-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Free · natal snapshot</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">What keeps<br>repeating?</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="natal-intro">Luna reads the natal chart as a persistent pattern, not a verdict. '
+        'Give the birth time only if you know it. If the time or location is uncertain, Luna leaves the Ascendant and houses out rather than inventing precision.</div>',
+        unsafe_allow_html=True,
+    )
+
+    with st.form("free-natal-snapshot-v320"):
+        birth_date = st.date_input(
+            "Birth date",
+            value=date(1990, 1, 1),
+            min_value=date(1900, 1, 1),
+            max_value=browser_local_date(),
+        )
+        time_known = st.checkbox("I know my birth time exactly", value=False)
+        birth_time_value = None
+        city_choice = "Not listed — planetary snapshot only"
+        timezone_name = "UTC"
+
+        if time_known:
+            birth_time_value = st.time_input("Birth time", value=datetime.strptime("12:00", "%H:%M").time())
+            city_options = ["Not listed — planetary snapshot only"] + sorted(CITY_LOCATIONS)
+            city_choice = st.selectbox(
+                "Birth city",
+                city_options,
+                index=0,
+                help="Choose the actual city when listed. Luna uses its coordinates and historical timezone for the Ascendant and whole-sign houses.",
+            )
+            if city_choice == "Not listed — planetary snapshot only":
+                timezone_name = st.selectbox(
+                    "Birth timezone",
+                    TIMEZONES,
+                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
+                    help="This lets Luna place the planets at the correct moment, but without coordinates it will not calculate the Ascendant or houses.",
+                )
+
+        submitted = st.form_submit_button("Create my free snapshot", use_container_width=True)
+
+    if not submitted:
+        st.markdown(
+            '<div class="lean-bookmark-note">Birth details stay out of the page URL. This free snapshot is calculated in the current app session and is not sent to Stripe.</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
+    latitude = longitude = None
+    location_name = None
+    if time_known and city_choice != "Not listed — planetary snapshot only":
+        location = CITY_LOCATIONS[city_choice]
+        timezone_name = location.timezone
+        latitude = location.latitude
+        longitude = location.longitude
+        location_name = f"{location.name}, {location.country}"
+
+    snapshot = build_natal_snapshot(
+        birth_date=birth_date,
+        birth_time_known=time_known,
+        birth_time=birth_time_value,
+        timezone_name=timezone_name,
+        location_name=location_name,
+        latitude=latitude,
+        longitude=longitude,
+    )
+
+    track_event("free_natal_snapshot_generated", {"birth_time_known": bool(time_known)})
+
+    st.markdown("## Your natal signature")
+    signature_items = [
+        ("Dominant element", snapshot.dominant_element),
+        ("Dominant mode", snapshot.dominant_modality),
+    ]
+    if snapshot.ascendant:
+        signature_items.append(("Ascendant", snapshot.ascendant.label()))
+    if snapshot.midheaven:
+        signature_items.append(("Midheaven", snapshot.midheaven.label()))
+    signature_html = "".join(
+        f'<div><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
+        for label, value in signature_items
+    )
+    st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
+    st.markdown(natal_wheel_svg(snapshot), unsafe_allow_html=True)
+
+    if not time_known:
+        if len(snapshot.moon_uncertain) > 1:
+            st.info(
+                "Birth time is unknown, and the Moon changed sign during this date. "
+                f"Luna will not choose between {' / '.join(snapshot.moon_uncertain)} without a time."
+            )
+        else:
+            st.caption(
+                "Birth time unknown: planetary positions are shown as a date-only snapshot. "
+                "Ascendant, Midheaven and houses are intentionally omitted."
+            )
+    elif snapshot.ascendant is None:
+        st.caption(
+            "Exact time supplied, but the birth location was not available. "
+            "Planetary positions use the selected timezone; Ascendant and houses are intentionally omitted."
+        )
+    else:
+        st.caption("Tropical geocentric positions · Whole-sign houses · Swiss Ephemeris")
+
+    st.markdown("## Three patterns that keep repeating")
+    for theme in snapshot.themes:
+        st.markdown(
+            f'''<div class="natal-theme">
+  <div class="natal-evidence">{escape(theme.evidence)}</div>
+  <h3>{escape(theme.title)}</h3>
+  <p>{escape(theme.text)}</p>
+</div>''',
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("Chart evidence"):
+        rows = []
+        for item in snapshot.positions:
+            rows.append(
+                {
+                    "Point": item.planet,
+                    "Position": item.label(),
+                    "House": item.house if item.house is not None else "—",
+                }
+            )
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.markdown("**Strongest aspects**")
+        for aspect in snapshot.aspects[:10]:
+            st.markdown(f"- {aspect.label()}")
+
+    st.markdown(
+        "**Next layer:** Luna can later compare these persistent natal patterns with the sky now — "
+        "showing which pattern is active, when it peaks and when the pressure changes."
+    )
+    st.markdown('</section>', unsafe_allow_html=True)
+
+
 def solar_year_page() -> None:
     set_page_metadata(
         "The Solar Year | Luna Convergence",
@@ -3348,6 +3610,7 @@ def solar_year_page() -> None:
         "/solar-year",
     )
     st.markdown('<div class="eyebrow">Explainable astrology / solar structure</div>', unsafe_allow_html=True)
+    st.markdown('<a class="lean-monthly-link" href="/natal-snapshot">Create your free Natal Snapshot →</a>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">The Solar<br>Convergence</div>', unsafe_allow_html=True)
     st.markdown(
         "**The Sun is Luna's primary natural clock.** The Aries Gate at the March Equinox is the head of the "
@@ -3470,6 +3733,9 @@ optional question is stored in Stripe Checkout metadata and used only to generat
 and support the purchased report. A city is used to
 estimate latitude, hemisphere and daylight; a street address is not requested.
 
+The free Natal Snapshot uses birth details in the current app session to calculate the result.
+Birth details are not placed in the page URL or Stripe metadata by the snapshot feature.
+
 To request correction or deletion of order information, use the contact
 email displayed during checkout or in the report-delivery message.
         """
@@ -3479,6 +3745,7 @@ email displayed during checkout or in the report-delivery message.
         """
 - page views;
 - free daily reading generation;
+- free natal snapshot generation (without birth details in the event payload);
 - monthly report checkout clicks;
 - year-ahead report checkout clicks;
 - confirmed paid-report purchases.
@@ -3494,7 +3761,7 @@ def footer() -> None:
 <div class="small-note">
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 {"<br><strong>Preview build:</strong> " + escape(BUILD_LABEL) if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/privacy">Privacy</a>
+<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,
         unsafe_allow_html=True,
@@ -3562,6 +3829,12 @@ SOLAR_YEAR_PAGE_REF = st.Page(
     title="Solar Year",
     url_path="solar-year",
 )
+NATAL_SNAPSHOT_REF = st.Page(
+    natal_snapshot_page,
+    title="Free Natal Snapshot",
+    url_path="natal-snapshot",
+    visibility="hidden",
+)
 METHOD_PAGE_REF = st.Page(
     method_page,
     title="How It Works",
@@ -3602,6 +3875,7 @@ ALL_PAGES = [
     HOUSES_PAGE_REF,
     SAMPLE_PAGE_REF,
     SOLAR_YEAR_PAGE_REF,
+    NATAL_SNAPSHOT_REF,
     METHOD_PAGE_REF,
     PRIVACY_PAGE_REF,
     PAYMENT_SUCCESS_REF,
