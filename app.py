@@ -797,6 +797,14 @@ a {
 }
 
 .lean-daily-label,
+.lean-daily-empty {
+  max-width: 700px;
+  margin: 2.4rem auto 0;
+  color: #6f6f6f;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
 .lean-daily-reset {
     font-family:"IBM Plex Mono", "Courier New", monospace;
     font-size:.69rem;
@@ -1273,7 +1281,7 @@ def top_navigation(current_path: str) -> None:
         nav_path = path
 
     remembered_sign = (
-        st.session_state.get("landing-daily-sign")
+        st.session_state.get("landing-daily-sign-v3195")
         or st.session_state.get("daily-sign")
         or DEFAULT_SIGN
     )
@@ -2311,10 +2319,23 @@ def _render_lean_daily(path: str) -> None:
     sign = st.selectbox(
         "Your zodiac sign",
         SIGNS,
-        index=SIGNS.index(DEFAULT_SIGN),
-        key="landing-daily-sign",
+        index=None,
+        placeholder="Choose your star sign",
+        key="landing-daily-sign-v3195",
         label_visibility="collapsed",
+        persist_state="session",
     )
+
+    # A neutral first state is deliberate: Luna must never imply that a new
+    # visitor is Sagittarius.  It also turns the first sign choice into a real
+    # engagement signal instead of firing analytics automatically on page load.
+    if sign is None:
+        st.markdown(
+            '<div class="lean-daily-empty">Choose your star sign to open today\'s horoscope.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
     st.session_state["daily-sign"] = sign
 
     last_sign = st.session_state.get("tracked_landing_daily_sign")
