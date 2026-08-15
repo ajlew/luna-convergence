@@ -45,6 +45,7 @@ from solar_cycle import (
     solar_gate_label,
 )
 from natal_snapshot import build_natal_snapshot, natal_wheel_svg
+from solar_year_wave import solar_year_wave_svg
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -757,6 +758,19 @@ a {
     box-shadow:inset 0 0 0 .23rem var(--black);
 }
 
+.solar-year-wave-wrap {
+    max-width:760px;
+    margin:.25rem auto .8rem;
+    padding:.15rem 0 .25rem;
+}
+
+.solar-year-wave {
+    width:100%;
+    height:auto;
+    display:block;
+    overflow:visible;
+}
+
 .lean-daily {
     max-width:760px;
     margin:0 auto;
@@ -902,6 +916,21 @@ a {
     line-height:1.7;
 }
 
+.natal-birth-confirm {
+    margin:-.3rem 0 1.1rem;
+    padding:.75rem 0;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    color:var(--ink);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    line-height:1.6;
+}
+
+.natal-birth-confirm span {
+    color:var(--muted);
+}
+
 .natal-theme {
     padding:1.5rem 0 1.6rem;
     border-top:1px solid var(--black);
@@ -921,7 +950,7 @@ a {
 
 .natal-signature {
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-columns:repeat(3,minmax(0,1fr));
     gap:1rem;
     margin:1.6rem 0 2rem;
 }
@@ -1294,6 +1323,9 @@ hr {
         width:1.95rem;
         height:1.95rem;
     }
+    .solar-year-wave-wrap {
+        margin:.05rem auto .55rem;
+    }
     .lean-daily {
         padding:.35rem 0 3.75rem;
     }
@@ -1309,6 +1341,9 @@ hr {
     }
     .lean-daily-story {
         margin-bottom:2.65rem;
+    }
+    .natal-signature {
+        grid-template-columns:repeat(2,minmax(0,1fr));
     }
     .lean-daily-question {
         margin:2.35rem 0 2.2rem;
@@ -2430,6 +2465,11 @@ def _render_lean_daily(path: str) -> None:
         path,
     )
 
+    st.markdown(
+        solar_year_wave_svg(browser_local_now(), browser_timezone_name()),
+        unsafe_allow_html=True,
+    )
+
     saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()
     saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
     sign = st.selectbox(
@@ -3475,36 +3515,107 @@ def natal_snapshot_page() -> None:
         unsafe_allow_html=True,
     )
 
-    with st.form("free-natal-snapshot-v320"):
+    with st.container(border=True):
         birth_date = st.date_input(
             "Birth date",
             value=date(1990, 1, 1),
             min_value=date(1900, 1, 1),
             max_value=browser_local_date(),
+            key="natal-birth-date-v323",
         )
-        time_known = st.checkbox("I know my birth time exactly", value=False)
+        time_known = st.checkbox(
+            "I know my birth time exactly",
+            value=False,
+            key="natal-time-known-v323",
+        )
         birth_time_value = None
-        city_choice = "Not listed — planetary snapshot only"
+        city_choice = None
         timezone_name = "UTC"
+        manual_city_name = ""
+        manual_country = ""
+        manual_latitude = None
+        manual_longitude = None
+        manual_timezone = "UTC"
+        time_basis = "Local time at birthplace"
 
         if time_known:
-            birth_time_value = st.time_input("Birth time", value=datetime.strptime("12:00", "%H:%M").time())
-            city_options = ["Not listed — planetary snapshot only"] + sorted(CITY_LOCATIONS)
+            birth_time_value = st.time_input(
+                "Birth time",
+                value=datetime.strptime("12:00", "%H:%M").time(),
+                key="natal-birth-time-v323",
+                help="Normally enter the local clock time at the place of birth. If your source explicitly gives Universal Time, choose UTC below.",
+            )
+            time_basis = st.selectbox(
+                "Time basis",
+                ["Local time at birthplace", "Universal Time (UTC)"],
+                index=0,
+                key="natal-time-basis-v323",
+                help="Most birth certificates use local time. Some astrology records state UT/UTC directly.",
+            )
+            city_options = sorted(CITY_LOCATIONS) + [
+                "Other city — enter manually",
+                "Not listed — planetary snapshot only",
+            ]
             city_choice = st.selectbox(
                 "Birth city",
                 city_options,
-                index=0,
-                help="Choose the actual city when listed. Luna uses its coordinates and historical timezone for the Ascendant and whole-sign houses.",
+                index=None,
+                placeholder="Choose your birth city",
+                key="natal-city-v323",
+                help=(
+                    "Luna now includes a wider international city list, including Alotau, Papua New Guinea. "
+                    "If your city is still missing, choose Other city and enter coordinates and an IANA timezone."
+                ),
             )
-            if city_choice == "Not listed — planetary snapshot only":
-                timezone_name = st.selectbox(
-                    "Birth timezone",
-                    TIMEZONES,
-                    index=TIMEZONES.index(DEFAULT_TIMEZONE),
-                    help="This lets Luna place the planets at the correct moment, but without coordinates it will not calculate the Ascendant or houses.",
-                )
 
-        submitted = st.form_submit_button("Create my free snapshot", use_container_width=True)
+            if city_choice == "Other city — enter manually":
+                st.caption("City not listed? Enter it directly. Coordinates keep the Ascendant and houses precise without sending your birth place to an external geocoding service.")
+                manual_cols = st.columns(2, gap="medium")
+                with manual_cols[0]:
+                    manual_city_name = st.text_input("City / town", key="natal-manual-city-v323")
+                    manual_latitude = st.number_input(
+                        "Latitude",
+                        min_value=-90.0,
+                        max_value=90.0,
+                        value=0.0,
+                        step=0.0001,
+                        format="%.4f",
+                        key="natal-manual-lat-v323",
+                    )
+                with manual_cols[1]:
+                    manual_country = st.text_input("Country", key="natal-manual-country-v323")
+                    manual_longitude = st.number_input(
+                        "Longitude",
+                        min_value=-180.0,
+                        max_value=180.0,
+                        value=0.0,
+                        step=0.0001,
+                        format="%.4f",
+                        key="natal-manual-lon-v323",
+                    )
+                if time_basis == "Local time at birthplace":
+                    manual_timezone = st.text_input(
+                        "Birth timezone · IANA name",
+                        value=browser_timezone_name(),
+                        key="natal-manual-timezone-v323",
+                        help="Examples: Pacific/Port_Moresby, Australia/Sydney, Europe/London, America/New_York.",
+                    )
+                else:
+                    manual_timezone = "UTC"
+                    st.caption("Universal Time selected: Luna uses the entered time directly as UTC while retaining the birth coordinates for Ascendant and houses.")
+            elif city_choice == "Not listed — planetary snapshot only":
+                if time_basis == "Local time at birthplace":
+                    timezone_name = st.selectbox(
+                        "Birth timezone",
+                        TIMEZONES,
+                        index=timezone_select_index(),
+                        key="natal-unlisted-timezone-v323",
+                        help="This places the planets at the correct moment, but without coordinates Luna will not calculate the Ascendant or houses.",
+                    )
+                else:
+                    timezone_name = "UTC"
+
+        submitted = st.button("Create my free snapshot", use_container_width=True, key="natal-submit-v323")
 
     if not submitted:
         st.markdown(
@@ -3516,12 +3627,37 @@ def natal_snapshot_page() -> None:
 
     latitude = longitude = None
     location_name = None
-    if time_known and city_choice != "Not listed — planetary snapshot only":
-        location = CITY_LOCATIONS[city_choice]
-        timezone_name = location.timezone
-        latitude = location.latitude
-        longitude = location.longitude
-        location_name = f"{location.name}, {location.country}"
+    if time_known:
+        if city_choice in CITY_LOCATIONS:
+            location = CITY_LOCATIONS[city_choice]
+            timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else location.timezone
+            latitude = location.latitude
+            longitude = location.longitude
+            location_name = f"{location.name}, {location.country}"
+        elif city_choice == "Other city — enter manually":
+            if time_basis == "Local time at birthplace":
+                try:
+                    ZoneInfo(str(manual_timezone).strip())
+                except Exception:
+                    st.error("That timezone name is not recognised. Use an IANA name such as Pacific/Port_Moresby or Australia/Sydney.")
+                    st.markdown('</section>', unsafe_allow_html=True)
+                    return
+            else:
+                manual_timezone = "UTC"
+            if not str(manual_city_name).strip():
+                st.error("Enter the birth city or town name.")
+                st.markdown('</section>', unsafe_allow_html=True)
+                return
+            timezone_name = str(manual_timezone).strip()
+            latitude = float(manual_latitude)
+            longitude = float(manual_longitude)
+            location_name = str(manual_city_name).strip()
+            if str(manual_country).strip():
+                location_name += f", {str(manual_country).strip()}"
+        elif city_choice != "Not listed — planetary snapshot only":
+            st.error("Choose a birth city, use Other city, or choose planetary snapshot only.")
+            st.markdown('</section>', unsafe_allow_html=True)
+            return
 
     snapshot = build_natal_snapshot(
         birth_date=birth_date,
@@ -3535,21 +3671,42 @@ def natal_snapshot_page() -> None:
 
     track_event("free_natal_snapshot_generated", {"birth_time_known": bool(time_known)})
 
+    by_planet = {item.planet: item for item in snapshot.positions}
+    moon_value = by_planet["Moon"].sign
+    if not time_known and len(snapshot.moon_uncertain) > 1:
+        moon_value = " / ".join(snapshot.moon_uncertain)
+
     st.markdown("## Your natal signature")
     signature_items = [
+        ("Sun", by_planet["Sun"].sign),
+        ("Moon", moon_value),
+        ("Rising", snapshot.ascendant.sign if snapshot.ascendant else "Not calculated"),
         ("Dominant element", snapshot.dominant_element),
         ("Dominant mode", snapshot.dominant_modality),
+        ("Midheaven", snapshot.midheaven.sign if snapshot.midheaven else "Not calculated"),
     ]
-    if snapshot.ascendant:
-        signature_items.append(("Ascendant", snapshot.ascendant.label()))
-    if snapshot.midheaven:
-        signature_items.append(("Midheaven", snapshot.midheaven.label()))
     signature_html = "".join(
         f'<div><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
         for label, value in signature_items
     )
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
-    st.markdown(natal_wheel_svg(snapshot), unsafe_allow_html=True)
+
+    birth_bits = [birth_date.strftime("%d %B %Y")]
+    if time_known and birth_time_value is not None:
+        birth_bits.append(birth_time_value.strftime("%H:%M"))
+        birth_bits.append("UTC" if time_basis == "Universal Time (UTC)" else "local time")
+        birth_bits.append(location_name or "Location not supplied")
+        birth_bits.append(timezone_name)
+        birth_precision = "Exact birth time supplied"
+    else:
+        birth_bits.append("Birth time unknown")
+        birth_precision = "Angles and houses intentionally omitted"
+    st.markdown(
+        f'<div class="natal-birth-confirm"><strong>Birth data</strong> · {escape(" · ".join(birth_bits))}<br><span>{escape(birth_precision)}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(natal_wheel_svg(snapshot, size=760), unsafe_allow_html=True)
 
     if not time_known:
         if len(snapshot.moon_uncertain) > 1:
@@ -3601,7 +3758,6 @@ def natal_snapshot_page() -> None:
         "showing which pattern is active, when it peaks and when the pressure changes."
     )
     st.markdown('</section>', unsafe_allow_html=True)
-
 
 def solar_year_page() -> None:
     set_page_metadata(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.22 — Lean Monthly Briefing"
+BUILD_LABEL = "Luna v3.23 — Solar Year + Natal Location Expansion"
 EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
@@ -24,6 +24,7 @@ TIMEZONES = [
     "Australia/Hobart",
     "Australia/Darwin",
     "Pacific/Auckland",
+    "Pacific/Port_Moresby",
     "Europe/London",
     "Europe/Dublin",
     "Europe/Paris",
@@ -43,6 +44,20 @@ TIMEZONES = [
     "Asia/Seoul",
     "Asia/Kolkata",
     "Asia/Dubai",
+    "Pacific/Fiji",
+    "Asia/Manila",
+    "Asia/Jakarta",
+    "Asia/Bangkok",
+    "Asia/Kuala_Lumpur",
+    "Asia/Hong_Kong",
+    "Asia/Taipei",
+    "Asia/Kathmandu",
+    "Asia/Dhaka",
+    "Asia/Karachi",
+    "Africa/Cairo",
+    "Asia/Amman",
+    "Asia/Baghdad",
+    "Asia/Beirut",
     "UTC",
 ]
 

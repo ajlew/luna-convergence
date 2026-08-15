@@ -385,7 +385,7 @@ def natal_wheel_svg(snapshot: NatalSnapshot, size: int = 640) -> str:
 
     pieces = [
         f'<svg viewBox="0 0 {size} {size}" role="img" aria-label="Luna natal wheel" '
-        'style="width:100%;max-width:680px;height:auto;display:block;margin:1rem auto 2rem;">',
+        'style="width:100%;max-width:760px;height:auto;display:block;margin:1rem auto 2.2rem;">',
         f'<circle cx="{center:.1f}" cy="{center:.1f}" r="{outer:.1f}" fill="none" stroke="#111" stroke-width="1.4"/>',
         f'<circle cx="{center:.1f}" cy="{center:.1f}" r="{inner:.1f}" fill="none" stroke="#bbb" stroke-width="1"/>',
     ]
