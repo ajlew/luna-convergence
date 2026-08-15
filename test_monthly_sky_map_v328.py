@@ -1,6 +1,6 @@
 from datetime import date
 
-from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_svg, snapshot_date_for_period
+from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_png, monthly_sky_map_svg, snapshot_date_for_period
 from monthly_experience_v1 import build_monthly_experience_html
 from monthly_narrative_v1 import build_monthly_narrative
 from synthesis import period_report
@@ -57,6 +57,18 @@ def test_free_preview_embeds_sky_wheel_as_image_data_uri():
     narrative = build_monthly_narrative(result, main_focus="General overview")
     preview_html = build_monthly_experience_html(narrative, result, show_print=False, preview=True)
     assert 'class="luna-sky-wheel-image"' in preview_html
-    assert 'src="data:image/svg+xml;base64,' in preview_html
+    assert 'src="data:image/png;base64,' in preview_html
     sky_section = preview_html.split('Monthly sky snapshot', 1)[1].split('How August unfolds', 1)[0]
     assert '<svg' not in sky_section
+
+
+def test_monthly_sky_map_png_is_valid_raster():
+    import io
+    from PIL import Image
+
+    snapshot = build_monthly_sky_snapshot(_august_result("Taurus"))
+    png = monthly_sky_map_png(snapshot, size=800)
+    assert png.startswith(b"\x89PNG\r\n\x1a\n")
+    image = Image.open(io.BytesIO(png))
+    assert image.format == "PNG"
+    assert image.size == (800, 800)

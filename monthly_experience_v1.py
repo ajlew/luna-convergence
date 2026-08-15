@@ -25,7 +25,7 @@ from luna_editorial_system import (
 from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import narrator_cue
 from solar_cycle import solar_gate_label
-from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_svg
+from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_png
 
 
 PRINT_PAPERS = ("A4", "A3")
@@ -461,18 +461,17 @@ def _safe(value: object) -> str:
 def _monthly_sky_map_html(result: dict) -> str:
     try:
         snapshot = build_monthly_sky_snapshot(result)
-        svg = monthly_sky_map_svg(snapshot)
+        png_bytes = monthly_sky_map_png(snapshot)
     except Exception:
         return ""
 
-    # Streamlit st.html sanitises inline SVG markup with DOMPurify. The section
-    # copy survived but the wheel itself was stripped from the live page. Embed
-    # the exact generated SVG as an image data URI instead: <img> survives the
-    # sanitizer while preserving the same vector artwork at every screen size.
-    encoded_svg = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    # Hosted Streamlit browsers can reject SVG data-URI images even when the
+    # surrounding <img> tag survives sanitisation. Use a normal PNG data URI,
+    # generated server-side with Pillow, so the monthly wheel renders reliably.
+    encoded_png = base64.b64encode(png_bytes).decode("ascii")
     wheel_image = (
         f'<img class="luna-sky-wheel-image" '
-        f'src="data:image/svg+xml;base64,{encoded_svg}" '
+        f'src="data:image/png;base64,{encoded_png}" '
         f'alt="{_safe(snapshot.sign)} monthly sky map">'
     )
     date_label = snapshot.snapshot_date.strftime("%d %B %Y")

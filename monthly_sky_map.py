@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from io import BytesIO
 import math
 from zoneinfo import ZoneInfo
+
+from PIL import Image, ImageDraw, ImageFont
 
 from astrology_engine import SIGNS, angular_distance, detect_aspects, house_map, positions_for_date
 
@@ -167,3 +170,129 @@ def monthly_sky_map_svg(snapshot: MonthlySkySnapshot, size: int = 640) -> str:
     )
     pieces.append('</svg>')
     return ''.join(pieces)
+
+
+def _font(size: int, *, serif: bool = False, bold: bool = False):
+    """Return a dependable bundled/system font for raster sky maps."""
+    candidates = []
+    if serif:
+        candidates.extend([
+            "DejaVuSerif-Bold.ttf" if bold else "DejaVuSerif.ttf",
+            "LiberationSerif-Bold.ttf" if bold else "LiberationSerif-Regular.ttf",
+        ])
+    else:
+        candidates.extend([
+            "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+            "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf",
+        ])
+    for name in candidates:
+        try:
+            return ImageFont.truetype(name, size=size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+
+def monthly_sky_map_png(snapshot: MonthlySkySnapshot, size: int = 1000) -> bytes:
+    """Rasterise the free monthly sky map without relying on browser SVG support.
+
+    Streamlit's sanitised HTML path can leave SVG data-URI images broken in some
+    hosted browsers. Drawing the same chart directly with Pillow produces a normal
+    PNG that is safe for an ``<img>`` data URI and requires no browser SVG parsing.
+    """
+    size = max(640, int(size))
+    image = Image.new("RGB", (size, size), "white")
+    draw = ImageDraw.Draw(image)
+
+    center = size / 2.0
+    outer = size * 0.365
+    inner = size * 0.265
+    planet_r = size * 0.300
+    sign_label_r = size * 0.420
+    house_label_r = size * 0.228
+
+    def xy(longitude: float, radius: float) -> tuple[float, float]:
+        angle = math.radians(180.0 - (longitude % 360.0))
+        return center + radius * math.cos(angle), center + radius * math.sin(angle)
+
+    line = "#c5c5c0"
+    dark = "#111111"
+    muted = "#777770"
+    light = "#a9a9a3"
+
+    # Rings
+    draw.ellipse((center-outer, center-outer, center+outer, center+outer), outline=dark, width=max(2, size//500))
+    draw.ellipse((center-inner, center-inner, center+inner, center+inner), outline=line, width=max(1, size//700))
+
+    sign_font = _font(max(14, size // 72))
+    house_font = _font(max(12, size // 82), bold=False)
+    house1_font = _font(max(12, size // 82), bold=True)
+    planet_font = _font(max(13, size // 70), bold=True)
+    title_font = _font(max(26, size // 34), serif=True)
+    small_font = _font(max(11, size // 86))
+
+    native_index = SIGNS.index(snapshot.sign)
+    for index, sign in enumerate(SIGNS):
+        longitude = index * 30.0
+        house = ((index - native_index) % 12) + 1
+        x1, y1 = xy(longitude, inner)
+        x2, y2 = xy(longitude, outer)
+        is_house_one = house == 1
+        draw.line((x1, y1, x2, y2), fill=dark if is_house_one else line, width=max(2 if is_house_one else 1, size//650))
+
+        lx, ly = xy(longitude + 15.0, sign_label_r)
+        label = sign[:3].upper()
+        box = draw.textbbox((0, 0), label, font=sign_font)
+        draw.text((lx-(box[2]-box[0])/2, ly-(box[3]-box[1])/2), label, font=sign_font, fill="#555555")
+
+        hx, hy = xy(longitude + 15.0, house_label_r)
+        hlabel = f"H{house}"
+        hf = house1_font if is_house_one else house_font
+        box = draw.textbbox((0, 0), hlabel, font=hf)
+        draw.text((hx-(box[2]-box[0])/2, hy-(box[3]-box[1])/2), hlabel, font=hf, fill=dark if is_house_one else muted)
+
+    # Restrained aspect web
+    for aspect in snapshot.aspects[:6]:
+        p1 = snapshot.positions.get(aspect.planet1)
+        p2 = snapshot.positions.get(aspect.planet2)
+        if not p1 or not p2:
+            continue
+        x1, y1 = xy(p1.longitude, inner * 0.88)
+        x2, y2 = xy(p2.longitude, inner * 0.88)
+        # Pillow dashed lines are awkward; use a lighter solid line for hard aspects.
+        hard = aspect.name in {"square", "opposition"}
+        draw.line((x1, y1, x2, y2), fill="#aaaaaa" if hard else "#c0c0bc", width=max(1, size//850))
+
+    # Planets; push close longitudes inward to keep labels readable.
+    ordered = sorted(snapshot.positions.values(), key=lambda item: item.longitude)
+    previous_longitudes: list[float] = []
+    dot_r = max(4, size // 180)
+    for item in ordered:
+        nearby = sum(1 for value in previous_longitudes[-3:] if angular_distance(item.longitude, value) < 8.0)
+        radius = planet_r - min(nearby, 2) * (size * 0.034)
+        px, py = xy(item.longitude, radius)
+        draw.ellipse((px-dot_r, py-dot_r, px+dot_r, py+dot_r), fill=dark)
+        retro = " R" if item.retrograde else ""
+        label = f"{PLANET_SHORT.get(item.planet, item.planet[:4].upper())}{retro}"
+        box = draw.textbbox((0, 0), label, font=planet_font)
+        tx = px - (box[2]-box[0]) / 2
+        ty = py - dot_r - (box[3]-box[1]) - max(5, size//180)
+        draw.text((tx, ty), label, font=planet_font, fill=dark)
+        previous_longitudes.append(item.longitude)
+
+    # Centre label
+    title = "LUNA"
+    box = draw.textbbox((0, 0), title, font=title_font)
+    draw.text((center-(box[2]-box[0])/2, center-size*0.032), title, font=title_font, fill=dark)
+
+    subtitle = f"{snapshot.sign.upper()} SKY MAP"
+    box = draw.textbbox((0, 0), subtitle, font=small_font)
+    draw.text((center-(box[2]-box[0])/2, center+size*0.012), subtitle, font=small_font, fill="#666666")
+
+    date_label = snapshot.snapshot_date.strftime("%d %b %Y").upper()
+    box = draw.textbbox((0, 0), date_label, font=small_font)
+    draw.text((center-(box[2]-box[0])/2, center+size*0.040), date_label, font=small_font, fill="#888888")
+
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
