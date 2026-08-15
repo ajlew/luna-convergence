@@ -1398,7 +1398,160 @@ def _technical_appendix(result: dict, order_reference: str) -> str:
 
 
 
+
+# v3.27 — the public chronology must read like one month actually unfolding.
+# The decision engine may still score support/friction internally, but the customer
+# sees a concrete life-area development rather than the scoring vocabulary.
+_TRAJECTORY_OPENING_HOOKS = {
+    1: "A personal decision begins to feel harder to postpone",
+    2: "A number begins to clarify what is and is not worth it",
+    3: "A message or decision starts moving before every fact is in",
+    4: "A private matter starts setting the terms",
+    5: "A spark becomes easier to test in real life",
+    6: "A workable routine begins to prove itself",
+    7: "An agreement starts revealing whether the terms are mutual",
+    8: "A financial or trust issue becomes easier to define",
+    9: "The wider road gets its first piece of proof",
+    10: "A visible result begins separating promise from performance",
+    11: "A future plan starts revealing who actually belongs in it",
+    12: "The quiet begins to show what needs to end or recover",
+}
+
+_TRAJECTORY_MIDDLE_HOOKS = {
+    1: "The personal reset stops being theoretical",
+    2: "The value question becomes impossible to price vaguely",
+    3: "The conversation stops being a one-off",
+    4: "The private issue stops staying in the background",
+    5: "The spark asks for a real response",
+    6: "The routine stops being temporary",
+    7: "The agreement needs actual terms",
+    8: "The real price of the agreement becomes visible",
+    9: "The wider road demands a real commitment",
+    10: "Visibility starts carrying consequences",
+    11: "The future plan needs the right people, not more people",
+    12: "The need for closure becomes harder to postpone",
+}
+
+_TRAJECTORY_OPENING_BODY = {
+    1: "A choice about identity, energy or direction begins to show whether the new version of the plan can hold up outside your head.",
+    2: "A pay, pricing, purchase or security question begins to reveal the number that makes the decision real.",
+    3: "A message, application, conversation or local decision begins to move. Treat the response as information rather than a complete answer.",
+    4: "A home, family or private-life matter begins to show which condition must be settled before the rest of the month can move cleanly.",
+    5: "A romantic, creative or pleasure-led opening becomes easier to test. Interest is useful; follow-through is the evidence.",
+    6: "A workload, schedule, health routine or practical system begins to show what can actually be repeated without draining you.",
+    7: "A partner, client or agreement begins to reveal whether interest and responsibility are genuinely mutual.",
+    8: "A shared expense, repayment, trust question or obligation begins to acquire clearer boundaries. The useful part is seeing what can actually be carried.",
+    9: "A trip, course, publication, legal matter or international opening gains practical support. One part of the wider possibility begins to look buildable.",
+    10: "A role, public result or leadership question begins to separate visible promise from work that can actually be credited and sustained.",
+    11: "A friendship, audience, group or future plan begins to show which people add momentum and which merely add noise.",
+    12: "A private ending, recovery need or unfinished matter begins to clarify in the quiet. Space is giving you information that activity could hide.",
+}
+
+_TRAJECTORY_MIDDLE_BODY = {
+    1: "What began as a personal adjustment now asks for a more durable choice about who you are becoming and what you will no longer perform for approval.",
+    2: "The money or value question is no longer background detail. Price, cost, worth or security now needs a number or boundary you can act on.",
+    3: "The same message, decision or conversation keeps returning because it now needs a clear answer, not another round of interpretation.",
+    4: "The home or private-life issue can no longer be managed around the edges. A boundary, responsibility or living arrangement needs a more lasting form.",
+    5: "What began as attraction, pleasure or creative possibility now asks for a response that can survive beyond the initial spark.",
+    6: "Whatever has been developing around work, health, service or daily obligations now asks for a more lasting arrangement. Change the system, not merely today's schedule.",
+    7: "The relationship or agreement stops being defined by tone and starts being defined by terms, reciprocity and what each person is actually willing to carry.",
+    8: "Shared money, trust or obligation stops being background detail. The important discovery is not only what is owed, but what continuing the arrangement will require.",
+    9: "Travel, study, publishing, law or an international opening moves from possibility toward commitment. The road exists; now the practical condition for taking it matters.",
+    10: "Career, authority or public visibility becomes harder to keep hypothetical. A result, role or responsibility now needs to be owned in concrete terms.",
+    11: "The future plan becomes more selective. A group, friendship, audience or alliance now has to prove that it supports the direction rather than merely applauding it.",
+    12: "Rest, closure or a private emotional process becomes harder to postpone. What needs to end, heal or be released is asking for actual space.",
+}
+
+_TRAJECTORY_OPENING_ACTIONS = {
+    1: "Make the smallest decision that proves the new direction in practice.",
+    2: "Put a real number on the decision before giving it more time or money.",
+    3: "Ask the direct question and keep the next step written and specific.",
+    4: "Stabilise the private condition before promising more elsewhere.",
+    5: "Let the response, not the fantasy, tell you whether the opening is real.",
+    6: "Keep what works; do not increase the load until the routine has survived ordinary days.",
+    7: "Clarify one term that proves the effort is mutual.",
+    8: "Put the workable financial or trust terms in view before goodwill substitutes for clarity.",
+    9: "Secure the part that makes the wider opportunity real; keep the rest reversible.",
+    10: "Finish the result that can be seen before chasing more visibility.",
+    11: "Invest in the people already helping the future take shape.",
+    12: "Protect enough quiet to tell recovery from avoidance.",
+}
+
+_TRAJECTORY_MIDDLE_ACTIONS = {
+    1: "Choose the version of the decision you could still respect after the excitement passes.",
+    2: "Set the price, limit or minimum standard now; do not leave it implied.",
+    3: "Give the conversation a decision point instead of another sequel.",
+    4: "Change the private arrangement that keeps recreating the same problem.",
+    5: "Make the interest concrete enough that reality can answer back.",
+    6: "Redesign the workload or routine around what can actually be sustained.",
+    7: "State the terms clearly enough that both sides can agree or refuse them.",
+    8: "Name the obligation before agreeing to extend it.",
+    9: "Identify the one practical condition that determines whether you can say yes.",
+    10: "Take responsibility for the visible result, but do not accept a title without workable authority.",
+    11: "Choose the few people who can actually carry the next stage with you.",
+    12: "Give the ending or recovery process a boundary in time and attention.",
+}
+
+_TRAJECTORY_SECONDARY_SHORT = {
+    1: "your energy and personal direction",
+    2: "your money and security",
+    3: "your decisions and everyday movement",
+    4: "your home and private life",
+    5: "your creativity, pleasure and romantic life",
+    6: "your workload, health and routines",
+    7: "your relationships and agreements",
+    8: "shared money, trust and obligations",
+    9: "travel, study and the wider world",
+    10: "career and visible results",
+    11: "friends, audiences and future plans",
+    12: "rest, closure and private renewal",
+}
+
+_TRAJECTORY_LATE_PAIR_HOOKS = {
+    (6, 1): "The cost of the routine becomes personal",
+    (8, 3): "What was financial now forces a decision",
+    (9, 4): "The wider road reaches your front door",
+    (4, 10): "The private foundation starts affecting the public result",
+    (10, 4): "The visible result comes home",
+    (7, 2): "The relationship terms acquire a price",
+    (2, 7): "The money question reaches the relationship",
+    (5, 11): "The spark starts changing the future plan",
+    (11, 5): "The future plan starts changing what brings you alive",
+}
+
+_TRAJECTORY_LATE_HOOKS = {
+    1: "The personal choice starts affecting the rest of the board",
+    2: "The money question starts reaching beyond money",
+    3: "What was a conversation now changes the next move",
+    4: "The private issue starts affecting the outside world",
+    5: "What began as desire now carries a consequence",
+    6: "The routine starts charging a wider price",
+    7: "The relationship terms start affecting another part of life",
+    8: "The obligation starts forcing movement elsewhere",
+    9: "The wider opportunity starts changing the life around it",
+    10: "The visible result starts changing the private equation",
+    11: "The future plan starts testing another priority",
+    12: "What was private starts reaching the rest of life",
+}
+
+_TRAJECTORY_LATE_BODY = {
+    1: "The useful test now is whether the choice still fits once its effect on another part of life is visible.",
+    2: "The decision is no longer only about affordability; it is about what the financial choice now permits or constrains elsewhere.",
+    3: "The message or decision has moved beyond words. The consequence now shows whether the information was sufficient to act on.",
+    4: "The private arrangement now has an external cost or benefit. Protect the foundation that still supports the rest of the month.",
+    5: "Desire, creativity or pleasure now has to coexist with another priority. Keep what is alive without making the rest of life subsidise it.",
+    6: "The routine has stopped being a private scheduling issue. Energy, identity or another priority is now showing the real cost of how the system is built.",
+    7: "The relationship or agreement is now affecting another practical area. Reciprocity has to survive outside the conversation itself.",
+    8: "Money, trust or obligation has become a decision problem. What looked containable now changes what you can say yes to elsewhere.",
+    9: "The wider opportunity now asks something of the life you already have. Expansion is only useful if the foundation can carry it.",
+    10: "The visible result now has a private consequence. Achievement is useful only if the role, authority and cost still belong together.",
+    11: "The future plan now tests another priority. The right alliance should make the next stage more possible, not merely more crowded.",
+    12: "The private process is now affecting ordinary life. Closure or recovery needs enough room that it stops becoming an invisible tax on everything else.",
+}
+
+
 def _trajectory_action(posture: str) -> str:
+    """Legacy fallback used outside the richer chronology."""
     return {
         "ADVANCE": "Use the clean support while it is present, but keep timing and terms visible.",
         "QUESTION": "Enjoy what opens, but verify the missing fact before increasing commitment.",
@@ -1406,6 +1559,65 @@ def _trajectory_action(posture: str) -> str:
         "HOLD": "Do what is necessary and preserve optionality while the pressure is still moving.",
         "PASS": "Let the optional demand pass; protect time, money and freedom of movement.",
     }.get(str(posture).upper(), "Let the evidence determine the next move.")
+
+
+def _trajectory_public_condition(balance: float) -> str:
+    """Only surface a balance note when the evidence is genuinely mixed.
+
+    Strong positive/negative balances are already expressed in the house-specific
+    story and action. Repeating a generic score translation across every sign
+    would recreate the template feel v3.27 is intended to remove.
+    """
+    if -10 < balance < 10:
+        return "The evidence is mixed enough that timing and terms matter more than speed."
+    return ""
+
+
+def _trajectory_event_role(chapter: MonthlyChapter) -> str:
+    text = " ".join([chapter.title, *chapter.evidence]).lower()
+    if "eclipse" in text or "new moon" in text:
+        return "This is a reset point rather than another ordinary day in the story."
+    if "full moon" in text:
+        return "This is a culmination point: something that has been developing becomes easier to see in full."
+    if "station" in text or "turns direct" in text or "direct station" in text:
+        return "The timing changes here: a matter that was stalled, reviewed or uncertain can start behaving differently."
+    if "retrograde" in text:
+        return "The event asks for review before expansion; old information, terms or assumptions may need another pass."
+    return "The event gives the month a concrete checkpoint rather than another general mood."
+
+
+def _trajectory_house_action(house: int, stage: int, posture: str, secondary_house: int) -> str:
+    if stage == 0:
+        base = _TRAJECTORY_OPENING_ACTIONS.get(house, HOUSE_ACTION.get(house, _trajectory_action(posture)))
+    elif stage == 1:
+        base = _TRAJECTORY_MIDDLE_ACTIONS.get(house, HOUSE_ACTION.get(house, _trajectory_action(posture)))
+    else:
+        secondary = _TRAJECTORY_SECONDARY_SHORT.get(secondary_house, "the area now being affected")
+        late = {
+            1: f"Keep the decision that still fits who you are becoming, and cut the part now draining {secondary}.",
+            2: f"Let the numbers decide what can continue before the cost spreads into {secondary}.",
+            3: f"Make the decision the information now requires; do not let ambiguity keep disrupting {secondary}.",
+            4: f"Protect the private foundation that {secondary} now depends upon.",
+            5: f"Keep the desire that still has evidence behind it; do not make {secondary} pay for the rest.",
+            6: f"Drop the routine or obligation that now costs more energy than it returns, especially where it is affecting {secondary}.",
+            7: f"Keep the relationship or agreement only on terms that still make sense once {secondary} is included.",
+            8: f"Make the decision the financial or trust facts now require before they keep distorting {secondary}.",
+            9: f"Protect the foundation the wider opportunity depends upon, especially {secondary}.",
+            10: f"Keep the visible responsibility that is genuinely yours; do not let it consume {secondary}.",
+            11: f"Keep the future plan only where the people involved also support {secondary}.",
+            12: f"Give the private ending or recovery enough space that it stops leaking into {secondary}.",
+        }.get(house, _trajectory_action(posture))
+        base = late
+
+    # Preserve the strategic posture without returning to generic engine language.
+    posture = str(posture).upper()
+    if posture == "PASS" and stage < 2:
+        return base + " Let the optional part wait."
+    if posture == "NEGOTIATE" and stage < 2:
+        return base + " Renegotiate before adding exposure."
+    if posture == "QUESTION" and stage < 2:
+        return base + " Verify the missing fact before enlarging the commitment."
+    return base
 
 
 def _trajectory_window_date_range(trajectory: dict, window: dict, fallback: str) -> str:
@@ -1425,23 +1637,27 @@ def _trajectory_aligned_chapters(
     chapters: tuple[MonthlyChapter, ...],
     trajectory: dict,
 ) -> tuple[MonthlyChapter, ...]:
-    """Make the chronology tell one nature-led story instead of independent cards.
+    """Turn evidence anchors into a sign-specific three-act chronology.
 
-    The trajectory is intentionally capped at three customer chapters: opening,
-    concentration, and late result. Extra internal arc roles remain available in
-    the evidence ledger but are not allowed to manufacture another public scene.
+    Astronomy remains untouched. The public layer now has distinct jobs:
+      Act I  — opening evidence / first proof
+      Act II — reset, commitment or concentration
+      Act III — consequence / spillover into another life area
+
+    Internal support/friction scores remain available in the technical evidence,
+    but are no longer repeated as customer-facing prose.
     """
     windows = list(trajectory.get("windows") or [])
     if not chapters or not windows:
         return chapters
 
-    # Preserve the astronomy/evidence anchors from the original arc while
-    # compressing narrative-only roles that do not add a new natural condition.
     if len(chapters) >= 3:
         sources = [chapters[0], chapters[1], chapters[-1]]
     else:
         sources = list(chapters)
 
+    primary_house = int(trajectory.get("primary_house") or 0)
+    secondary_house = int(trajectory.get("secondary_house") or 0)
     primary_area = str(trajectory.get("primary_area", "the main area"))
     secondary_area = str(trajectory.get("secondary_area", "the later consequence"))
     trajectory_kind = str(trajectory.get("trajectory", "oscillating"))
@@ -1454,79 +1670,68 @@ def _trajectory_aligned_chapters(
         support = float(window.get("support", 0.0))
         friction = float(window.get("friction", 0.0))
         balance = support - friction
-        pressure = "; ".join(str(item) for item in (window.get("pressure_aspects") or [])[:5])
-        supportive = "; ".join(str(item) for item in (window.get("support_aspects") or [])[:3])
         posture = str(window.get("posture", "QUESTION"))
-        balance_phrase = (
-            "support clearly outweighs friction" if balance >= 10
-            else "friction clearly outweighs support" if balance <= -10
-            else "support and friction are close enough that timing matters"
-        )
+        condition = _trajectory_public_condition(balance)
 
         if index == 0:
-            hook = (
-                "The difficult opening: protect room to move before deciding"
-                if trajectory_kind in {"recovery", "easing"} and balance < 0
-                else "The first signal: movement arrives before the whole picture is settled"
-            )
+            hook = _TRAJECTORY_OPENING_HOOKS.get(primary_house, "The first useful evidence arrives")
+            if trajectory_kind in {"recovery", "easing"} and balance < 0:
+                hook = f"{hook} — but the opening still needs room to change"
             paragraphs = [
-                f"The month first shows itself through {primary_area}. Here, {balance_phrase}, so the opening is evidence, not a final verdict."
-            ]
-            if pressure:
-                paragraphs.append(
-                    f"The early warning is visible in the sky: {pressure}."
-                    + (f" Support is present too: {supportive}." if supportive else "")
+                _TRAJECTORY_OPENING_BODY.get(
+                    primary_house,
+                    f"The month first becomes concrete through {primary_area}. Treat the first development as evidence rather than a final verdict.",
                 )
+            ]
+            if condition:
+                paragraphs.append(condition)
 
         elif index == len(sources) - 1:
-            hook = (
-                "The storm peaks: the original problem starts affecting the rest of the month"
-                if trajectory_kind in {"late_storm", "pressure_builds"}
-                else "The recovery holds: later conditions give you more room to choose"
-                if trajectory_kind in {"recovery", "easing"}
-                else "The late-month result shows what the earlier pattern can actually carry"
+            hook = _TRAJECTORY_LATE_PAIR_HOOKS.get(
+                (primary_house, secondary_house),
+                _TRAJECTORY_LATE_HOOKS.get(primary_house, "The earlier story now has a wider consequence"),
             )
+            secondary_short = _TRAJECTORY_SECONDARY_SHORT.get(secondary_house, secondary_area)
             paragraphs = [
-                f"By late month, {balance_phrase}. The earlier pressure around {primary_area} now has consequences for {secondary_area}."
+                f"By late month, the earlier story around {primary_area} is no longer contained there. It is now affecting {secondary_short}."
             ]
-            if pressure:
-                paragraphs.append(
-                    f"This is not vague atmosphere: the hard contacts include {pressure}."
-                    + (f" Support remains through {supportive}." if supportive else "")
-                )
+            if condition:
+                paragraphs.append(condition)
             if trajectory_kind in {"late_storm", "pressure_builds"}:
                 paragraphs.append(
-                    "The task is no longer to answer every signal. Protect the commitments that still make sense after the pressure has exposed their real cost."
+                    _TRAJECTORY_LATE_BODY.get(
+                        primary_house,
+                        "The original issue now has a wider consequence. Protect only the commitments that still make sense once that cost is visible.",
+                    )
                 )
             elif trajectory_kind in {"recovery", "easing"}:
                 paragraphs.append(
-                    "The task is to notice that Nature has changed the conditions. Do not carry an early defensive posture forward after support has materially improved."
+                    "The later conditions give you more room than the opening did. Do not carry an early defensive posture forward after the evidence has changed."
                 )
             else:
                 paragraphs.append(
-                    "The task is to judge the later window on its own evidence rather than on the month's opening mood."
+                    "Judge the later consequence on its own terms rather than allowing the month's opening mood to make the decision for you."
                 )
 
         else:
-            hook = (
-                "The weather turns: support begins to outrun the difficult opening"
-                if trajectory_kind in {"recovery", "easing"} and balance >= 10
-                else "The pattern concentrates: the main issue becomes harder to treat as a one-off"
-            )
+            hook = _TRAJECTORY_MIDDLE_HOOKS.get(primary_house, "The main issue becomes concrete")
+            if trajectory_kind in {"recovery", "easing"} and balance >= 10:
+                hook = f"{hook} — and the conditions begin to improve"
             paragraphs = [
-                f"Mid-month keeps returning attention to {primary_area}. Here, {balance_phrase}; this is where the terms, limits and responsibilities become easier to judge."
+                _TRAJECTORY_MIDDLE_BODY.get(
+                    primary_house,
+                    f"Mid-month keeps returning attention to {primary_area}, but now the issue needs a more durable decision rather than another temporary response.",
+                ),
+                _trajectory_event_role(chapter),
             ]
-            if pressure:
-                paragraphs.append(
-                    f"The pressure is explicit: {pressure}."
-                    + (f" Supportive contacts such as {supportive} keep another route open." if supportive else "")
-                )
+            if condition:
+                paragraphs.append(condition)
             if countercurrent and str(window.get("label", "")) == counter_window:
                 evidence = "; ".join(str(item) for item in (countercurrent.get("support_evidence") or [])[:3])
                 relief = f"At the same time, {countercurrent.get('label', 'another part of life')} provide genuine relief"
                 if evidence:
                     relief += f", supported by {evidence}"
-                relief += ". Let it give you perspective and relief without making it responsible for solving the main problem."
+                relief += ". Use that relief for perspective; do not make it responsible for solving the main problem."
                 paragraphs.append(relief)
 
         aligned.append(MonthlyChapter(
@@ -1535,11 +1740,10 @@ def _trajectory_aligned_chapters(
             hook=hook,
             title=chapter.title,
             paragraphs=tuple(paragraphs),
-            action=_trajectory_action(posture),
+            action=_trajectory_house_action(primary_house, index, posture, secondary_house),
             evidence=chapter.evidence,
         ))
     return tuple(aligned)
-
 
 def _countercurrent_love_story(result: dict, trajectory: dict) -> tuple[str, ...] | None:
     counter = dict(trajectory.get("countercurrent") or {})
