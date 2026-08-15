@@ -7,6 +7,7 @@ or re-implement the upload contract.
 """
 
 from calendar import month_name
+from datetime import datetime
 import hmac
 
 import streamlit as st
@@ -26,6 +27,12 @@ from ephemeris_repository import (
     registered_years,
     registry_summary,
     store_ephemeris_pdf,
+)
+from historical_ephemeris import (
+    ASPECTS as HISTORICAL_ASPECTS,
+    archive_stats as historical_archive_stats,
+    aspect_events as historical_aspect_events,
+    positions_on as historical_positions_on,
 )
 
 
@@ -151,6 +158,100 @@ def render_ephemeris_admin(
             else:
                 st.warning(f"{label}: {row.get('validation_message')}")
         st.session_state.pop("ephemeris-admin-test-result", None)
+
+    # Structured 1950–2050 astronomy memory.  This database is generated directly
+    # from Swiss Ephemeris; uploaded PDFs remain validation/reference artifacts.
+    st.markdown("## Luna Astronomy Memory")
+    archive = historical_archive_stats()
+    if archive.get("available"):
+        cols = st.columns(4, gap="small")
+        cols[0].metric("Archive", f"{archive.get('start_year')}–{archive.get('end_year')}")
+        cols[1].metric("Daily positions", f"{archive.get('positions', 0):,}")
+        cols[2].metric("Events", "On demand")
+        cols[3].metric("Bodies", str(archive.get('bodies', 0)))
+        st.caption(
+            f"{archive.get('frame', '').title()} · {archive.get('zodiac', '').title()} · "
+            f"{archive.get('node', '')} · daily snapshot {archive.get('snapshot_utc', '')} UTC · "
+            f"events {archive.get('event_mode', 'derived on demand')}. "
+            "PDF ephemerides remain validation references rather than calculation tables."
+        )
+
+        with st.expander("Historical sky lookup", expanded=False):
+            lookup_date = st.date_input(
+                "UTC date",
+                value=datetime.now().date(),
+                min_value=datetime(archive.get('start_year', 1950), 1, 1).date(),
+                max_value=datetime(archive.get('end_year', 2050), 12, 31).date(),
+                key="historical-archive-date",
+            )
+            rows = historical_positions_on(lookup_date)
+            if rows:
+                st.dataframe(
+                    [
+                        {
+                            "Body": row["body"],
+                            "Sign": row["sign"],
+                            "Degree": f"{row['degree_in_sign']:.2f}°",
+                            "Longitude": f"{row['longitude']:.3f}°",
+                            "Motion": "Rx" if row["retrograde"] else "Direct",
+                        }
+                        for row in rows
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+        with st.expander("Historical aspect recurrence", expanded=False):
+            bodies = [
+                "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
+                "Uranus", "Neptune", "Pluto", "True Node"
+            ]
+            c1, c2, c3, c4 = st.columns(4, gap="small")
+            with c1:
+                body1 = st.selectbox("First body", bodies, index=bodies.index("Mercury"), key="hist-body1")
+            with c2:
+                body2_options = [body for body in bodies if body != body1]
+                body2 = st.selectbox(
+                    "Second body",
+                    body2_options,
+                    index=body2_options.index("Jupiter") if "Jupiter" in body2_options else 0,
+                    key="hist-body2",
+                )
+            with c3:
+                aspect = st.selectbox("Aspect", list(HISTORICAL_ASPECTS), key="hist-aspect")
+            with c4:
+                sign_filter = st.selectbox("First-body sign", ["Any"] + list(SIGNS), key="hist-sign")
+            recurrence = historical_aspect_events(
+                body1,
+                body2,
+                aspect,
+                sign=None if sign_filter == "Any" else sign_filter,
+                ascending=False,
+                limit=30,
+            )
+            if recurrence:
+                st.dataframe(
+                    [
+                        {
+                            "Exact UTC": row["exact_utc"],
+                            body1: f"{row['body1_sign'] if row['body1'] == body1 else row['body2_sign']} "
+                                   f"{(row['body1_degree'] if row['body1'] == body1 else row['body2_degree']):.2f}°",
+                            body2: f"{row['body2_sign'] if row['body2'] == body2 else row['body1_sign']} "
+                                   f"{(row['body2_degree'] if row['body2'] == body2 else row['body1_degree']):.2f}°",
+                            "Aspect": row["aspect"].title(),
+                        }
+                        for row in recurrence
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.caption("No matching precomputed event in the archive.")
+    else:
+        st.warning(
+            "Structured historical archive is not present. Run build_historical_ephemeris.py "
+            "and deploy data/luna_ephemeris_1950_2050.sqlite3."
+        )
 
     entries = list_registered_ephemerides()
     st.markdown("## Registered years")
