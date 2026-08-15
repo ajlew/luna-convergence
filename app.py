@@ -3437,9 +3437,9 @@ def monthly_sign_page(sign: str) -> None:
     if not EDITOR_PREVIEW_ENABLED:
         st.markdown("## Get the complete personalised month")
         st.markdown(
-            "The paid report adds the three-act timeline, love/work/money guidance, "
-            "your selected focus, Solar Convergence, key dates and full evidence "
-            "dropdowns while keeping the main page sparse."
+            "The paid report goes beyond the free monthly briefing with deeper "
+            "love/work/money guidance, your selected focus, long-range pressure "
+            "timing, full evidence and a downloadable personalised PDF."
         )
         report_cta(
             context=f"august-2026-{sign_slug(sign)}",

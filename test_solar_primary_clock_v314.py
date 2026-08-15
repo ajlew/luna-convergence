@@ -60,7 +60,7 @@ def test_monthly_solar_clock_is_location_aware_without_season_labels():
     assert not any(word in joined for word in forbidden)
 
 
-def test_customer_monthly_report_surfaces_solar_clock_near_front():
+def test_customer_monthly_report_keeps_solar_clock_in_collapsed_evidence():
     narrative, result = build_production_monthly_report(
         sign="Sagittarius",
         year=2026,
@@ -70,10 +70,10 @@ def test_customer_monthly_report_surfaces_solar_clock_near_front():
     )
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible(html)
-    assert "First principle · The Sun is Luna's primary natural clock" in text
+    assert "Solar clock evidence" in text
     assert "Your Sun Sagittarius" in text
     assert "Current Sun Virgo → Libra" in text
     assert "Libra Gate · September Equinox" in text
-    assert "Local light Decreasing · London" in text
-    assert "Local geography changes the light you experience, not the universal Aries-to-Pisces solar sequence." in text
+    assert "Local light Decreasing from London" in text
+    assert "First principle · The Sun is Luna's primary natural clock" not in text
     assert "Local season" not in text

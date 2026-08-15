@@ -26,14 +26,13 @@ def main() -> None:
     )
 
     for required in (
-        "Luna says",
+        "Monthly briefing",
         "July checks the bank balance before it upgrades the itinerary",
         "The month starts with the price. It ends with the possibility.",
-        "How July unfolds — four acts",
-        "Moments to notice",
-        "Write the next move when the story changes",
+        "How July unfolds",
+        "Dates worth circling",
         "Whether the spark arrives—or the room stays quiet",
-        "From reading the future to writing it.",
+        "Shift from applicant to gatekeeper.",
         "Why Luna sees this",
         "Evidence path",
         "Ranked scenario families",
@@ -41,34 +40,36 @@ def main() -> None:
         "Solar Convergence",
         "Key dates and planetary timing",
         "Full technical evidence",
-        "Evidence-to-scenario trace",
-        "@page",
+        "Print or save report",
+        "A4",
+        "A3",
+        "Portrait",
+        "Landscape",
+        "window.print()",
+        "@media print",
     ):
         assert required in html, required
 
     for removed in (
-        "Dates worth circling",
         "Concrete possibilities",
         "You remain the main character",
         "The month in three acts",
         "You are not waiting to be selected",
-        '<section class="luna-monthly-section luna-relationship-test">',
+        "Why Luna says this",
     ):
         assert removed not in html, removed
 
     assert html.count("Your move") == 1
-    assert html.count('class="luna-story-act"') == 4
+    assert html.count('class="luna-story-act"') == 3
     assert html.count('class="luna-story-date-card"') == 4
     assert "Include evidence" not in html
     assert "Monthly arc equation" not in html
     assert "luna-arc-card" not in html
-    assert "Print or save report" not in html
-    assert "luna-print-report" not in html
-    assert "isolatedReportClone" not in html
-    assert 'document.createElement("iframe")' not in html
+    assert "detail.open = true" in html
     assert "position:sticky" not in html
+    assert "min-height:0 !important" in html
 
-    print("Monthly four-act webpage tests passed.")
+    print("Monthly arc webpage tests passed.")
 
 
 if __name__ == "__main__":

@@ -79,7 +79,8 @@ def test_solar_background_keeps_nature_and_drops_generic_mini_forecast():
     narrative, result = _report(1995)
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible_text(html)
-    assert "The Sun is Luna's primary natural clock" in text
+    assert "the Sun establishes Luna's annual natural clock" in text
+    assert "Solar clock evidence" in text
     assert "Local season" not in text
     assert "Libra Gate · September Equinox" in text
     assert "Solar convergence:" in text

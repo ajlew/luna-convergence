@@ -43,15 +43,18 @@ def test_monthly_customer_report_has_one_authoritative_chronology():
     assert narrative.key_dates
 
 
-def test_2017_calls_the_concentrated_pressure_plainly_and_names_evidence_nearby():
+def test_2017_customer_chronology_keeps_signal_and_moves_dense_proof_to_evidence_layer():
     narrative, result = _report(2017)
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible_text(html)
-    assert "5 planets are involved in 3 exact pressure contacts" in text
-    assert "Sun square Saturn" in text
-    assert "Mercury conjunction Mars" in text
-    assert "Mercury opposition Neptune" in text
-    assert "For Sagittarius, Virgo describes career, reputation, authority and visible results" in text
+    how = text.split("How September unfolds", 1)[1].split("Where the story lands", 1)[0]
+    assert "Influence:" in how
+    assert "Luna's move" in how
+    assert "5 planets are involved in 3 exact pressure contacts" not in how
+    assert "Why Luna says this" not in how
+    # The evidence-rich source narrative remains available internally.
+    assert narrative.luna_says
+    assert result.get("events")
 
 
 def test_customer_rendering_uses_life_areas_instead_of_house_number_codes():
@@ -64,15 +67,14 @@ def test_customer_rendering_uses_life_areas_instead_of_house_number_codes():
     assert "friends, networks, audiences and future plans" in text
 
 
-def test_2026_opening_evidence_is_directly_connected_to_public_career_story():
+def test_2026_opening_signal_is_directly_connected_without_reprinting_house_proof():
     narrative, result = _report(2026)
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible_text(html)
-    # The old mismatch showed Jupiter trine Saturn as the H5 event while narrating career.
-    # The single chronology now chooses a directly career-linked event for that beat.
-    how = text.split("How September unfolds", 1)[1].split("Romance and validation", 1)[0]
+    how = text.split("How September unfolds", 1)[1].split("Where the story lands", 1)[0]
     assert "Mercury sextile Mars" in how
-    assert "For Sagittarius, Virgo describes career, reputation, authority and visible results" in how
+    assert "For Sagittarius, Virgo describes career, reputation, authority and visible results" not in how
+    assert "career, reputation, authority and visible results" in text
 
 
 def test_solar_customer_copy_translates_internal_house_numbers():

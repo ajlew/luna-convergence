@@ -106,6 +106,63 @@ def _event_short(event: dict, *, include_date: bool = False) -> str:
     return text
 
 
+def _newspaper_date(event_date: str | None, fallback: str) -> str:
+    """Compact dateline used by the customer-facing monthly briefing."""
+    if event_date:
+        try:
+            return datetime.fromisoformat(str(event_date)).strftime("%d %b").upper()
+        except (TypeError, ValueError):
+            pass
+    return str(fallback or "").upper()
+
+
+def _chapter_customer_paragraphs(paragraphs: Iterable[str], *, maximum: int = 2) -> tuple[str, ...]:
+    """Keep chronology interpretive; move dense aspect proof to evidence drawers.
+
+    The narrative engine deliberately retains the full evidence-rich paragraphs for
+    QA, PDFs and internal analysis.  The customer timeline should read like a
+    newspaper briefing: what changed, what it means, and what to do.
+    """
+    cleaned: list[str] = []
+    for raw in paragraphs or ():
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        lower = text.lower()
+        # Paragraphs whose job is primarily to enumerate aspects belong in the
+        # evidence layer rather than the main story.
+        if lower.startswith((
+            "the pressure is explicit:",
+            "this is not vague atmosphere:",
+            "the early warning is visible in the sky:",
+        )):
+            continue
+        # Keep useful counter-current meaning but remove the inline list of
+        # exact aspects/orbs that makes the prose feel like a calculation dump.
+        supported_marker = re.search(r", supported by ", text, flags=re.I)
+        if supported_marker:
+            tail_match = re.search(r"\b(Let it|Enjoy|Use it|Keep|Protect)\b.*$", text[supported_marker.end():], flags=re.I)
+            tail = tail_match.group(0).strip() if tail_match else ""
+            text = text[:supported_marker.start()].rstrip() + "."
+            if tail:
+                text += " " + tail
+        # These clauses are evidence lists, not customer story. They can contain
+        # decimal orbs, so split on semantic markers rather than full stops.
+        for marker in (" Supportive contacts such as ", " Support is present too: ", " Support remains through "):
+            idx = text.find(marker)
+            if idx >= 0:
+                text = text[:idx].rstrip()
+        text = re.sub(r"\s+", " ", text).strip()
+        if text and text not in cleaned:
+            cleaned.append(text)
+
+    if len(cleaned) <= maximum:
+        return tuple(cleaned)
+    # For a three-part chapter, the first sentence establishes the condition
+    # and the last normally advances the decision.  That is the useful pair.
+    return (cleaned[0], cleaned[-1])
+
+
 def _beat_for_chapter(result: dict, chapter) -> dict:
     arc = result.get("monthly_arc") or {}
     beats = list(arc.get("beats") or [])
@@ -740,7 +797,7 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
         display_event = _direct_story_event(result, context)
         evidence_context = _context_for_evidence(context, display_event)
         if display_event.get("title"):
-            display_title = str(display_event.get("title"))
+            display_title = _event_short(display_event)
         elif context.get("trajectory_window"):
             display_title = f"{str(context.get('trajectory_window')).capitalize()} sky"
         else:
@@ -753,6 +810,7 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
             "chapter": chapter,
             "context": context,
             "display_title": display_title,
+            "event_date": str(display_event.get("event_date") or ""),
             "exact_date": exact_date,
             "window": window,
             "sky_evidence": sky_evidence,
@@ -795,28 +853,29 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     for item in merged:
         chapter = item["chapter"]
         exact_date = item["exact_date"]
-        if exact_date and exact_date != item["window"]:
+        event_date = str(item.get("event_date") or "")
+        if event_date:
+            date_label = _newspaper_date(event_date, exact_date or item["window"])
             date_html = (
-                f'<span>{_safe(exact_date)}</span>'
+                f'<span class="luna-news-date">{_safe(date_label)}</span>'
                 f'<small>{_safe(item["display_title"])}</small>'
-                f'<em>Influence window: {_safe(item["window"])}</em>'
+                f'<em>Influence: {_safe(item["window"])}</em>'
             )
         else:
             date_html = (
-                f'<span>{_safe(item["window"])}</span>'
+                f'<span class="luna-news-date">{_safe(_newspaper_date(None, item["window"]))}</span>'
                 f'<small>{_safe(item["display_title"])}</small>'
             )
 
         action_lines = []
         seen_actions = set()
-        for strategy, action in item["actions"]:
-            key = (strategy, action)
-            if key in seen_actions:
+        for _strategy, action in item["actions"]:
+            if action in seen_actions:
                 continue
-            seen_actions.add(key)
-            move_label = f"Luna's move — {strategy}" if strategy else "Luna's move"
-            action_lines.append(f'<p class="luna-chapter-move"><strong>{_safe(move_label)}:</strong> {_safe(action)}</p>')
+            seen_actions.add(action)
+            action_lines.append(f'<p class="luna-chapter-move"><strong>Luna\'s move:</strong> {_safe(action)}</p>')
 
+        customer_paragraphs = _chapter_customer_paragraphs(item["paragraphs"], maximum=2)
         acts.append(
             f"""
 <article class="luna-story-act">
@@ -824,10 +883,8 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     {date_html}
   </div>
   <div class="luna-story-copy">
-    {f'<div class="luna-sky-evidence"><span>Why Luna says this</span><p>{_safe(item["sky_evidence"])}</p></div>' if item["sky_evidence"] else ''}
-    {f'<div class="luna-solar-convergence-note"><span>Solar convergence</span><p>{_safe(item["solar_note"])}</p></div>' if item.get("solar_note") else ''}
     <h3>{_safe(chapter.hook)}</h3>
-    {_paragraphs(item["paragraphs"])}
+    {_paragraphs(customer_paragraphs)}
     {''.join(action_lines)}
   </div>
 </article>
@@ -836,25 +893,31 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     return "".join(acts)
 
 
+def _compact_domain_copy(copy: str) -> str:
+    """Trim scenario exhaust and internal decision jargon from Love/Work/Money."""
+    text = re.sub(r"\s+", " ", str(copy or "")).strip()
+    # The first sentence carries the domain diagnosis.  Long example catalogues
+    # and repeated risk/reward language belong in evidence, not the summary.
+    text = re.sub(r"\s+Even if it appears through\b.*$", "", text, flags=re.I)
+    text = re.sub(r"\s+The headline alone is not a reason to chase it\b.*$", "", text, flags=re.I)
+    text = re.sub(r"\s+This domain does not currently offer favourable enough asymmetry\b.*$", "", text, flags=re.I)
+    return text.strip()
+
+
 def _life_rows(narrative: MonthlyNarrative, result: dict) -> str:
-    decisions = dict((result.get("monthly_decision") or {}).get("domain_decisions") or {})
     sections = (
-        ("Love", "romance", narrative.love_hook, narrative.love_story[0]),
-        ("Work", "work", narrative.work_hook, narrative.work_story[0]),
-        ("Money", "money", narrative.money_hook, narrative.money_story[0]),
+        ("Love", narrative.love_hook, narrative.love_story[0]),
+        ("Work", narrative.work_hook, narrative.work_story[0]),
+        ("Money", narrative.money_hook, narrative.money_story[0]),
     )
     rows = []
-    for label, key, hook, copy in sections:
-        decision = dict(decisions.get(key) or {})
-        strategy = " · ".join(
-            value for value in (str(decision.get("action_truth", "")), str(decision.get("posture", ""))) if value
-        )
+    for label, hook, copy in sections:
         rows.append(
             f"""
 <article class="luna-life-row">
-  <span>{_safe(label)}{f'<small>{_safe(strategy)}</small>' if strategy else ''}</span>
+  <span>{_safe(label)}</span>
   <h3>{_safe(hook)}</h3>
-  <p>{_safe(copy)}</p>
+  <p>{_safe(_compact_domain_copy(copy))}</p>
 </article>
             """
         )
@@ -977,6 +1040,7 @@ def _relationship_test_evidence(result: dict) -> dict:
     return {
         "title": title,
         "date_range": human_date_range(start_date, end_date),
+        "signal": aspect,
         "evidence": evidence,
     }
 
@@ -1010,9 +1074,9 @@ def build_monthly_experience_html(
         evidence_html = ""
         if rel_evidence:
             evidence_html = f"""
-  <div class="luna-sky-evidence">
-    <span>{_safe(rel_evidence.get('date_range'))} · {_safe(rel_evidence.get('title'))}</span>
-    <p>{_safe(rel_evidence.get('evidence'))}</p>
+  <div class="luna-signal-line">
+    <span>Signal</span>
+    <strong>{_safe(rel_evidence.get('date_range'))} · {_safe(rel_evidence.get('signal') or rel_evidence.get('title'))}</strong>
   </div>
             """
         relationship_test_section = f"""
@@ -1141,33 +1205,29 @@ def build_monthly_experience_html(
 </section>
     """
 
+    summary_strip = f"""
+<section class="luna-monthly-brief" aria-label="Monthly brief">
+  <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
+  <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
+</section>
+    """
+
     body = ""
     if not preview:
         body = f"""
-{solar_clock_strip}
-<section class="luna-monthly-section luna-opening-story">
-  <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
-  <h2>{_safe(narrative.central_storyline)}</h2>
-  <div class="luna-story-prose">
-    {_paragraphs(narrative.luna_says)}
-  </div>
-  <div class="luna-do-dont luna-do-dont-light">
-    <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(narrative.do_line)}</strong></div>
-    <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
-  </div>
-</section>
+{summary_strip}
 
 {problem_horizon_section}
 
 {focus_section}
 
 <section class="luna-monthly-section luna-story-section">
-  <div class="luna-eyebrow">How {_safe(narrative.label.split()[0])} unfolds</div>
+  <div class="luna-eyebrow">Monthly briefing</div>
+  <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
   <div class="luna-story-timeline">{chapters}</div>
 </section>
 
 {relationship_test_section}
-
 
 {romance_section}
 
@@ -1179,7 +1239,6 @@ def build_monthly_experience_html(
 <section class="luna-monthly-section luna-next-move">
   <div>
     <div class="luna-eyebrow">{_safe(YOUR_MOVE_LABEL)}</div>
-    <div class="luna-strategy-badge">{_safe(narrative.portfolio_posture or (narrative.decision_truth + ' · ' + narrative.strategic_posture))}</div>
     <h2>From reading the future to writing it.</h2>
     <p class="luna-strategy-rationale">{_safe(narrative.portfolio_rationale or narrative.strategic_rationale)}</p>
   </div>
@@ -1192,11 +1251,11 @@ def build_monthly_experience_html(
         """
     else:
         body = f"""
-{solar_clock_strip}
-<section class="luna-monthly-section luna-opening-story">
-  <div class="luna-eyebrow">{_safe(LUNA_SAYS_LABEL)}</div>
-  <h2>{_safe(narrative.central_storyline)}</h2>
-  {_paragraphs(narrative.luna_says, maximum=2)}
+{summary_strip}
+<section class="luna-monthly-section luna-story-section">
+  <div class="luna-eyebrow">Monthly briefing</div>
+  <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
+  <div class="luna-story-timeline">{chapters}</div>
 </section>
         """
 
@@ -1277,6 +1336,8 @@ def build_monthly_experience_html(
 }}
 @media (max-width:700px) {{
   .luna-solar-clock-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
+  .luna-monthly-brief {{ grid-template-columns:1fr; }}
+  .luna-monthly-brief > div + div {{ border-left:0; border-top:1px solid var(--black); }}
 }}
 
 .luna-monthly-hero {{
@@ -1362,6 +1423,61 @@ def build_monthly_experience_html(
   padding:clamp(2.25rem,5vw,4.3rem) clamp(1rem,4vw,3.2rem);
   border-bottom:1px solid var(--black);
 }}
+.luna-monthly-brief {{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-bottom:1px solid var(--black);
+}}
+.luna-monthly-brief > div {{
+  padding:1rem clamp(1rem,4vw,3.2rem);
+}}
+.luna-monthly-brief > div + div {{
+  border-left:1px solid var(--black);
+}}
+.luna-monthly-brief span {{
+  display:block;
+  margin-bottom:.3rem;
+  color:var(--muted);
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.62rem;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+}}
+.luna-monthly-brief strong {{
+  display:block;
+  max-width:520px;
+  font-family:"Bodoni Moda",Georgia,serif;
+  font-size:clamp(1.08rem,1.8vw,1.38rem);
+  font-weight:500;
+  line-height:1.2;
+}}
+.luna-section-title {{
+  max-width:760px;
+  margin:.4rem 0 1.25rem;
+  font-size:clamp(2rem,4vw,3.35rem);
+  line-height:1;
+}}
+.luna-signal-line {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.45rem .75rem;
+  align-items:baseline;
+  margin:0 0 1rem;
+  padding-bottom:.65rem;
+  border-bottom:1px solid var(--line);
+}}
+.luna-signal-line span {{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.62rem;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  color:var(--muted);
+}}
+.luna-signal-line strong {{
+  font-size:.9rem;
+  font-weight:500;
+}}
+
 .luna-opening-story h2 {{
   max-width:780px;
   margin:.45rem 0 1.35rem;
@@ -1521,6 +1637,14 @@ def build_monthly_experience_html(
   display:flex;
   flex-direction:column;
   gap:.45rem;
+}}
+.luna-story-date .luna-news-date {{
+  color:var(--black);
+  font-family:"Bodoni Moda",Georgia,serif;
+  font-size:clamp(1.8rem,3vw,2.55rem);
+  font-weight:500;
+  letter-spacing:-.025em;
+  line-height:.95;
 }}
 .luna-story-date small {{
   color:var(--muted);

@@ -52,16 +52,16 @@ def test_each_trajectory_window_renders_as_one_card_with_one_move():
         articles = _story_articles(html)
         assert len(articles) == 3
         for article in articles:
-            assert article.count("Luna&#x27;s move") == 1
+            assert article.count('class="luna-chapter-move"') == 1
 
 
 def test_1995_windows_are_separate_and_timed_advance_names_what_moves():
     narrative, result = _report(1995)
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible(html)
-    assert "9 September 1995 Full Moon in Pisces Influence window: 1-10 September 1995" in text
-    assert "15 September 1995 Sun opposition Saturn Influence window: 11-20 September 1995" in text
-    assert "25 September 1995 New Moon in Libra Influence window: 21-30 September 1995" in text
+    assert "09 SEP Full Moon in Pisces Influence: 1-10 September 1995" in text
+    assert "15 SEP Sun opposition Saturn" in text and "Influence: 11-20 September 1995" in text
+    assert "25 SEP New Moon in Libra Influence: 21-30 September 1995" in text
     assert "Negotiate home and family conditions" in narrative.portfolio_rationale + " " + " ".join(narrative.action_plan)
     assert "Advance the workable part of home and family" in " ".join(narrative.action_plan)
 
@@ -70,9 +70,9 @@ def test_2026_event_dates_stay_inside_windows_and_full_moon_returns_as_result():
     narrative, result = _report(2026)
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible(html)
-    assert "1 September 2026 Mercury sextile Mars Influence window: 1-10 September 2026" in text
-    assert "11 September 2026 New Moon in Virgo Influence window: 11-20 September 2026" in text
-    assert "27 September 2026 Full Moon in Aries Influence window: 21-30 September 2026" in text
+    assert "01 SEP Mercury sextile Mars" in text and "Influence: 1-10 September 2026" in text
+    assert "11 SEP New Moon in Virgo Influence: 11-20 September 2026" in text
+    assert "27 SEP Full Moon in Aries Influence: 21-30 September 2026" in text
     assert "16-18 September 2026 · Venus square Pluto" in text
     assert "Neptune sextile Pluto Influence window: 21-30 September 2026" not in text
 
@@ -85,6 +85,4 @@ def test_2026_bridge_is_explained_in_customer_story_with_nature_evidence():
     assert "Sun enters Libra" in " ".join(bridge["movements"])
     html = build_monthly_experience_html(narrative, result, show_print=False, preview=False)
     text = _visible(html)
-    assert "form the bridge" in text
-    assert "Mercury enters Libra" in text
-    assert "Sun enters Libra" in text
+    assert "form the bridge" not in text
