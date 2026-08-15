@@ -948,6 +948,46 @@ a {
     text-transform:uppercase;
 }
 
+.natal-signature-reading {
+    padding:1.45rem 0 1.55rem;
+    border-top:1px solid var(--line);
+}
+
+.natal-signature-reading h3 {
+    margin:.28rem 0 .72rem !important;
+}
+
+.natal-signature-reading p {
+    max-width:720px;
+}
+
+.natal-signature-meta {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:1rem;
+    margin-top:.85rem;
+    font-size:.84rem;
+    line-height:1.55;
+}
+
+.natal-signature-meta span {
+    display:block;
+    margin-bottom:.2rem;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.62rem;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
+.natal-signature-question {
+    max-width:720px;
+    margin:.9rem 0 0;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:1.08rem;
+    line-height:1.45;
+}
+
 .natal-signature {
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -1344,6 +1384,10 @@ hr {
     }
     .natal-signature {
         grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .natal-signature-meta {
+        grid-template-columns:1fr;
+        gap:.55rem;
     }
     .lean-daily-question {
         margin:2.35rem 0 2.2rem;
@@ -3737,6 +3781,28 @@ def natal_snapshot_page() -> None:
 </div>''',
             unsafe_allow_html=True,
         )
+
+    if snapshot.signatures:
+        st.markdown("## Your strongest signatures")
+        st.caption("The chart does not just describe placements. Luna gives priority to the combinations most likely to show up as recognisable behaviour.")
+        for signature in snapshot.signatures:
+            question_html = (
+                f'<div class="natal-signature-question">{escape(signature.question)}</div>'
+                if signature.question else ""
+            )
+            st.markdown(
+                f'''<div class="natal-signature-reading">
+  <div class="natal-evidence">{escape(signature.evidence)}</div>
+  <h3>{escape(signature.title)}</h3>
+  <p>{escape(signature.text)}</p>
+  <div class="natal-signature-meta">
+    <div><span>Strength</span>{escape(signature.strength)}</div>
+    <div><span>Watch</span>{escape(signature.watch)}</div>
+  </div>
+  {question_html}
+</div>''',
+                unsafe_allow_html=True,
+            )
 
     with st.expander("Chart evidence"):
         rows = []

@@ -106,6 +106,16 @@ class NatalTheme:
 
 
 @dataclass(frozen=True)
+class NatalSignature:
+    title: str
+    text: str
+    strength: str
+    watch: str
+    evidence: str
+    question: str | None = None
+
+
+@dataclass(frozen=True)
 class NatalSnapshot:
     birth_date: date
     birth_time_known: bool
@@ -117,6 +127,7 @@ class NatalSnapshot:
     midheaven: NatalPosition | None
     moon_uncertain: tuple[str, ...]
     themes: tuple[NatalTheme, ...]
+    signatures: tuple[NatalSignature, ...]
     dominant_element: str
     dominant_modality: str
 
@@ -277,6 +288,217 @@ def _build_themes(positions: list[NatalPosition], aspects: list[NatalAspect], mo
     return tuple(themes[:3])
 
 
+
+
+def _aspect_pair(aspect: NatalAspect) -> frozenset[str]:
+    return frozenset((aspect.planet1, aspect.planet2))
+
+
+def _signature_priority(aspect: NatalAspect) -> float:
+    """Rank aspects by human interpretive value, not mathematical tightness alone.
+
+    Personal-planet combinations that readers can recognise in everyday behaviour
+    outrank tight generational contacts. Orb/strength still matters inside that
+    hierarchy.
+    """
+    pair = _aspect_pair(aspect)
+    pair_bonus = {
+        frozenset(("Moon", "Saturn")): 12.0,
+        frozenset(("Sun", "Moon")): 11.6,
+        frozenset(("Moon", "Mercury")): 11.2,
+        frozenset(("Sun", "Saturn")): 11.0,
+        frozenset(("Sun", "Mercury")): 10.7,
+        frozenset(("Venus", "Saturn")): 10.4,
+        frozenset(("Venus", "Pluto")): 10.1,
+        frozenset(("Mars", "Saturn")): 9.9,
+        frozenset(("Moon", "Pluto")): 9.7,
+        frozenset(("Moon", "Neptune")): 9.4,
+        frozenset(("Sun", "Pluto")): 9.2,
+        frozenset(("Venus", "Mars")): 8.8,
+        frozenset(("Mercury", "Saturn")): 8.7,
+        frozenset(("Mercury", "Pluto")): 8.5,
+        frozenset(("Sun", "Jupiter")): 8.4,
+        frozenset(("Moon", "Jupiter")): 8.3,
+    }.get(pair, 6.0)
+    aspect_bonus = {
+        "conjunction": 1.25,
+        "square": 1.15,
+        "opposition": 1.10,
+        "trine": 0.65,
+        "sextile": 0.50,
+    }.get(aspect.name, 0.0)
+    if pair.issubset({"Uranus", "Neptune", "Pluto"}):
+        pair_bonus -= 5.5
+    return pair_bonus + aspect_bonus + min(1.5, aspect.strength * 0.45) - min(1.0, aspect.orb * 0.04)
+
+
+def _signature_for_aspect(aspect: NatalAspect) -> NatalSignature:
+    pair = _aspect_pair(aspect)
+    hard = aspect.name in {"square", "opposition"}
+    conjunction = aspect.name == "conjunction"
+
+    if pair == frozenset(("Moon", "Saturn")):
+        if hard or conjunction:
+            return NatalSignature(
+                title="Emotionally reserved",
+                text=(
+                    "You may feel considerably more than you show. Emotional disclosure tends to follow trust rather than create it: "
+                    "until you know where you stand, the instinct can be to contain the feeling and deal with the practical situation first. "
+                    "That restraint can look like distance to people who do not yet know you well."
+                ),
+                strength="Emotional endurance, loyalty and self-command.",
+                watch="Carrying everything privately until independence becomes isolation.",
+                evidence=aspect.label(),
+                question="Are you protecting something valuable, or protecting yourself from being known?",
+            )
+        return NatalSignature(
+            title="Feelings have structure",
+            text="Emotion and responsibility can work together naturally. You often become steadier when other people become reactive, and reliability can be one of the ways you show care.",
+            strength="Consistency under emotional pressure.",
+            watch="Assuming you must always be the composed one.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Sun", "Moon")):
+        if hard:
+            return NatalSignature(
+                title="What you want and what you need can pull apart",
+                text=(
+                    "A decision can make complete sense to the part of you moving forward while another part does not feel safe, satisfied or ready. "
+                    "This is not necessarily indecision; it is a recurring negotiation between conscious direction and emotional need."
+                ),
+                strength="You can see more than one truth inside the same decision.",
+                watch="Letting one side overrule the other until the conflict returns elsewhere.",
+                evidence=aspect.label(),
+                question="Which part of you is asking to be heard before you decide?",
+            )
+
+    if pair == frozenset(("Sun", "Mercury")) and conjunction:
+        return NatalSignature(
+            title="Your ideas become personal",
+            text=(
+                "Thinking and identity sit close together. This can give your words conviction and make it natural to communicate a coherent point of view. "
+                "The complication is that disagreement may sometimes feel more personal than it actually is."
+            ),
+            strength="Clarity, conviction and the ability to communicate an idea as a whole.",
+            watch="Confusing certainty with evidence, or criticism of an idea with criticism of you.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Moon", "Mercury")) and hard:
+        return NatalSignature(
+            title="Your head and feelings do not always vote together",
+            text=(
+                "You may understand something logically before you have emotionally accepted it, or feel something strongly before you can explain why. "
+                "Under pressure, words can arrive before the feeling underneath them has been fully understood."
+            ),
+            strength="You can translate emotion into language once you give yourself enough processing time.",
+            watch="Trying to solve a feeling before you have named it.",
+            evidence=aspect.label(),
+            question="What changes if you name the feeling before arguing the case?",
+        )
+
+    if pair == frozenset(("Sun", "Saturn")) and (hard or conjunction):
+        return NatalSignature(
+            title="Achievement asks for patience",
+            text=(
+                "Part of you wants movement and possibility while another part keeps asking whether the structure can actually hold. "
+                "Progress can therefore feel slower or more conditional than you would prefer, but the same pattern can produce unusual staying power."
+            ),
+            strength="Endurance, discipline and the ability to build rather than merely begin.",
+            watch="Treating every delay as proof that you should stop, or setting standards no human can meet.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Venus", "Saturn")) and (hard or conjunction):
+        return NatalSignature(
+            title="Affection needs proof",
+            text="Warmth matters, but reliability matters more. You may take time to trust what another person feels and notice quickly when words, effort and responsibility do not match.",
+            strength="Loyalty and a serious approach to commitments that matter.",
+            watch="Testing love so thoroughly that spontaneity has nowhere to breathe.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Venus", "Pluto")) and (hard or conjunction):
+        return NatalSignature(
+            title="Attachment runs deep",
+            text="Attraction and values are rarely entirely casual once they matter to you. Relationships can expose questions of trust, power, loyalty and what you are unwilling to lose.",
+            strength="Depth, devotion and the capacity to transform through close bonds.",
+            watch="Mistaking intensity for compatibility or control for security.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Mars", "Saturn")) and hard:
+        return NatalSignature(
+            title="Drive meets resistance",
+            text="The impulse to act can repeatedly meet limits, duties or timing constraints. Frustrating as that can be, it can also teach you how to use force selectively rather than wasting it against every obstacle.",
+            strength="Controlled effort and persistence under pressure.",
+            watch="Bottling frustration until it becomes rigidity or abrupt anger.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Moon", "Pluto")) and (hard or conjunction):
+        return NatalSignature(
+            title="You feel beneath the surface",
+            text="Emotional situations rarely stay superficial for long. You can be highly alert to subtext, loyalty and shifts in trust, even when nobody has named them directly.",
+            strength="Emotional depth and strong instincts about what is really happening.",
+            watch="Reading danger into ambiguity or holding on after the situation has already changed.",
+            evidence=aspect.label(),
+        )
+
+    if pair == frozenset(("Moon", "Neptune")):
+        return NatalSignature(
+            title="Sensitive to atmosphere",
+            text="You can absorb the tone of a room before anyone explains it. Imagination and empathy are strong, but boundaries become important when other people's moods are difficult to separate from your own.",
+            strength="Imagination, empathy and sensitivity to nuance.",
+            watch="Letting atmosphere become evidence when facts are still incomplete.",
+            evidence=aspect.label(),
+        )
+
+    p1, p2 = aspect.planet1, aspect.planet2
+    roles = f"{PLANET_ROLE.get(p1, p1.lower())} and {PLANET_ROLE.get(p2, p2.lower())}"
+    if hard:
+        return NatalSignature(
+            title="Two parts of you can compete for the wheel",
+            text=f"This {aspect.name} links {roles} through friction. The pattern becomes most useful when you notice which function is over-correcting and restore some choice before acting.",
+            strength="Pressure can become a source of self-knowledge and deliberate skill.",
+            watch="Repeating the same reaction simply because it is familiar.",
+            evidence=aspect.label(),
+        )
+    if conjunction:
+        return NatalSignature(
+            title="Two instincts arrive together",
+            text=f"This conjunction fuses {roles}. The combination can become a distinctive part of how you operate because one function tends to trigger the other automatically.",
+            strength="Concentration and a recognisable personal style.",
+            watch="Forgetting that the two functions can occasionally be separated.",
+            evidence=aspect.label(),
+        )
+    return NatalSignature(
+        title="A strength that can become automatic",
+        text=f"This {aspect.name} links {roles} with relatively little friction. Because the capacity can feel natural, it becomes more valuable when you use it deliberately rather than assuming it will carry every situation.",
+        strength="A cooperative connection between two parts of the chart.",
+        watch="Underestimating a talent simply because it feels easy.",
+        evidence=aspect.label(),
+    )
+
+
+def _build_signatures(aspects: list[NatalAspect], limit: int = 4) -> tuple[NatalSignature, ...]:
+    if not aspects:
+        return ()
+    ranked = sorted(aspects, key=lambda item: (-_signature_priority(item), item.orb))
+    result: list[NatalSignature] = []
+    seen_titles: set[str] = set()
+    for aspect in ranked:
+        signature = _signature_for_aspect(aspect)
+        if signature.title in seen_titles:
+            continue
+        result.append(signature)
+        seen_titles.add(signature.title)
+        if len(result) >= limit:
+            break
+    return tuple(result)
+
+
 def _dominance(positions: list[NatalPosition]) -> tuple[str, str]:
     # Weight personal planets a little more heavily while keeping the outer
     # planets in the signature. This is descriptive only, not a predictive score.
@@ -345,6 +567,7 @@ def build_natal_snapshot(
     aspects = detect_natal_aspects(positions)
     moon_uncertain = () if birth_time_known else _moon_uncertainty(birth_date)
     themes = _build_themes(positions, aspects, moon_uncertain=moon_uncertain)
+    signatures = _build_signatures(aspects)
     dominant_element, dominant_modality = _dominance(positions)
 
     return NatalSnapshot(
@@ -358,6 +581,7 @@ def build_natal_snapshot(
         midheaven=midheaven,
         moon_uncertain=moon_uncertain,
         themes=themes,
+        signatures=signatures,
         dominant_element=dominant_element,
         dominant_modality=dominant_modality,
     )
