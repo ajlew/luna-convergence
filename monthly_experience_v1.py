@@ -24,6 +24,7 @@ from luna_editorial_system import (
 from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import narrator_cue
 from solar_cycle import solar_gate_label
+from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_svg
 
 
 PRINT_PAPERS = ("A4", "A3")
@@ -454,6 +455,24 @@ def _normalise_render_text(value: object) -> str:
 
 def _safe(value: object) -> str:
     return escape(_normalise_render_text(value), quote=True)
+
+
+def _monthly_sky_map_html(result: dict) -> str:
+    try:
+        snapshot = build_monthly_sky_snapshot(result)
+        svg = monthly_sky_map_svg(snapshot)
+    except Exception:
+        return ""
+    date_label = snapshot.snapshot_date.strftime("%d %B %Y")
+    return f"""
+<section class="luna-monthly-section luna-monthly-sky-map">
+  <div class="luna-eyebrow">Monthly sky snapshot</div>
+  <h2 class="luna-section-title">{_safe(snapshot.sign)} sky map</h2>
+  <p class="luna-sky-map-intro">The same sky, mapped through {_safe(snapshot.sign)} as whole-sign House 1. The wheel makes the month's planetary concentration visible before Luna tells the story.</p>
+  <div class="luna-sky-wheel">{svg}</div>
+  <div class="luna-sky-map-meta">Geocentric tropical sky · {_safe(date_label)} · 12:00 local · {_safe(snapshot.timezone_name)} · no Ascendant or MC implied</div>
+</section>
+"""
 
 
 def _concentration_theme_html(result: dict) -> str:
@@ -1279,6 +1298,7 @@ def build_monthly_experience_html(
 </section>
     """
     concentration_theme_section = _concentration_theme_html(result)
+    monthly_sky_map_section = _monthly_sky_map_html(result)
     natal_overlay_section = _natal_overlay_html(result)
 
     body = ""
@@ -1326,6 +1346,7 @@ def build_monthly_experience_html(
         body = f"""
 {summary_strip}
 {concentration_theme_section}
+{monthly_sky_map_section}
 <section class="luna-monthly-section luna-story-section">
   <div class="luna-eyebrow">Monthly briefing</div>
   <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
@@ -1376,6 +1397,32 @@ def build_monthly_experience_html(
   line-height:1.58;
   margin:.4rem 0 .9rem;
 }}
+.luna-monthly-sky-map {{
+  padding-bottom:1.25rem;
+}}
+.luna-sky-map-intro {{
+  max-width:48rem;
+  color:var(--muted);
+}}
+.luna-sky-wheel {{
+  max-width:760px;
+  margin:.25rem auto 0;
+}}
+.luna-sky-map-meta {{
+  padding-top:.7rem;
+  border-top:1px solid var(--line);
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.66rem;
+  line-height:1.5;
+  letter-spacing:.02em;
+  color:var(--muted);
+}}
+@media (max-width: 640px) {{
+  .luna-monthly-sky-map .luna-section-title {{ margin-bottom:.4rem; }}
+  .luna-sky-map-intro {{ font-size:.92rem; }}
+  .luna-sky-map-meta {{ font-size:.6rem; }}
+}}
+
 .luna-solar-clock {{
   margin:0 0 1.2rem;
   padding:1rem 1.15rem;
