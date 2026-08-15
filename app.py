@@ -51,6 +51,7 @@ from natal_snapshot import (
     natal_profile_summary,
 )
 from monthly_natal_overlay import build_monthly_natal_overlay
+from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
@@ -777,6 +778,12 @@ a {
     overflow:visible;
 }
 
+.solar-year-wave-wrap.compact {
+    margin:.05rem auto .35rem;
+    padding:0;
+    opacity:.82;
+}
+
 .lean-daily {
     max-width:760px;
     margin:0 auto;
@@ -952,6 +959,38 @@ a {
     font-size:.66rem;
     letter-spacing:.025em;
     text-transform:uppercase;
+}
+
+.natal-chart-emphasis {
+    margin:.35rem 0 1.65rem;
+    padding:1rem 0 1.15rem;
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--line);
+}
+
+.natal-chart-emphasis span {
+    display:block;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.64rem;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
+.natal-chart-emphasis strong {
+    display:block;
+    margin:.38rem 0 .45rem;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:clamp(1.55rem,3vw,2.2rem);
+    font-weight:400;
+    line-height:1.08;
+}
+
+.natal-chart-emphasis p {
+    max-width:720px;
+    margin:0;
+    color:var(--ink);
+    line-height:1.6;
 }
 
 .natal-signature-reading {
@@ -2754,11 +2793,6 @@ def _render_lean_daily(path: str) -> None:
         path,
     )
 
-    st.markdown(
-        solar_year_wave_svg(browser_local_now(), browser_timezone_name()),
-        unsafe_allow_html=True,
-    )
-
     saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()
     saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
     sign = st.selectbox(
@@ -2825,6 +2859,28 @@ def _render_lean_daily(path: str) -> None:
         unsafe_allow_html=True,
     )
     _render_optional_luna_video()
+
+
+def _render_site_solar_wave(path: str) -> None:
+    """Keep the solar clock present across the customer experience without clutter.
+
+    Daily and Solar Year retain the fully labelled clock. Other customer pages
+    use a 72px masthead version: same astronomical curve/current Sun, but no
+    repeated tropic or gate labels. Operational/admin/payment pages stay clear.
+    """
+    clean = str(path or "").strip("/")
+    if clean in {"ephemeris-admin", "editorial-preview", "payment-success"}:
+        return
+    full = clean in {"", "daily-horoscope", "august-2026-horoscopes", "solar-year"}
+    if full:
+        wave_html = solar_year_wave_svg(browser_local_now(), browser_timezone_name())
+    else:
+        wave_html = solar_year_wave_svg(
+            browser_local_now(),
+            browser_timezone_name(),
+            compact=True,
+        )
+    st.markdown(wave_html, unsafe_allow_html=True)
 
 
 def home_page() -> None:
@@ -3635,7 +3691,7 @@ SEO_MONTH_NAME = "August"
 
 @lru_cache(maxsize=32)
 def monthly_seo_data(sign: str) -> dict:
-    return period_report(
+    result = period_report(
         sign,
         date(SEO_YEAR, SEO_MONTH, 1),
         date(SEO_YEAR, SEO_MONTH, 31),
@@ -3643,6 +3699,8 @@ def monthly_seo_data(sign: str) -> dict:
         f"{SEO_MONTH_NAME} {SEO_YEAR}",
         transition_count=7,
     )
+    result["concentration_theme"] = build_monthly_concentration_theme(result)
+    return result
 
 
 def sign_slug(sign: str) -> str:
@@ -4039,6 +4097,20 @@ def natal_snapshot_page() -> None:
     else:
         st.caption("Tropical geocentric positions · Whole-sign houses · Swiss Ephemeris")
 
+    concentration = dict(snapshot.concentration_theme or {})
+    if concentration:
+        clusters = list(concentration.get("clusters") or [])
+        cluster_names = " + ".join(str(item.get("sign")) for item in clusters if item.get("sign"))
+        headline = f"{cluster_names} carry unusual weight" if cluster_names else "Several parts of the chart share one climate"
+        st.markdown(
+            f'''<div class="natal-chart-emphasis">
+  <span>Chart emphasis · the forest</span>
+  <strong>{escape(headline)}</strong>
+  <p>{escape(str(concentration.get("summary") or ""))}</p>
+</div>''',
+            unsafe_allow_html=True,
+        )
+
     if snapshot.signatures:
         st.markdown("## Your strongest signatures")
         st.caption(
@@ -4371,6 +4443,7 @@ current_page = st.navigation(ALL_PAGES, position="hidden")
 
 brand_header()
 top_navigation(current_page.url_path)
+_render_site_solar_wave(current_page.url_path)
 install_google_analytics(
     f"{current_page.title} | {BRAND_NAME}",
     "/" if not current_page.url_path else f"/{current_page.url_path}",

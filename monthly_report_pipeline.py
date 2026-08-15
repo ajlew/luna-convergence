@@ -12,10 +12,11 @@ from datetime import date, timedelta
 from typing import Any
 
 from monthly_experience_v1 import render_monthly_experience
+from concentration_theme import build_monthly_concentration_theme
 from monthly_narrative_v1 import build_monthly_narrative
 from synthesis import period_report
 
-MONTHLY_PIPELINE_VERSION = "1.3"
+MONTHLY_PIPELINE_VERSION = "1.4"
 
 
 def month_date_range(year: int, month: int) -> tuple[date, date]:
@@ -54,6 +55,7 @@ def build_production_monthly_report(
         nearest_city=nearest_city,
         main_focus=main_focus,
     )
+    result["concentration_theme"] = build_monthly_concentration_theme(result)
     narrative = build_monthly_narrative(
         result,
         main_focus=main_focus,

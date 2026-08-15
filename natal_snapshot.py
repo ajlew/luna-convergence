@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 import swisseph as swe
 
 from astrology_engine import ASPECTS, PLANET_WEIGHTS, SIGNS, angular_distance, sign_index
+from concentration_theme import build_natal_concentration_theme
 
 
 
@@ -136,6 +137,7 @@ class NatalSnapshot:
     moon_uncertain: tuple[str, ...]
     themes: tuple[NatalTheme, ...]
     signatures: tuple[NatalSignature, ...]
+    concentration_theme: dict
     dominant_element: str
     dominant_modality: str
 
@@ -576,6 +578,7 @@ def build_natal_snapshot(
     moon_uncertain = () if birth_time_known else _moon_uncertainty(birth_date)
     themes = _build_themes(positions, aspects, moon_uncertain=moon_uncertain)
     signatures = _build_signatures(aspects)
+    concentration_theme = build_natal_concentration_theme(positions)
     dominant_element, dominant_modality = _dominance(positions)
 
     return NatalSnapshot(
@@ -590,6 +593,7 @@ def build_natal_snapshot(
         moon_uncertain=moon_uncertain,
         themes=themes,
         signatures=signatures,
+        concentration_theme=concentration_theme,
         dominant_element=dominant_element,
         dominant_modality=dominant_modality,
     )

@@ -201,6 +201,15 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     # Page 2 - at a glance, using the homepage hero/card rhythm.
     glance_paragraphs = "".join(f"<p>{_safe(value)}</p>" for value in narrative.at_glance)
     focus_html = "".join(f"<p>{_safe(value)}</p>" for value in narrative.focus_answer[:2])
+    concentration = dict(result.get("concentration_theme") or {})
+    concentration_html = ""
+    if concentration:
+        concentration_html = f"""
+<div class="homepage-band concentration-band">
+  <div><span class="mono-label">Where the sky is gathering</span><h2>{_safe(concentration.get('headline'))}</h2></div>
+  <div><div class="evidence-line">{_safe(concentration.get('signal'))} / {_safe(concentration.get('active_range'))}</div><p>{_safe(concentration.get('text'))}</p></div>
+</div>
+"""
     page2_body = f"""
 <div class="section-hero two-column">
   <section>
@@ -221,6 +230,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
   <div class="trust-item"><b>The opening</b><br>{_safe(snapshot.get('Strongest window', ''))}</div>
   <div class="trust-item"><b>The reality check</b><br>{_safe(snapshot.get('Second turning point', ''))}</div>
 </div>
+{concentration_html}
 """
 
     # Paid natal overlay - only present when the checkout supplied derived natal geometry.

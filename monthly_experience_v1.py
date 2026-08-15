@@ -456,6 +456,21 @@ def _safe(value: object) -> str:
     return escape(_normalise_render_text(value), quote=True)
 
 
+def _concentration_theme_html(result: dict) -> str:
+    theme = dict(result.get("concentration_theme") or {})
+    if not theme:
+        return ""
+    return f"""
+<section class="luna-monthly-section luna-concentration-theme">
+  <div class="luna-eyebrow">Where the sky is gathering</div>
+  <h2 class="luna-section-title">{_safe(theme.get('headline'))}</h2>
+  <div class="luna-concentration-signal">{_safe(theme.get('signal'))} · {_safe(theme.get('active_range'))}</div>
+  <p>{_safe(theme.get('text'))}</p>
+  <div class="luna-concentration-move"><span>Your move</span><strong>{_safe(theme.get('move'))}</strong></div>
+</section>
+"""
+
+
 def _natal_overlay_html(result: dict) -> str:
     overlay = dict(result.get("natal_overlay") or {})
     activations = list(overlay.get("activations") or [])
@@ -1263,12 +1278,15 @@ def build_monthly_experience_html(
   <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
 </section>
     """
+    concentration_theme_section = _concentration_theme_html(result)
     natal_overlay_section = _natal_overlay_html(result)
 
     body = ""
     if not preview:
         body = f"""
 {summary_strip}
+
+{concentration_theme_section}
 
 {natal_overlay_section}
 
@@ -1307,6 +1325,7 @@ def build_monthly_experience_html(
     else:
         body = f"""
 {summary_strip}
+{concentration_theme_section}
 <section class="luna-monthly-section luna-story-section">
   <div class="luna-eyebrow">Monthly briefing</div>
   <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
@@ -1751,6 +1770,42 @@ def build_monthly_experience_html(
   color:var(--muted);
 }}
 .luna-chapter-move strong {{ color:var(--black); }}
+.luna-concentration-theme {{
+  padding:clamp(1.8rem,4vw,3rem) 0;
+  border-top:1px solid var(--black);
+  border-bottom:1px solid var(--line);
+}}
+.luna-concentration-theme p {{
+  max-width:760px;
+  font-size:1.03rem;
+  line-height:1.6;
+}}
+.luna-concentration-signal {{
+  margin:.35rem 0 .75rem;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.66rem;
+  text-transform:uppercase;
+  letter-spacing:.055em;
+  color:var(--muted);
+}}
+.luna-concentration-move {{
+  max-width:760px;
+  margin-top:1rem;
+  padding-top:.75rem;
+  border-top:1px solid var(--line);
+}}
+.luna-concentration-move span {{
+  display:block;
+  margin-bottom:.25rem;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.62rem;
+  text-transform:uppercase;
+  letter-spacing:.055em;
+  color:var(--muted);
+}}
+.luna-concentration-move strong {{
+  font-weight:500;
+}}
 .luna-natal-overlay {{
   padding-top:clamp(2rem,5vw,4rem);
 }}

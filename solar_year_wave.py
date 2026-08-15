@@ -87,7 +87,7 @@ def sun_state(now: datetime) -> dict[str, object]:
     }
 
 
-def solar_year_wave_svg(now: datetime, timezone_name: str | None = None) -> str:
+def solar_year_wave_svg(now: datetime, timezone_name: str | None = None, *, compact: bool = False) -> str:
     """A quiet solar-year strip showing the Sun between the two tropics.
 
     The curve is the Sun's geocentric equatorial declination sampled through the
@@ -106,11 +106,11 @@ def solar_year_wave_svg(now: datetime, timezone_name: str | None = None) -> str:
     year = local_now.year
 
     width = 760.0
-    height = 158.0
-    left = 142.0
+    height = 72.0 if compact else 158.0
+    left = 14.0 if compact else 142.0
     right = 14.0
-    top = 18.0
-    bottom = 33.0
+    top = 9.0 if compact else 18.0
+    bottom = 14.0 if compact else 33.0
     plot_w = width - left - right
     plot_h = height - top - bottom
     max_decl = 26.0
@@ -151,41 +151,52 @@ def solar_year_wave_svg(now: datetime, timezone_name: str | None = None) -> str:
     )
 
     pieces = [
-        f'<div class="solar-year-wave-wrap">',
+        f'<div class="solar-year-wave-wrap{" compact" if compact else ""}">',
         f'<svg class="solar-year-wave" viewBox="0 0 {int(width)} {int(height)}" role="img" '
         f'aria-label="Solar year: equator, Tropic of Cancer, Tropic of Capricorn, equinoxes, solstices and current Sun position">',
     ]
 
-    # Latitude reference lines.
+    # Latitude reference lines. The compact masthead keeps the geometry but
+    # removes explanatory labels so it functions as a quiet brand clock.
     for label, decl in (
         ("TROPIC OF CANCER · +23.4°", TROPIC_DEG),
         ("EQUATOR · 0°", 0.0),
         ("TROPIC OF CAPRICORN · −23.4°", -TROPIC_DEG),
     ):
         y = y_for_declination(decl)
-        stroke = "#111" if decl == 0 else "#cfcfca"
+        stroke = "#aaa" if compact and decl == 0 else ("#111" if decl == 0 else "#deded9")
         pieces.append(f'<line x1="{left:.1f}" y1="{y:.1f}" x2="{width-right:.1f}" y2="{y:.1f}" stroke="{stroke}" stroke-width="1"/>')
-        pieces.append(
-            f'<text x="6" y="{y + 3.5:.1f}" font-family="IBM Plex Mono, Courier New, monospace" '
-            f'font-size="13" fill="#6e6e69">{escape(label)}</text>'
-        )
+        if not compact:
+            pieces.append(
+                f'<text x="6" y="{y + 3.5:.1f}" font-family="IBM Plex Mono, Courier New, monospace" '
+                f'font-size="13" fill="#6e6e69">{escape(label)}</text>'
+            )
 
-    # Exact quarter gates.
+    # Exact quarter gates. The compact version retains the four hinge marks but
+    # leaves their labels to the full Daily/Solar Year clock.
     for label, gate_dt, _longitude in solar_gates(year, timezone_name):
         gx = x_for_datetime(gate_dt)
-        pieces.append(f'<line x1="{gx:.1f}" y1="{top:.1f}" x2="{gx:.1f}" y2="{height-bottom+3:.1f}" stroke="#dddcd7" stroke-width="1"/>')
-        pieces.append(
-            f'<text x="{gx:.1f}" y="{height-14:.1f}" text-anchor="middle" '
-            f'font-family="IBM Plex Mono, Courier New, monospace" font-size="11.5" fill="#555">{escape(label)}</text>'
-        )
+        pieces.append(f'<line x1="{gx:.1f}" y1="{top:.1f}" x2="{gx:.1f}" y2="{height-bottom+3:.1f}" stroke="#e3e3df" stroke-width="1"/>')
+        if not compact:
+            pieces.append(
+                f'<text x="{gx:.1f}" y="{height-14:.1f}" text-anchor="middle" '
+                f'font-family="IBM Plex Mono, Courier New, monospace" font-size="11.5" fill="#555">{escape(label)}</text>'
+            )
 
-    pieces.append(f'<polyline points="{path_points}" fill="none" stroke="#111" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>')
-    pieces.append(f'<line x1="{current_x:.1f}" y1="{top:.1f}" x2="{current_x:.1f}" y2="{height-bottom+3:.1f}" stroke="#111" stroke-width="1" stroke-dasharray="2 4" opacity="0.7"/>')
-    pieces.append(f'<circle cx="{current_x:.1f}" cy="{current_y:.1f}" r="4.5" fill="#111"/>')
-    pieces.append(
-        f'<text x="{text_x:.1f}" y="{max(top+11, current_y-9):.1f}" text-anchor="{anchor}" '
-        f'font-family="IBM Plex Mono, Courier New, monospace" font-size="12.5" font-weight="600" fill="#111">{escape(sun_label)}</text>'
-    )
+    pieces.append(f'<polyline points="{path_points}" fill="none" stroke="#111" stroke-width="{1.35 if compact else 1.7}" stroke-linejoin="round" stroke-linecap="round"/>')
+    pieces.append(f'<line x1="{current_x:.1f}" y1="{top:.1f}" x2="{current_x:.1f}" y2="{height-bottom+3:.1f}" stroke="#111" stroke-width="1" stroke-dasharray="2 4" opacity="0.55"/>')
+    pieces.append(f'<circle cx="{current_x:.1f}" cy="{current_y:.1f}" r="{3.4 if compact else 4.5}" fill="#111"/>')
+    if compact:
+        label_y = max(12.0, min(height - 5.0, current_y - 6.0))
+        pieces.append(
+            f'<text x="{text_x:.1f}" y="{label_y:.1f}" text-anchor="{anchor}" '
+            f'font-family="IBM Plex Mono, Courier New, monospace" font-size="10.5" font-weight="600" fill="#333">{escape(sun_label.split(" · ")[0] + " · " + str(current["sign"]).upper())}</text>'
+        )
+    else:
+        pieces.append(
+            f'<text x="{text_x:.1f}" y="{max(top+11, current_y-9):.1f}" text-anchor="{anchor}" '
+            f'font-family="IBM Plex Mono, Courier New, monospace" font-size="12.5" font-weight="600" fill="#111">{escape(sun_label)}</text>'
+        )
     pieces.append('</svg>')
     pieces.append('</div>')
     return "".join(pieces)
