@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import base64
 from html import escape
 import re
 from typing import Iterable
@@ -463,13 +464,24 @@ def _monthly_sky_map_html(result: dict) -> str:
         svg = monthly_sky_map_svg(snapshot)
     except Exception:
         return ""
+
+    # Streamlit st.html sanitises inline SVG markup with DOMPurify. The section
+    # copy survived but the wheel itself was stripped from the live page. Embed
+    # the exact generated SVG as an image data URI instead: <img> survives the
+    # sanitizer while preserving the same vector artwork at every screen size.
+    encoded_svg = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    wheel_image = (
+        f'<img class="luna-sky-wheel-image" '
+        f'src="data:image/svg+xml;base64,{encoded_svg}" '
+        f'alt="{_safe(snapshot.sign)} monthly sky map">'
+    )
     date_label = snapshot.snapshot_date.strftime("%d %B %Y")
     return f"""
 <section class="luna-monthly-section luna-monthly-sky-map">
   <div class="luna-eyebrow">Monthly sky snapshot</div>
   <h2 class="luna-section-title">{_safe(snapshot.sign)} sky map</h2>
   <p class="luna-sky-map-intro">The same sky, mapped through {_safe(snapshot.sign)} as whole-sign House 1. The wheel makes the month's planetary concentration visible before Luna tells the story.</p>
-  <div class="luna-sky-wheel">{svg}</div>
+  <div class="luna-sky-wheel">{wheel_image}</div>
   <div class="luna-sky-map-meta">Geocentric tropical sky · {_safe(date_label)} · 12:00 local · {_safe(snapshot.timezone_name)} · no Ascendant or MC implied</div>
 </section>
 """
@@ -1407,6 +1419,13 @@ def build_monthly_experience_html(
 .luna-sky-wheel {{
   max-width:760px;
   margin:.25rem auto 0;
+}}
+.luna-sky-wheel-image {{
+  display:block;
+  width:100%;
+  height:auto;
+  max-width:700px;
+  margin:.4rem auto 1rem;
 }}
 .luna-sky-map-meta {{
   padding-top:.7rem;

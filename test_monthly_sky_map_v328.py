@@ -50,3 +50,13 @@ def test_snapshot_date_period_rule_is_bounded():
     # The helper always returns a date inside the requested month, regardless of now.
     chosen = snapshot_date_for_period(date(2030, 2, 1), date(2030, 2, 28), "Australia/Sydney")
     assert date(2030, 2, 1) <= chosen <= date(2030, 2, 28)
+
+
+def test_free_preview_embeds_sky_wheel_as_image_data_uri():
+    result = _august_result("Taurus")
+    narrative = build_monthly_narrative(result, main_focus="General overview")
+    preview_html = build_monthly_experience_html(narrative, result, show_print=False, preview=True)
+    assert 'class="luna-sky-wheel-image"' in preview_html
+    assert 'src="data:image/svg+xml;base64,' in preview_html
+    sky_section = preview_html.split('Monthly sky snapshot', 1)[1].split('How August unfolds', 1)[0]
+    assert '<svg' not in sky_section
