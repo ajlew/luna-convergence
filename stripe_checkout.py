@@ -123,7 +123,12 @@ def order_metadata(order: dict[str, Any]) -> dict[str, str]:
         "main_focus": order.get("main_focus", ""),
         "personal_question": order.get("personal_question", ""),
         "order_reference": order.get("reference", ""),
-        "fulfilment_version": "3.18",
+        # Paid Monthly personalisation stores only derived natal geometry.
+        # Raw birth date, time and birthplace are deliberately excluded.
+        "natal_profile": order.get("natal_profile", ""),
+        "natal_summary": order.get("natal_summary", ""),
+        "natal_precision": order.get("natal_precision", ""),
+        "fulfilment_version": "3.25",
     }
     # Stripe metadata values are strings. Keep each comfortably below the
     # documented per-value limit; the public question is already capped at 80.

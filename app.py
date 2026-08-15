@@ -44,7 +44,13 @@ from solar_cycle import (
     resolve_location,
     solar_gate_label,
 )
-from natal_snapshot import build_natal_snapshot, natal_wheel_svg
+from natal_snapshot import (
+    build_natal_snapshot,
+    natal_wheel_svg,
+    encode_natal_profile,
+    natal_profile_summary,
+)
+from monthly_natal_overlay import build_monthly_natal_overlay
 from solar_year_wave import solar_year_wave_svg
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
@@ -1698,8 +1704,16 @@ def _order_summary(
     main_focus: str,
     personal_question: str,
     reference: str,
+    natal_summary: str = "",
+    natal_precision: str = "",
 ) -> None:
     question_value = personal_question or "No optional question supplied"
+    natal_html = ""
+    if natal_summary:
+        natal_html = (
+            f'<div class="order-label">Natal basis</div><div class="order-value">{escape(natal_summary)}</div>'
+            f'<div class="order-label">Birth-time precision</div><div class="order-value">{escape(natal_precision)}</div>'
+        )
     st.markdown(
         f"""
 <div class="order-summary">
@@ -1715,6 +1729,7 @@ def _order_summary(
   <div class="order-value">{escape(nearest_city)} ({escape(location_basis)})</div>
   <div class="order-label">Main focus</div>
   <div class="order-value">{escape(main_focus)}</div>
+  {natal_html}
   <div class="order-label">Personal question</div>
   <div class="order-value">{escape(question_value)}</div>
   <div class="order-label">Delivery email</div>
@@ -1896,6 +1911,9 @@ def payment_success_page() -> None:
     nearest_city = metadata.get("nearest_city", "")
     main_focus = metadata.get("main_focus", "General overview")
     personal_question = metadata.get("personal_question", "")
+    natal_profile_value = metadata.get("natal_profile", "")
+    natal_summary_value = metadata.get("natal_summary", "")
+    natal_precision_value = metadata.get("natal_precision", "")
     order_reference = metadata.get(
         "order_reference", str(session.get("client_reference_id") or "")
     )
@@ -1922,6 +1940,10 @@ def payment_success_page() -> None:
                 main_focus=main_focus,
                 personal_question=personal_question,
             )
+            if natal_profile_value:
+                result["natal_overlay"] = build_monthly_natal_overlay(natal_profile_value, result)
+                result["natal_summary"] = natal_summary_value
+                result["natal_precision"] = natal_precision_value
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -1995,6 +2017,214 @@ def payment_success_page() -> None:
         st.exception(exc)
 
 
+
+def _monthly_natal_checkout_fields(key_context: str) -> dict:
+    """Render the paid Monthly natal inputs using the same precision rules as the free snapshot."""
+    prefill = dict(st.session_state.get("luna_natal_checkout_prefill") or {})
+    try:
+        prefill_date = date.fromisoformat(str(prefill.get("birth_date") or ""))
+    except Exception:
+        prefill_date = None
+    prefill_time_text = str(prefill.get("birth_time") or "12:00")
+    try:
+        prefill_time = datetime.strptime(prefill_time_text, "%H:%M").time()
+    except Exception:
+        prefill_time = datetime.strptime("12:00", "%H:%M").time()
+
+    st.markdown("### Personalise with your natal chart")
+    st.caption(
+        "The paid Monthly uses your natal geometry as a second layer over the sign forecast. "
+        "If you do not know the exact birth time, leave it unchecked; Luna will not invent the Ascendant or houses."
+    )
+
+    birth_date_value = st.date_input(
+        "Birth date",
+        value=prefill_date,
+        min_value=date(1900, 1, 1),
+        max_value=browser_local_date(),
+        key=f"{key_context}-monthly-natal-birth-date",
+    )
+    time_known_value = st.checkbox(
+        "I know my birth time exactly",
+        value=bool(prefill.get("time_known", False)),
+        key=f"{key_context}-monthly-natal-time-known",
+    )
+
+    values = {
+        "birth_date": birth_date_value,
+        "time_known": time_known_value,
+        "birth_time": None,
+        "time_basis": "Local time at birthplace",
+        "city_choice": "",
+        "manual_city": "",
+        "manual_country": "",
+        "manual_latitude": None,
+        "manual_longitude": None,
+        "manual_timezone": "UTC",
+        "unlisted_timezone": "UTC",
+    }
+
+    if not time_known_value:
+        st.caption("Birth time unknown: Luna will use the reliable planetary geometry and omit Ascendant, Midheaven and houses.")
+        return values
+
+    values["birth_time"] = st.time_input(
+        "Birth time",
+        value=prefill_time,
+        key=f"{key_context}-monthly-natal-birth-time",
+        help="Normally enter the local clock time at the place of birth. If your source explicitly gives Universal Time, choose UTC below.",
+    )
+    basis_options = ["Local time at birthplace", "Universal Time (UTC)"]
+    prefill_basis = str(prefill.get("time_basis") or basis_options[0])
+    values["time_basis"] = st.selectbox(
+        "Time basis",
+        basis_options,
+        index=basis_options.index(prefill_basis) if prefill_basis in basis_options else 0,
+        key=f"{key_context}-monthly-natal-time-basis",
+    )
+
+    city_options = sorted(CITY_LOCATIONS) + [
+        "Other city — enter manually",
+        "Not listed — planetary snapshot only",
+    ]
+    prefill_choice = str(prefill.get("city_choice") or "")
+    if prefill_choice not in city_options and prefill.get("location_name"):
+        # A previous manual location should reopen the manual entry path.
+        prefill_choice = "Other city — enter manually"
+    values["city_choice"] = st.selectbox(
+        "Birth city",
+        city_options,
+        index=city_options.index(prefill_choice) if prefill_choice in city_options else None,
+        placeholder="Choose your birth city",
+        key=f"{key_context}-monthly-natal-city",
+        help="Use Other city if the place is not listed. Exact coordinates keep the Ascendant and houses precise.",
+    )
+
+    if values["city_choice"] == "Other city — enter manually":
+        st.caption("Enter the birthplace directly. These raw birth details are used only to calculate the natal geometry in this app session.")
+        c1, c2 = st.columns(2, gap="medium")
+        with c1:
+            values["manual_city"] = st.text_input(
+                "City / town",
+                value=str(prefill.get("manual_city") or prefill.get("location_name") or "").split(",", 1)[0],
+                key=f"{key_context}-monthly-natal-manual-city",
+            )
+            values["manual_latitude"] = st.number_input(
+                "Latitude",
+                min_value=-90.0,
+                max_value=90.0,
+                value=float(prefill.get("latitude") or 0.0),
+                step=0.0001,
+                format="%.4f",
+                key=f"{key_context}-monthly-natal-manual-lat",
+            )
+        with c2:
+            values["manual_country"] = st.text_input(
+                "Country",
+                value=str(prefill.get("manual_country") or ""),
+                key=f"{key_context}-monthly-natal-manual-country",
+            )
+            values["manual_longitude"] = st.number_input(
+                "Longitude",
+                min_value=-180.0,
+                max_value=180.0,
+                value=float(prefill.get("longitude") or 0.0),
+                step=0.0001,
+                format="%.4f",
+                key=f"{key_context}-monthly-natal-manual-lon",
+            )
+        if values["time_basis"] == "Local time at birthplace":
+            values["manual_timezone"] = st.text_input(
+                "Birth timezone · IANA name",
+                value=str(prefill.get("timezone_name") or browser_timezone_name()),
+                key=f"{key_context}-monthly-natal-manual-timezone",
+                help="Examples: Pacific/Port_Moresby, Australia/Sydney, Europe/London, America/New_York.",
+            )
+        else:
+            values["manual_timezone"] = "UTC"
+            st.caption("Universal Time selected: Luna uses the entered time directly as UTC while retaining the birth coordinates for Ascendant and houses.")
+    elif values["city_choice"] == "Not listed — planetary snapshot only":
+        if values["time_basis"] == "Local time at birthplace":
+            prefill_tz = str(prefill.get("timezone_name") or DEFAULT_TIMEZONE)
+            values["unlisted_timezone"] = st.selectbox(
+                "Birth timezone",
+                TIMEZONES,
+                index=TIMEZONES.index(prefill_tz) if prefill_tz in TIMEZONES else timezone_select_index(),
+                key=f"{key_context}-monthly-natal-unlisted-timezone",
+                help="This places the planets at the correct moment, but without coordinates Luna will not calculate the Ascendant or houses.",
+            )
+        else:
+            values["unlisted_timezone"] = "UTC"
+
+    return values
+
+
+def _build_monthly_checkout_natal(values: dict):
+    """Validate paid Monthly natal inputs and return a derived snapshot plus precision label."""
+    birth_date_value = values.get("birth_date")
+    if birth_date_value is None:
+        raise ValueError("Choose your birth date.")
+    time_known = bool(values.get("time_known"))
+    if not time_known:
+        snapshot = build_natal_snapshot(
+            birth_date=birth_date_value,
+            birth_time_known=False,
+            timezone_name="UTC",
+        )
+        return snapshot, "Birth time unknown · angles and houses omitted"
+
+    birth_time_value = values.get("birth_time")
+    if birth_time_value is None:
+        raise ValueError("Enter the exact birth time or untick 'I know my birth time exactly'.")
+
+    city_choice = str(values.get("city_choice") or "")
+    if not city_choice:
+        raise ValueError("Choose the birth city, enter another city, or choose planetary snapshot only.")
+
+    latitude = longitude = None
+    location_name = None
+    time_basis = str(values.get("time_basis") or "Local time at birthplace")
+
+    if city_choice in CITY_LOCATIONS:
+        location = CITY_LOCATIONS[city_choice]
+        timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else location.timezone
+        latitude = location.latitude
+        longitude = location.longitude
+        location_name = f"{location.name}, {location.country}"
+    elif city_choice == "Other city — enter manually":
+        manual_city = str(values.get("manual_city") or "").strip()
+        if not manual_city:
+            raise ValueError("Enter the birth city or town name.")
+        timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else str(values.get("manual_timezone") or "").strip()
+        if time_basis == "Local time at birthplace":
+            try:
+                ZoneInfo(timezone_name)
+            except Exception as exc:
+                raise ValueError("That birth timezone is not recognised. Use an IANA name such as Pacific/Port_Moresby or Australia/Sydney.") from exc
+        latitude = float(values.get("manual_latitude") or 0.0)
+        longitude = float(values.get("manual_longitude") or 0.0)
+        location_name = manual_city
+        manual_country = str(values.get("manual_country") or "").strip()
+        if manual_country:
+            location_name += f", {manual_country}"
+    else:
+        timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else str(values.get("unlisted_timezone") or DEFAULT_TIMEZONE)
+
+    snapshot = build_natal_snapshot(
+        birth_date=birth_date_value,
+        birth_time_known=True,
+        birth_time=birth_time_value,
+        timezone_name=timezone_name,
+        location_name=location_name,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    if snapshot.ascendant:
+        precision = "Exact birth time supplied · Ascendant and houses calculated"
+    else:
+        precision = "Exact birth time supplied · birthplace coordinates unavailable, so angles and houses omitted"
+    return snapshot, precision
+
 def report_cta(
     context: str = "general",
     prefill_sign: str | None = None,
@@ -2028,7 +2258,7 @@ def report_cta(
             prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
         )
 
-        with st.form(f"{key_context}-monthly-checkout"):
+        with st.container(border=True):
             st.markdown("### Choose your monthly report")
             m1, m2 = st.columns(2)
             with m1:
@@ -2077,13 +2307,16 @@ def report_cta(
                 placeholder="What would you most like clarity about this month?",
                 help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
+            natal_values = _monthly_natal_checkout_fields(key_context)
             st.caption(
-                "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link."
+                "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link. "
+                "Raw birth details are used to calculate the natal chart in this session; Stripe receives only the derived natal geometry needed for fulfilment."
             )
-            submitted = st.form_submit_button(
+            submitted = st.button(
                 f"Prepare monthly checkout — {MONTHLY_PRICE}",
                 type="primary",
                 use_container_width=True,
+                key=f"{key_context}-monthly-submit",
             )
 
         state_key = f"prepared-order::{key_context}::monthly"
@@ -2092,51 +2325,61 @@ def report_cta(
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
-                period_code = month_codes[month_label]
-                reference = build_order_reference(
-                    "MONTHLY",
-                    sign,
-                    period_code,
-                    timezone_name,
-                    _order_token(key_context, "MONTHLY"),
-                    main_focus=main_focus,
-                    personal_question=personal_question,
-                    nearest_city=nearest_city,
-                )
-                location, location_basis = resolve_location(
-                    nearest_city,
-                    timezone_name,
-                )
-                order = {
-                    "product_code": "MONTHLY",
-                    "report_name": "Monthly Strategic Report",
-                    "email": delivery_email.strip(),
-                    "sign": sign,
-                    "period": month_label,
-                    "period_code": period_code,
-                    "timezone": timezone_name,
-                    "nearest_city": location.name,
-                    "location_basis": location_basis,
-                    "main_focus": main_focus,
-                    "personal_question": personal_question.strip(),
-                    "reference": reference,
-                }
                 try:
-                    order["checkout_url"] = _create_instant_checkout(order, "MONTHLY")
+                    natal_snapshot, natal_precision = _build_monthly_checkout_natal(natal_values)
                 except Exception as exc:
-                    st.error(f"Secure checkout is not ready: {exc}")
+                    st.error(f"Natal details need attention: {exc}")
                     st.session_state.pop(state_key, None)
                 else:
-                    st.session_state[state_key] = order
-                    track_event(
-                        "monthly_order_prepared",
-                        {
-                            "zodiac_sign": sign,
-                            "report_period": period_code,
-                            "timezone": timezone_name,
-                            "main_focus": main_focus,
-                        },
+                    period_code = month_codes[month_label]
+                    reference = build_order_reference(
+                        "MONTHLY",
+                        sign,
+                        period_code,
+                        timezone_name,
+                        _order_token(key_context, "MONTHLY"),
+                        main_focus=main_focus,
+                        personal_question=personal_question,
+                        nearest_city=nearest_city,
                     )
+                    location, location_basis = resolve_location(
+                        nearest_city,
+                        timezone_name,
+                    )
+                    order = {
+                        "product_code": "MONTHLY",
+                        "report_name": "Monthly Strategic Report",
+                        "email": delivery_email.strip(),
+                        "sign": sign,
+                        "period": month_label,
+                        "period_code": period_code,
+                        "timezone": timezone_name,
+                        "nearest_city": location.name,
+                        "location_basis": location_basis,
+                        "main_focus": main_focus,
+                        "personal_question": personal_question.strip(),
+                        "reference": reference,
+                        "natal_profile": encode_natal_profile(natal_snapshot),
+                        "natal_summary": natal_profile_summary(natal_snapshot),
+                        "natal_precision": natal_precision,
+                    }
+                    try:
+                        order["checkout_url"] = _create_instant_checkout(order, "MONTHLY")
+                    except Exception as exc:
+                        st.error(f"Secure checkout is not ready: {exc}")
+                        st.session_state.pop(state_key, None)
+                    else:
+                        st.session_state[state_key] = order
+                        track_event(
+                            "monthly_order_prepared",
+                            {
+                                "zodiac_sign": sign,
+                                "report_period": period_code,
+                                "timezone": timezone_name,
+                                "main_focus": main_focus,
+                                "natal_time_known": bool(natal_values.get("time_known")),
+                            },
+                        )
 
         order = st.session_state.get(state_key)
         if order:
@@ -2151,6 +2394,8 @@ def report_cta(
                 order["main_focus"],
                 order["personal_question"],
                 order["reference"],
+                order.get("natal_summary", ""),
+                order.get("natal_precision", ""),
             )
             payment_button(
                 f"Continue to secure payment — {MONTHLY_PRICE}",
@@ -3562,7 +3807,7 @@ def natal_snapshot_page() -> None:
     with st.container(border=True):
         birth_date = st.date_input(
             "Birth date",
-            value=date(1990, 1, 1),
+            value=None,
             min_value=date(1900, 1, 1),
             max_value=browser_local_date(),
             key="natal-birth-date-v323",
@@ -3669,6 +3914,11 @@ def natal_snapshot_page() -> None:
         st.markdown('</section>', unsafe_allow_html=True)
         return
 
+    if birth_date is None:
+        st.error("Choose your birth date before creating the snapshot.")
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
     latitude = longitude = None
     location_name = None
     if time_known:
@@ -3712,6 +3962,24 @@ def natal_snapshot_page() -> None:
         latitude=latitude,
         longitude=longitude,
     )
+
+    # Reuse the same birth inputs if this customer later opens the paid Monthly
+    # checkout during the same app session. These details stay in Streamlit
+    # session state only; raw birth data is never copied into the page URL,
+    # analytics payloads or Stripe metadata.
+    st.session_state["luna_natal_checkout_prefill"] = {
+        "birth_date": birth_date.isoformat(),
+        "time_known": bool(time_known),
+        "birth_time": birth_time_value.strftime("%H:%M") if birth_time_value else "",
+        "time_basis": time_basis,
+        "city_choice": city_choice or "",
+        "location_name": location_name or "",
+        "timezone_name": timezone_name,
+        "latitude": latitude,
+        "longitude": longitude,
+        "manual_city": manual_city_name,
+        "manual_country": manual_country,
+    }
 
     track_event("free_natal_snapshot_generated", {"birth_time_known": bool(time_known)})
 
@@ -3771,20 +4039,12 @@ def natal_snapshot_page() -> None:
     else:
         st.caption("Tropical geocentric positions · Whole-sign houses · Swiss Ephemeris")
 
-    st.markdown("## Three patterns that keep repeating")
-    for theme in snapshot.themes:
-        st.markdown(
-            f'''<div class="natal-theme">
-  <div class="natal-evidence">{escape(theme.evidence)}</div>
-  <h3>{escape(theme.title)}</h3>
-  <p>{escape(theme.text)}</p>
-</div>''',
-            unsafe_allow_html=True,
-        )
-
     if snapshot.signatures:
         st.markdown("## Your strongest signatures")
-        st.caption("The chart does not just describe placements. Luna gives priority to the combinations most likely to show up as recognisable behaviour.")
+        st.caption(
+            "These are the combinations Luna gives the greatest behavioural weight. "
+            "The chart evidence is shown once; each signature translates it into lived behaviour, strength and watch-point."
+        )
         for signature in snapshot.signatures:
             question_html = (
                 f'<div class="natal-signature-question">{escape(signature.question)}</div>'
@@ -3957,6 +4217,9 @@ estimate latitude, hemisphere and daylight; a street address is not requested.
 
 The free Natal Snapshot uses birth details in the current app session to calculate the result.
 Birth details are not placed in the page URL or Stripe metadata by the snapshot feature.
+For paid Monthly personalisation, the same birth inputs are used in-session to calculate a compact
+derived natal profile. Stripe receives that derived geometry and a Sun/Moon/Rising summary for
+fulfilment; it does **not** receive the raw birth date, birth time or birthplace.
 
 To request correction or deletion of order information, use the contact
 email displayed during checkout or in the report-delivery message.

@@ -223,6 +223,49 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 </div>
 """
 
+    # Paid natal overlay - only present when the checkout supplied derived natal geometry.
+    natal_overlay = dict(result.get("natal_overlay") or {})
+    natal_page = ""
+    if natal_overlay:
+        activation_cards = []
+        for item in natal_overlay.get("activations") or []:
+            signature = str(item.get("signature") or "").strip()
+            signature_html = (
+                f'<div class="evidence-line">Persistent pattern / {_safe(signature)}</div>'
+                if signature else ""
+            )
+            activation_cards.append(
+                f"""
+<article class="chapter-row">
+  <div class="chapter-number">{_safe(item.get('date_label'))}</div>
+  <div>
+    <div class="mono-label">{_safe(item.get('signal'))}</div>
+    <h2>{_safe(item.get('title'))}</h2>
+    <p>{_safe(item.get('text'))}</p>
+    {signature_html}
+    <div class="best-move"><span>Your move</span><strong>{_safe(item.get('move'))}</strong></div>
+  </div>
+</article>
+"""
+            )
+        if not activation_cards:
+            activation_cards.append(
+                f'<article class="card"><h3>No tight personal contact dominates this month</h3><p>{_safe(natal_overlay.get("summary"))}</p></article>'
+            )
+        natal_meta = " · ".join(
+            value for value in (
+                str(result.get("natal_summary") or ""),
+                str(result.get("natal_precision") or ""),
+            ) if value
+        )
+        natal_page = f"""
+<div class="eyebrow">Personal natal overlay</div>
+<h1 class="section-title">Where this month touches your chart</h1>
+<p class="hero-subtitle narrow">{_safe(natal_overlay.get('summary'))}</p>
+{f'<div class="evidence-line">{_safe(natal_meta)}</div>' if natal_meta else ''}
+<div class="chapter-list">{''.join(activation_cards)}</div>
+"""
+
     # Strategic Horizon - problem first, consequence and timing before the chronology.
     horizon = narrative.problem_horizon or {}
     horizon_cards = []
@@ -444,6 +487,10 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     page_bodies = [
         (page1_body, "homepage-page"),
         (page2_body, ""),
+    ]
+    if natal_page:
+        page_bodies.append((natal_page, ""))
+    page_bodies.extend([
         (horizon_page, ""),
         (page3_body, ""),
         (page4_body, ""),
@@ -452,7 +499,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
         (page7_body, ""),
         (page8_body, ""),
         (page9_body, ""),
-    ]
+    ])
     pages = [
         _page(body, icon_uri, report_right, index, extra_class)
         for index, (body, extra_class) in enumerate(page_bodies, 1)

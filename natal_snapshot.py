@@ -3,12 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
 from typing import Iterable
+import json
 import math
 from zoneinfo import ZoneInfo
 
 import swisseph as swe
 
 from astrology_engine import ASPECTS, PLANET_WEIGHTS, SIGNS, angular_distance, sign_index
+
+
+
+NATAL_PROFILE_ORDER = (
+    "Sun", "Moon", "Mercury", "Venus", "Mars",
+    "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+)
 
 NATAL_PLANETS = {
     "Sun": swe.SUN,
@@ -586,6 +594,60 @@ def build_natal_snapshot(
         dominant_modality=dominant_modality,
     )
 
+
+
+def encode_natal_profile(snapshot: NatalSnapshot) -> str:
+    """Serialize only the derived natal geometry needed for paid personalisation.
+
+    Raw birth date, time and birthplace are deliberately excluded. The payload is
+    compact enough for Stripe metadata and can be used to reproduce natal-to-transit
+    comparisons after payment without storing birth details in Stripe.
+    """
+    by_planet = {item.planet: item for item in snapshot.positions}
+    planet_values = [round(float(by_planet[name].longitude), 3) for name in NATAL_PROFILE_ORDER]
+    houses = [int(by_planet[name].house or 0) for name in NATAL_PROFILE_ORDER]
+    angles = [
+        round(float(snapshot.ascendant.longitude), 3) if snapshot.ascendant else None,
+        round(float(snapshot.midheaven.longitude), 3) if snapshot.midheaven else None,
+    ]
+    signature_rows = []
+    aspect_by_label = {item.label(): item for item in snapshot.aspects}
+    for signature in snapshot.signatures[:4]:
+        aspect = aspect_by_label.get(signature.evidence)
+        if aspect:
+            signature_rows.append([aspect.planet1, aspect.planet2, signature.title])
+    payload = {
+        "v": 1,
+        "p": planet_values,
+        "h": houses,
+        "a": angles,
+        "s": signature_rows,
+        "t": 1 if snapshot.birth_time_known else 0,
+    }
+    return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+
+def decode_natal_profile(value: str) -> dict:
+    try:
+        payload = json.loads(str(value or ""))
+    except Exception:
+        return {}
+    if not isinstance(payload, dict) or payload.get("v") != 1:
+        return {}
+    planets = payload.get("p")
+    if not isinstance(planets, list) or len(planets) != len(NATAL_PROFILE_ORDER):
+        return {}
+    return payload
+
+
+def natal_profile_summary(snapshot: NatalSnapshot) -> str:
+    by_planet = {item.planet: item for item in snapshot.positions}
+    bits = [f"Sun {by_planet['Sun'].sign}", f"Moon {by_planet['Moon'].sign}"]
+    if snapshot.ascendant:
+        bits.append(f"Rising {snapshot.ascendant.sign}")
+    else:
+        bits.append("Rising not calculated")
+    return " · ".join(bits)
 
 
 def natal_wheel_svg(snapshot: NatalSnapshot, size: int = 640) -> str:

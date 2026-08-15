@@ -456,6 +456,58 @@ def _safe(value: object) -> str:
     return escape(_normalise_render_text(value), quote=True)
 
 
+def _natal_overlay_html(result: dict) -> str:
+    overlay = dict(result.get("natal_overlay") or {})
+    activations = list(overlay.get("activations") or [])
+    if not overlay:
+        return ""
+
+    natal_summary = str(result.get("natal_summary") or "")
+    natal_precision = str(result.get("natal_precision") or "")
+    cards = []
+    for item in activations:
+        signature = str(item.get("signature") or "").strip()
+        signature_html = (
+            f'<div class="luna-natal-pattern"><span>Persistent pattern</span><strong>{_safe(signature)}</strong></div>'
+            if signature else ""
+        )
+        cards.append(
+            f"""<article class="luna-natal-activation">
+  <div class="luna-natal-date">{_safe(item.get('date_label'))}</div>
+  <div class="luna-natal-copy">
+    <div class="luna-natal-signal">{_safe(item.get('signal'))}</div>
+    <h3>{_safe(item.get('title'))}</h3>
+    <p>{_safe(item.get('text'))}</p>
+    {signature_html}
+    <div class="luna-natal-move"><span>Your move</span><strong>{_safe(item.get('move'))}</strong></div>
+  </div>
+</article>"""
+        )
+
+    if not cards:
+        cards.append(
+            f"""<article class="luna-natal-activation single">
+  <div class="luna-natal-copy">
+    <h3>No tight personal contact dominates this month</h3>
+    <p>{_safe(overlay.get('summary'))}</p>
+  </div>
+</article>"""
+        )
+
+    meta_bits = [value for value in (natal_summary, natal_precision) if value]
+    meta = " · ".join(meta_bits)
+    meta_html = f'<div class="luna-natal-meta">{_safe(meta)}</div>' if meta else ""
+    return f"""
+<section class="luna-monthly-section luna-natal-overlay">
+  <div class="luna-eyebrow">Personal natal overlay</div>
+  <h2 class="luna-section-title">Where this month touches your chart</h2>
+  <p class="luna-natal-intro">{_safe(overlay.get('summary'))}</p>
+  {meta_html}
+  <div class="luna-natal-activation-list">{''.join(cards)}</div>
+</section>
+"""
+
+
 def _paragraphs(values: Iterable[str], maximum: int | None = None) -> str:
     selected = list(values)
     if maximum is not None:
@@ -1211,11 +1263,14 @@ def build_monthly_experience_html(
   <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(narrative.dont_line)}</strong></div>
 </section>
     """
+    natal_overlay_section = _natal_overlay_html(result)
 
     body = ""
     if not preview:
         body = f"""
 {summary_strip}
+
+{natal_overlay_section}
 
 {problem_horizon_section}
 
@@ -1696,6 +1751,84 @@ def build_monthly_experience_html(
   color:var(--muted);
 }}
 .luna-chapter-move strong {{ color:var(--black); }}
+.luna-natal-overlay {{
+  padding-top:clamp(2rem,5vw,4rem);
+}}
+.luna-natal-intro {{
+  max-width:760px;
+  font-size:1.02rem;
+  line-height:1.6;
+}}
+.luna-natal-meta {{
+  margin:.65rem 0 1.25rem;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.67rem;
+  text-transform:uppercase;
+  letter-spacing:.045em;
+  color:var(--muted);
+}}
+.luna-natal-activation-list {{
+  border-top:1px solid var(--black);
+}}
+.luna-natal-activation {{
+  display:grid;
+  grid-template-columns:minmax(6.5rem,.24fr) minmax(0,1fr);
+  gap:clamp(1rem,4vw,2.6rem);
+  padding:1.45rem 0 1.65rem;
+  border-bottom:1px solid var(--black);
+}}
+.luna-natal-activation.single {{
+  grid-template-columns:1fr;
+}}
+.luna-natal-date {{
+  font-family:"Bodoni Moda",Georgia,serif;
+  font-size:clamp(1.75rem,3vw,2.45rem);
+  line-height:1;
+}}
+.luna-natal-signal,
+.luna-natal-pattern span,
+.luna-natal-move span {{
+  display:block;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.62rem;
+  text-transform:uppercase;
+  letter-spacing:.055em;
+  color:var(--muted);
+}}
+.luna-natal-copy h3 {{
+  margin:.45rem 0 .65rem;
+  font-size:clamp(1.65rem,3vw,2.45rem);
+  line-height:1.03;
+}}
+.luna-natal-copy p {{
+  max-width:700px;
+  line-height:1.6;
+}}
+.luna-natal-pattern {{
+  margin:.9rem 0;
+  padding:.75rem .9rem;
+  background:var(--soft);
+}}
+.luna-natal-pattern strong {{
+  display:block;
+  margin-top:.25rem;
+}}
+.luna-natal-move {{
+  margin-top:1rem;
+  padding-top:.8rem;
+  border-top:1px solid var(--line);
+}}
+.luna-natal-move strong {{
+  display:block;
+  margin-top:.25rem;
+  max-width:700px;
+}}
+@media (max-width:640px) {{
+  .luna-natal-activation {{
+    grid-template-columns:1fr;
+    gap:.65rem;
+  }}
+}}
 .luna-relationship-test {{
   background:var(--soft);
 }}
