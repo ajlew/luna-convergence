@@ -1428,6 +1428,12 @@ hr {
     border-right:1px solid var(--black);
     border-bottom:1px solid var(--black);
     background:var(--white);
+    break-inside:avoid;
+    page-break-inside:avoid;
+}
+
+.weekly-card:last-child:nth-child(odd) {
+    grid-column:1 / -1;
 }
 
 .weekly-card-meta {
@@ -1494,6 +1500,8 @@ hr {
     [data-testid="stDownloadButton"],
     [data-testid="stForm"],
     [data-testid="stExpander"],
+    [data-testid="stSelectbox"],
+    [data-testid="stCode"],
     .weekly-copy-heading,
     iframe {
         display:none !important;
@@ -3098,13 +3106,22 @@ def _weekly_cards_html(days) -> str:
 
 def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
     studio_class = " weekly-studio" if studio else ""
+    if studio:
+        heading = (
+            '<div class="weekly-kicker">Seven-day production preview</div>'
+            f'<div class="weekly-range">{escape(week_label(monday))}</div>'
+        )
+    else:
+        heading = (
+            '<div class="weekly-kicker">Week ahead · Monday to Sunday</div>'
+            f'<div class="weekly-range">{escape(week_label(monday))}</div>'
+            '<h1>Seven days. One changing sky.</h1>'
+            '<p class="weekly-intro">The shared planetary weather before it moves through your star sign. Each day gives you the evidence, the human pressure point and one clean move.</p>'
+        )
     st.markdown(
         f"""
 <section class="weekly-view{studio_class}" aria-label="Luna weekly astrology view">
-  <div class="weekly-kicker">Week ahead · Monday to Sunday</div>
-  <div class="weekly-range">{escape(week_label(monday))}</div>
-  <h1>Seven days. One changing sky.</h1>
-  <p class="weekly-intro">The shared planetary weather before it moves through your star sign. Each day gives you the evidence, the human pressure point and one clean move.</p>
+  {heading}
   <div class="weekly-grid">{_weekly_cards_html(days)}</div>
 </section>
         """,
@@ -3212,12 +3229,16 @@ def weekly_studio_page() -> None:
         '<div class="weekly-copy-heading"><h2>Copy one day</h2><p>Use the copy icon in the top-right corner of each text block, then paste into Canva.</p></div>',
         unsafe_allow_html=True,
     )
-    for item in days:
-        with st.expander(
-            f"{item.weekday} · {item.date_label} · {item.headline}",
-            expanded=False,
-        ):
-            st.code(item.video_copy(), language=None, wrap_lines=True)
+    copy_index = st.selectbox(
+        "Choose a day to copy",
+        list(range(len(days))),
+        format_func=lambda index: (
+            f"{days[index].weekday} · {days[index].date_label} · "
+            f"{days[index].headline}"
+        ),
+        key="weekly-studio-copy-day-v3291",
+    )
+    st.code(days[copy_index].video_copy(), language=None, wrap_lines=True)
 
 
 def render_monthly_preview_workspace() -> None:

@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+from difflib import SequenceMatcher
+from itertools import combinations
 
 from weekly_view import (
     all_video_copy,
@@ -36,6 +38,21 @@ def test_weekly_view_builds_seven_evidenced_canva_scripts():
 
     combined = all_video_copy(days)
     assert combined.count("LUNA CONVERGENCE") == 7
+
+
+def test_weekly_copy_does_not_reuse_explanations_or_actions():
+    days = build_weekly_view(date(2026, 8, 17), "Australia/Sydney")
+
+    assert len({item.line_two for item in days}) == 7
+    assert len({item.action for item in days}) == 7
+
+    for first, second in combinations(days, 2):
+        first_copy = " ".join((first.line_one, first.line_two, first.action)).lower()
+        second_copy = " ".join((second.line_one, second.line_two, second.action)).lower()
+        similarity = SequenceMatcher(None, first_copy, second_copy).ratio()
+        assert similarity < 0.64, (
+            f"{first.weekday} and {second.weekday} are too similar: {similarity:.2f}"
+        )
 
 
 def test_weekly_view_rejects_non_monday_start():
