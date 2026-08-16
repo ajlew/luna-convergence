@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.28.1 — Free Monthly Sky Map"
+BUILD_LABEL = "Luna v3.29 — Weekly View"
 EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
@@ -64,6 +64,7 @@ TIMEZONES = [
 NAV_ITEMS = [
     "Home",
     "Daily Horoscope",
+    "Weekly View",
     "Reports",
     "House Guide",
     "Sample Report",

@@ -53,6 +53,13 @@ from natal_snapshot import (
 from monthly_natal_overlay import build_monthly_natal_overlay
 from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
+from weekly_view import (
+    all_video_copy,
+    build_weekly_view,
+    default_week_start,
+    monday_for,
+    week_label,
+)
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -94,6 +101,7 @@ from site_config import (
 ASSET_DIR = Path(__file__).parent / "assets"
 FAVICON_PATH = ASSET_DIR / "saturn_hex_favicon.png"
 BRAND_ICON_PATH = ASSET_DIR / "saturn_hex_brand.png"
+WEEKLY_BACKGROUND_PATH = ASSET_DIR / "luna_weekly_video_background_1080x1920.png"
 
 st.set_page_config(
     page_title=f"{BRAND_NAME} | Strategic Horoscopes",
@@ -784,6 +792,16 @@ a {
     opacity:.82;
 }
 
+.daily-sign-picker-label {
+    max-width:760px;
+    margin:.45rem auto .35rem;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.66rem;
+    letter-spacing:.045em;
+    text-transform:uppercase;
+}
+
 .lean-daily {
     max-width:760px;
     margin:0 auto;
@@ -1353,6 +1371,146 @@ hr {
     color:var(--black) !important;
 }
 
+.weekly-view {
+    width:100%;
+    max-width:1120px;
+    margin:0 auto;
+    padding:.5rem 0 3.5rem;
+}
+
+.weekly-kicker,
+.weekly-range,
+.weekly-card-meta,
+.weekly-evidence,
+.weekly-move-label {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    text-transform:uppercase;
+    letter-spacing:.035em;
+}
+
+.weekly-kicker {
+    font-size:.7rem;
+    color:var(--muted);
+    margin-top:.7rem;
+}
+
+.weekly-range {
+    display:inline-block;
+    margin:.85rem 0 1.2rem;
+    padding:.38rem .55rem;
+    border:1px solid var(--black);
+    font-size:.68rem;
+}
+
+.weekly-view > h1 {
+    max-width:900px;
+    margin-bottom:1.1rem !important;
+}
+
+.weekly-intro {
+    max-width:760px;
+    margin:0 0 3rem;
+    color:var(--muted);
+    font-size:1rem;
+}
+
+.weekly-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0;
+    border-top:1px solid var(--black);
+    border-left:1px solid var(--black);
+}
+
+.weekly-card {
+    min-width:0;
+    padding:1.45rem 1.35rem 1.6rem;
+    border-right:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    background:var(--white);
+}
+
+.weekly-card-meta {
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    padding-bottom:.75rem;
+    border-bottom:1px solid var(--line);
+    font-size:.67rem;
+}
+
+.weekly-evidence {
+    margin:1.05rem 0 .75rem;
+    color:var(--muted);
+    font-size:.63rem;
+    line-height:1.5;
+}
+
+.weekly-card h2 {
+    min-height:2.3em;
+    margin:.2rem 0 1rem !important;
+    font-family:"IBM Plex Mono", "Courier New", monospace !important;
+    font-size:clamp(1.35rem,2.3vw,2.15rem) !important;
+    line-height:1.08 !important;
+    letter-spacing:-.035em !important;
+}
+
+.weekly-card p {
+    margin:.25rem 0;
+    font-size:1rem;
+    line-height:1.5;
+}
+
+.weekly-move {
+    margin-top:1.3rem;
+    padding-top:1rem;
+    border-top:1px solid var(--black);
+}
+
+.weekly-move-label {
+    margin-bottom:.35rem;
+    font-size:.62rem;
+    font-weight:600;
+}
+
+.weekly-move p {
+    margin:0;
+    font-weight:600;
+}
+
+.weekly-studio-controls {
+    margin:1rem 0 2rem;
+    padding:1.15rem;
+    border:1px solid var(--black);
+    background:var(--soft);
+}
+
+@media print {
+    .brand-row,
+    .top-nav,
+    .mobile-nav,
+    .solar-year-wave-wrap,
+    .weekly-studio-controls,
+    [data-testid="stDownloadButton"],
+    [data-testid="stForm"],
+    [data-testid="stExpander"],
+    .weekly-copy-heading,
+    iframe {
+        display:none !important;
+    }
+    .block-container {
+        max-width:none;
+        padding:.3in !important;
+    }
+    .weekly-grid {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .weekly-card {
+        break-inside:avoid;
+        page-break-inside:avoid;
+    }
+}
+
 @media (max-width: 850px) {
     .trust-strip {
         grid-template-columns:1fr 1fr;
@@ -1450,6 +1608,22 @@ hr {
     .trust-item:last-child {
         border-bottom:none;
     }
+    .weekly-view {
+        padding-top:.2rem;
+    }
+    .weekly-view > h1 {
+        font-size:clamp(3rem,14vw,4.4rem) !important;
+    }
+    .weekly-intro {
+        margin-bottom:2rem;
+    }
+    .weekly-grid {
+        grid-template-columns:1fr;
+    }
+    .weekly-card h2 {
+        min-height:0;
+        font-size:1.75rem !important;
+    }
 }
 </style>
         """,
@@ -1497,6 +1671,7 @@ def top_navigation(current_path: str) -> None:
     # fulfilment, previews and administration still exist but stay out of sight.
     items = [
         ("", "Daily Horoscope"),
+        ("weekly-view", "Weekly View"),
         (monthly_path, "This Month"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
@@ -2795,11 +2970,15 @@ def _render_lean_daily(path: str) -> None:
 
     saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()
     saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
+    st.markdown(
+        '<div class="daily-sign-picker-label">Choose your star sign</div>',
+        unsafe_allow_html=True,
+    )
     sign = st.selectbox(
         "Your zodiac sign",
         SIGNS,
         index=saved_index,
-        placeholder="Choose your star sign",
+        placeholder="Select a sign",
         key="landing-daily-sign-v3195",
         label_visibility="collapsed",
         persist_state="session",
@@ -2891,6 +3070,154 @@ def daily_page() -> None:
     # Keep the established /daily-horoscope URL alive for bookmarks and links,
     # while showing the same stripped-back Daily experience as the homepage.
     _render_lean_daily("/daily-horoscope")
+
+
+def _weekly_cards_html(days) -> str:
+    cards: list[str] = []
+    for item in days:
+        cards.append(
+            f"""
+<article class="weekly-card">
+  <div class="weekly-card-meta">
+    <strong>{escape(item.weekday)}</strong>
+    <span>{escape(item.date_label)}</span>
+  </div>
+  <div class="weekly-evidence">{escape(item.evidence)}</div>
+  <h2>{escape(item.headline)}</h2>
+  <p>{escape(item.line_one)}</p>
+  <p>{escape(item.line_two)}</p>
+  <div class="weekly-move">
+    <div class="weekly-move-label">Your move</div>
+    <p>{escape(item.action)}</p>
+  </div>
+</article>
+            """
+        )
+    return "".join(cards)
+
+
+def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
+    studio_class = " weekly-studio" if studio else ""
+    st.markdown(
+        f"""
+<section class="weekly-view{studio_class}" aria-label="Luna weekly astrology view">
+  <div class="weekly-kicker">Week ahead · Monday to Sunday</div>
+  <div class="weekly-range">{escape(week_label(monday))}</div>
+  <h1>Seven days. One changing sky.</h1>
+  <p class="weekly-intro">The shared planetary weather before it moves through your star sign. Each day gives you the evidence, the human pressure point and one clean move.</p>
+  <div class="weekly-grid">{_weekly_cards_html(days)}</div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def weekly_page() -> None:
+    set_page_metadata(
+        "Weekly Astrology View | Luna Convergence",
+        "Read the Luna Convergence week ahead from Monday to Sunday, with one evidence-led interpretation and practical move for every day.",
+        "/weekly-view",
+    )
+    today = browser_local_date()
+    monday = default_week_start(today)
+    timezone_name = browser_timezone_name()
+    try:
+        days = build_weekly_view(monday, timezone_name)
+    except Exception as exc:
+        st.error("Luna could not calculate this week's planetary pattern.")
+        if EDITOR_PREVIEW_ENABLED:
+            st.exception(exc)
+        return
+    _render_weekly_cards(days, monday)
+    st.markdown(
+        '<a class="lean-monthly-link" href="/daily-horoscope">Open your sign-specific Daily Horoscope →</a>',
+        unsafe_allow_html=True,
+    )
+
+
+def weekly_studio_page() -> None:
+    """Hidden production workspace for Luna's seven social-video scripts."""
+    set_page_metadata(
+        "Weekly Video Studio | Luna Convergence",
+        "Private Luna production workspace for Monday-to-Sunday Canva-ready astrology video copy.",
+        "/weekly-studio",
+    )
+    st.markdown('<div class="eyebrow">Owner production workspace</div>', unsafe_allow_html=True)
+    st.markdown("# Weekly video studio")
+    st.markdown(
+        "Choose any date. Luna snaps it back to Monday and prepares all seven "
+        "daily scripts from the calculated sky."
+    )
+
+    with st.form("weekly-studio-controls-v329", clear_on_submit=False):
+        controls = st.columns(2, gap="medium")
+        with controls[0]:
+            selected_date = st.date_input(
+                "Week containing",
+                value=default_week_start(browser_local_date()),
+                key="weekly-studio-date-v329",
+            )
+        with controls[1]:
+            timezone_name = st.selectbox(
+                "Timezone",
+                TIMEZONES,
+                index=timezone_select_index(),
+                key="weekly-studio-timezone-v329",
+            )
+        st.form_submit_button(
+            "Build Monday-to-Sunday week",
+            type="primary",
+            use_container_width=True,
+        )
+
+    monday = monday_for(selected_date)
+    days = build_weekly_view(monday, timezone_name)
+    st.caption(
+        f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · "
+        f"{timezone_name}"
+    )
+    _render_weekly_cards(days, monday, studio=True)
+
+    combined_copy = all_video_copy(days)
+    file_stamp = monday.isoformat()
+    action_columns = st.columns(2, gap="medium")
+    with action_columns[0]:
+        st.download_button(
+            "Download all seven scripts",
+            data=combined_copy,
+            file_name=f"luna_week_{file_stamp}_canva_copy.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+    with action_columns[1]:
+        if WEEKLY_BACKGROUND_PATH.exists():
+            st.download_button(
+                "Download 1080 × 1920 background",
+                data=WEEKLY_BACKGROUND_PATH.read_bytes(),
+                file_name="luna_weekly_video_background_1080x1920.png",
+                mime="image/png",
+                use_container_width=True,
+            )
+
+    import streamlit.components.v1 as components
+
+    components.html(
+        """
+<button onclick="window.parent.print()" style="width:100%;min-height:52px;border:1px solid #050505;background:#050505;color:#fff;font:500 12px 'Courier New',monospace;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">Print or save the week</button>
+        """,
+        height=62,
+    )
+
+    st.markdown(
+        '<div class="weekly-copy-heading"><h2>Copy one day</h2><p>Use the copy icon in the top-right corner of each text block, then paste into Canva.</p></div>',
+        unsafe_allow_html=True,
+    )
+    for item in days:
+        with st.expander(
+            f"{item.weekday} · {item.date_label} · {item.headline}",
+            expanded=False,
+        ):
+            st.code(item.video_copy(), language=None, wrap_lines=True)
 
 
 def render_monthly_preview_workspace() -> None:
@@ -4337,6 +4664,17 @@ DAILY_PAGE_REF = st.Page(
     title="Daily Horoscope",
     url_path="daily-horoscope",
 )
+WEEKLY_PAGE_REF = st.Page(
+    weekly_page,
+    title="Weekly View",
+    url_path="weekly-view",
+)
+WEEKLY_STUDIO_REF = st.Page(
+    weekly_studio_page,
+    title="Weekly Video Studio",
+    url_path="weekly-studio",
+    visibility="hidden",
+)
 MONTHLY_INDEX_REF = st.Page(
     monthly_index_page,
     title="August 2026 Horoscopes",
@@ -4423,6 +4761,8 @@ MONTHLY_PAGE_REFS = {
 ALL_PAGES = [
     HOME_PAGE_REF,
     DAILY_PAGE_REF,
+    WEEKLY_PAGE_REF,
+    WEEKLY_STUDIO_REF,
     MONTHLY_INDEX_REF,
     MONTHLY_PREVIEW_REF,
     EDITORIAL_PREVIEW_REF,
