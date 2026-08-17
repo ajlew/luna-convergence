@@ -6,6 +6,7 @@ from typing import Iterable
 
 from astrology_engine import HOUSE_NAMES, positions_for_date
 from natal_snapshot import NatalSnapshot, NatalPosition
+from timing_insight import build_story_language
 
 
 TRANSIT_PLANETS = ("Jupiter", "Saturn", "Uranus", "Neptune", "Pluto")
@@ -193,6 +194,8 @@ class TransitStory:
     headline: str
     summary: str
     scenarios: tuple[str, ...]
+    insight: str
+    question: str
     move: str
     watch: str
     periods: tuple[TransitPeriod, ...]
@@ -396,6 +399,12 @@ def _scan_story(
         return None
 
     score = _story_score(transit_planet, target, aspect, len(hits))
+    language = build_story_language(
+        transit_planet=transit_planet,
+        target_planet=target.planet,
+        aspect=aspect,
+        natal_house=target.house,
+    )
     return TransitStory(
         transit_planet=transit_planet,
         natal_target=target.planet,
@@ -404,10 +413,12 @@ def _scan_story(
         score=score,
         polarity=_polarity(transit_planet, aspect),
         headline=HEADLINE_OVERRIDES.get((transit_planet, target.planet), GENERIC_HEADLINES[transit_planet]),
-        summary=_summary(target, transit_planet, aspect),
-        scenarios=_scenario_lines(target, transit_planet, aspect),
-        move=TRANSIT_MOVE[transit_planet],
-        watch=TRANSIT_WATCH[transit_planet],
+        summary=language.summary,
+        scenarios=language.scenarios,
+        insight=language.insight,
+        question=language.question,
+        move=language.move,
+        watch=language.watch,
         periods=periods,
         hits=hits,
     )
@@ -480,7 +491,7 @@ def build_timing_map(
         end_date=end_date,
         timezone_name=timezone_name,
         stories=tuple(selected),
-        major_games=min(3, len(selected)),
+        major_games=min(3, len({story.transit_planet for story in selected})),
         turning_points=turning_points,
         rule_changes=rule_changes,
     )

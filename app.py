@@ -64,6 +64,12 @@ from timing_map import (
     build_timing_map,
     month_intensity,
 )
+from timing_insight import (
+    build_major_games,
+    dates_to_remember,
+    strongest_story,
+    year_closing,
+)
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -1685,6 +1691,22 @@ hr {
 .timing-move strong { font-family:'Josefin Sans',sans-serif; font-size:1.25rem; font-weight:500; }
 .timing-evidence { font-size:.72rem; line-height:1.65; }
 .timing-test { border:1px solid var(--black); padding:1.25rem; margin:2.5rem 0 1rem; }
+.timing-games { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1rem 0 2.5rem; }
+.timing-game { border:1px solid var(--black); padding:1.15rem; min-width:0; }
+.timing-game .timing-meta { margin-bottom:.55rem; }
+.timing-game h3 { font-family:'Josefin Sans',sans-serif !important; font-size:1.35rem !important; line-height:1.05 !important; margin:.15rem 0 .75rem !important; }
+.timing-game p { font-size:.96rem; margin:.55rem 0; }
+.timing-game-question { border-top:1px solid #d8d8d3; padding-top:.7rem; margin-top:.8rem !important; }
+.timing-insight { border-left:1px solid var(--black); padding:.2rem 0 .2rem 1rem; margin:1rem 0; max-width:800px; }
+.timing-insight strong { font-family:'Josefin Sans',sans-serif; font-size:1.08rem; font-weight:500; }
+.timing-question { font-family:'Josefin Sans',sans-serif; font-size:1.15rem; margin:1rem 0; }
+.timing-watch-one { border-top:1px solid var(--black); border-bottom:1px solid var(--black); padding:1.25rem 0; margin:1.5rem 0 2.5rem; }
+.timing-watch-one h3 { font-family:'Josefin Sans',sans-serif !important; font-size:1.65rem !important; margin:.2rem 0 .55rem !important; }
+.timing-closing { border-top:2px solid var(--black); padding:2rem 0 .5rem; margin-top:2rem; }
+.timing-remember-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; margin:1rem 0 2rem; }
+.timing-remember { border:1px solid var(--black); padding:.85rem; }
+.timing-remember span { display:block; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.06em; font-size:.62rem; color:var(--muted); margin-bottom:.3rem; }
+.timing-remember strong { font-family:'Josefin Sans',sans-serif; font-size:1rem; font-weight:500; }
 @media (max-width:700px) {
     .timing-summary-grid { grid-template-columns:1fr; }
     .timing-summary-grid > div { border-right:none; border-bottom:1px solid var(--black); }
@@ -1692,6 +1714,7 @@ hr {
     .timing-strip { gap:2px; }
     .timing-month span { font-size:.48rem; }
     .timing-dates { grid-template-columns:1fr; }
+    .timing-games, .timing-remember-grid { grid-template-columns:1fr; }
 }
 
 </style>
@@ -4829,9 +4852,47 @@ def timing_map_page() -> None:
     st.markdown("**Relative timing intensity**")
     st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
 
+    games = build_major_games(report.stories, max_games=3)
+    if games:
+        st.markdown("## The games underneath the year")
+        st.caption("Repeated contacts are grouped into larger arguments so the map does not pretend every transit is an unrelated story.")
+        game_cards = []
+        for game in games:
+            counter_html = (
+                f'<p><strong>Countercurrent:</strong> {escape(game.countercurrent)}</p>'
+                if game.countercurrent else ""
+            )
+            players = " · ".join(game.players)
+            game_cards.append(
+                f'''<article class="timing-game">
+  <div class="timing-meta">GAME {game.rank:02d} · {escape(_timing_range_label(game.first_date, game.last_date))}</div>
+  <h3>{escape(game.title)}</h3>
+  <p>{escape(game.summary)}</p>
+  <p class="timing-game-question"><strong>{escape(game.question)}</strong></p>
+  {counter_html}
+  <div class="timing-evidence">{escape(players)}</div>
+</article>'''
+            )
+        st.markdown('<div class="timing-games">' + "".join(game_cards) + '</div>', unsafe_allow_html=True)
+
+    one_to_watch = strongest_story(report.stories)
+    if one_to_watch is not None and one_to_watch.hits:
+        next_hit = one_to_watch.hits[0]
+        st.markdown(
+            f'''<div class="timing-watch-one">
+  <div class="timing-meta">IF YOU REMEMBER ONE CONTACT</div>
+  <h3>{escape(one_to_watch.headline)}</h3>
+  <p>{escape(one_to_watch.insight)}</p>
+  <p><strong>{escape(_timing_date_label(next_hit.exact_date))}</strong> · {escape(one_to_watch.transit_planet)} {escape(one_to_watch.aspect)} natal {escape(one_to_watch.natal_target)}</p>
+</div>''',
+            unsafe_allow_html=True,
+        )
+
     if not report.stories:
         st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
     else:
+        st.markdown("## Turning points inside the games")
+        st.caption("The cards stay chronological. The larger game above explains why repeated Saturn, Uranus or other contacts belong to one developing story rather than duplicated copy.")
         for number, story in enumerate(report.stories, start=1):
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
             date_boxes = []
@@ -4849,8 +4910,10 @@ def timing_map_page() -> None:
   <div class="timing-meta">{number:02d} / {escape(story.polarity)} · active {escape(periods_label)}</div>
   <h2>{escape(story.headline)}</h2>
   <p>{escape(story.summary)}</p>
+  <div class="timing-insight"><div class="timing-move-label">Luna's read</div><strong>{escape(story.insight)}</strong></div>
   <div class="timing-dates">{"".join(date_boxes)}</div>
   <ul class="timing-scenarios">{scenario_html}</ul>
+  <div class="timing-question"><strong>Question:</strong> {escape(story.question)}</div>
   <div class="timing-move"><div class="timing-move-label">Your move</div><strong>{escape(story.move)}</strong></div>
   <p><strong>Watch:</strong> {escape(story.watch)}</p>
 </article>''',
@@ -4867,8 +4930,27 @@ def timing_map_page() -> None:
                         f"- Pass {pass_number}: **{_timing_date_label(hit.exact_date)}** · {motion} · daily minimum orb {hit.orb:.2f}°"
                     )
                 st.caption(
-                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
+                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis. The human-situation layer is interpretive: it broadens possible real-life manifestations without claiming that one event must occur."
                 )
+
+    closing = year_closing(report.stories, games)
+    remember = dates_to_remember(report.stories, limit=3)
+    st.markdown('<div class="timing-closing">', unsafe_allow_html=True)
+    st.markdown("## Where this leaves you")
+    st.markdown(escape(closing))
+    if remember:
+        st.markdown("**Three dates Luna would keep visible**")
+        remember_cards = []
+        for item in remember:
+            remember_cards.append(
+                f'''<div class="timing-remember">
+  <span>{escape(_timing_date_label(item.exact_date))}</span>
+  <strong>{escape(item.label)}</strong>
+  <div class="timing-evidence">{escape(item.reason)}</div>
+</div>'''
+            )
+        st.markdown('<div class="timing-remember-grid">' + "".join(remember_cards) + '</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
         '<div class="timing-test"><strong>Pilot price test</strong><br>Would you pay <strong>A$7.95</strong> for this as an instant personal report with a clean PDF copy? No payment is collected in this pilot.</div>',
