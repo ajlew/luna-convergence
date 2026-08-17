@@ -3,6 +3,7 @@ https://luna-convergence.streamlit.app/daily-horoscope
 https://luna-convergence.streamlit.app/weekly-view
 https://luna-convergence.streamlit.app/august-2026-horoscopes
 https://luna-convergence.streamlit.app/reports
+https://luna-convergence.streamlit.app/timing-map
 https://luna-convergence.streamlit.app/house-guide
 https://luna-convergence.streamlit.app/sample-report
 https://luna-convergence.streamlit.app/how-it-works

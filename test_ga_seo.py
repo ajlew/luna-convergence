@@ -13,7 +13,8 @@ assert 'MONTHLY_PRICE = "A$3.30"' in config
 assert 'YEARLY_PRICE = "A$14.95"' in config
 
 urls = (root / "SEARCH_CONSOLE_URLS.txt").read_text(encoding="utf-8").splitlines()
-assert len(urls) == 20
+assert len(urls) == 22
 assert "https://luna-convergence.streamlit.app/august-2026-sagittarius" in urls
+assert "https://luna-convergence.streamlit.app/timing-map" in urls
 
 print("GA4 and SEO route checks passed.")

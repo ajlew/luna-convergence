@@ -60,6 +60,10 @@ from weekly_view import (
     monday_for,
     week_label,
 )
+from timing_map import (
+    build_timing_map,
+    month_intensity,
+)
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -1633,6 +1637,63 @@ hr {
         font-size:1.75rem !important;
     }
 }
+
+.timing-shell {
+    max-width:980px;
+    margin:0 auto;
+    padding:.5rem 0 4rem;
+}
+.timing-intro {
+    max-width:760px;
+    font-size:1.12rem;
+    line-height:1.75;
+    margin:0 0 2rem;
+}
+.timing-summary-grid {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    border-top:1px solid var(--black);
+    border-bottom:1px solid var(--black);
+    margin:1.3rem 0 2rem;
+}
+.timing-summary-grid > div { padding:1.15rem 1rem; border-right:1px solid var(--black); }
+.timing-summary-grid > div:last-child { border-right:none; }
+.timing-summary-grid span, .timing-evidence, .timing-meta, .timing-month span, .timing-move-label {
+    font-family:'IBM Plex Mono',monospace;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+}
+.timing-summary-grid span { display:block; font-size:.69rem; color:var(--muted); margin-bottom:.4rem; }
+.timing-summary-grid strong { font-family:'Josefin Sans',sans-serif; font-size:1.55rem; font-weight:500; }
+.timing-strip { display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); gap:5px; align-items:end; margin:.6rem 0 2.6rem; }
+.timing-month { min-width:0; }
+.timing-month span { display:block; font-size:.58rem; text-align:center; margin-bottom:.35rem; color:var(--muted); }
+.timing-month i { display:block; min-height:4px; background:#111; border:1px solid #111; }
+.timing-story { border-top:1px solid var(--black); padding:2rem 0 2.25rem; }
+.timing-story:last-of-type { border-bottom:1px solid var(--black); }
+.timing-meta { font-size:.7rem; color:var(--muted); margin-bottom:.65rem; }
+.timing-story h2 { font-family:'Josefin Sans',sans-serif !important; font-size:clamp(2rem,5vw,3.25rem) !important; line-height:.98 !important; margin:.25rem 0 1rem !important; }
+.timing-story p { max-width:800px; }
+.timing-dates { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; margin:1.25rem 0; }
+.timing-date-box { border:1px solid var(--black); padding:.8rem; }
+.timing-date-box span { display:block; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.07em; font-size:.62rem; color:var(--muted); margin-bottom:.2rem; }
+.timing-date-box strong { font-family:'Josefin Sans',sans-serif; font-size:1.02rem; font-weight:500; }
+.timing-scenarios { margin:1rem 0 1.25rem; padding-left:1.15rem; }
+.timing-scenarios li { margin:.45rem 0; }
+.timing-move { border-left:3px solid var(--black); padding:.75rem 0 .75rem 1rem; margin:1.15rem 0; }
+.timing-move-label { font-size:.65rem; color:var(--muted); margin-bottom:.35rem; }
+.timing-move strong { font-family:'Josefin Sans',sans-serif; font-size:1.25rem; font-weight:500; }
+.timing-evidence { font-size:.72rem; line-height:1.65; }
+.timing-test { border:1px solid var(--black); padding:1.25rem; margin:2.5rem 0 1rem; }
+@media (max-width:700px) {
+    .timing-summary-grid { grid-template-columns:1fr; }
+    .timing-summary-grid > div { border-right:none; border-bottom:1px solid var(--black); }
+    .timing-summary-grid > div:last-child { border-bottom:none; }
+    .timing-strip { gap:2px; }
+    .timing-month span { font-size:.48rem; }
+    .timing-dates { grid-template-columns:1fr; }
+}
+
 </style>
         """,
         unsafe_allow_html=True,
@@ -1681,6 +1742,7 @@ def top_navigation(current_path: str) -> None:
         ("", "Daily Horoscope"),
         ("weekly-view", "Weekly View"),
         (monthly_path, "This Month"),
+        ("timing-map", "12-Month Map"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
     ]
@@ -4500,9 +4562,335 @@ def natal_snapshot_page() -> None:
             st.markdown(f"- {aspect.label()}")
 
     st.markdown(
-        "**Next layer:** Luna can later compare these persistent natal patterns with the sky now — "
+        "**Next layer:** compare these persistent natal patterns with the next 12 months — "
         "showing which pattern is active, when it peaks and when the pressure changes."
     )
+    st.markdown(
+        '<a class="lean-monthly-link" href="/timing-map">Build your 12-Month Timing Map →</a>',
+        unsafe_allow_html=True,
+    )
+    st.markdown('</section>', unsafe_allow_html=True)
+
+def _timing_date_label(value: date) -> str:
+    return value.strftime("%d %b %Y").lstrip("0")
+
+
+def _timing_range_label(start: date, end: date) -> str:
+    if start == end:
+        return _timing_date_label(start)
+    if start.year == end.year and start.month == end.month:
+        return f"{start.day}–{end.day} {start.strftime('%b %Y')}"
+    return f"{_timing_date_label(start)} – {_timing_date_label(end)}"
+
+
+def _timing_strip_html(report) -> str:
+    cells = []
+    for label, value in month_intensity(report):
+        height = 6 + int(round(38 * float(value)))
+        opacity = 0.18 + 0.82 * float(value)
+        cells.append(
+            f'<div class="timing-month"><span>{escape(label)}</span>'
+            f'<i style="height:{height}px;opacity:{opacity:.2f}"></i></div>'
+        )
+    return '<div class="timing-strip" aria-label="Relative timing intensity by month">' + "".join(cells) + '</div>'
+
+
+def _timing_birth_snapshot():
+    """Collect birth inputs for the Timing Map without changing existing natal/checkout flows."""
+    prefill = dict(st.session_state.get("luna_natal_checkout_prefill") or {})
+    prefill_date = None
+    try:
+        if prefill.get("birth_date"):
+            prefill_date = date.fromisoformat(str(prefill["birth_date"]))
+    except Exception:
+        prefill_date = None
+
+    birth_date = st.date_input(
+        "Birth date",
+        value=prefill_date,
+        min_value=date(1900, 1, 1),
+        max_value=browser_local_date(),
+        key="timing-birth-date-v330",
+    )
+    time_known = st.checkbox(
+        "I know my birth time exactly",
+        value=bool(prefill.get("time_known", False)),
+        key="timing-time-known-v330",
+    )
+
+    birth_time_value = None
+    city_choice = None
+    timezone_name = "UTC"
+    manual_city_name = ""
+    manual_country = ""
+    manual_latitude = None
+    manual_longitude = None
+    manual_timezone = "UTC"
+    time_basis = str(prefill.get("time_basis") or "Local time at birthplace")
+
+    if time_known:
+        try:
+            default_time = datetime.strptime(str(prefill.get("birth_time") or "12:00"), "%H:%M").time()
+        except ValueError:
+            default_time = datetime.strptime("12:00", "%H:%M").time()
+        birth_time_value = st.time_input(
+            "Birth time",
+            value=default_time,
+            key="timing-birth-time-v330",
+        )
+        time_basis = st.selectbox(
+            "Time basis",
+            ["Local time at birthplace", "Universal Time (UTC)"],
+            index=0 if time_basis != "Universal Time (UTC)" else 1,
+            key="timing-time-basis-v330",
+        )
+        city_options = sorted(CITY_LOCATIONS) + [
+            "Other city — enter manually",
+            "Not listed — planetary timing only",
+        ]
+        previous_city = str(prefill.get("city_choice") or "")
+        default_index = city_options.index(previous_city) if previous_city in city_options else None
+        city_choice = st.selectbox(
+            "Birth city",
+            city_options,
+            index=default_index,
+            placeholder="Choose your birth city",
+            key="timing-city-v330",
+        )
+
+        if city_choice == "Other city — enter manually":
+            c1, c2 = st.columns(2, gap="medium")
+            with c1:
+                manual_city_name = st.text_input(
+                    "City / town", value=str(prefill.get("manual_city") or ""), key="timing-manual-city-v330"
+                )
+                manual_latitude = st.number_input(
+                    "Latitude", min_value=-90.0, max_value=90.0,
+                    value=float(prefill.get("latitude") or 0.0), step=0.0001, format="%.4f",
+                    key="timing-manual-lat-v330",
+                )
+            with c2:
+                manual_country = st.text_input(
+                    "Country", value=str(prefill.get("manual_country") or ""), key="timing-manual-country-v330"
+                )
+                manual_longitude = st.number_input(
+                    "Longitude", min_value=-180.0, max_value=180.0,
+                    value=float(prefill.get("longitude") or 0.0), step=0.0001, format="%.4f",
+                    key="timing-manual-lon-v330",
+                )
+            if time_basis == "Local time at birthplace":
+                manual_timezone = st.text_input(
+                    "Birth timezone · IANA name",
+                    value=str(prefill.get("timezone_name") or browser_timezone_name()),
+                    key="timing-manual-timezone-v330",
+                )
+            else:
+                manual_timezone = "UTC"
+        elif city_choice == "Not listed — planetary timing only":
+            if time_basis == "Local time at birthplace":
+                default_tz = str(prefill.get("timezone_name") or browser_timezone_name())
+                tz_index = TIMEZONES.index(default_tz) if default_tz in TIMEZONES else timezone_select_index()
+                timezone_name = st.selectbox(
+                    "Birth timezone", TIMEZONES, index=tz_index, key="timing-unlisted-timezone-v330"
+                )
+            else:
+                timezone_name = "UTC"
+
+    if birth_date is None:
+        return None, "Choose your birth date before creating the map.", None
+
+    latitude = longitude = None
+    location_name = None
+    if time_known:
+        if city_choice in CITY_LOCATIONS:
+            location = CITY_LOCATIONS[city_choice]
+            timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else location.timezone
+            latitude = location.latitude
+            longitude = location.longitude
+            location_name = f"{location.name}, {location.country}"
+        elif city_choice == "Other city — enter manually":
+            if not str(manual_city_name).strip():
+                return None, "Enter the birth city or town name.", None
+            if time_basis == "Local time at birthplace":
+                try:
+                    ZoneInfo(str(manual_timezone).strip())
+                except Exception:
+                    return None, "That timezone name is not recognised. Use an IANA name such as Australia/Sydney.", None
+            else:
+                manual_timezone = "UTC"
+            timezone_name = str(manual_timezone).strip()
+            latitude = float(manual_latitude)
+            longitude = float(manual_longitude)
+            location_name = str(manual_city_name).strip()
+            if str(manual_country).strip():
+                location_name += f", {str(manual_country).strip()}"
+        elif city_choice != "Not listed — planetary timing only":
+            return None, "Choose a birth city, use Other city, or choose planetary timing only.", None
+
+    snapshot = build_natal_snapshot(
+        birth_date=birth_date,
+        birth_time_known=time_known,
+        birth_time=birth_time_value,
+        timezone_name=timezone_name,
+        location_name=location_name,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    prefill_out = {
+        "birth_date": birth_date.isoformat(),
+        "time_known": bool(time_known),
+        "birth_time": birth_time_value.strftime("%H:%M") if birth_time_value else "",
+        "time_basis": time_basis,
+        "city_choice": city_choice or "",
+        "location_name": location_name or "",
+        "timezone_name": timezone_name,
+        "latitude": latitude,
+        "longitude": longitude,
+        "manual_city": manual_city_name,
+        "manual_country": manual_country,
+    }
+    return snapshot, "", prefill_out
+
+
+def timing_map_page() -> None:
+    set_page_metadata(
+        "12-Month Timing Map | Luna Convergence",
+        "A personalised 12-month astrology timing map showing the strongest natal transit windows, exact passes and the evidence behind them.",
+        "/timing-map",
+    )
+    st.markdown('<section class="timing-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Pilot · personalised timing</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">Your 12-Month<br>Timing Map</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="timing-intro">This is not another Sun-sign year. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto across the next 365 days, ranks the strongest contacts and shows the story first. The calculation stays one click underneath.</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
+
+    start_date = st.date_input(
+        "Start the 12 months on",
+        value=browser_local_date(),
+        min_value=date(1950, 1, 1),
+        max_value=date(2100, 12, 31),
+        key="timing-start-date-v330",
+        help="The pilot defaults to today in your browser timezone. You can test another 12-month window.",
+    )
+
+    with st.container(border=True):
+        st.markdown("### Tell Luna when you were born")
+        st.caption("If the birth time is unknown, Luna leaves Ascendant, Midheaven and houses out rather than inventing precision.")
+        snapshot, validation_message, prefill_out = _timing_birth_snapshot()
+        generate = st.button("Build my 12-month map", type="primary", use_container_width=True, key="timing-generate-v330")
+
+    if generate:
+        if snapshot is None:
+            st.error(validation_message or "Complete the birth details first.")
+        else:
+            st.session_state["luna_natal_checkout_prefill"] = prefill_out or {}
+            with st.spinner("Luna is ranking the strongest 12-month contacts…"):
+                report = build_timing_map(
+                    snapshot,
+                    start_date=start_date,
+                    timezone_name=browser_timezone_name(),
+                    max_stories=10,
+                )
+            st.session_state["timing-map-report-v330"] = report
+            st.session_state["timing-map-summary-v330"] = natal_profile_summary(snapshot)
+            st.session_state["timing-map-time-known-v330"] = bool(snapshot.birth_time_known)
+            track_event(
+                "timing_map_generated",
+                {
+                    "birth_time_known": bool(snapshot.birth_time_known),
+                    "stories": len(report.stories),
+                    "turning_points": report.turning_points,
+                },
+            )
+
+    report = st.session_state.get("timing-map-report-v330")
+    if report is None:
+        st.markdown(
+            '<div class="lean-bookmark-note">Birth details stay out of the page URL and analytics. This pilot calculates the natal geometry in the current app session.</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
+    profile_summary = str(st.session_state.get("timing-map-summary-v330") or "Personal natal profile")
+    st.markdown("## The year at a glance")
+    st.caption(f"{profile_summary} · {_timing_date_label(report.start_date)} → {_timing_date_label(report.end_date)}")
+    st.markdown(
+        f'''<div class="timing-summary-grid">
+  <div><span>Major games</span><strong>{report.major_games}</strong></div>
+  <div><span>Turning points</span><strong>{report.turning_points}</strong></div>
+  <div><span>Rule changes</span><strong>{report.rule_changes}</strong></div>
+</div>''',
+        unsafe_allow_html=True,
+    )
+    st.markdown("**Relative timing intensity**")
+    st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
+
+    if not report.stories:
+        st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
+    else:
+        for number, story in enumerate(report.stories, start=1):
+            periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
+            date_boxes = []
+            hit_labels = ["Peak", "Returns", "Final pass"]
+            for hit_index, hit in enumerate(story.hits[:3]):
+                label = hit_labels[min(hit_index, 2)] if len(story.hits) > 1 else "Exact"
+                suffix = " · retrograde" if hit.retrograde else ""
+                date_boxes.append(
+                    f'<div class="timing-date-box"><span>{escape(label)}</span>'
+                    f'<strong>{escape(_timing_date_label(hit.exact_date) + suffix)}</strong></div>'
+                )
+            scenario_html = "".join(f"<li>{escape(line)}</li>" for line in story.scenarios)
+            st.markdown(
+                f'''<article class="timing-story">
+  <div class="timing-meta">{number:02d} / {escape(story.polarity)} · active {escape(periods_label)}</div>
+  <h2>{escape(story.headline)}</h2>
+  <p>{escape(story.summary)}</p>
+  <div class="timing-dates">{"".join(date_boxes)}</div>
+  <ul class="timing-scenarios">{scenario_html}</ul>
+  <div class="timing-move"><div class="timing-move-label">Your move</div><strong>{escape(story.move)}</strong></div>
+  <p><strong>Watch:</strong> {escape(story.watch)}</p>
+</article>''',
+                unsafe_allow_html=True,
+            )
+            with st.expander("Why Luna sees this"):
+                st.markdown(
+                    f"**Transit {story.transit_planet} {story.aspect} natal {story.natal_target}**"
+                    + (f" · natal house {story.natal_house}" if story.natal_house else "")
+                )
+                for pass_number, hit in enumerate(story.hits, start=1):
+                    motion = "retrograde" if hit.retrograde else "direct"
+                    st.markdown(
+                        f"- Pass {pass_number}: **{_timing_date_label(hit.exact_date)}** · {motion} · daily minimum orb {hit.orb:.2f}°"
+                    )
+                st.caption(
+                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
+                )
+
+    st.markdown(
+        '<div class="timing-test"><strong>Pilot price test</strong><br>Would you pay <strong>A$7.95</strong> for this as an instant personal report with a clean PDF copy? No payment is collected in this pilot.</div>',
+        unsafe_allow_html=True,
+    )
+    vote_cols = st.columns(3, gap="small")
+    choices = [("Yes", "yes"), ("Maybe", "maybe"), ("No", "no")]
+    for column, (label, value) in zip(vote_cols, choices):
+        with column:
+            if st.button(label, use_container_width=True, key=f"timing-price-{value}-v330"):
+                st.session_state["timing-map-vote-v330"] = value
+                track_event(
+                    "timing_map_price_test",
+                    {
+                        "response": value,
+                        "price_aud": 7.95,
+                        "birth_time_known": bool(st.session_state.get("timing-map-time-known-v330", False)),
+                    },
+                )
+    if st.session_state.get("timing-map-vote-v330"):
+        st.success("Recorded. This pilot records only the response and product context — not your birth details.")
+
     st.markdown('</section>', unsafe_allow_html=True)
 
 def solar_year_page() -> None:
@@ -4635,8 +5023,9 @@ optional question is stored in Stripe Checkout metadata and used only to generat
 and support the purchased report. A city is used to
 estimate latitude, hemisphere and daylight; a street address is not requested.
 
-The free Natal Snapshot uses birth details in the current app session to calculate the result.
-Birth details are not placed in the page URL or Stripe metadata by the snapshot feature.
+The free Natal Snapshot and the 12-Month Timing Map pilot use birth details in the current app session to calculate the result.
+Birth details are not placed in the page URL or analytics events by either feature. The Timing Map price test records only the
+response, pilot price and whether an exact birth time was available; it does not record the birth date, time or place.
 For paid Monthly personalisation, the same birth inputs are used in-session to calculate a compact
 derived natal profile. Stripe receives that derived geometry and a Sun/Moon/Rising summary for
 fulfilment; it does **not** receive the raw birth date, birth time or birthplace.
@@ -4651,6 +5040,7 @@ email displayed during checkout or in the report-delivery message.
 - page views;
 - free daily reading generation;
 - free natal snapshot generation (without birth details in the event payload);
+- 12-month timing-map generation and pilot price-test response (without birth details);
 - monthly report checkout clicks;
 - year-ahead report checkout clicks;
 - confirmed paid-report purchases.
@@ -4666,7 +5056,7 @@ def footer() -> None:
 <div class="small-note">
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 {"<br><strong>Preview build:</strong> " + escape(BUILD_LABEL) if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
+<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">12-Month Timing Map</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,
         unsafe_allow_html=True,
@@ -4751,6 +5141,11 @@ NATAL_SNAPSHOT_REF = st.Page(
     url_path="natal-snapshot",
     visibility="hidden",
 )
+TIMING_MAP_REF = st.Page(
+    timing_map_page,
+    title="12-Month Timing Map",
+    url_path="timing-map",
+)
 METHOD_PAGE_REF = st.Page(
     method_page,
     title="How It Works",
@@ -4794,6 +5189,7 @@ ALL_PAGES = [
     SAMPLE_PAGE_REF,
     SOLAR_YEAR_PAGE_REF,
     NATAL_SNAPSHOT_REF,
+    TIMING_MAP_REF,
     METHOD_PAGE_REF,
     PRIVACY_PAGE_REF,
     PAYMENT_SUCCESS_REF,
