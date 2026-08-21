@@ -3231,6 +3231,69 @@ def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
     }
 
 
+
+def _weekly_social_area(summary: dict) -> str:
+    """Compress calculated weekly life areas into a phone-readable social-card label."""
+    raw = " · ".join(str(x) for x in summary.get("areas", []) if x)
+    replacements = (
+        ("income, possessions and self-worth", "MONEY · VALUE · SELF-WORTH"),
+        ("rest, hidden matters, closure and psychological patterns", "REST · CLOSURE · INNER LIFE"),
+        ("identity, body and self-direction", "IDENTITY · DIRECTION"),
+        ("money, possessions and self-worth", "MONEY · VALUE · SELF-WORTH"),
+        ("communication, learning and local movement", "COMMUNICATION · LEARNING"),
+        ("home, family and foundations", "HOME · FAMILY"),
+        ("creativity, romance and pleasure", "CREATIVITY · ROMANCE"),
+        ("work, health and daily systems", "WORK · ROUTINE"),
+        ("partnerships, agreements and open rivals", "RELATIONSHIPS · AGREEMENTS"),
+        ("shared money, intimacy and deep change", "SHARED MONEY · CHANGE"),
+        ("travel, belief and higher learning", "TRAVEL · BELIEF · LEARNING"),
+        ("career, reputation and public direction", "CAREER · DIRECTION"),
+        ("friends, networks and future aims", "NETWORKS · FUTURE"),
+    )
+    value = raw.lower()
+    for long_form, short_form in replacements:
+        if long_form in value:
+            return short_form
+    first = str((summary.get("areas") or ["YOUR PRIORITIES"])[0])
+    first = first.replace(" and ", " · ").replace(",", " ·")
+    return " ".join(first.upper().split()[:5]).rstrip(" ·,")
+
+
+def _weekly_social_move(summary: dict) -> str:
+    """Compress the calculated strongest move without changing its meaning."""
+    move = str(summary.get("move") or "Keep the facts visible before committing").strip().rstrip(".")
+    low = move.lower()
+    rules = (
+        ("measure cash, margin and recurring cost separately", "MEASURE THE REAL COST"),
+        ("keep the facts visible before committing", "VERIFY BEFORE COMMITTING"),
+        ("remove the false assumption", "REMOVE THE FALSE ASSUMPTION"),
+        ("change the method before adding effort", "CHANGE THE METHOD FIRST"),
+        ("choose what deserves amplification", "AMPLIFY WHAT MATTERS"),
+        ("state both prices", "NAME THE REAL COST"),
+        ("do the necessary thing", "DO WHAT IS NECESSARY"),
+    )
+    for needle, short in rules:
+        if needle in low:
+            return short
+    words = move.upper().split()
+    return " ".join(words if len(words) <= 6 else words[:6]).rstrip(",;:")
+
+
+def _weekly_social_card_copy(summary: dict, monday: date) -> str:
+    """Canva-ready 1080x1920 copy for a four-second sign card."""
+    sunday = monday + timedelta(days=6)
+    date_line = f"{monday.strftime('%d %b').lstrip('0')}–{sunday.strftime('%d %b').lstrip('0')}".upper()
+    return (
+        f"THE WEEK AHEAD · {date_line}\n\n"
+        f"{str(summary.get('sign', '')).upper()}\n\n"
+        "WHERE IT LANDS\n"
+        f"{_weekly_social_area(summary)}\n\n"
+        "YOUR MOVE\n"
+        f"{_weekly_social_move(summary)}.\n\n"
+        "LUNA CONVERGENCE"
+    )
+
+
 def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> None:
     summary = _weekly_sign_summary(sign, monday, timezone_name)
     st.markdown(f"## {escape(sign)} · The Week Ahead")
@@ -3335,7 +3398,7 @@ def weekly_studio_page() -> None:
 1. **Choose any date** in the week you want. Luna automatically snaps it back to Monday.
 2. Confirm the **timezone**. This controls the calculated weekly sky.
 3. Use **One Changing Sky** as the opening frame of the weekly video.
-4. Use the **12 sign translations** as the middle of one all-sign video. Each sign card should show only *Where it lands* and *Your move* for fast reading.
+4. Use the **1080 × 1920 SOCIAL CARD COPY** inside each sign. Luna automatically compresses the calculated *Where it lands* and *Your move* into four-second, phone-readable wording.
 5. Keep the longer interpretation on the website; do not squeeze it onto the social card.
 6. Use the existing **Monday-Sunday cards** for the seven separate Daily clips and as the evidence behind the weekly synthesis.
 7. Export social/video artwork at **1080 × 1920 (9:16)**.
@@ -3380,11 +3443,12 @@ def weekly_studio_page() -> None:
             st.markdown(item["interpretation"])
             st.markdown("**YOUR MOVE**  ")
             st.markdown(f"**{item['move'].capitalize()}.**")
-            social_copy = f"{item['sign'].upper()}\nTHE WEEK AHEAD\n\nWHERE IT LANDS\n{' · '.join(item['areas'])}\n\nYOUR MOVE\n{item['move'].capitalize()}.\n\nLUNA CONVERGENCE"
+            st.markdown("**1080 × 1920 SOCIAL CARD COPY**")
+            social_copy = _weekly_social_card_copy(item, monday)
             st.code(social_copy, language=None, wrap_lines=True)
 
     all_sign_copy = "\n\n---\n\n".join(
-        f"{i['sign'].upper()}\nWHERE IT LANDS: {' · '.join(i['areas'])}\nYOUR MOVE: {i['move'].capitalize()}." for i in sign_summaries
+        _weekly_social_card_copy(i, monday) for i in sign_summaries
     )
     st.download_button("Download all 12 sign cards copy", data=all_sign_copy, file_name=f"luna_week_{monday.isoformat()}_12_signs.txt", mime="text/plain", use_container_width=True)
 
