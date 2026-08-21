@@ -64,12 +64,6 @@ from timing_map import (
     build_timing_map,
     month_intensity,
 )
-from timing_insight import (
-    build_major_games,
-    dates_to_remember,
-    strongest_story,
-    year_closing,
-)
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -1691,22 +1685,6 @@ hr {
 .timing-move strong { font-family:'Josefin Sans',sans-serif; font-size:1.25rem; font-weight:500; }
 .timing-evidence { font-size:.72rem; line-height:1.65; }
 .timing-test { border:1px solid var(--black); padding:1.25rem; margin:2.5rem 0 1rem; }
-.timing-games { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1rem 0 2.5rem; }
-.timing-game { border:1px solid var(--black); padding:1.15rem; min-width:0; }
-.timing-game .timing-meta { margin-bottom:.55rem; }
-.timing-game h3 { font-family:'Josefin Sans',sans-serif !important; font-size:1.35rem !important; line-height:1.05 !important; margin:.15rem 0 .75rem !important; }
-.timing-game p { font-size:.96rem; margin:.55rem 0; }
-.timing-game-question { border-top:1px solid #d8d8d3; padding-top:.7rem; margin-top:.8rem !important; }
-.timing-insight { border-left:1px solid var(--black); padding:.2rem 0 .2rem 1rem; margin:1rem 0; max-width:800px; }
-.timing-insight strong { font-family:'Josefin Sans',sans-serif; font-size:1.08rem; font-weight:500; }
-.timing-question { font-family:'Josefin Sans',sans-serif; font-size:1.15rem; margin:1rem 0; }
-.timing-watch-one { border-top:1px solid var(--black); border-bottom:1px solid var(--black); padding:1.25rem 0; margin:1.5rem 0 2.5rem; }
-.timing-watch-one h3 { font-family:'Josefin Sans',sans-serif !important; font-size:1.65rem !important; margin:.2rem 0 .55rem !important; }
-.timing-closing { border-top:2px solid var(--black); padding:2rem 0 .5rem; margin-top:2rem; }
-.timing-remember-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; margin:1rem 0 2rem; }
-.timing-remember { border:1px solid var(--black); padding:.85rem; }
-.timing-remember span { display:block; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.06em; font-size:.62rem; color:var(--muted); margin-bottom:.3rem; }
-.timing-remember strong { font-family:'Josefin Sans',sans-serif; font-size:1rem; font-weight:500; }
 @media (max-width:700px) {
     .timing-summary-grid { grid-template-columns:1fr; }
     .timing-summary-grid > div { border-right:none; border-bottom:1px solid var(--black); }
@@ -1714,7 +1692,6 @@ hr {
     .timing-strip { gap:2px; }
     .timing-month span { font-size:.48rem; }
     .timing-dates { grid-template-columns:1fr; }
-    .timing-games, .timing-remember-grid { grid-template-columns:1fr; }
 }
 
 </style>
@@ -3214,10 +3191,59 @@ def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
     )
 
 
+def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
+    """Translate the shared Monday-Sunday sky into a compact sign-specific layer."""
+    sunday = monday + timedelta(days=6)
+    data = period_report(
+        sign,
+        monday,
+        sunday,
+        timezone_name,
+        week_label(monday),
+        transition_count=7,
+    )
+    dominant = data.get("dominant_houses", [])[:3]
+    house_numbers = [int(item.get("house", 1)) for item in dominant if item.get("house")]
+    if not house_numbers:
+        house_numbers = [1]
+    areas = [HOUSE_NAMES.get(h, f"House {h}") for h in house_numbers[:2]]
+    transitions = data.get("major_transitions", [])
+    first = transitions[0] if transitions else None
+    primary = house_numbers[0]
+    strategy = HOUSE_STRATEGY.get(primary, {})
+    action = strategy.get("action", "keep the facts visible before committing")
+    risk = strategy.get("risk", "moving before the pattern is clear")
+    headline = f"{areas[0]} comes into focus"
+    interpretation = (
+        f"This week's shared sky concentrates most strongly around {', '.join(a.lower() for a in areas)}. "
+        f"The useful response is to {action}; the main risk is {risk}."
+    )
+    if first:
+        interpretation = f"{first.get('title', 'The week\'s leading shift')} sets the first pressure point. " + interpretation
+    return {
+        "sign": sign,
+        "headline": headline,
+        "areas": areas,
+        "interpretation": interpretation,
+        "move": action.rstrip("."),
+    }
+
+
+def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> None:
+    summary = _weekly_sign_summary(sign, monday, timezone_name)
+    st.markdown(f"## {escape(sign)} · The Week Ahead")
+    st.markdown(f"### {escape(summary['headline'])}")
+    st.markdown("**WHERE IT LANDS**")
+    st.markdown(" · ".join(summary["areas"]))
+    st.markdown(summary["interpretation"])
+    st.markdown("**YOUR STRONGEST MOVE**")
+    st.markdown(f"**{summary['move'].capitalize()}.**")
+
+
 def weekly_page() -> None:
     set_page_metadata(
         "Weekly Astrology View | Luna Convergence",
-        "Read the Luna Convergence week ahead from Monday to Sunday, with one evidence-led interpretation and practical move for every day.",
+        "One changing sky, translated for your star sign, with the week's evidence and practical moves.",
         "/weekly-view",
     )
     today = browser_local_date()
@@ -3230,100 +3256,89 @@ def weekly_page() -> None:
         if EDITOR_PREVIEW_ENABLED:
             st.exception(exc)
         return
-    _render_weekly_cards(days, monday)
-    st.markdown(
-        '<a class="lean-monthly-link" href="/daily-horoscope">Open your sign-specific Daily Horoscope →</a>',
-        unsafe_allow_html=True,
-    )
+
+    st.markdown('<div class="weekly-kicker">Week ahead · Monday to Sunday</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="weekly-range">{escape(week_label(monday))}</div>', unsafe_allow_html=True)
+    st.markdown("# One changing sky.")
+    st.markdown("The planets make one shared pattern. **Where that pattern lands depends on your sign.**")
+    sign = st.selectbox("Where does it land for you?", SIGNS, key="weekly-sign-v331")
+    try:
+        _render_weekly_sign_layer(sign, monday, timezone_name)
+    except Exception as exc:
+        st.warning("Luna could not build the sign-specific weekly layer, so the shared seven-day sky is shown below.")
+        if EDITOR_PREVIEW_ENABLED:
+            st.exception(exc)
+    st.markdown("## The shared sky · Seven days")
+    _render_weekly_cards(days, monday, studio=True)
+    st.markdown('<a class="lean-monthly-link" href="/daily-horoscope">Open your sign-specific Daily Horoscope →</a>', unsafe_allow_html=True)
 
 
 def weekly_studio_page() -> None:
-    """Hidden production workspace for Luna's seven social-video scripts."""
+    """Hidden owner workspace for the shared weekly sky and 12 sign translations."""
     set_page_metadata(
         "Weekly Video Studio | Luna Convergence",
-        "Private Luna production workspace for Monday-to-Sunday Canva-ready astrology video copy.",
+        "Private Luna production workspace for one weekly sky, twelve sign cards and Monday-to-Sunday source material.",
         "/weekly-studio",
     )
     st.markdown('<div class="eyebrow">Owner production workspace</div>', unsafe_allow_html=True)
     st.markdown("# Weekly video studio")
-    st.markdown(
-        "Choose any date. Luna snaps it back to Monday and prepares all seven "
-        "daily scripts from the calculated sky."
-    )
 
-    with st.form("weekly-studio-controls-v329", clear_on_submit=False):
+    with st.expander("How to use this studio", expanded=True):
+        st.markdown("""
+1. **Choose any date** in the week you want. Luna automatically snaps it back to Monday.
+2. Confirm the **timezone**. This controls the calculated weekly sky.
+3. Use **One Changing Sky** as the opening frame of the weekly video.
+4. Use the **12 sign translations** as the middle of one all-sign video. Each sign card should show only *Where it lands* and *Your move* for fast reading.
+5. Keep the longer interpretation on the website; do not squeeze it onto the social card.
+6. Use the existing **Monday-Sunday cards** for the seven separate Daily clips and as the evidence behind the weekly synthesis.
+7. Export social/video artwork at **1080 × 1920 (9:16)**.
+
+**Production rule:** calculate the sky once; translate it twelve ways. Do not manually invent twelve different skies.
+        """)
+
+    with st.form("weekly-studio-controls-v331", clear_on_submit=False):
         controls = st.columns(2, gap="medium")
         with controls[0]:
-            selected_date = st.date_input(
-                "Week containing",
-                value=default_week_start(browser_local_date()),
-                key="weekly-studio-date-v329",
-            )
+            selected_date = st.date_input("Week containing", value=default_week_start(browser_local_date()), key="weekly-studio-date-v331")
         with controls[1]:
-            timezone_name = st.selectbox(
-                "Timezone",
-                TIMEZONES,
-                index=timezone_select_index(),
-                key="weekly-studio-timezone-v329",
-            )
-        st.form_submit_button(
-            "Build Monday-to-Sunday week",
-            type="primary",
-            use_container_width=True,
-        )
+            timezone_name = st.selectbox("Timezone", TIMEZONES, index=timezone_select_index(), key="weekly-studio-timezone-v331")
+        st.form_submit_button("Build weekly sky + 12 signs", type="primary", use_container_width=True)
 
     monday = monday_for(selected_date)
     days = build_weekly_view(monday, timezone_name)
-    st.caption(
-        f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · "
-        f"{timezone_name}"
+    st.caption(f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · {timezone_name}")
+
+    st.markdown("## 12 sign translations")
+    sign_summaries = []
+    for sign in SIGNS:
+        try:
+            sign_summaries.append(_weekly_sign_summary(sign, monday, timezone_name))
+        except Exception as exc:
+            if EDITOR_PREVIEW_ENABLED:
+                st.warning(f"{sign}: sign translation unavailable: {exc}")
+
+    for item in sign_summaries:
+        with st.expander(item["sign"], expanded=False):
+            st.markdown(f"### {item['headline']}")
+            st.markdown("**WHERE IT LANDS**  ")
+            st.markdown(" · ".join(item["areas"]))
+            st.markdown(item["interpretation"])
+            st.markdown("**YOUR MOVE**  ")
+            st.markdown(f"**{item['move'].capitalize()}.**")
+            social_copy = f"{item['sign'].upper()}\nTHE WEEK AHEAD\n\nWHERE IT LANDS\n{' · '.join(item['areas'])}\n\nYOUR MOVE\n{item['move'].capitalize()}.\n\nLUNA CONVERGENCE"
+            st.code(social_copy, language=None, wrap_lines=True)
+
+    all_sign_copy = "\n\n---\n\n".join(
+        f"{i['sign'].upper()}\nWHERE IT LANDS: {' · '.join(i['areas'])}\nYOUR MOVE: {i['move'].capitalize()}." for i in sign_summaries
     )
+    st.download_button("Download all 12 sign cards copy", data=all_sign_copy, file_name=f"luna_week_{monday.isoformat()}_12_signs.txt", mime="text/plain", use_container_width=True)
+
+    st.markdown("## Monday-Sunday source cards")
     _render_weekly_cards(days, monday, studio=True)
-
     combined_copy = all_video_copy(days)
-    file_stamp = monday.isoformat()
-    action_columns = st.columns(2, gap="medium")
-    with action_columns[0]:
-        st.download_button(
-            "Download all seven scripts",
-            data=combined_copy,
-            file_name=f"luna_week_{file_stamp}_canva_copy.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
-    with action_columns[1]:
-        if WEEKLY_BACKGROUND_PATH.exists():
-            st.download_button(
-                "Download 1080 × 1920 background",
-                data=WEEKLY_BACKGROUND_PATH.read_bytes(),
-                file_name="luna_weekly_video_background_1080x1920.png",
-                mime="image/png",
-                use_container_width=True,
-            )
-
-    import streamlit.components.v1 as components
-
-    components.html(
-        """
-<button onclick="window.parent.print()" style="width:100%;min-height:52px;border:1px solid #050505;background:#050505;color:#fff;font:500 12px 'Courier New',monospace;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">Print or save the week</button>
-        """,
-        height=62,
-    )
-
-    st.markdown(
-        '<div class="weekly-copy-heading"><h2>Copy one day</h2><p>Use the copy icon in the top-right corner of each text block, then paste into Canva.</p></div>',
-        unsafe_allow_html=True,
-    )
-    copy_index = st.selectbox(
-        "Choose a day to copy",
-        list(range(len(days))),
-        format_func=lambda index: (
-            f"{days[index].weekday} · {days[index].date_label} · "
-            f"{days[index].headline}"
-        ),
-        key="weekly-studio-copy-day-v3291",
-    )
-    st.code(days[copy_index].video_copy(), language=None, wrap_lines=True)
+    st.download_button("Download all seven daily scripts", data=combined_copy, file_name=f"luna_week_{monday.isoformat()}_daily_canva_copy.txt", mime="text/plain", use_container_width=True)
+    if WEEKLY_BACKGROUND_PATH.exists():
+        st.download_button("Download 1080 × 1920 background", data=WEEKLY_BACKGROUND_PATH.read_bytes(), file_name="luna_weekly_video_background_1080x1920.png", mime="image/png", use_container_width=True)
 
 
 def render_monthly_preview_workspace() -> None:
@@ -4852,47 +4867,9 @@ def timing_map_page() -> None:
     st.markdown("**Relative timing intensity**")
     st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
 
-    games = build_major_games(report.stories, max_games=3)
-    if games:
-        st.markdown("## The games underneath the year")
-        st.caption("Repeated contacts are grouped into larger arguments so the map does not pretend every transit is an unrelated story.")
-        game_cards = []
-        for game in games:
-            counter_html = (
-                f'<p><strong>Countercurrent:</strong> {escape(game.countercurrent)}</p>'
-                if game.countercurrent else ""
-            )
-            players = " · ".join(game.players)
-            game_cards.append(
-                f'''<article class="timing-game">
-  <div class="timing-meta">GAME {game.rank:02d} · {escape(_timing_range_label(game.first_date, game.last_date))}</div>
-  <h3>{escape(game.title)}</h3>
-  <p>{escape(game.summary)}</p>
-  <p class="timing-game-question"><strong>{escape(game.question)}</strong></p>
-  {counter_html}
-  <div class="timing-evidence">{escape(players)}</div>
-</article>'''
-            )
-        st.markdown('<div class="timing-games">' + "".join(game_cards) + '</div>', unsafe_allow_html=True)
-
-    one_to_watch = strongest_story(report.stories)
-    if one_to_watch is not None and one_to_watch.hits:
-        next_hit = one_to_watch.hits[0]
-        st.markdown(
-            f'''<div class="timing-watch-one">
-  <div class="timing-meta">IF YOU REMEMBER ONE CONTACT</div>
-  <h3>{escape(one_to_watch.headline)}</h3>
-  <p>{escape(one_to_watch.insight)}</p>
-  <p><strong>{escape(_timing_date_label(next_hit.exact_date))}</strong> · {escape(one_to_watch.transit_planet)} {escape(one_to_watch.aspect)} natal {escape(one_to_watch.natal_target)}</p>
-</div>''',
-            unsafe_allow_html=True,
-        )
-
     if not report.stories:
         st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
     else:
-        st.markdown("## Turning points inside the games")
-        st.caption("The cards stay chronological. The larger game above explains why repeated Saturn, Uranus or other contacts belong to one developing story rather than duplicated copy.")
         for number, story in enumerate(report.stories, start=1):
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
             date_boxes = []
@@ -4910,10 +4887,8 @@ def timing_map_page() -> None:
   <div class="timing-meta">{number:02d} / {escape(story.polarity)} · active {escape(periods_label)}</div>
   <h2>{escape(story.headline)}</h2>
   <p>{escape(story.summary)}</p>
-  <div class="timing-insight"><div class="timing-move-label">Luna's read</div><strong>{escape(story.insight)}</strong></div>
   <div class="timing-dates">{"".join(date_boxes)}</div>
   <ul class="timing-scenarios">{scenario_html}</ul>
-  <div class="timing-question"><strong>Question:</strong> {escape(story.question)}</div>
   <div class="timing-move"><div class="timing-move-label">Your move</div><strong>{escape(story.move)}</strong></div>
   <p><strong>Watch:</strong> {escape(story.watch)}</p>
 </article>''',
@@ -4930,27 +4905,8 @@ def timing_map_page() -> None:
                         f"- Pass {pass_number}: **{_timing_date_label(hit.exact_date)}** · {motion} · daily minimum orb {hit.orb:.2f}°"
                     )
                 st.caption(
-                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis. The human-situation layer is interpretive: it broadens possible real-life manifestations without claiming that one event must occur."
+                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
                 )
-
-    closing = year_closing(report.stories, games)
-    remember = dates_to_remember(report.stories, limit=3)
-    st.markdown('<div class="timing-closing">', unsafe_allow_html=True)
-    st.markdown("## Where this leaves you")
-    st.markdown(escape(closing))
-    if remember:
-        st.markdown("**Three dates Luna would keep visible**")
-        remember_cards = []
-        for item in remember:
-            remember_cards.append(
-                f'''<div class="timing-remember">
-  <span>{escape(_timing_date_label(item.exact_date))}</span>
-  <strong>{escape(item.label)}</strong>
-  <div class="timing-evidence">{escape(item.reason)}</div>
-</div>'''
-            )
-        st.markdown('<div class="timing-remember-grid">' + "".join(remember_cards) + '</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
         '<div class="timing-test"><strong>Pilot price test</strong><br>Would you pay <strong>A$7.95</strong> for this as an instant personal report with a clean PDF copy? No payment is collected in this pilot.</div>',
