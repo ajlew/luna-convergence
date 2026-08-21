@@ -3022,7 +3022,8 @@ def _render_optional_luna_video() -> None:
         return
     st.markdown('<section class="luna-video-slot">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Luna short</div>', unsafe_allow_html=True)
-    st.video(LUNA_YOUTUBE_FEATURED_VIDEO_URL)
+    playable_url = _youtube_playable_url(LUNA_YOUTUBE_FEATURED_VIDEO_URL)
+    st.video(playable_url)
     if LUNA_YOUTUBE_CHANNEL_URL:
         st.markdown(
             f'<a class="lean-monthly-link" href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">Luna on YouTube →</a>',
@@ -3219,7 +3220,8 @@ def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
         f"The useful response is to {action}; the main risk is {risk}."
     )
     if first:
-        interpretation = f"{first.get('title', 'The week\'s leading shift')} sets the first pressure point. " + interpretation
+        first_title = first.get("title") or "The week's leading shift"
+        interpretation = f"{first_title} sets the first pressure point. " + interpretation
     return {
         "sign": sign,
         "headline": headline,
@@ -3240,6 +3242,43 @@ def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> No
     st.markdown(f"**{summary['move'].capitalize()}.**")
 
 
+
+
+def _weekly_choice_options(anchor: date, weeks_back: int = 4, weeks_forward: int = 12):
+    """Return ready-to-pick Monday starts around the current week."""
+    current_monday = default_week_start(anchor)
+    starts = [current_monday + timedelta(weeks=offset) for offset in range(-weeks_back, weeks_forward + 1)]
+    return starts
+
+
+def _weekly_choice_label(monday: date, current_monday: date) -> str:
+    sunday = monday + timedelta(days=6)
+    if monday == current_monday:
+        prefix = "This week · "
+    elif monday == current_monday + timedelta(weeks=1):
+        prefix = "Next week · "
+    elif monday == current_monday - timedelta(weeks=1):
+        prefix = "Last week · "
+    else:
+        prefix = ""
+    return f"{prefix}{monday.strftime('%d %b').lstrip('0')} – {sunday.strftime('%d %b %Y').lstrip('0')}"
+
+
+def _youtube_playable_url(url: str) -> str:
+    """Normalize YouTube Shorts/share links to the standard watch URL for desktop embeds."""
+    value = str(url or "").strip()
+    if not value:
+        return ""
+    if "youtube.com/shorts/" in value:
+        video_id = value.split("youtube.com/shorts/", 1)[1].split("?", 1)[0].split("/", 1)[0]
+        if video_id:
+            return f"https://www.youtube.com/watch?v={video_id}"
+    if "youtu.be/" in value:
+        video_id = value.split("youtu.be/", 1)[1].split("?", 1)[0].split("/", 1)[0]
+        if video_id:
+            return f"https://www.youtube.com/watch?v={video_id}"
+    return value
+
 def weekly_page() -> None:
     set_page_metadata(
         "Weekly Astrology View | Luna Convergence",
@@ -3247,7 +3286,15 @@ def weekly_page() -> None:
         "/weekly-view",
     )
     today = browser_local_date()
-    monday = default_week_start(today)
+    current_monday = default_week_start(today)
+    week_options = _weekly_choice_options(today)
+    monday = st.selectbox(
+        "Choose week",
+        week_options,
+        index=week_options.index(current_monday),
+        format_func=lambda value: _weekly_choice_label(value, current_monday),
+        key="weekly-view-week-v332",
+    )
     timezone_name = browser_timezone_name()
     try:
         days = build_weekly_view(monday, timezone_name)
@@ -3296,15 +3343,23 @@ def weekly_studio_page() -> None:
 **Production rule:** calculate the sky once; translate it twelve ways. Do not manually invent twelve different skies.
         """)
 
-    with st.form("weekly-studio-controls-v331", clear_on_submit=False):
+    with st.form("weekly-studio-controls-v332", clear_on_submit=False):
         controls = st.columns(2, gap="medium")
+        current_monday = default_week_start(browser_local_date())
+        week_options = _weekly_choice_options(browser_local_date())
         with controls[0]:
-            selected_date = st.date_input("Week containing", value=default_week_start(browser_local_date()), key="weekly-studio-date-v331")
+            selected_monday = st.selectbox(
+                "Choose week",
+                week_options,
+                index=week_options.index(current_monday),
+                format_func=lambda value: _weekly_choice_label(value, current_monday),
+                key="weekly-studio-week-v332",
+            )
         with controls[1]:
-            timezone_name = st.selectbox("Timezone", TIMEZONES, index=timezone_select_index(), key="weekly-studio-timezone-v331")
+            timezone_name = st.selectbox("Timezone", TIMEZONES, index=timezone_select_index(), key="weekly-studio-timezone-v332")
         st.form_submit_button("Build weekly sky + 12 signs", type="primary", use_container_width=True)
 
-    monday = monday_for(selected_date)
+    monday = selected_monday
     days = build_weekly_view(monday, timezone_name)
     st.caption(f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · {timezone_name}")
 
