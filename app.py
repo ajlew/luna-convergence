@@ -5212,6 +5212,105 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
         )
 
 
+
+def _render_monthly_full_meat_unified(
+    narrative,
+    result,
+    *,
+    sign: str,
+    timezone_name: str,
+    birth_date_value: date | None,
+) -> None:
+    """
+    Restore the complete production Monthly content.
+    Only presentation is unified so it reads closer to Personal Transits.
+    No event extraction, no DOM reordering, no narrative loss.
+    """
+    st.markdown(
+        """
+        <style>
+        /* Keep the full production report, but remove the 'magazine insert' look. */
+        .relationship-card{
+            background:#fff !important;
+            border-left:0 !important;
+            border-right:0 !important;
+            border-top:1px solid rgba(0,0,0,.55) !important;
+            border-bottom:1px solid rgba(0,0,0,.55) !important;
+            padding:1.15rem 0 !important;
+            margin:1.35rem 0 !important;
+        }
+        .relationship-card h3{
+            font-size:clamp(1.45rem,2.6vw,2rem) !important;
+            line-height:1.08 !important;
+            margin:.35rem 0 .55rem !important;
+        }
+        .relationship-card p{
+            font-size:1rem !important;
+            line-height:1.58 !important;
+        }
+
+        /* Dated monthly entries should feel like the transit stories: same rhythm, less card-ness. */
+        .monthly-briefing,
+        .briefing-row,
+        .timeline-row,
+        .monthly-timeline-row{
+            background:#fff !important;
+            box-shadow:none !important;
+            border-radius:0 !important;
+        }
+
+        /* Consequence summaries should not compete with the main story. */
+        .area-strip{
+            margin:1.6rem 0 !important;
+        }
+        .area-note{
+            padding:1rem !important;
+        }
+        .area-note h3,
+        .area-note h4{
+            font-size:1.15rem !important;
+            line-height:1.12 !important;
+        }
+
+        /* Final move should read like the transit page's action block. */
+        .best-move{
+            grid-template-columns:8rem 1fr !important;
+            margin:1.7rem 0 !important;
+            padding:1rem 0 !important;
+        }
+        .best-move-copy{
+            font-size:1.3rem !important;
+            line-height:1.22 !important;
+        }
+
+        /* Reduce visual competition between section headings. */
+        .forecast-copy h2,
+        .forecast-copy h3{
+            margin-top:1.4rem !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Full, original production renderer: this is where the "meat" lives.
+    render_production_monthly_report(
+        narrative,
+        result,
+        show_print=True,
+    )
+
+    # Historical context remains available immediately after the complete reading
+    # until it can be attached to individual dated events inside the pipeline itself.
+    _render_monthly_history(
+        sign,
+        SEO_YEAR,
+        SEO_MONTH,
+        timezone_name,
+        birth_date_value=birth_date_value,
+    )
+
+
 def monthly_sign_page(sign: str) -> None:
     """Unified free Monthly: birth context first, one editorial report, one history section."""
     title = f"{sign} August 2026 Horoscope | Luna Convergence"
@@ -5253,7 +5352,7 @@ def monthly_sign_page(sign: str) -> None:
     st.markdown("### One moving sky. One personal reference point.")
     _render_monthly_personal_sky(snapshot)
 
-    _render_monthly_native_like_transits(
+    _render_monthly_full_meat_unified(
         narrative,
         result,
         sign=sign,
