@@ -3578,7 +3578,7 @@ def _render_monthly_history(
     if not matches:
         return
 
-    st.markdown("### Have you been somewhere like this before?")
+    st.markdown("## Have you been somewhere like this before?")
     st.markdown(
         "Luna looks backward for earlier months with a similar **sky structure**. "
         "The point is not to say that the same event repeats. It is to give the present month a reference point."
@@ -4815,7 +4815,7 @@ def _render_monthly_past_echo_strip(
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">PAST CONTEXT</div>', unsafe_allow_html=True)
-    st.markdown("### Have you been somewhere like this before?")
+    st.markdown("## Have you been somewhere like this before?")
     st.markdown(
         "Before reading the month forward, Luna checks the closest earlier sky patterns. "
         "They are reference points, not claims that the same life event must repeat."
@@ -4926,202 +4926,289 @@ def _render_monthly_personal_sky(snapshot) -> None:
 
 
 
-def _render_monthly_flowing_report(narrative, result) -> None:
-    """
-    Render the production Monthly, then normalise the presentation to match
-    the Personal Transits reading rhythm: one headline, one chronological
-    sequence, one repeated event format.
-    """
-    render_production_monthly_report(narrative, result, show_print=True)
+def _monthly_plain(value):
+    from dataclasses import asdict, is_dataclass
+    if is_dataclass(value):
+        return {k: _monthly_plain(v) for k, v in asdict(value).items()}
+    if isinstance(value, dict):
+        return {str(k): _monthly_plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_monthly_plain(v) for v in value]
+    if hasattr(value, "__dict__") and not isinstance(value, (str, bytes, int, float, bool, date, datetime)):
+        try:
+            return {str(k): _monthly_plain(v) for k, v in vars(value).items() if not str(k).startswith("_")}
+        except Exception:
+            pass
+    return value
 
-    st.components.v1.html(
-        r"""
-<script>
-(function () {
-  const doc = window.parent.document;
 
-  function norm(s) {
-    return (s || "").replace(/\s+/g, " ").trim().toLowerCase();
-  }
+def _monthly_walk(value, path=()):
+    yield path, value
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield from _monthly_walk(child, path + (str(key),))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from _monthly_walk(child, path + (str(index),))
 
-  function findAll() {
-    return Array.from(doc.querySelectorAll('h1,h2,h3,h4,p,div,span,strong'));
-  }
 
-  function findExact(rx) {
-    return findAll().find(el => rx.test(norm(el.textContent)));
-  }
+def _monthly_text(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return str(value).strip()
 
-  function ensureCss() {
-    if (doc.getElementById('luna-monthly-one-flow-css')) return;
-    const style = doc.createElement('style');
-    style.id = 'luna-monthly-one-flow-css';
-    style.textContent = `
-      .luna-monthly-section-label{
-        margin:2rem 0 .65rem !important;
-        padding-top:.7rem !important;
-        border-top:1px solid rgba(0,0,0,.48) !important;
-        font-family:"IBM Plex Mono",monospace !important;
-        font-size:10px !important;
-        line-height:1.2 !important;
-        letter-spacing:.08em !important;
-        text-transform:uppercase !important;
-        font-weight:500 !important;
-      }
-      .luna-monthly-injected-row{
-        display:grid;
-        grid-template-columns:150px minmax(0,1fr);
-        gap:1.25rem;
-        padding:1.25rem 0 1.35rem;
-        border-bottom:1px solid rgba(0,0,0,.48);
-        background:#fff;
-      }
-      .luna-monthly-injected-date{
-        font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif;
-        font-size:clamp(27px,3vw,38px);
-        line-height:.95;
-      }
-      .luna-monthly-injected-transit{
-        margin-top:.4rem;
-        font-family:"IBM Plex Mono",monospace;
-        font-size:9px;
-        line-height:1.4;
-      }
-      .luna-monthly-injected-story h3{
-        margin:0 0 .55rem !important;
-        font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif !important;
-        font-size:clamp(20px,2.2vw,28px) !important;
-        line-height:1.06 !important;
-        font-weight:400 !important;
-      }
-      .luna-monthly-injected-story p{
-        margin:.35rem 0 0;
-        font-family:"Josefin Sans",Arial,sans-serif;
-        font-size:14px;
-        line-height:1.55;
-      }
-      @media(max-width:720px){
-        .luna-monthly-injected-row{
-          grid-template-columns:1fr;
-          gap:.45rem;
-        }
-      }
-    `;
-    doc.head.appendChild(style);
-  }
 
-  function closestUseful(el) {
-    if (!el) return null;
-    return el.closest('[data-testid="stMarkdownContainer"]') ||
-           el.closest('[data-testid="stVerticalBlock"]') ||
-           el.parentElement;
-  }
+def _monthly_first(mapping: dict, keys: tuple[str, ...], default=""):
+    lower = {str(k).lower(): v for k, v in mapping.items()}
+    for key in keys:
+        if key.lower() in lower:
+            value = lower[key.lower()]
+            if value not in (None, "", [], {}):
+                return value
+    return default
 
-  function apply() {
-    ensureCss();
 
-    // "How August unfolds" is the one timeline label, not a competing headline.
-    const how = findExact(/^how [a-z]+ unfolds$/i);
-    if (how) {
-      how.textContent = how.textContent.toUpperCase();
-      how.classList.add('luna-monthly-section-label');
+def _monthly_parse_day(value, fallback=99) -> int:
+    if isinstance(value, (date, datetime)):
+        return int(value.day)
+    text = _monthly_text(value)
+    for pattern in (
+        r"\b(\d{1,2})\s*[-–]\s*\d{1,2}\s+[A-Za-z]+",
+        r"\b(\d{1,2})\s+[A-Za-z]{3,9}\b",
+        r"\b(\d{1,2})\s*AUG\b",
+        r"\b2026[-/]\d{1,2}[-/](\d{1,2})\b",
+    ):
+        match = re.search(pattern, text, re.I)
+        if match:
+            return int(match.group(1))
+    return fallback
+
+
+def _monthly_event_from_dict(item: dict) -> dict | None:
+    if not isinstance(item, dict):
+        return None
+    date_value = _monthly_first(item, ("date", "date_label", "display_date", "exact_date", "day", "window", "date_range", "period"))
+    transit = _monthly_first(item, ("transit", "event", "event_label", "sky_event", "aspect", "technical_label", "subtitle"))
+    title = _monthly_first(item, ("headline", "title", "story_title", "hook", "name"))
+    body = _monthly_first(item, ("body", "story", "interpretation", "copy", "summary", "description", "text"))
+    move = _monthly_first(item, ("move", "action", "luna_move", "best_move", "recommendation"))
+    influence = _monthly_first(item, ("influence", "influence_window", "active", "active_window", "range"))
+
+    joined = " ".join(_monthly_text(v) for v in (date_value, transit, title, body, move, influence))
+    dateish = bool(re.search(r"\b(?:\d{1,2}\s*(?:[-–]\s*\d{1,2})?\s+aug|august\s+\d{1,2}|2026[-/]08)\b", joined, re.I))
+    eventish = bool(re.search(r"\b(?:eclipse|trine|sextile|square|opposition|conjunct|retrograde|station|ingress)\b", joined, re.I))
+    if not (dateish or eventish):
+        return None
+    if not title and not body:
+        return None
+
+    return {
+        "day": _monthly_parse_day(date_value or transit or title or joined),
+        "date": _monthly_text(date_value),
+        "transit": _monthly_text(transit),
+        "title": _monthly_text(title),
+        "body": _monthly_text(body),
+        "move": _monthly_text(move),
+        "influence": _monthly_text(influence),
     }
 
-    // Find the formerly separate Luna's Read signal.
-    const signalHeadline = findAll().find(el =>
-      /^around \d{1,2}[-–]\d{1,2} [a-z]+ \d{4},/.test(norm(el.textContent))
-    );
-    if (!signalHeadline) return false;
 
-    const signalRoot = closestUseful(signalHeadline);
-    if (!signalRoot) return false;
+def _monthly_collect_structured_events(narrative, result) -> list[dict]:
+    roots = [_monthly_plain(narrative), _monthly_plain(result)]
+    candidates = []
 
-    const lines = (signalRoot.innerText || "")
-      .split("\n")
-      .map(x => x.trim())
-      .filter(Boolean);
+    for root in roots:
+        for path, value in _monthly_walk(root):
+            if isinstance(value, list) and value and all(isinstance(x, dict) for x in value):
+                events = [e for e in (_monthly_event_from_dict(x) for x in value) if e]
+                if events:
+                    unique_days = len({e["day"] for e in events if e["day"] < 99})
+                    richness = sum(bool(e["title"]) + bool(e["body"]) + bool(e["move"]) for e in events)
+                    path_text = " ".join(path).lower()
+                    path_bonus = 12 if any(w in path_text for w in ("brief", "timeline", "unfold", "signal", "key", "date")) else 0
+                    candidates.append((unique_days * 5 + richness + path_bonus, events))
 
-    const headlineLine = lines.find(x =>
-      /^Around \d{1,2}[-–]\d{1,2} [A-Za-z]+ \d{4},/i.test(x)
-    ) || "";
+    events = max(candidates, key=lambda pair: pair[0])[1] if candidates else []
 
-    const m = headlineLine.match(
-      /^Around\s+(\d{1,2})[-–](\d{1,2})\s+([A-Za-z]+)\s+(\d{4}),\s*(.*)$/i
-    );
-    if (!m) return false;
+    existing = {(e["day"], e["title"].lower()) for e in events}
+    for root in roots:
+        for path, value in _monthly_walk(root):
+            if not isinstance(value, dict):
+                continue
+            event = _monthly_event_from_dict(value)
+            if not event:
+                continue
+            path_text = " ".join(path).lower()
+            joined = " ".join(_monthly_text(v) for v in value.values())
+            supporting = any(w in path_text for w in ("signal", "relationship", "read", "window"))
+            midmonth = bool(re.search(r"\b18\s*[-–]\s*21\s+aug", joined, re.I))
+            sig = (event["day"], event["title"].lower())
+            if (supporting or midmonth) and sig not in existing:
+                events.append(event)
+                existing.add(sig)
 
-    const dateText = `${m[1]}–${m[2]} ${m[3].slice(0,3).toUpperCase()}`;
-    const titleText = m[5].replace(/\.$/, "");
+    if not events:
+        for raw in (result.get("major_transitions") or []):
+            if isinstance(raw, dict):
+                event = _monthly_event_from_dict(raw)
+                if event:
+                    events.append(event)
 
-    const transitLine = lines.find(x =>
-      /sextile|trine|square|opposition|conjunct|eclipse|retrograde/i.test(x)
-    ) || "";
+    deduped, seen = [], set()
+    for event in sorted(events, key=lambda e: (e["day"], e["title"] or e["transit"])):
+        key = (event["day"], (event["title"] or event["transit"]).lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(event)
+    return deduped[:7]
 
-    const transitText = transitLine
-      .replace(/^signal\s*/i, "")
-      .replace(/^\d{1,2}[-–]\d{1,2}\s+[A-Za-z]+\s+\d{4}\s*·?\s*/i, "");
 
-    const bodyText = lines.filter(x =>
-      x !== headlineLine &&
-      x !== transitLine &&
-      !/^luna['’]s read$/i.test(x) &&
-      !/^signal$/i.test(x)
-    ).join(" ");
+def _monthly_main_headline(narrative, sign: str) -> str:
+    for key in ("hook_headline", "headline", "title", "monthly_headline"):
+        value = getattr(narrative, key, None)
+        if value:
+            return str(value).strip()
+    return AUGUST_2026_PREVIEW_HOOKS.get(sign, f"{sign} · {SEO_MONTH_NAME} {SEO_YEAR}")
 
-    if (!doc.querySelector('.luna-monthly-injected-row')) {
-      const row = doc.createElement('div');
-      row.className = 'luna-monthly-injected-row';
-      row.innerHTML = `
-        <div>
-          <div class="luna-monthly-injected-date">${dateText}</div>
-          <div class="luna-monthly-injected-transit">${transitText}</div>
-        </div>
-        <div class="luna-monthly-injected-story">
-          <h3>${titleText}</h3>
-          <p>${bodyText}</p>
-        </div>
-      `;
 
-      // Put 18–21 AUG between 13 AUG and 28 AUG.
-      const aug28 = findAll().find(el => /^28 aug$/i.test(norm(el.textContent)));
-      const target = closestUseful(aug28);
+def _monthly_intro_copy(narrative, result) -> list[str]:
+    plain = _monthly_plain(narrative)
+    preferred = []
+    if isinstance(plain, dict):
+        for key in ("overview", "opening", "lead", "summary", "theme_copy", "story"):
+            value = plain.get(key)
+            if isinstance(value, str) and len(value.strip()) > 45:
+                preferred.append(value.strip())
+            elif isinstance(value, list):
+                preferred.extend(str(x).strip() for x in value if isinstance(x, str) and len(x.strip()) > 45)
+    if preferred:
+        return preferred[:2]
+    theme = result.get("concentration_theme")
+    return [theme.strip()] if isinstance(theme, str) and theme.strip() else []
 
-      if (target && target.parentElement) {
-        target.parentElement.insertBefore(row, target);
-        signalRoot.style.display = 'none';
-      } else {
-        return false;
-      }
-    }
 
-    // Hide the now-redundant "Luna's read" label if it remains separately rendered.
-    const lunaRead = findExact(/^luna['’]s read$/i);
-    if (lunaRead) {
-      const b = closestUseful(lunaRead);
-      if (b) b.style.display = 'none';
-    }
+def _monthly_history_for_event(sign: str, year: int, month: int, timezone_name: str, birth_date_value: date | None, event_index: int) -> None:
+    try:
+        matches = _monthly_history_matches(sign, year, month, timezone_name)
+    except Exception:
+        return
+    if not matches:
+        return
 
-    // Consequence summary uses a quiet label.
-    const lands = findExact(/^where the story lands$/i);
-    if (lands) {
-      lands.textContent = 'WHERE IT LANDS';
-      lands.classList.add('luna-monthly-section-label');
-    }
+    item = matches[min(event_index, len(matches) - 1)]
+    past_year = int(item["year"])
+    shared = item.get("shared_houses") or []
+    now_only = item.get("current_only") or []
+    then_only = item.get("past_only") or []
 
-    return true;
-  }
+    st.markdown("---")
+    st.markdown("#### Have you been here before?")
 
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries += 1;
-    if (apply() || tries > 20) clearInterval(timer);
-  }, 180);
-})();
-</script>
-        """,
-        height=0,
-        width=0,
-    )
+    age_text = ""
+    if birth_date_value:
+        ref_date = date(past_year, month, 15)
+        if ref_date >= birth_date_value:
+            age = ref_date.year - birth_date_value.year - (
+                (ref_date.month, ref_date.day) < (birth_date_value.month, birth_date_value.day)
+            )
+            age_text = f" You were about **{age}**."
+
+    st.markdown(f"Think back to **{month_name[month]} {past_year}**.{age_text}")
+
+    if shared:
+        shared_text = " + ".join(_monthly_reader_house_label(h) for h in shared[:2])
+        st.markdown(f"**What rhymes:** **{shared_text}** was also unusually active.")
+    if now_only and then_only:
+        st.markdown(
+            f"**What is different now:** {_monthly_reader_house_label(now_only[0])} is more active; "
+            f"the earlier month leaned more toward {_monthly_reader_house_label(then_only[0])}."
+        )
+    elif now_only:
+        st.markdown(f"**What is different now:** this month adds {_monthly_reader_house_label(now_only[0])}.")
+    elif then_only:
+        st.markdown(f"**What is different now:** the earlier month carried more {_monthly_reader_house_label(then_only[0])}.")
+
+    st.caption("What do you remember changing then? The earlier month is context, not a replay.")
+
+
+def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None) -> None:
+    st.markdown('<div class="eyebrow">MONTHLY · PERSONAL CONTEXT</div>', unsafe_allow_html=True)
+    st.markdown(f"# {_monthly_main_headline(narrative, sign)}")
+
+    for paragraph in _monthly_intro_copy(narrative, result):
+        st.markdown(paragraph)
+
+    events = _monthly_collect_structured_events(narrative, result)
+    if events:
+        st.markdown("## How August unfolds")
+        for index, event in enumerate(events):
+            date_label = event["date"]
+            if not date_label or len(date_label) > 40:
+                date_label = f"{event['day']:02d} AUG" if event["day"] < 99 else "AUGUST"
+
+            st.markdown("---")
+            meta_parts = [p for p in (event["transit"], f"Influence: {event['influence']}" if event["influence"] else "") if p]
+            st.markdown(
+                f'<div class="timing-meta">{escape(date_label.upper())}'
+                + (f" · {escape(' · '.join(meta_parts))}" if meta_parts else "")
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(f"### {event['title'] or event['transit'] or 'The month changes here'}")
+            if event["body"]:
+                for paragraph in re.split(r"\n\s*\n", event["body"]):
+                    if paragraph.strip():
+                        st.markdown(paragraph.strip())
+            if event["move"]:
+                st.markdown(
+                    f'<div class="timing-move"><span class="timing-move-label">YOUR MOVE</span>'
+                    f'<p>{escape(event["move"])}</p></div>',
+                    unsafe_allow_html=True,
+                )
+
+            if index < 3:
+                _monthly_history_for_event(sign, SEO_YEAR, SEO_MONTH, timezone_name, birth_date_value, index)
+    else:
+        st.info("Luna found the month, but this pipeline version did not expose the dated briefing structure.")
+
+    st.markdown("## Where it lands")
+    dominant = result.get("dominant_houses") or []
+    for item in dominant[:3]:
+        if not isinstance(item, dict):
+            continue
+        house = item.get("house")
+        label = _monthly_reader_house_label(house).upper()
+        st.markdown(f"**{label}**")
+        try:
+            st.markdown(HOUSE_STRATEGY[int(house)]["action"])
+        except Exception:
+            pass
+
+    final_move = ""
+    plain = _monthly_plain(narrative)
+    if isinstance(plain, dict):
+        for key in ("best_move", "final_move", "action", "your_move"):
+            value = plain.get(key)
+            if isinstance(value, str) and value.strip():
+                final_move = value.strip()
+                break
+    if not final_move and events:
+        final_move = next((e["move"] for e in reversed(events) if e["move"]), "")
+    if final_move:
+        st.markdown("## Your move")
+        st.markdown(final_move)
+
+    with st.expander("Why Luna sees this"):
+        st.markdown(
+            "Luna combines the calculated August sky, whole-sign house emphasis, major transitions "
+            "and the closest earlier monthly precedents. Historical echoes sit beside the current event they help explain."
+        )
 
 
 def monthly_sign_page(sign: str) -> None:
@@ -5165,15 +5252,13 @@ def monthly_sign_page(sign: str) -> None:
     st.markdown("### One moving sky. One personal reference point.")
     _render_monthly_personal_sky(snapshot)
 
-    _render_monthly_past_echo_strip(
-        sign,
-        SEO_YEAR,
-        SEO_MONTH,
-        timezone_name,
+    _render_monthly_native_like_transits(
+        narrative,
+        result,
+        sign=sign,
+        timezone_name=timezone_name,
         birth_date_value=birth_date_value,
     )
-
-    _render_monthly_flowing_report(narrative, result)
 
 
     st.markdown("## Something specific on your mind?")
