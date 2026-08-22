@@ -3460,6 +3460,209 @@ def weekly_studio_page() -> None:
         st.download_button("Download 1080 × 1920 background", data=WEEKLY_BACKGROUND_PATH.read_bytes(), file_name="luna_weekly_video_background_1080x1920.png", mime="image/png", use_container_width=True)
 
 
+
+# ---------------------------------------------------------------------------
+# Historical context layer
+# ---------------------------------------------------------------------------
+# Luna uses these scores internally only. Readers see plain-English precedent,
+# not percentages.  The comparison is structural: houses + major transition
+# labels.  It does not claim that the same real-world event must repeat.
+
+def _history_tokens(value: str) -> set[str]:
+    stop = {
+        "the", "a", "an", "and", "or", "to", "of", "in", "on", "for", "with",
+        "enters", "entry", "moves", "move", "turns", "direct", "retrograde",
+    }
+    cleaned = "".join(ch.lower() if ch.isalnum() else " " for ch in str(value or ""))
+    return {word for word in cleaned.split() if len(word) > 2 and word not in stop}
+
+
+def _monthly_structure_signature(result: dict) -> dict:
+    houses = [
+        int(item.get("house"))
+        for item in (result.get("dominant_houses") or [])[:4]
+        if item.get("house")
+    ]
+    titles = [str(item.get("title") or "") for item in (result.get("major_transitions") or [])[:8]]
+    tokens = set()
+    for title in titles:
+        tokens |= _history_tokens(title)
+    return {"houses": houses, "tokens": tokens, "titles": titles}
+
+
+def _set_similarity(left: set, right: set) -> float:
+    if not left and not right:
+        return 1.0
+    union = left | right
+    return len(left & right) / len(union) if union else 0.0
+
+
+def _monthly_similarity(current: dict, past: dict) -> float:
+    a = _monthly_structure_signature(current)
+    b = _monthly_structure_signature(past)
+    house_a, house_b = set(a["houses"]), set(b["houses"])
+    house_score = _set_similarity(house_a, house_b)
+    token_score = _set_similarity(a["tokens"], b["tokens"])
+    top_house = 1.0 if a["houses"] and b["houses"] and a["houses"][0] == b["houses"][0] else 0.0
+    return (0.58 * house_score) + (0.32 * token_score) + (0.10 * top_house)
+
+
+@st.cache_data(show_spinner=False, ttl=60 * 60 * 12)
+def _monthly_history_matches(sign: str, year: int, month: int, timezone_name: str, lookback_years: int = 18) -> list[dict]:
+    """Find the closest same-month sign-level sky structures in prior years."""
+    if month == 12:
+        current_end = date(year, 12, 31)
+    else:
+        current_end = date(year, month + 1, 1) - timedelta(days=1)
+    current = period_report(
+        sign,
+        date(year, month, 1),
+        current_end,
+        timezone_name,
+        f"{month_name[month]} {year}",
+        transition_count=9,
+    )
+    current_sig = _monthly_structure_signature(current)
+    matches = []
+    for past_year in range(year - 1, max(1949, year - lookback_years) - 1, -1):
+        try:
+            if month == 12:
+                past_end = date(past_year, 12, 31)
+            else:
+                past_end = date(past_year, month + 1, 1) - timedelta(days=1)
+            past = period_report(
+                sign,
+                date(past_year, month, 1),
+                past_end,
+                timezone_name,
+                f"{month_name[month]} {past_year}",
+                transition_count=9,
+            )
+            score = _monthly_similarity(current, past)
+            past_sig = _monthly_structure_signature(past)
+            shared_houses = [h for h in current_sig["houses"] if h in set(past_sig["houses"])]
+            current_only = [h for h in current_sig["houses"] if h not in set(past_sig["houses"])]
+            past_only = [h for h in past_sig["houses"] if h not in set(current_sig["houses"])]
+            matches.append({
+                "year": past_year,
+                "score": score,
+                "shared_houses": shared_houses,
+                "current_only": current_only,
+                "past_only": past_only,
+                "past_first_title": (past_sig["titles"][0] if past_sig["titles"] else ""),
+            })
+        except Exception:
+            continue
+    matches.sort(key=lambda item: item["score"], reverse=True)
+    return matches[:3]
+
+
+def _house_short(house: int) -> str:
+    name = str(HOUSE_NAMES.get(house, f"House {house}"))
+    # Keep historical comparison conversational rather than technical.
+    return name.lower()
+
+
+def _render_monthly_history(sign: str, year: int, month: int, timezone_name: str) -> None:
+    """Reader-facing historical precedent. Internal similarity percentages stay hidden."""
+    try:
+        matches = _monthly_history_matches(sign, int(year), int(month), timezone_name)
+    except Exception:
+        return
+    if not matches:
+        return
+
+    st.markdown("## Have you been somewhere like this before?")
+    st.markdown(
+        "Luna looked backward for earlier months with a similar **astrological structure**. "
+        "This is context, not a claim that the same life event must repeat."
+    )
+    for index, item in enumerate(matches, start=1):
+        past_label = f"{month_name[int(month)]} {item['year']}"
+        shared = item.get("shared_houses") or []
+        now_only = item.get("current_only") or []
+        then_only = item.get("past_only") or []
+        if shared:
+            shared_text = " and ".join(_house_short(h) for h in shared[:2])
+            lead = f"Both periods put extra emphasis on **{shared_text}**."
+        else:
+            lead = "The overall sequence of planetary changes is unusually close, even though it lands in different life areas."
+
+        if now_only and then_only:
+            difference = (
+                f"**What is different now:** this month adds **{_house_short(now_only[0])}**, "
+                f"while the earlier pattern leaned more toward **{_house_short(then_only[0])}**."
+            )
+        elif now_only:
+            difference = f"**What is different now:** the present month adds **{_house_short(now_only[0])}** to the pattern."
+        elif then_only:
+            difference = f"**What is different now:** the older pattern carried more **{_house_short(then_only[0])}** than this one."
+        else:
+            difference = "**What is different now:** the supporting transits and exact timing are not identical, so Luna treats this as an echo rather than a replay."
+
+        heading = "Think back" if index == 1 else "Another echo"
+        st.markdown(f"### {heading} · {past_label}")
+        st.markdown(lead)
+        st.markdown(difference)
+        st.caption(f"Do you remember what was changing around {past_label}? You supply the memory; Luna supplies the sky pattern.")
+
+    with st.expander("How Luna chose these dates"):
+        st.markdown(
+            "Luna compares the month's dominant whole-sign houses and major planetary transition labels with earlier "
+            "months for the same sign, ranks the closest structures internally, and shows only the clearest precedents. "
+            "The internal score is a retrieval tool — not a probability of an event happening."
+        )
+
+
+_TRANSIT_RECURRENCE_YEARS = {
+    "Jupiter": 11.86,
+    "Saturn": 29.46,
+    "Uranus": 84.01,
+    "Neptune": 164.8,
+    "Pluto": 248.0,
+}
+
+
+def _previous_transit_echo_date(story) -> date | None:
+    """Estimate the previous recurrence of the same slow-planet transit family."""
+    if not getattr(story, "hits", None):
+        return None
+    years = _TRANSIT_RECURRENCE_YEARS.get(str(getattr(story, "transit_planet", "")))
+    if not years:
+        return None
+    aspect = str(getattr(story, "aspect", "")).lower()
+    # Squares/trines/sextiles occur at two geometrically equivalent points per orbit.
+    factor = 0.5 if any(word in aspect for word in ("square", "trine", "sextile")) else 1.0
+    days = int(round(years * factor * 365.2425))
+    return story.hits[0].exact_date - timedelta(days=days)
+
+
+def _render_transit_history(story, birth_date_value: date | None = None) -> None:
+    """Human-readable precedent for a major personal transit story."""
+    earlier = _previous_transit_echo_date(story)
+    if earlier is None:
+        return
+    st.markdown("### Have you been here before?")
+    if birth_date_value and earlier >= birth_date_value:
+        age = earlier.year - birth_date_value.year - ((earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day))
+        st.markdown(f"**Think back to {_timing_date_label(earlier)}. You were about {max(age, 0)}.**")
+        st.markdown(
+            f"A previous **{story.transit_planet} {story.aspect} natal {story.natal_target}** cycle was near this part of its orbit. "
+            "Do you remember what was changing then?"
+        )
+    else:
+        st.markdown(f"**Before your time · around {_timing_date_label(earlier)}**")
+        st.markdown(
+            f"The same **{story.transit_planet}–{story.natal_target} transit family** has an earlier geometric echo here. "
+            "You may not have lived through it, but it gives the present transit a longer cycle context."
+        )
+    st.markdown(
+        "**What is different now:** the rest of the sky, the exact orb sequence and your present circumstances are different. "
+        "Luna uses the earlier date as precedent — not as a prediction that history repeats."
+    )
+    st.caption("The exact internal recurrence estimate stays behind the scenes. The reader-facing question is simpler: what, if anything, feels familiar?")
+
+
 def render_monthly_preview_workspace() -> None:
     """Generate a complete monthly report without exposing the paid checkout flow."""
     local_today = browser_local_date()
@@ -3547,6 +3750,9 @@ def render_monthly_preview_workspace() -> None:
         st.session_state["monthly-preview-result"] = result
         st.session_state["monthly-preview-narrative"] = narrative
         st.session_state["monthly-preview-focus-value"] = main_focus
+        st.session_state["monthly-preview-history-context"] = {
+            "sign": sign, "year": year, "month": month, "timezone_name": timezone_name
+        }
         st.rerun()
 
     result = st.session_state.get("monthly-preview-result")
@@ -3577,6 +3783,14 @@ def render_monthly_preview_workspace() -> None:
         result,
         show_print=True,
     )
+    history_context = st.session_state.get("monthly-preview-history-context") or {}
+    if history_context:
+        _render_monthly_history(
+            history_context.get("sign", result.get("sign", DEFAULT_SIGN)),
+            int(history_context.get("year", local_today.year)),
+            int(history_context.get("month", local_today.month)),
+            str(history_context.get("timezone_name") or browser_timezone_name()),
+        )
 
 
 def monthly_preview_page() -> None:
@@ -4388,6 +4602,8 @@ def monthly_sign_page(sign: str) -> None:
         unsafe_allow_html=True,
     )
 
+    _render_monthly_history(sign, SEO_YEAR, SEO_MONTH, DEFAULT_TIMEZONE)
+
     if not EDITOR_PREVIEW_ENABLED:
         st.markdown("## Get the complete personalised month")
         st.markdown(
@@ -4720,7 +4936,7 @@ def natal_snapshot_page() -> None:
 
     st.markdown(
         "**Next layer:** compare these persistent natal patterns with the next 12 months — "
-        "showing which pattern is active, when it peaks and when the pressure changes."
+        "showing which pattern is active, when it peaks and when the conditions change."
     )
     st.markdown(
         '<a class="lean-monthly-link" href="/timing-map">Build your 12-Month Timing Map →</a>',
@@ -4749,7 +4965,7 @@ def _timing_strip_html(report) -> str:
             f'<div class="timing-month"><span>{escape(label)}</span>'
             f'<i style="height:{height}px;opacity:{opacity:.2f}"></i></div>'
         )
-    return '<div class="timing-strip" aria-label="Relative timing intensity by month">' + "".join(cells) + '</div>'
+    return '<div class="timing-strip" aria-label="Transit intensity by month">' + "".join(cells) + '</div>'
 
 
 def _timing_birth_snapshot():
@@ -4911,15 +5127,15 @@ def _timing_birth_snapshot():
 
 def timing_map_page() -> None:
     set_page_metadata(
-        "12-Month Timing Map | Luna Convergence",
-        "A personalised 12-month astrology timing map showing the strongest natal transit windows, exact passes and the evidence behind them.",
+        "Personal Transits | Luna Convergence",
+        "A personalised 12-month transit map showing when major natal activations strengthen, peak, change and release.",
         "/timing-map",
     )
     st.markdown('<section class="timing-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Pilot · personalised timing</div>', unsafe_allow_html=True)
-    st.markdown('<div class="editorial-title">Your 12-Month<br>Timing Map</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Pilot · personal transits</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">Your 12-Month<br>Personal Transits</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="timing-intro">This is not another Sun-sign year. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto across the next 365 days, ranks the strongest contacts and shows the story first. The calculation stays one click underneath.</div>',
+        '<div class="timing-intro">This is not another Sun-sign year. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto across the next 365 days, ranks the strongest contacts and shows the strongest periods first. The calculation stays one click underneath.</div>',
         unsafe_allow_html=True,
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
@@ -4954,6 +5170,7 @@ def timing_map_page() -> None:
             st.session_state["timing-map-report-v330"] = report
             st.session_state["timing-map-summary-v330"] = natal_profile_summary(snapshot)
             st.session_state["timing-map-time-known-v330"] = bool(snapshot.birth_time_known)
+            st.session_state["timing-map-birth-date-v334"] = getattr(snapshot, "birth_date", None) or (prefill_out or {}).get("birth_date")
             track_event(
                 "timing_map_generated",
                 {
@@ -4983,8 +5200,12 @@ def timing_map_page() -> None:
 </div>''',
         unsafe_allow_html=True,
     )
-    st.markdown("**Relative timing intensity**")
+    st.markdown("**Transit intensity**")
     st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
+    st.caption(
+        "Intensity measures how strongly major transits cluster in time. It is deliberately neutral: "
+        "a peak can describe support, friction, change, opportunity or a mixed period. Read the story beneath the peak to see its type."
+    )
 
     if not report.stories:
         st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
@@ -5013,6 +5234,14 @@ def timing_map_page() -> None:
 </article>''',
                 unsafe_allow_html=True,
             )
+            birth_date_for_history = st.session_state.get("timing-map-birth-date-v334")
+            if isinstance(birth_date_for_history, str):
+                try:
+                    birth_date_for_history = date.fromisoformat(birth_date_for_history)
+                except Exception:
+                    birth_date_for_history = None
+            _render_transit_history(story, birth_date_for_history)
+
             with st.expander("Why Luna sees this"):
                 st.markdown(
                     f"**Transit {story.transit_planet} {story.aspect} natal {story.natal_target}**"
@@ -5028,7 +5257,7 @@ def timing_map_page() -> None:
                 )
 
     st.markdown(
-        '<div class="timing-test"><strong>Pilot price test</strong><br>Would you pay <strong>A$7.95</strong> for this as an instant personal report with a clean PDF copy? No payment is collected in this pilot.</div>',
+        "<div class=\"timing-test\"><strong>Personal Transits · pilot</strong><br>This is Luna's paid-value layer: personal timing, major peaks, historical context and the difference between then and now. Pricing is still being tested; no payment is collected in this pilot.</div>",
         unsafe_allow_html=True,
     )
     vote_cols = st.columns(3, gap="small")
