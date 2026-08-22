@@ -4784,7 +4784,7 @@ _MONTHLY_READER_LABELS = {
     6: "work + routine",
     7: "relationships + agreements",
     8: "shared money + obligations",
-    9: "the wider world",
+    9: "travel + expansion",
     10: "career + public direction",
     11: "networks + future plans",
     12: "rest + closure",
@@ -5367,21 +5367,25 @@ def _monthly_is_technical(text: str) -> bool:
 
 def _monthly_internal_text(text: str) -> bool:
     low = str(text or "").lower()
-    return any(
-        phrase in low
-        for phrase in (
-            "promoted through the connected event cluster",
-            "connected event cluster",
-            "convergence graph",
-            "moves into house ",
-            "scenario slug",
-            "debug",
-            "internal",
-            "editorial_status",
-            "travel_legal_disruption",
-            "opportunity_convergence",
-        )
+    internal_phrases = (
+        "promoted through the connected event cluster",
+        "connected event cluster",
+        "convergence graph",
+        "moves into house ",
+        "scenario slug",
+        "editorial_status",
+        "travel_legal_disruption",
+        "opportunity_convergence",
+        "hierarchy background",
+        "house weight",
+        "direct event support",
+        "relevance ",
+        "relevance:",
+        "/100",
+        "debug",
+        "internal",
     )
+    return any(phrase in low for phrase in internal_phrases)
 
 
 def _monthly_extract_houses(value) -> set[int]:
@@ -5458,6 +5462,8 @@ def _monthly_body_score(text: str, path_text: str = "") -> int:
         score += 10
     if _monthly_internal_text(value):
         score -= 150
+    if value.lower().startswith("ask the question this development makes unavoidable"):
+        score -= 220
     if value.lower().startswith("moves into house"):
         score -= 120
     if "astrology is a symbolic" in value.lower():
@@ -5578,11 +5584,138 @@ def _monthly_candidate_from_container(value, path=()):
     }
 
 
+
+def _monthly_clean_reader_paragraph(event_key: str, paragraph: str) -> str:
+    """Remove template/debug/technical leakage while preserving useful interpretation."""
+    value = re.sub(r"\s+", " ", str(paragraph or "")).strip()
+    if not value:
+        return ""
+
+    low = value.lower()
+
+    # Generic template sentence adds nothing because every event already has a Your Move.
+    if low.startswith("ask the question this development makes unavoidable"):
+        return ""
+
+    if _monthly_internal_text(value):
+        return ""
+
+    # Internal House-9 taxonomy may remain in the engine, never as literal customer copy.
+    value = value.replace(
+        "travel, publishing, law, education and foreign markets",
+        "travel, study, publishing, legal matters and international opportunities",
+    )
+    value = value.replace(
+        "Travel, publishing, law, education and foreign markets",
+        "Travel, study, publishing, legal matters and international opportunities",
+    )
+
+    # Technical aspect lists belong in evidence, not in the human story.
+    if event_key == "solar_eclipse":
+        aspect_hits = re.findall(
+            r"\b(?:Mercury|Venus|Mars|Jupiter|Saturn|Uranus|Neptune|Pluto)\s+"
+            r"(?:trine|sextile|square|opposition|conjunct(?:ion)?)\s+"
+            r"(?:Mercury|Venus|Mars|Jupiter|Saturn|Uranus|Neptune|Pluto)\b",
+            value,
+            flags=re.I,
+        )
+        if len(aspect_hits) >= 2:
+            return "There is support around the decision, but it does not remove the need to choose."
+
+    return value
+
+
+def _monthly_clean_context_paragraph(paragraph: str) -> str:
+    """Translate the concentration-theme prose without exposing taxonomy or planet lists."""
+    value = re.sub(r"\s+", " ", str(paragraph or "")).strip()
+    if not value or _monthly_internal_text(value):
+        return ""
+
+    low = value.lower()
+
+    # The first production sentence can be a planet-by-planet technical inventory.
+    if "sun (" in low and "mercury (" in low and "jupiter (" in low:
+        return (
+            "Several parts of the month are concentrating in the same life area, "
+            "so what looks like separate issues may actually be one connected story."
+        )
+
+    value = value.replace(
+        "travel, publishing, law, education and foreign markets",
+        "outward-facing plans and opportunities",
+    )
+    value = value.replace(
+        "Travel, publishing, law, education and foreign markets",
+        "Outward-facing plans and opportunities",
+    )
+
+    if "one connected story" in value.lower() and "reacting to each transit separately" in value.lower():
+        return "Several questions in the same life area are converging into one decision."
+
+    return value
+
+
+def _monthly_clean_final_step(step: str) -> str:
+    """Translate engine-ish action language into ordinary reader language."""
+    value = re.sub(r"\s+", " ", str(step or "")).strip()
+    replacements = (
+        ("before the pressure peak where possible", "before late-month demands intensify"),
+        ("as the difficult cluster builds", "as competing demands build"),
+        ("when late pressure spreads into", "when late-month demands reach"),
+        ("wider horizons moves", "outward-facing decisions"),
+        ("wider horizons", "outward-facing plans"),
+        ("private foundations", "private life"),
+    )
+    for old, new in replacements:
+        value = value.replace(old, new)
+    return value
+
+
 _MONTHLY_CANONICAL_EVENTS = (
-    {"key":"sun_saturn","match":r"\bsun\s+trine\s+saturn\b","day":7,"date_label":"07 AUG 2026","transit":"Sun trine Saturn","signal":"SUPPORT","default_influence":"1–10 August 2026"},
-    {"key":"solar_eclipse","match":r"\b(?:total\s+)?solar\s+eclipse\b|\beclipse\s+in\s+leo\b","day":13,"date_label":"13 AUG 2026","transit":"Total Solar Eclipse in Leo","signal":"DECISION","default_influence":"11–20 August 2026"},
-    {"key":"venus_jupiter","match":r"\bvenus\s+sextile\s+jupiter\b","day":18,"date_label":"18–21 AUG 2026","transit":"Venus sextile Jupiter","signal":"OPENING","default_influence":"18–21 August 2026"},
-    {"key":"lunar_eclipse","match":r"\bpartial\s+lunar\s+eclipse\b|\blunar\s+eclipse\b|\beclipse\s+in\s+pisces\b","day":28,"date_label":"28 AUG 2026","transit":"Partial Lunar Eclipse in Pisces","signal":"CHANGE","default_influence":"21–31 August 2026"},
+    {
+        "key":"sun_saturn",
+        "match":r"\bsun\s+trine\s+saturn\b",
+        "day":7,
+        "date_label":"07 AUG 2026",
+        "transit":"Sun trine Saturn",
+        "signal":"SUPPORT",
+        "default_influence":"1–10 August 2026",
+        "reader_title":"The first opening becomes practical",
+        "reader_move":"",
+    },
+    {
+        "key":"solar_eclipse",
+        "match":r"\b(?:total\s+)?solar\s+eclipse\b|\beclipse\s+in\s+leo\b",
+        "day":13,
+        "date_label":"13 AUG 2026",
+        "transit":"Total Solar Eclipse in Leo",
+        "signal":"DECISION",
+        "default_influence":"11–20 August 2026",
+        "reader_title":"The opportunity now asks for commitment",
+        "reader_move":"",
+    },
+    {
+        "key":"venus_jupiter",
+        "match":r"\bvenus\s+sextile\s+jupiter\b",
+        "day":18,
+        "date_label":"18–21 AUG 2026",
+        "transit":"Venus sextile Jupiter",
+        "signal":"OPENING",
+        "default_influence":"18–21 August 2026",
+        "reader_title":"Chemistry gets a chance to prove itself",
+        "reader_move":"Enjoy what opens. Judge it by what remains when timing and responsibility return.",
+    },
+    {
+        "key":"lunar_eclipse",
+        "match":r"\bpartial\s+lunar\s+eclipse\b|\blunar\s+eclipse\b|\beclipse\s+in\s+pisces\b",
+        "day":28,
+        "date_label":"28 AUG 2026",
+        "transit":"Partial Lunar Eclipse in Pisces",
+        "signal":"CHANGE",
+        "default_influence":"21–31 August 2026",
+        "reader_title":"The decision reaches home",
+        "reader_move":"",
+    },
 )
 
 
@@ -5677,6 +5810,19 @@ def _monthly_canonical_events(narrative, result) -> list[dict]:
         for candidate in family:
             houses |= set(candidate.get("houses") or set())
 
+        clean_body = []
+        seen_body = set()
+        for paragraph in body:
+            cleaned = _monthly_clean_reader_paragraph(spec["key"], paragraph)
+            if cleaned and cleaned.lower() not in seen_body:
+                seen_body.add(cleaned.lower())
+                clean_body.append(cleaned)
+
+        reader_title = spec.get("reader_title") or title
+        reader_move = spec.get("reader_move") or move
+        if reader_move:
+            reader_move = _monthly_clean_final_step(reader_move)
+
         events.append({
             "key":spec["key"],
             "day":spec["day"],
@@ -5684,9 +5830,9 @@ def _monthly_canonical_events(narrative, result) -> list[dict]:
             "transit":spec["transit"],
             "signal":spec["signal"],
             "influence":influence,
-            "title":title,
-            "body":body,
-            "move":move,
+            "title":reader_title,
+            "body":clean_body,
+            "move":reader_move,
             "houses":houses,
         })
 
@@ -5832,11 +5978,23 @@ def _monthly_history_match_for_event(matches, event, used_years):
         shared = set(item.get("shared_houses") or [])
         now_only = set(item.get("current_only") or [])
         then_only = set(item.get("past_only") or [])
-        score = len(event_houses & shared)*8 + len(event_houses & now_only)*4 + len(event_houses & then_only)*2
-        if past_year not in used_years:
-            score += 3
-        scored.append((score, item))
-    return max(scored, key=lambda pair: pair[0])[1]
+        raw_score = (
+            len(event_houses & shared) * 8
+            + len(event_houses & now_only) * 4
+            + len(event_houses & then_only) * 2
+        )
+        scored.append((raw_score, past_year, item))
+
+    scored.sort(key=lambda row: row[0], reverse=True)
+    best_score, best_year, best_item = scored[0]
+
+    # Editorial rule: if a different unused year is nearly as strong, prefer it.
+    # This avoids a repetitive page without falsifying the historical match.
+    for score, year, item in scored:
+        if year not in used_years and score >= best_score - 4:
+            return item
+
+    return best_item
 
 
 def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years):
@@ -5857,7 +6015,13 @@ def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_y
     now_only = item.get("current_only") or []
     then_only = item.get("past_only") or []
 
-    st.markdown("### Have you been here before?")
+    echo_heading = {
+        "sun_saturn": "Have you been here before?",
+        "solar_eclipse": "A similar turning point",
+        "venus_jupiter": "This opening has an echo",
+        "lunar_eclipse": "Think back",
+    }.get(event.get("key"), "Have you been here before?")
+    st.markdown(f"### {echo_heading}")
 
     age_text = ""
     if birth_date_value:
@@ -5897,10 +6061,17 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
 
     context_title, context_body = _monthly_context_section(narrative, result)
     if context_title or context_body:
-        st.markdown('<div class="timing-meta" style="margin-top:1.6rem">WHERE THE SKY IS GATHERING</div>', unsafe_allow_html=True)
-        if context_title and context_title.lower() != _monthly_main_headline(narrative, sign).lower():
-            st.markdown(f"## {context_title}")
+        # context_title remains available to the engine but is intentionally not rendered.
+        st.markdown(
+            '<div class="timing-meta" style="margin-top:1.6rem">WHERE THE SKY IS GATHERING</div>',
+            unsafe_allow_html=True,
+        )
+        visible_context = []
         for paragraph in context_body[:2]:
+            cleaned = _monthly_clean_context_paragraph(paragraph)
+            if cleaned and cleaned not in visible_context:
+                visible_context.append(cleaned)
+        for paragraph in visible_context[:1]:
             st.markdown(paragraph)
 
     events = _monthly_canonical_events(narrative, result)
@@ -5948,27 +6119,50 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
                 st.markdown(labels)
 
     st.markdown("## Where it lands")
-    rendered_area = False
-    for category in ("LOVE","WORK","MONEY"):
-        title, body = _monthly_area_editorial(narrative, result, category)
-        if title or body:
-            rendered_area = True
-            st.markdown(f'<div class="timing-meta">{category}</div>', unsafe_allow_html=True)
-            if title:
-                st.markdown(f"### {title}")
-            if body:
-                st.markdown(body)
 
-    if not rendered_area:
-        dominant = result.get("dominant_houses") or []
-        for item in dominant[:3]:
-            if isinstance(item, dict) and item.get("house"):
-                house = int(item["house"])
-                st.markdown(f"**{_monthly_reader_house_label(house).upper()}**")
-                try:
-                    st.markdown(HOUSE_STRATEGY[house]["action"])
-                except Exception:
-                    pass
+    area_defaults = {
+        "LOVE": (
+            "Chemistry opens the door. Follow-through decides what stays.",
+            "Romance, creativity or pleasure offers genuine relief from the month's main demands. "
+            "Use the relief without asking it to carry the whole decision.",
+        ),
+        "WORK": (
+            "The path moves from possibility to decision.",
+            "The strongest work pattern centres on travel, study, publishing, legal matters or an international opportunity becoming more concrete.",
+        ),
+        "MONEY": (
+            "Shared resources need clear ownership.",
+            "The strongest money pattern centres on shared, borrowed or externally controlled resources. Clarify what belongs to whom before commitment hardens.",
+        ),
+    }
+
+    for category in ("LOVE", "WORK", "MONEY"):
+        extracted_title, extracted_body = _monthly_area_editorial(narrative, result, category)
+        fallback_title, fallback_body = area_defaults[category]
+
+        # Customer page never displays scoring/debug output.
+        if (
+            not extracted_title
+            or _monthly_internal_text(extracted_title)
+            or re.search(r"\b(?:relevance|house weight|direct event support|/100)\b", extracted_title, re.I)
+        ):
+            visible_title = fallback_title
+        else:
+            # Preserve the proven editorial titles rather than backend classification names.
+            visible_title = fallback_title
+
+        if (
+            not extracted_body
+            or _monthly_internal_text(extracted_body)
+            or re.search(r"\b(?:relevance|house weight|direct event support|/100)\b", extracted_body, re.I)
+        ):
+            visible_body = fallback_body
+        else:
+            visible_body = _monthly_clean_reader_paragraph("", extracted_body) or fallback_body
+
+        st.markdown(f'<div class="timing-meta">{category}</div>', unsafe_allow_html=True)
+        st.markdown(f"### {visible_title}")
+        st.markdown(visible_body)
 
     move_title, move_steps = _monthly_action_plan(narrative, result)
     st.markdown("## Your move")
@@ -5976,7 +6170,9 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         st.markdown(f"### {move_title}")
     if move_steps:
         for index, step in enumerate(move_steps, start=1):
-            st.markdown(f"{index}. {step}")
+            cleaned_step = _monthly_clean_final_step(step)
+            if cleaned_step:
+                st.markdown(f"{index}. {cleaned_step}")
     else:
         fallback = next((event["move"] for event in reversed(events) if event["move"]), "")
         if fallback:
