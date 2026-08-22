@@ -4815,7 +4815,7 @@ def _render_monthly_past_echo_strip(
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">PAST CONTEXT</div>', unsafe_allow_html=True)
-    st.markdown("## Have you been somewhere like this before?")
+    st.markdown("### Have you been somewhere like this before?")
     st.markdown(
         "Before reading the month forward, Luna checks the closest earlier sky patterns. "
         "They are reference points, not claims that the same life event must repeat."
@@ -4928,129 +4928,200 @@ def _render_monthly_personal_sky(snapshot) -> None:
 
 def _render_monthly_flowing_report(narrative, result) -> None:
     """
-    Render the existing production Monthly with a flatter hierarchy:
-    one major hero headline, then small section labels and contextual subheads.
-    This preserves the production calculations/content while changing how
-    Streamlit presents the headings.
+    Render the production Monthly, then normalise the presentation to match
+    the Personal Transits reading rhythm: one headline, one chronological
+    sequence, one repeated event format.
     """
-    original_markdown = st.markdown
+    render_production_monthly_report(narrative, result, show_print=True)
 
-    def flowing_markdown(body, *args, **kwargs):
-        if isinstance(body, str):
-            stripped = body.strip()
+    st.components.v1.html(
+        r"""
+<script>
+(function () {
+  const doc = window.parent.document;
 
-            # "How August unfolds" is a section label, not another major headline.
-            body = re.sub(
-                r"(?im)^##\s+How\s+([A-Za-z]+)\s+unfolds\s*$",
-                r'<div class="monthly-flow-label">HOW \1 UNFOLDS</div>',
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#\s+How\s+([A-Za-z]+)\s+unfolds\s*$",
-                r'<div class="monthly-flow-label">HOW \1 UNFOLDS</div>',
-                body,
-            )
+  function norm(s) {
+    return (s || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
 
-            # "Luna's read" becomes a quiet contextual label.
-            body = re.sub(
-                r"(?im)^\s*Luna['’]s\s+read\s*$",
-                r'<div class="monthly-flow-label">SUPPORTING SIGNAL</div>',
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#{1,4}\s+Luna['’]s\s+read\s*$",
-                r'<div class="monthly-flow-label">SUPPORTING SIGNAL</div>',
-                body,
-            )
+  function findAll() {
+    return Array.from(doc.querySelectorAll('h1,h2,h3,h4,p,div,span,strong'));
+  }
 
-            # The large 18–21 Aug signal is another dated subhead, not a second headline.
-            body = re.sub(
-                r"(?im)^##\s+Around\s+([0-9]{1,2})-([0-9]{1,2})\s+([A-Za-z]+)\s+([0-9]{4}),\s*(.+)$",
-                r'<div class="monthly-flow-date">\1–\2 \3 \4</div>\n### \5',
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#\s+Around\s+([0-9]{1,2})-([0-9]{1,2})\s+([A-Za-z]+)\s+([0-9]{4}),\s*(.+)$",
-                r'<div class="monthly-flow-date">\1–\2 \3 \4</div>\n### \5',
-                body,
-            )
+  function findExact(rx) {
+    return findAll().find(el => rx.test(norm(el.textContent)));
+  }
 
-            # Dated story headlines should read like transit subheads, not new page titles.
-            body = re.sub(
-                r"(?im)^###\s+(The wider road .+)$",
-                r'#### \1',
-                body,
-            )
-
-            # "Where the story lands" and "Your move" are structural labels.
-            body = re.sub(
-                r"(?im)^#{1,4}\s+Where the story lands\s*$",
-                r'<div class="monthly-flow-label">WHERE IT LANDS</div>',
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#{1,4}\s+Your move\s*$",
-                r'<div class="monthly-flow-label">YOUR MOVE</div>',
-                body,
-            )
-
-            # Make sure injected HTML can render.
-            if "monthly-flow-" in body and "unsafe_allow_html" not in kwargs:
-                kwargs["unsafe_allow_html"] = True
-
-        return original_markdown(body, *args, **kwargs)
-
-    # CSS applies only to the visual classes injected above; the black hero remains untouched.
-    original_markdown(
-        """
-        <style>
-        .monthly-flow-label{
-            margin:1.9rem 0 .45rem 0;
-            padding-top:.65rem;
-            border-top:1px solid rgba(0,0,0,.40);
-            font-family:"IBM Plex Mono",monospace;
-            font-size:.66rem;
-            line-height:1.2;
-            letter-spacing:.08em;
-            text-transform:uppercase;
+  function ensureCss() {
+    if (doc.getElementById('luna-monthly-one-flow-css')) return;
+    const style = doc.createElement('style');
+    style.id = 'luna-monthly-one-flow-css';
+    style.textContent = `
+      .luna-monthly-section-label{
+        margin:2rem 0 .65rem !important;
+        padding-top:.7rem !important;
+        border-top:1px solid rgba(0,0,0,.48) !important;
+        font-family:"IBM Plex Mono",monospace !important;
+        font-size:10px !important;
+        line-height:1.2 !important;
+        letter-spacing:.08em !important;
+        text-transform:uppercase !important;
+        font-weight:500 !important;
+      }
+      .luna-monthly-injected-row{
+        display:grid;
+        grid-template-columns:150px minmax(0,1fr);
+        gap:1.25rem;
+        padding:1.25rem 0 1.35rem;
+        border-bottom:1px solid rgba(0,0,0,.48);
+        background:#fff;
+      }
+      .luna-monthly-injected-date{
+        font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif;
+        font-size:clamp(27px,3vw,38px);
+        line-height:.95;
+      }
+      .luna-monthly-injected-transit{
+        margin-top:.4rem;
+        font-family:"IBM Plex Mono",monospace;
+        font-size:9px;
+        line-height:1.4;
+      }
+      .luna-monthly-injected-story h3{
+        margin:0 0 .55rem !important;
+        font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif !important;
+        font-size:clamp(20px,2.2vw,28px) !important;
+        line-height:1.06 !important;
+        font-weight:400 !important;
+      }
+      .luna-monthly-injected-story p{
+        margin:.35rem 0 0;
+        font-family:"Josefin Sans",Arial,sans-serif;
+        font-size:14px;
+        line-height:1.55;
+      }
+      @media(max-width:720px){
+        .luna-monthly-injected-row{
+          grid-template-columns:1fr;
+          gap:.45rem;
         }
-        .monthly-flow-date{
-            margin:1.15rem 0 .15rem 0;
-            font-family:"IBM Plex Mono",monospace;
-            font-size:.70rem;
-            line-height:1.2;
-            letter-spacing:.06em;
-            text-transform:uppercase;
-        }
-        /* Keep post-hero headings subordinate to the single editorial headline. */
-        .stMainBlockContainer h2{
-            font-size:clamp(1.65rem,3.1vw,2.35rem);
-            line-height:1.05;
-            margin-top:1.6rem;
-            margin-bottom:.55rem;
-        }
-        .stMainBlockContainer h3{
-            font-size:clamp(1.32rem,2.35vw,1.82rem);
-            line-height:1.08;
-            margin-top:.65rem;
-            margin-bottom:.45rem;
-        }
-        .stMainBlockContainer h4{
-            font-size:clamp(1.05rem,1.8vw,1.35rem);
-            line-height:1.12;
-            margin-top:.4rem;
-            margin-bottom:.35rem;
-        }
-        </style>
+      }
+    `;
+    doc.head.appendChild(style);
+  }
+
+  function closestUseful(el) {
+    if (!el) return null;
+    return el.closest('[data-testid="stMarkdownContainer"]') ||
+           el.closest('[data-testid="stVerticalBlock"]') ||
+           el.parentElement;
+  }
+
+  function apply() {
+    ensureCss();
+
+    // "How August unfolds" is the one timeline label, not a competing headline.
+    const how = findExact(/^how [a-z]+ unfolds$/i);
+    if (how) {
+      how.textContent = how.textContent.toUpperCase();
+      how.classList.add('luna-monthly-section-label');
+    }
+
+    // Find the formerly separate Luna's Read signal.
+    const signalHeadline = findAll().find(el =>
+      /^around \d{1,2}[-–]\d{1,2} [a-z]+ \d{4},/.test(norm(el.textContent))
+    );
+    if (!signalHeadline) return false;
+
+    const signalRoot = closestUseful(signalHeadline);
+    if (!signalRoot) return false;
+
+    const lines = (signalRoot.innerText || "")
+      .split("\n")
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    const headlineLine = lines.find(x =>
+      /^Around \d{1,2}[-–]\d{1,2} [A-Za-z]+ \d{4},/i.test(x)
+    ) || "";
+
+    const m = headlineLine.match(
+      /^Around\s+(\d{1,2})[-–](\d{1,2})\s+([A-Za-z]+)\s+(\d{4}),\s*(.*)$/i
+    );
+    if (!m) return false;
+
+    const dateText = `${m[1]}–${m[2]} ${m[3].slice(0,3).toUpperCase()}`;
+    const titleText = m[5].replace(/\.$/, "");
+
+    const transitLine = lines.find(x =>
+      /sextile|trine|square|opposition|conjunct|eclipse|retrograde/i.test(x)
+    ) || "";
+
+    const transitText = transitLine
+      .replace(/^signal\s*/i, "")
+      .replace(/^\d{1,2}[-–]\d{1,2}\s+[A-Za-z]+\s+\d{4}\s*·?\s*/i, "");
+
+    const bodyText = lines.filter(x =>
+      x !== headlineLine &&
+      x !== transitLine &&
+      !/^luna['’]s read$/i.test(x) &&
+      !/^signal$/i.test(x)
+    ).join(" ");
+
+    if (!doc.querySelector('.luna-monthly-injected-row')) {
+      const row = doc.createElement('div');
+      row.className = 'luna-monthly-injected-row';
+      row.innerHTML = `
+        <div>
+          <div class="luna-monthly-injected-date">${dateText}</div>
+          <div class="luna-monthly-injected-transit">${transitText}</div>
+        </div>
+        <div class="luna-monthly-injected-story">
+          <h3>${titleText}</h3>
+          <p>${bodyText}</p>
+        </div>
+      `;
+
+      // Put 18–21 AUG between 13 AUG and 28 AUG.
+      const aug28 = findAll().find(el => /^28 aug$/i.test(norm(el.textContent)));
+      const target = closestUseful(aug28);
+
+      if (target && target.parentElement) {
+        target.parentElement.insertBefore(row, target);
+        signalRoot.style.display = 'none';
+      } else {
+        return false;
+      }
+    }
+
+    // Hide the now-redundant "Luna's read" label if it remains separately rendered.
+    const lunaRead = findExact(/^luna['’]s read$/i);
+    if (lunaRead) {
+      const b = closestUseful(lunaRead);
+      if (b) b.style.display = 'none';
+    }
+
+    // Consequence summary uses a quiet label.
+    const lands = findExact(/^where the story lands$/i);
+    if (lands) {
+      lands.textContent = 'WHERE IT LANDS';
+      lands.classList.add('luna-monthly-section-label');
+    }
+
+    return true;
+  }
+
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    if (apply() || tries > 20) clearInterval(timer);
+  }, 180);
+})();
+</script>
         """,
-        unsafe_allow_html=True,
+        height=0,
+        width=0,
     )
-
-    st.markdown = flowing_markdown
-    try:
-        render_production_monthly_report(narrative, result, show_print=True)
-    finally:
-        st.markdown = original_markdown
 
 
 def monthly_sign_page(sign: str) -> None:
