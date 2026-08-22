@@ -3578,7 +3578,7 @@ def _render_monthly_history(
     if not matches:
         return
 
-    st.markdown("## Have you been somewhere like this before?")
+    st.markdown("### Have you been somewhere like this before?")
     st.markdown(
         "Luna looks backward for earlier months with a similar **sky structure**. "
         "The point is not to say that the same event repeats. It is to give the present month a reference point."
@@ -4925,6 +4925,134 @@ def _render_monthly_personal_sky(snapshot) -> None:
         pass
 
 
+
+def _render_monthly_flowing_report(narrative, result) -> None:
+    """
+    Render the existing production Monthly with a flatter hierarchy:
+    one major hero headline, then small section labels and contextual subheads.
+    This preserves the production calculations/content while changing how
+    Streamlit presents the headings.
+    """
+    original_markdown = st.markdown
+
+    def flowing_markdown(body, *args, **kwargs):
+        if isinstance(body, str):
+            stripped = body.strip()
+
+            # "How August unfolds" is a section label, not another major headline.
+            body = re.sub(
+                r"(?im)^##\s+How\s+([A-Za-z]+)\s+unfolds\s*$",
+                r'<div class="monthly-flow-label">HOW \1 UNFOLDS</div>',
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#\s+How\s+([A-Za-z]+)\s+unfolds\s*$",
+                r'<div class="monthly-flow-label">HOW \1 UNFOLDS</div>',
+                body,
+            )
+
+            # "Luna's read" becomes a quiet contextual label.
+            body = re.sub(
+                r"(?im)^\s*Luna['’]s\s+read\s*$",
+                r'<div class="monthly-flow-label">SUPPORTING SIGNAL</div>',
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#{1,4}\s+Luna['’]s\s+read\s*$",
+                r'<div class="monthly-flow-label">SUPPORTING SIGNAL</div>',
+                body,
+            )
+
+            # The large 18–21 Aug signal is another dated subhead, not a second headline.
+            body = re.sub(
+                r"(?im)^##\s+Around\s+([0-9]{1,2})-([0-9]{1,2})\s+([A-Za-z]+)\s+([0-9]{4}),\s*(.+)$",
+                r'<div class="monthly-flow-date">\1–\2 \3 \4</div>\n### \5',
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#\s+Around\s+([0-9]{1,2})-([0-9]{1,2})\s+([A-Za-z]+)\s+([0-9]{4}),\s*(.+)$",
+                r'<div class="monthly-flow-date">\1–\2 \3 \4</div>\n### \5',
+                body,
+            )
+
+            # Dated story headlines should read like transit subheads, not new page titles.
+            body = re.sub(
+                r"(?im)^###\s+(The wider road .+)$",
+                r'#### \1',
+                body,
+            )
+
+            # "Where the story lands" and "Your move" are structural labels.
+            body = re.sub(
+                r"(?im)^#{1,4}\s+Where the story lands\s*$",
+                r'<div class="monthly-flow-label">WHERE IT LANDS</div>',
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#{1,4}\s+Your move\s*$",
+                r'<div class="monthly-flow-label">YOUR MOVE</div>',
+                body,
+            )
+
+            # Make sure injected HTML can render.
+            if "monthly-flow-" in body and "unsafe_allow_html" not in kwargs:
+                kwargs["unsafe_allow_html"] = True
+
+        return original_markdown(body, *args, **kwargs)
+
+    # CSS applies only to the visual classes injected above; the black hero remains untouched.
+    original_markdown(
+        """
+        <style>
+        .monthly-flow-label{
+            margin:1.9rem 0 .45rem 0;
+            padding-top:.65rem;
+            border-top:1px solid rgba(0,0,0,.40);
+            font-family:"IBM Plex Mono",monospace;
+            font-size:.66rem;
+            line-height:1.2;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+        }
+        .monthly-flow-date{
+            margin:1.15rem 0 .15rem 0;
+            font-family:"IBM Plex Mono",monospace;
+            font-size:.70rem;
+            line-height:1.2;
+            letter-spacing:.06em;
+            text-transform:uppercase;
+        }
+        /* Keep post-hero headings subordinate to the single editorial headline. */
+        .stMainBlockContainer h2{
+            font-size:clamp(1.65rem,3.1vw,2.35rem);
+            line-height:1.05;
+            margin-top:1.6rem;
+            margin-bottom:.55rem;
+        }
+        .stMainBlockContainer h3{
+            font-size:clamp(1.32rem,2.35vw,1.82rem);
+            line-height:1.08;
+            margin-top:.65rem;
+            margin-bottom:.45rem;
+        }
+        .stMainBlockContainer h4{
+            font-size:clamp(1.05rem,1.8vw,1.35rem);
+            line-height:1.12;
+            margin-top:.4rem;
+            margin-bottom:.35rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown = flowing_markdown
+    try:
+        render_production_monthly_report(narrative, result, show_print=True)
+    finally:
+        st.markdown = original_markdown
+
+
 def monthly_sign_page(sign: str) -> None:
     """Unified free Monthly: birth context first, one editorial report, one history section."""
     title = f"{sign} August 2026 Horoscope | Luna Convergence"
@@ -4974,8 +5102,7 @@ def monthly_sign_page(sign: str) -> None:
         birth_date_value=birth_date_value,
     )
 
-    st.markdown('<div class="eyebrow">THE STORY OF YOUR MONTH</div>', unsafe_allow_html=True)
-    render_production_monthly_report(narrative, result, show_print=True)
+    _render_monthly_flowing_report(narrative, result)
 
 
     st.markdown("## Something specific on your mind?")
