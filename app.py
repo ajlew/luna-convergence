@@ -4662,7 +4662,6 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
         unsafe_allow_html=True,
     )
     st.markdown('<div class="eyebrow">FREE · PERSONAL MONTH</div>', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">YOUR AUGUST · FREE PERSONAL MONTH</div>', unsafe_allow_html=True)
     st.markdown(
         "Add the birth details you know. Luna uses them to anchor the sky map, show your age at earlier echoes, "
         "and add natal geometry only where the data supports it."
@@ -5222,158 +5221,502 @@ def _render_monthly_full_meat_unified(
     birth_date_value: date | None,
 ) -> None:
     """
-    Preserve the complete Monthly production report, but enforce one visual hierarchy:
-    one hero headline; all other headings are contextual subheads/labels.
+    Restore the complete production Monthly content.
+    Only presentation is unified so it reads closer to Personal Transits.
+    No event extraction, no DOM reordering, no narrative loss.
     """
-    original_markdown = st.markdown
-
-    def monthly_markdown(body, *args, **kwargs):
-        if isinstance(body, str):
-            # One hero only: demote the "Where the sky is gathering" story headline.
-            body = re.sub(
-                r"(?im)^##\s+Visibility wants a larger stage\s*$",
-                r"### Visibility wants a larger stage",
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#\s+Visibility wants a larger stage\s*$",
-                r"### Visibility wants a larger stage",
-                body,
-            )
-
-            # "How August unfolds" is a section label, not another headline.
-            body = re.sub(
-                r"(?im)^#{1,3}\s+How August unfolds\s*$",
-                r'<div class="monthly-section-label">HOW AUGUST UNFOLDS</div>',
-                body,
-            )
-
-            # "Luna's read" is not a separate chapter.
-            body = re.sub(
-                r"(?im)^#{0,3}\s*Luna['’]s read\s*$",
-                r'<div class="monthly-section-label">18–21 AUG · SUPPORTING SIGNAL</div>',
-                body,
-            )
-
-            # The 18–21 Aug headline should match the dated story titles, not become a second hero.
-            body = re.sub(
-                r"(?im)^##\s+Around 18-21 August 2026,\s*(.+)$",
-                r"### \1",
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#\s+Around 18-21 August 2026,\s*(.+)$",
-                r"### \1",
-                body,
-            )
-
-            # Where it lands / Your move become structural labels.
-            body = re.sub(
-                r"(?im)^#{1,3}\s+Where the story lands\s*$",
-                r'<div class="monthly-section-label">WHERE IT LANDS</div>',
-                body,
-            )
-            body = re.sub(
-                r"(?im)^#{1,3}\s+Your move\s*$",
-                r'<div class="monthly-section-label">YOUR MOVE</div>',
-                body,
-            )
-
-            if "monthly-section-label" in body:
-                kwargs["unsafe_allow_html"] = True
-
-        return original_markdown(body, *args, **kwargs)
-
-    original_markdown(
+    st.markdown(
         """
         <style>
-        .monthly-section-label{
-            margin:1.8rem 0 .65rem 0;
-            padding-top:.7rem;
-            border-top:1px solid rgba(0,0,0,.5);
-            font-family:"IBM Plex Mono",monospace;
-            font-size:.66rem;
-            line-height:1.25;
-            letter-spacing:.08em;
-            text-transform:uppercase;
-        }
-
-        /* One hero headline only. All report subheads stay clearly subordinate. */
-        .forecast-copy h2,
-        .forecast-copy h3,
-        .relationship-card h3{
-            font-size:clamp(1.35rem,2.5vw,1.95rem) !important;
-            line-height:1.08 !important;
-            font-weight:400 !important;
-        }
-
-        /* Remove the separate cream-feature look from the mid-month signal. */
+        /* Keep the full production report, but remove the 'magazine insert' look. */
         .relationship-card{
             background:#fff !important;
             border-left:0 !important;
             border-right:0 !important;
-            border-top:1px solid rgba(0,0,0,.5) !important;
-            border-bottom:1px solid rgba(0,0,0,.5) !important;
-            border-radius:0 !important;
-            padding:1rem 0 !important;
-            margin:1.1rem 0 !important;
+            border-top:1px solid rgba(0,0,0,.55) !important;
+            border-bottom:1px solid rgba(0,0,0,.55) !important;
+            padding:1.15rem 0 !important;
+            margin:1.35rem 0 !important;
+        }
+        .relationship-card h3{
+            font-size:clamp(1.45rem,2.6vw,2rem) !important;
+            line-height:1.08 !important;
+            margin:.35rem 0 .55rem !important;
+        }
+        .relationship-card p{
+            font-size:1rem !important;
+            line-height:1.58 !important;
         }
 
-        /* Give every dated row breathing room so 13 AUG and 28 AUG cannot collide. */
-        .monthly-briefing > *,
+        /* Dated monthly entries should feel like the transit stories: same rhythm, less card-ness. */
+        .monthly-briefing,
         .briefing-row,
         .timeline-row,
         .monthly-timeline-row{
-            clear:both !important;
-            display:grid !important;
-            grid-template-columns:150px minmax(0,1fr) !important;
-            column-gap:1.25rem !important;
-            row-gap:.25rem !important;
-            width:100% !important;
-            padding:1.15rem 0 1.25rem !important;
-            margin:0 !important;
-            border-bottom:1px solid rgba(0,0,0,.45) !important;
             background:#fff !important;
-            box-sizing:border-box !important;
+            box-shadow:none !important;
+            border-radius:0 !important;
         }
 
-        .monthly-briefing{
-            display:block !important;
-            width:100% !important;
+        /* Consequence summaries should not compete with the main story. */
+        .area-strip{
+            margin:1.6rem 0 !important;
+        }
+        .area-note{
+            padding:1rem !important;
+        }
+        .area-note h3,
+        .area-note h4{
+            font-size:1.15rem !important;
+            line-height:1.12 !important;
         }
 
-        @media(max-width:720px){
-            .monthly-briefing > *,
-            .briefing-row,
-            .timeline-row,
-            .monthly-timeline-row{
-                grid-template-columns:1fr !important;
-            }
-        }
-
-        /* Consequence summary and final action should not compete with the chronology. */
-        .area-strip{margin:1.4rem 0 !important;}
+        /* Final move should read like the transit page's action block. */
         .best-move{
-            margin:1.5rem 0 !important;
+            grid-template-columns:8rem 1fr !important;
+            margin:1.7rem 0 !important;
             padding:1rem 0 !important;
+        }
+        .best-move-copy{
+            font-size:1.3rem !important;
+            line-height:1.22 !important;
+        }
+
+        /* Reduce visual competition between section headings. */
+        .forecast-copy h2,
+        .forecast-copy h3{
+            margin-top:1.4rem !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown = monthly_markdown
-    try:
-        render_production_monthly_report(
-            narrative,
-            result,
-            show_print=True,
-        )
-    finally:
-        st.markdown = original_markdown
+    # Full, original production renderer: this is where the "meat" lives.
+    render_production_monthly_report(
+        narrative,
+        result,
+        show_print=True,
+    )
 
-    # History remains complete and visible until pipeline-level placement is available.
-    # Keep it once only, after the reading, to avoid duplicate blocks.
+    # Historical context remains available immediately after the complete reading
+    # until it can be attached to individual dated events inside the pipeline itself.
+    _render_monthly_history(
+        sign,
+        SEO_YEAR,
+        SEO_MONTH,
+        timezone_name,
+        birth_date_value=birth_date_value,
+    )
+
+
+
+def _monthly_deep_strings(value, path=(), depth=0, max_depth=7):
+    """Yield every meaningful string under a Monthly object with its structural path."""
+    if depth > max_depth:
+        return
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield from _monthly_deep_strings(child, path + (str(key),), depth + 1, max_depth)
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            yield from _monthly_deep_strings(child, path + (str(index),), depth + 1, max_depth)
+    elif isinstance(value, (date, datetime)):
+        yield path, value.isoformat()
+    elif isinstance(value, str):
+        cleaned = re.sub(r"\s+", " ", value).strip()
+        if cleaned:
+            yield path, cleaned
+
+
+def _monthly_container_strings(value, max_depth=5):
+    """Collect strings beneath a candidate container while keeping path hints."""
+    return list(_monthly_deep_strings(value, max_depth=max_depth))
+
+
+def _monthly_date_info(text: str):
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+    patterns = (
+        (r"\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s+(August|Aug)\s+(\d{4})\b", "range"),
+        (r"\b(\d{1,2})\s+(August|Aug)\s+(\d{4})\b", "single"),
+        (r"\b(\d{1,2})\s*AUG\b", "short"),
+        (r"\b2026[-/]08[-/](\d{1,2})\b", "iso"),
+    )
+    for pattern, kind in patterns:
+        m = re.search(pattern, text, re.I)
+        if not m:
+            continue
+        if kind == "range":
+            day = int(m.group(1))
+            label = f"{int(m.group(1)):02d}–{int(m.group(2)):02d} AUG"
+        elif kind in {"single", "short", "iso"}:
+            day = int(m.group(1))
+            label = f"{day:02d} AUG"
+        return day, label
+    return 99, ""
+
+
+def _monthly_is_technical(text: str) -> bool:
+    return bool(re.search(
+        r"\b(?:trine|sextile|square|opposition|conjunct|conjunction|eclipse|retrograde|station|ingress|orb|sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto)\b",
+        text,
+        re.I,
+    ))
+
+
+def _monthly_candidate_from_container(value, path=()):
+    """Build one rich event from any nested structure that contains a dated sky story."""
+    strings = _monthly_container_strings(value, max_depth=5)
+    if not strings:
+        return None
+
+    combined = " ".join(text for _, text in strings)
+    day, date_label = _monthly_date_info(combined)
+
+    if day == 99 and not _monthly_is_technical(combined):
+        return None
+
+    # Reject huge top-level month containers; they swallow unrelated sections.
+    total_chars = sum(len(t) for _, t in strings)
+    if total_chars > 5000:
+        return None
+
+    technical = []
+    influence = []
+    title_candidates = []
+    body_candidates = []
+    move_candidates = []
+
+    for pth, txt in strings:
+        low_path = " ".join(pth).lower()
+        low = txt.lower()
+
+        if "influence" in low_path or low.startswith("influence:"):
+            influence.append(re.sub(r"^influence:\s*", "", txt, flags=re.I))
+            continue
+
+        if any(k in low_path for k in ("move", "action", "recommend", "best_move", "luna_move")):
+            if 8 <= len(txt) <= 420:
+                move_candidates.append(txt)
+                continue
+
+        if _monthly_is_technical(txt) and len(txt) <= 180:
+            technical.append(txt)
+
+        # Strong title clues from paths.
+        if any(k in low_path for k in ("headline", "title", "hook", "story_title", "name")):
+            if 12 <= len(txt) <= 180 and not txt.lower().startswith("influence"):
+                title_candidates.append(txt)
+                continue
+
+        # Narrative "meat".
+        if len(txt) >= 55 and not txt.lower().startswith(("influence:", "luna's move:", "luna’s move:")):
+            body_candidates.append(txt)
+        elif 18 <= len(txt) <= 160 and not _monthly_is_technical(txt):
+            # A no-period, sentence-case line is often the editorial event title.
+            if txt.count(".") == 0 and txt.count(":") <= 1:
+                title_candidates.append(txt)
+
+        if txt.lower().startswith(("luna's move:", "luna’s move:")):
+            move_candidates.append(re.sub(r"^luna['’]s move:\s*", "", txt, flags=re.I))
+
+    # Prefer title candidates that are not the month-level hero and not date strings.
+    filtered_titles = []
+    for txt in title_candidates:
+        if _monthly_date_info(txt)[0] != 99:
+            continue
+        if len(txt) > 150:
+            continue
+        filtered_titles.append(txt)
+
+    title = filtered_titles[0] if filtered_titles else ""
+    body = []
+    seen_body = set()
+    for txt in body_candidates:
+        # Avoid reusing the title as body and avoid report-level disclaimers.
+        if txt == title:
+            continue
+        if any(bad in txt.lower() for bad in (
+            "astrology is a symbolic",
+            "daily, weekly and monthly are free",
+            "download complete monthly",
+            "print / save pdf",
+        )):
+            continue
+        key = txt.lower()
+        if key not in seen_body:
+            seen_body.add(key)
+            body.append(txt)
+
+    move = move_candidates[0] if move_candidates else ""
+    transit = technical[0] if technical else ""
+
+    # Event needs actual content, not just an aspect row.
+    richness = len(" ".join(body)) + len(move) * 2 + len(title) * 2
+    if richness < 70:
+        return None
+
+    return {
+        "day": day,
+        "date": date_label,
+        "transit": transit,
+        "title": title or transit or "The month changes here",
+        "body": body[:3],
+        "move": move,
+        "influence": influence[0] if influence else "",
+        "score": richness,
+        "path": " / ".join(path),
+    }
+
+
+def _monthly_rich_events(narrative, result) -> list[dict]:
+    """
+    Search every nested Monthly object, choose the richest event container for each
+    dated moment, then produce one chronological sequence.
+    """
+    roots = [("narrative", _monthly_plain(narrative)), ("result", _monthly_plain(result))]
+    candidates = []
+
+    def visit(value, path=(), depth=0):
+        if depth > 7:
+            return
+        if isinstance(value, dict):
+            candidate = _monthly_candidate_from_container(value, path)
+            if candidate:
+                candidates.append(candidate)
+            for key, child in value.items():
+                visit(child, path + (str(key),), depth + 1)
+        elif isinstance(value, list):
+            # Lists often contain the editorial timeline.
+            for index, child in enumerate(value):
+                visit(child, path + (str(index),), depth + 1)
+
+    for root_name, root in roots:
+        visit(root, (root_name,), 0)
+
+    # Prefer the richest event for each logical day/window.
+    by_day = {}
+    for event in candidates:
+        day = event["day"]
+        if day == 99:
+            # Undated technical items do not belong on the main timeline.
+            continue
+        current = by_day.get(day)
+        if current is None or event["score"] > current["score"]:
+            by_day[day] = event
+
+    events = [by_day[d] for d in sorted(by_day)]
+
+    # We want the major editorial spine, not every tiny aspect.
+    major_days = []
+    for event in events:
+        joined = " ".join([event["transit"], event["title"]] + event["body"])
+        major = bool(re.search(
+            r"\b(?:eclipse|trine saturn|sextile jupiter|solar eclipse|lunar eclipse)\b",
+            joined,
+            re.I,
+        ))
+        if major:
+            major_days.append(event)
+
+    # If the rich major filter finds the expected editorial events, use it.
+    if len(major_days) >= 3:
+        events = major_days
+
+    return events[:6]
+
+
+def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, index):
+    """Transit-style history block immediately under the current dated story."""
+    try:
+        matches = _monthly_history_matches(sign, SEO_YEAR, SEO_MONTH, timezone_name)
+    except Exception:
+        return
+    if not matches:
+        return
+
+    item = matches[min(index, len(matches) - 1)]
+    past_year = int(item["year"])
+    shared = item.get("shared_houses") or []
+    now_only = item.get("current_only") or []
+    then_only = item.get("past_only") or []
+
+    st.markdown('<div class="timing-history">', unsafe_allow_html=True)
+    st.markdown("#### Have you been here before?")
+
+    age_text = ""
+    if birth_date_value:
+        ref = date(past_year, SEO_MONTH, 15)
+        if ref >= birth_date_value:
+            age = ref.year - birth_date_value.year - (
+                (ref.month, ref.day) < (birth_date_value.month, birth_date_value.day)
+            )
+            age_text = f" You were about **{age}**."
+
+    st.markdown(f"Think back to **{SEO_MONTH_NAME} {past_year}**.{age_text}")
+
+    if shared:
+        shared_text = " + ".join(_monthly_reader_house_label(h) for h in shared[:2])
+        st.markdown(f"**What rhymes:** **{shared_text}** was active then too.")
+
+    if now_only and then_only:
+        st.markdown(
+            f"**What is different now:** **{_monthly_reader_house_label(now_only[0])}** carries more weight; "
+            f"the earlier month leaned more toward **{_monthly_reader_house_label(then_only[0])}**."
+        )
+    elif now_only:
+        st.markdown(f"**What is different now:** this month adds **{_monthly_reader_house_label(now_only[0])}**.")
+    elif then_only:
+        st.markdown(f"**What is different now:** the earlier month carried more **{_monthly_reader_house_label(then_only[0])}**.")
+
+    st.caption("What do you remember changing then?")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def _render_monthly_transit_style_v2(
+    narrative,
+    result,
+    *,
+    sign: str,
+    timezone_name: str,
+    birth_date_value: date | None,
+) -> None:
+    """
+    Monthly rebuilt in the same reading grammar as Personal Transits:
+    one headline, one chronological spine, rich prose, inline history.
+    """
+    st.markdown(
+        """
+        <style>
+        .monthly-v2-meta{
+            font-family:"IBM Plex Mono",monospace;
+            font-size:.67rem;
+            letter-spacing:.06em;
+            text-transform:uppercase;
+            margin-bottom:.35rem;
+        }
+        .monthly-v2-event{
+            border-top:1px solid rgba(0,0,0,.48);
+            padding:1.1rem 0 1.25rem;
+            margin:0;
+        }
+        .monthly-v2-event h2{
+            font-family:"Josefin Sans",Arial,sans-serif !important;
+            font-size:clamp(1.65rem,3vw,2.4rem) !important;
+            line-height:1.05 !important;
+            text-transform:uppercase;
+            letter-spacing:-.01em;
+            margin:.35rem 0 .7rem !important;
+        }
+        .monthly-v2-copy{
+            max-width:780px;
+        }
+        .monthly-v2-copy p{
+            font-size:1rem;
+            line-height:1.62;
+            margin:.4rem 0 .8rem;
+        }
+        .monthly-v2-move{
+            border-left:2px solid #111;
+            padding:.25rem 0 .25rem .8rem;
+            margin:.85rem 0 .35rem;
+        }
+        .monthly-v2-move-label{
+            font-family:"IBM Plex Mono",monospace;
+            font-size:.62rem;
+            letter-spacing:.07em;
+            text-transform:uppercase;
+        }
+        .timing-history{
+            border-top:1px solid rgba(0,0,0,.36);
+            margin-top:1.1rem;
+            padding-top:.9rem;
+        }
+        .timing-history h4{
+            font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif;
+            font-size:1.35rem;
+            font-weight:400;
+            margin:0 0 .45rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Small page label. The next heading is the only major headline.
+    st.markdown(
+        f'<div class="eyebrow">MONTHLY · {escape(sign.upper())} · {SEO_MONTH_NAME.upper()} {SEO_YEAR}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"# {_monthly_main_headline(narrative, sign)}")
+
+    intro = _monthly_intro_copy(narrative, result)
+    for paragraph in intro[:2]:
+        st.markdown(paragraph)
+
+    events = _monthly_rich_events(narrative, result)
+
+    st.markdown('<div class="eyebrow" style="margin-top:2rem">HOW AUGUST UNFOLDS</div>', unsafe_allow_html=True)
+
+    if not events:
+        # Never silently replace a rich report with a thin one.
+        st.warning("Luna could not read the structured Monthly timeline from this pipeline build.")
+        return
+
+    for index, event in enumerate(events):
+        st.markdown('<section class="monthly-v2-event">', unsafe_allow_html=True)
+
+        meta = event["date"]
+        if event["transit"]:
+            meta += f" · {event['transit']}"
+        if event["influence"]:
+            meta += f" · Influence: {event['influence']}"
+        st.markdown(f'<div class="monthly-v2-meta">{escape(meta)}</div>', unsafe_allow_html=True)
+
+        st.markdown(f"## {event['title']}")
+
+        st.markdown('<div class="monthly-v2-copy">', unsafe_allow_html=True)
+        for paragraph in event["body"]:
+            st.markdown(paragraph)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if event["move"]:
+            st.markdown(
+                f'<div class="monthly-v2-move">'
+                f'<div class="monthly-v2-move-label">YOUR MOVE</div>'
+                f'<div>{escape(event["move"])}</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        # Attach history to the first three most meaningful dated moments.
+        if index < 3:
+            _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, index)
+
+        st.markdown('</section>', unsafe_allow_html=True)
+
+    # Consequence layer only after time sequence.
+    st.markdown("## Where it lands")
+    dominant = result.get("dominant_houses") or []
+    for item in dominant[:3]:
+        if isinstance(item, dict) and item.get("house"):
+            house = int(item["house"])
+            st.markdown(f"**{_monthly_reader_house_label(house).upper()}**")
+            try:
+                st.markdown(HOUSE_STRATEGY[house]["action"])
+            except Exception:
+                pass
+
+    # Final move: use the last explicit event move.
+    final_move = next((event["move"] for event in reversed(events) if event["move"]), "")
+    if final_move:
+        st.markdown("## Your move")
+        st.markdown(final_move)
+
+    with st.expander("Why Luna sees this"):
+        st.markdown(
+            "Luna ranks the month's major astronomical events, reads their whole-sign house emphasis, "
+            "and compares the month with earlier structurally similar periods. The detailed calculation stays underneath."
+        )
 
 
 def monthly_sign_page(sign: str) -> None:
@@ -5417,7 +5760,7 @@ def monthly_sign_page(sign: str) -> None:
     st.markdown("### One moving sky. One personal reference point.")
     _render_monthly_personal_sky(snapshot)
 
-    _render_monthly_full_meat_unified(
+    _render_monthly_transit_style_v2(
         narrative,
         result,
         sign=sign,
