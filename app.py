@@ -6918,6 +6918,36 @@ def _timing_year_story(report) -> list[str]:
     return lines
 
 
+
+def _timing_reader_move(story) -> str:
+    """
+    Keep the Timing Map calculation untouched while removing repeated template
+    language from the reader-facing move.
+    """
+    headline = str(getattr(story, "headline", "") or "").strip().upper()
+    move = str(getattr(story, "move", "") or "").strip()
+
+    replacements = {
+        "HOME NEEDS MORE AIR": (
+            "Redesign the living or care arrangement so safety and breathing room can coexist. "
+            "Remove the arrangement that works only because you keep absorbing the strain."
+        ),
+        "DISCIPLINE BECOMES LEVERAGE": (
+            "Set the workload, deadline and stopping point before effort becomes its own justification. "
+            "Cut the obligation that only works because you keep over-functioning."
+        ),
+        "THE AGREEMENT GETS TESTED": (
+            "Define what is mutual, what it costs and what happens if the terms stay unequal. "
+            "Renegotiate the term that survives only because one side keeps carrying more."
+        ),
+    }
+
+    if headline in replacements:
+        return replacements[headline]
+
+    return move
+
+
 def timing_map_page() -> None:
     set_page_metadata(
         "Personal Transits | Luna Convergence",
@@ -7035,7 +7065,7 @@ def timing_map_page() -> None:
   <p>{escape(story.summary)}</p>
   <div class="timing-dates">{"".join(date_boxes)}</div>
   <ul class="timing-scenarios">{scenario_html}</ul>
-  <div class="timing-move"><div class="timing-move-label">Your move</div><strong>{escape(story.move)}</strong></div>
+  <div class="timing-move"><div class="timing-move-label">Your move</div><strong>{escape(_timing_reader_move(story))}</strong></div>
   <p><strong>Watch:</strong> {escape(story.watch)}</p>
 </article>''',
                 unsafe_allow_html=True,
