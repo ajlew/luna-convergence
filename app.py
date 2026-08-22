@@ -5364,121 +5364,278 @@ def _monthly_is_technical(text: str) -> bool:
     ))
 
 
+
+def _monthly_internal_text(text: str) -> bool:
+    low = str(text or "").lower()
+    return any(
+        phrase in low
+        for phrase in (
+            "promoted through the connected event cluster",
+            "connected event cluster",
+            "convergence graph",
+            "moves into house ",
+            "scenario slug",
+            "debug",
+            "internal",
+            "editorial_status",
+            "travel_legal_disruption",
+            "opportunity_convergence",
+        )
+    )
+
+
+def _monthly_extract_houses(value) -> set[int]:
+    houses: set[int] = set()
+
+    def visit(node):
+        if isinstance(node, dict):
+            for key, child in node.items():
+                low = str(key).lower()
+                if low in {"house", "natal_house"}:
+                    try:
+                        number = int(child)
+                        if 1 <= number <= 12:
+                            houses.add(number)
+                    except Exception:
+                        pass
+                elif low in {"houses", "house_numbers", "activated_houses"} and isinstance(child, (list, tuple, set)):
+                    for item in child:
+                        try:
+                            number = int(item)
+                            if 1 <= number <= 12:
+                                houses.add(number)
+                        except Exception:
+                            pass
+                visit(child)
+        elif isinstance(node, (list, tuple)):
+            for child in node:
+                visit(child)
+
+    visit(value)
+    return houses
+
+
+def _monthly_editorial_path_score(path_text: str) -> int:
+    low = path_text.lower()
+    score = 0
+    for word in ("brief", "timeline", "unfold", "narrative", "editorial", "relationship", "signal", "story"):
+        if word in low:
+            score += 18
+    for word in ("convergence", "graph", "technical", "evidence", "cluster", "scenario", "major_transition", "major_transitions"):
+        if word in low:
+            score -= 24
+    return score
+
+
+def _monthly_title_score(text: str, path_text: str = "") -> int:
+    value = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not value:
+        return -999
+    score = _monthly_editorial_path_score(path_text)
+    if 18 <= len(value) <= 110:
+        score += 30
+    if "_" in value:
+        score -= 80
+    if _monthly_internal_text(value):
+        score -= 120
+    if _monthly_is_technical(value):
+        score -= 12
+    if re.match(r"^(the|a|an|chemistry|home|work|money|travel|relationships|visibility|shared|your)\b", value, re.I):
+        score += 8
+    return score
+
+
+def _monthly_body_score(text: str, path_text: str = "") -> int:
+    value = re.sub(r"\s+", " ", str(text or "")).strip()
+    if len(value) < 45:
+        return -999
+    score = _monthly_editorial_path_score(path_text)
+    if 80 <= len(value) <= 520:
+        score += 35
+    elif len(value) > 900:
+        score -= 25
+    if "." in value:
+        score += 10
+    if _monthly_internal_text(value):
+        score -= 150
+    if value.lower().startswith("moves into house"):
+        score -= 120
+    if "astrology is a symbolic" in value.lower():
+        score -= 150
+    if "daily, weekly and monthly are free" in value.lower():
+        score -= 150
+    return score
+
+
+def _monthly_move_score(text: str, path_text: str = "") -> int:
+    value = re.sub(r"\s+", " ", str(text or "")).strip()
+    if len(value) < 8:
+        return -999
+    score = _monthly_editorial_path_score(path_text)
+    if 25 <= len(value) <= 240:
+        score += 30
+    if _monthly_internal_text(value):
+        score -= 150
+    if value.lower().startswith(("ask the question this development", "promoted through")):
+        score -= 80
+    return score
+
+
 def _monthly_candidate_from_container(value, path=()):
-    """Build one rich event from any nested structure that contains a dated sky story."""
     strings = _monthly_container_strings(value, max_depth=5)
     if not strings:
         return None
 
     combined = " ".join(text for _, text in strings)
     day, date_label = _monthly_date_info(combined)
-
     if day == 99 and not _monthly_is_technical(combined):
         return None
 
-    # Reject huge top-level month containers; they swallow unrelated sections.
-    total_chars = sum(len(t) for _, t in strings)
-    if total_chars > 5000:
+    if sum(len(t) for _, t in strings) > 5200:
         return None
 
-    technical = []
-    influence = []
-    title_candidates = []
-    body_candidates = []
-    move_candidates = []
+    titles, bodies, moves, technical, influence = [], [], [], [], []
 
     for pth, txt in strings:
-        low_path = " ".join(pth).lower()
+        path_text = " ".join(pth)
+        low_path = path_text.lower()
         low = txt.lower()
 
         if "influence" in low_path or low.startswith("influence:"):
-            influence.append(re.sub(r"^influence:\s*", "", txt, flags=re.I))
+            influence.append((txt, path_text))
+            continue
+
+        if low.startswith(("luna's move:", "luna’s move:")):
+            moves.append((re.sub(r"^luna['’]s move:\s*", "", txt, flags=re.I), path_text))
             continue
 
         if any(k in low_path for k in ("move", "action", "recommend", "best_move", "luna_move")):
-            if 8 <= len(txt) <= 420:
-                move_candidates.append(txt)
-                continue
+            moves.append((txt, path_text))
+            continue
 
-        if _monthly_is_technical(txt) and len(txt) <= 180:
-            technical.append(txt)
+        if _monthly_is_technical(txt) and len(txt) <= 190:
+            technical.append((txt, path_text))
 
-        # Strong title clues from paths.
         if any(k in low_path for k in ("headline", "title", "hook", "story_title", "name")):
-            if 12 <= len(txt) <= 180 and not txt.lower().startswith("influence"):
-                title_candidates.append(txt)
-                continue
-
-        # Narrative "meat".
-        if len(txt) >= 55 and not txt.lower().startswith(("influence:", "luna's move:", "luna’s move:")):
-            body_candidates.append(txt)
-        elif 18 <= len(txt) <= 160 and not _monthly_is_technical(txt):
-            # A no-period, sentence-case line is often the editorial event title.
-            if txt.count(".") == 0 and txt.count(":") <= 1:
-                title_candidates.append(txt)
-
-        if txt.lower().startswith(("luna's move:", "luna’s move:")):
-            move_candidates.append(re.sub(r"^luna['’]s move:\s*", "", txt, flags=re.I))
-
-    # Prefer title candidates that are not the month-level hero and not date strings.
-    filtered_titles = []
-    for txt in title_candidates:
-        if _monthly_date_info(txt)[0] != 99:
+            titles.append((txt, path_text))
             continue
-        if len(txt) > 150:
-            continue
-        filtered_titles.append(txt)
 
-    title = filtered_titles[0] if filtered_titles else ""
+        if 16 <= len(txt) <= 150 and txt.count(".") == 0 and not _monthly_is_technical(txt):
+            titles.append((txt, path_text))
+        elif len(txt) >= 45:
+            bodies.append((txt, path_text))
+
+    best_title = max(titles, key=lambda p: _monthly_title_score(p[0], p[1]), default=("", ""))
+    best_move = max(moves, key=lambda p: _monthly_move_score(p[0], p[1]), default=("", ""))
+    ranked_bodies = sorted(bodies, key=lambda p: _monthly_body_score(p[0], p[1]), reverse=True)
+
     body = []
-    seen_body = set()
-    for txt in body_candidates:
-        # Avoid reusing the title as body and avoid report-level disclaimers.
-        if txt == title:
-            continue
-        if any(bad in txt.lower() for bad in (
-            "astrology is a symbolic",
-            "daily, weekly and monthly are free",
-            "download complete monthly",
-            "print / save pdf",
-        )):
+    seen = set()
+    for txt, pth in ranked_bodies:
+        if _monthly_body_score(txt, pth) < 0:
             continue
         key = txt.lower()
-        if key not in seen_body:
-            seen_body.add(key)
-            body.append(txt)
+        if key in seen or txt == best_title[0]:
+            continue
+        seen.add(key)
+        body.append(txt)
+        if len(body) >= 3:
+            break
 
-    move = move_candidates[0] if move_candidates else ""
-    transit = technical[0] if technical else ""
+    transit = ""
+    if technical:
+        ranked_technical = sorted(
+            technical,
+            key=lambda p: (
+                1 if re.search(r"\b(?:trine|sextile|square|opposition|eclipse)\b", p[0], re.I) else 0,
+                -len(p[0]),
+            ),
+            reverse=True,
+        )
+        transit = ranked_technical[0][0]
 
-    # Event needs actual content, not just an aspect row.
-    richness = len(" ".join(body)) + len(move) * 2 + len(title) * 2
-    if richness < 70:
-        return None
+    influence_text = influence[0][0] if influence else ""
+    path_text = " / ".join(path)
+    candidate_score = (
+        _monthly_title_score(best_title[0], best_title[1])
+        + sum(max(0, _monthly_body_score(txt, pth)) for txt, pth in ranked_bodies[:2])
+        + max(0, _monthly_move_score(best_move[0], best_move[1]))
+        + _monthly_editorial_path_score(path_text)
+    )
 
     return {
         "day": day,
         "date": date_label,
         "transit": transit,
-        "title": title or transit or "The month changes here",
-        "body": body[:3],
-        "move": move,
-        "influence": influence[0] if influence else "",
-        "score": richness,
-        "path": " / ".join(path),
+        "title": best_title[0],
+        "body": body,
+        "move": best_move[0],
+        "influence": influence_text,
+        "score": candidate_score,
+        "path": path_text,
+        "combined": combined,
+        "houses": _monthly_extract_houses(value),
     }
 
 
-def _monthly_rich_events(narrative, result) -> list[dict]:
-    """
-    Search every nested Monthly object, choose the richest event container for each
-    dated moment, then produce one chronological sequence.
-    """
+_MONTHLY_CANONICAL_EVENTS = (
+    {"key":"sun_saturn","match":r"\bsun\s+trine\s+saturn\b","day":7,"date_label":"07 AUG 2026","transit":"Sun trine Saturn","signal":"SUPPORT","default_influence":"1–10 August 2026"},
+    {"key":"solar_eclipse","match":r"\b(?:total\s+)?solar\s+eclipse\b|\beclipse\s+in\s+leo\b","day":13,"date_label":"13 AUG 2026","transit":"Total Solar Eclipse in Leo","signal":"DECISION","default_influence":"11–20 August 2026"},
+    {"key":"venus_jupiter","match":r"\bvenus\s+sextile\s+jupiter\b","day":18,"date_label":"18–21 AUG 2026","transit":"Venus sextile Jupiter","signal":"OPENING","default_influence":"18–21 August 2026"},
+    {"key":"lunar_eclipse","match":r"\bpartial\s+lunar\s+eclipse\b|\blunar\s+eclipse\b|\beclipse\s+in\s+pisces\b","day":28,"date_label":"28 AUG 2026","transit":"Partial Lunar Eclipse in Pisces","signal":"CHANGE","default_influence":"21–31 August 2026"},
+)
+
+
+def _monthly_event_family(candidate: dict):
+    haystack = " ".join([
+        candidate.get("transit",""),
+        candidate.get("title",""),
+        " ".join(candidate.get("body",[])),
+        candidate.get("combined",""),
+    ])
+    for spec in _MONTHLY_CANONICAL_EVENTS:
+        if re.search(spec["match"], haystack, re.I):
+            return spec
+    return None
+
+
+def _monthly_best_piece(candidates, field, scorer):
+    pieces = []
+    for candidate in candidates:
+        if field == "body":
+            for paragraph in candidate.get("body", []):
+                pieces.append((paragraph, candidate.get("path","")))
+        else:
+            value = candidate.get(field,"")
+            if value:
+                pieces.append((value, candidate.get("path","")))
+
+    if field == "body":
+        ranked = sorted(pieces, key=lambda p: scorer(p[0], p[1]), reverse=True)
+        result, seen = [], set()
+        for value, path_text in ranked:
+            if scorer(value, path_text) < 0:
+                continue
+            key = value.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(value)
+            if len(result) >= 2:
+                break
+        return result
+
+    if not pieces:
+        return ""
+    return max(pieces, key=lambda p: scorer(p[0], p[1]))[0]
+
+
+def _monthly_canonical_events(narrative, result) -> list[dict]:
     roots = [("narrative", _monthly_plain(narrative)), ("result", _monthly_plain(result))]
     candidates = []
 
     def visit(value, path=(), depth=0):
-        if depth > 7:
+        if depth > 8:
             return
         if isinstance(value, dict):
             candidate = _monthly_candidate_from_container(value, path)
@@ -5487,47 +5644,202 @@ def _monthly_rich_events(narrative, result) -> list[dict]:
             for key, child in value.items():
                 visit(child, path + (str(key),), depth + 1)
         elif isinstance(value, list):
-            # Lists often contain the editorial timeline.
             for index, child in enumerate(value):
                 visit(child, path + (str(index),), depth + 1)
 
     for root_name, root in roots:
         visit(root, (root_name,), 0)
 
-    # Prefer the richest event for each logical day/window.
-    by_day = {}
-    for event in candidates:
-        day = event["day"]
-        if day == 99:
-            # Undated technical items do not belong on the main timeline.
+    events = []
+    for spec in _MONTHLY_CANONICAL_EVENTS:
+        family = [c for c in candidates if _monthly_event_family(c) == spec]
+        if not family:
             continue
-        current = by_day.get(day)
-        if current is None or event["score"] > current["score"]:
-            by_day[day] = event
 
-    events = [by_day[d] for d in sorted(by_day)]
+        title = _monthly_best_piece(family, "title", _monthly_title_score)
+        body = _monthly_best_piece(family, "body", _monthly_body_score)
+        move = _monthly_best_piece(family, "move", _monthly_move_score)
 
-    # We want the major editorial spine, not every tiny aspect.
-    major_days = []
-    for event in events:
-        joined = " ".join([event["transit"], event["title"]] + event["body"])
-        major = bool(re.search(
-            r"\b(?:eclipse|trine saturn|sextile jupiter|solar eclipse|lunar eclipse)\b",
-            joined,
-            re.I,
-        ))
-        if major:
-            major_days.append(event)
+        if not title or _monthly_internal_text(title) or "_" in title or _monthly_is_technical(title):
+            # Fall back to the human transit label only when no editorial title survived.
+            title = spec["transit"]
 
-    # If the rich major filter finds the expected editorial events, use it.
-    if len(major_days) >= 3:
-        events = major_days
+        influence = ""
+        for candidate in sorted(family, key=lambda c: c.get("score",0), reverse=True):
+            candidate_influence = str(candidate.get("influence") or "").strip()
+            if candidate_influence and len(candidate_influence) < 80 and not _monthly_internal_text(candidate_influence):
+                influence = candidate_influence
+                break
+        if not influence:
+            influence = spec["default_influence"]
 
-    return events[:6]
+        houses = set()
+        for candidate in family:
+            houses |= set(candidate.get("houses") or set())
+
+        events.append({
+            "key":spec["key"],
+            "day":spec["day"],
+            "date_label":spec["date_label"],
+            "transit":spec["transit"],
+            "signal":spec["signal"],
+            "influence":influence,
+            "title":title,
+            "body":body,
+            "move":move,
+            "houses":houses,
+        })
+
+    return events
 
 
-def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, index):
-    """Transit-style history block immediately under the current dated story."""
+def _monthly_context_section(narrative, result):
+    roots = [("narrative", _monthly_plain(narrative)), ("result", _monthly_plain(result))]
+    candidates = []
+
+    def visit(value, path=(), depth=0):
+        if depth > 6:
+            return
+        path_text = " ".join(path).lower()
+        if isinstance(value, dict):
+            if any(word in path_text for word in ("concentration", "gather", "theme")):
+                strings = _monthly_container_strings(value, max_depth=4)
+                titles = [(txt, " ".join(pth)) for pth, txt in strings if 16 <= len(txt) <= 120]
+                bodies = [(txt, " ".join(pth)) for pth, txt in strings if len(txt) >= 60]
+                title = max(titles, key=lambda p: _monthly_title_score(p[0], p[1]), default=("", ""))[0]
+                ranked = sorted(bodies, key=lambda p: _monthly_body_score(p[0], p[1]), reverse=True)
+                body = [txt for txt, pth in ranked if _monthly_body_score(txt, pth) > 0][:2]
+                score = _monthly_title_score(title, path_text) + sum(max(0, _monthly_body_score(txt, pth)) for txt, pth in ranked[:2])
+                if score > 0:
+                    candidates.append((score, title, body))
+            for key, child in value.items():
+                visit(child, path + (str(key),), depth + 1)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, path + (str(index),), depth + 1)
+
+    for root_name, root in roots:
+        visit(root, (root_name,), 0)
+
+    if not candidates:
+        return "", []
+    _, title, body = max(candidates, key=lambda item: item[0])
+    if _monthly_internal_text(title) or "_" in title:
+        title = ""
+    return title, body
+
+
+def _monthly_area_editorial(narrative, result, category: str):
+    keywords = {
+        "LOVE":("love","romance","relationship"),
+        "WORK":("work","career","profession"),
+        "MONEY":("money","finance","income","resource"),
+    }[category]
+    roots = [("narrative", _monthly_plain(narrative)), ("result", _monthly_plain(result))]
+    candidates = []
+
+    def visit(value, path=(), depth=0):
+        if depth > 7:
+            return
+        path_text = " ".join(path).lower()
+        if isinstance(value, dict):
+            if any(word in path_text for word in keywords):
+                strings = _monthly_container_strings(value, max_depth=4)
+                titles = [(txt, " ".join(pth)) for pth, txt in strings if 14 <= len(txt) <= 130]
+                bodies = [(txt, " ".join(pth)) for pth, txt in strings if len(txt) >= 45]
+                title = max(titles, key=lambda p: _monthly_title_score(p[0], p[1]), default=("", ""))[0]
+                body = max(bodies, key=lambda p: _monthly_body_score(p[0], p[1]), default=("", ""))[0]
+                score = _monthly_title_score(title, path_text) + _monthly_body_score(body, path_text)
+                if score > 0 and not _monthly_internal_text(title + " " + body):
+                    candidates.append((score, title, body))
+            for key, child in value.items():
+                visit(child, path + (str(key),), depth + 1)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, path + (str(index),), depth + 1)
+
+    for root_name, root in roots:
+        visit(root, (root_name,), 0)
+
+    if not candidates:
+        return "", ""
+    _, title, body = max(candidates, key=lambda item: item[0])
+    if "_" in title:
+        title = ""
+    return title, body
+
+
+def _monthly_action_plan(narrative, result):
+    roots = [("narrative", _monthly_plain(narrative)), ("result", _monthly_plain(result))]
+    candidates = []
+
+    def visit(value, path=(), depth=0):
+        if depth > 7:
+            return
+        path_text = " ".join(path).lower()
+        if isinstance(value, dict):
+            if any(word in path_text for word in ("move","action","plan","step","strategy")):
+                title, steps = "", []
+                for key, child in value.items():
+                    low = str(key).lower()
+                    if isinstance(child, str):
+                        if low in {"headline","title","hook"} and 10 <= len(child) <= 140:
+                            title = child.strip()
+                        elif 18 <= len(child) <= 260 and not _monthly_internal_text(child):
+                            steps.append(child.strip())
+                    elif isinstance(child, list):
+                        for item in child:
+                            if isinstance(item, str) and 18 <= len(item) <= 260 and not _monthly_internal_text(item):
+                                steps.append(item.strip())
+                if len(steps) >= 2:
+                    candidates.append((len(steps)*20 + _monthly_editorial_path_score(path_text), title, steps[:4]))
+            for key, child in value.items():
+                visit(child, path + (str(key),), depth + 1)
+        elif isinstance(value, list):
+            if any(word in path_text for word in ("move","action","plan","step","strategy")):
+                steps = [str(item).strip() for item in value if isinstance(item, str) and 18 <= len(item) <= 260 and not _monthly_internal_text(item)]
+                if len(steps) >= 2:
+                    candidates.append((len(steps)*20 + _monthly_editorial_path_score(path_text), "", steps[:4]))
+            for index, child in enumerate(value):
+                visit(child, path + (str(index),), depth + 1)
+
+    for root_name, root in roots:
+        visit(root, (root_name,), 0)
+
+    if not candidates:
+        return "", []
+    _, title, steps = max(candidates, key=lambda item: item[0])
+    if "_" in title or _monthly_internal_text(title):
+        title = ""
+    return title, steps
+
+
+def _monthly_history_match_for_event(matches, event, used_years):
+    if not matches:
+        return None
+
+    event_houses = set(event.get("houses") or set())
+    event_houses |= {
+        "sun_saturn":{9,10,11},
+        "solar_eclipse":{9},
+        "venus_jupiter":{5,7},
+        "lunar_eclipse":{4},
+    }.get(event.get("key"), set())
+
+    scored = []
+    for item in matches:
+        past_year = int(item["year"])
+        shared = set(item.get("shared_houses") or [])
+        now_only = set(item.get("current_only") or [])
+        then_only = set(item.get("past_only") or [])
+        score = len(event_houses & shared)*8 + len(event_houses & now_only)*4 + len(event_houses & then_only)*2
+        if past_year not in used_years:
+            score += 3
+        scored.append((score, item))
+    return max(scored, key=lambda pair: pair[0])[1]
+
+
+def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years):
     try:
         matches = _monthly_history_matches(sign, SEO_YEAR, SEO_MONTH, timezone_name)
     except Exception:
@@ -5535,22 +5847,23 @@ def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, index)
     if not matches:
         return
 
-    item = matches[min(index, len(matches) - 1)]
+    item = _monthly_history_match_for_event(matches, event, used_years)
+    if not item:
+        return
+
     past_year = int(item["year"])
+    used_years.add(past_year)
     shared = item.get("shared_houses") or []
     now_only = item.get("current_only") or []
     then_only = item.get("past_only") or []
 
-    st.markdown('<div class="timing-history">', unsafe_allow_html=True)
-    st.markdown("#### Have you been here before?")
+    st.markdown("### Have you been here before?")
 
     age_text = ""
     if birth_date_value:
         ref = date(past_year, SEO_MONTH, 15)
         if ref >= birth_date_value:
-            age = ref.year - birth_date_value.year - (
-                (ref.month, ref.day) < (birth_date_value.month, birth_date_value.day)
-            )
+            age = ref.year - birth_date_value.year - ((ref.month, ref.day) < (birth_date_value.month, birth_date_value.day))
             age_text = f" You were about **{age}**."
 
     st.markdown(f"Think back to **{SEO_MONTH_NAME} {past_year}**.{age_text}")
@@ -5570,154 +5883,104 @@ def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, index)
         st.markdown(f"**What is different now:** the earlier month carried more **{_monthly_reader_house_label(then_only[0])}**.")
 
     st.caption("What do you remember changing then?")
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
-def _render_monthly_transit_style_v2(
-    narrative,
-    result,
-    *,
-    sign: str,
-    timezone_name: str,
-    birth_date_value: date | None,
-) -> None:
-    """
-    Monthly rebuilt in the same reading grammar as Personal Transits:
-    one headline, one chronological spine, rich prose, inline history.
-    """
-    st.markdown(
-        """
-        <style>
-        .monthly-v2-meta{
-            font-family:"IBM Plex Mono",monospace;
-            font-size:.67rem;
-            letter-spacing:.06em;
-            text-transform:uppercase;
-            margin-bottom:.35rem;
-        }
-        .monthly-v2-event{
-            border-top:1px solid rgba(0,0,0,.48);
-            padding:1.1rem 0 1.25rem;
-            margin:0;
-        }
-        .monthly-v2-event h2{
-            font-family:"Josefin Sans",Arial,sans-serif !important;
-            font-size:clamp(1.65rem,3vw,2.4rem) !important;
-            line-height:1.05 !important;
-            text-transform:uppercase;
-            letter-spacing:-.01em;
-            margin:.35rem 0 .7rem !important;
-        }
-        .monthly-v2-copy{
-            max-width:780px;
-        }
-        .monthly-v2-copy p{
-            font-size:1rem;
-            line-height:1.62;
-            margin:.4rem 0 .8rem;
-        }
-        .monthly-v2-move{
-            border-left:2px solid #111;
-            padding:.25rem 0 .25rem .8rem;
-            margin:.85rem 0 .35rem;
-        }
-        .monthly-v2-move-label{
-            font-family:"IBM Plex Mono",monospace;
-            font-size:.62rem;
-            letter-spacing:.07em;
-            text-transform:uppercase;
-        }
-        .timing-history{
-            border-top:1px solid rgba(0,0,0,.36);
-            margin-top:1.1rem;
-            padding-top:.9rem;
-        }
-        .timing-history h4{
-            font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif;
-            font-size:1.35rem;
-            font-weight:400;
-            margin:0 0 .45rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Small page label. The next heading is the only major headline.
+def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None) -> None:
     st.markdown(
         f'<div class="eyebrow">MONTHLY · {escape(sign.upper())} · {SEO_MONTH_NAME.upper()} {SEO_YEAR}</div>',
         unsafe_allow_html=True,
     )
-    st.markdown(f"# {_monthly_main_headline(narrative, sign)}")
+    st.markdown(
+        f'<div class="editorial-title">{escape(_monthly_main_headline(narrative, sign))}</div>',
+        unsafe_allow_html=True,
+    )
 
-    intro = _monthly_intro_copy(narrative, result)
-    for paragraph in intro[:2]:
-        st.markdown(paragraph)
+    context_title, context_body = _monthly_context_section(narrative, result)
+    if context_title or context_body:
+        st.markdown('<div class="timing-meta" style="margin-top:1.6rem">WHERE THE SKY IS GATHERING</div>', unsafe_allow_html=True)
+        if context_title and context_title.lower() != _monthly_main_headline(narrative, sign).lower():
+            st.markdown(f"## {context_title}")
+        for paragraph in context_body[:2]:
+            st.markdown(paragraph)
 
-    events = _monthly_rich_events(narrative, result)
-
-    st.markdown('<div class="eyebrow" style="margin-top:2rem">HOW AUGUST UNFOLDS</div>', unsafe_allow_html=True)
+    events = _monthly_canonical_events(narrative, result)
+    st.markdown("## How August unfolds")
 
     if not events:
-        # Never silently replace a rich report with a thin one.
-        st.warning("Luna could not read the structured Monthly timeline from this pipeline build.")
+        st.warning("Luna could not recover the four canonical August stories from this build.")
         return
 
-    for index, event in enumerate(events):
-        st.markdown('<section class="monthly-v2-event">', unsafe_allow_html=True)
+    used_years = set()
 
-        meta = event["date"]
-        if event["transit"]:
-            meta += f" · {event['transit']}"
-        if event["influence"]:
-            meta += f" · Influence: {event['influence']}"
-        st.markdown(f'<div class="monthly-v2-meta">{escape(meta)}</div>', unsafe_allow_html=True)
-
-        st.markdown(f"## {event['title']}")
-
-        st.markdown('<div class="monthly-v2-copy">', unsafe_allow_html=True)
-        for paragraph in event["body"]:
-            st.markdown(paragraph)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if event["move"]:
-            st.markdown(
-                f'<div class="monthly-v2-move">'
-                f'<div class="monthly-v2-move-label">YOUR MOVE</div>'
-                f'<div>{escape(event["move"])}</div></div>',
-                unsafe_allow_html=True,
-            )
-
-        # Attach history to the first three most meaningful dated moments.
-        if index < 3:
-            _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, index)
-
-        st.markdown('</section>', unsafe_allow_html=True)
-
-    # Consequence layer only after time sequence.
-    st.markdown("## Where it lands")
-    dominant = result.get("dominant_houses") or []
-    for item in dominant[:3]:
-        if isinstance(item, dict) and item.get("house"):
-            house = int(item["house"])
-            st.markdown(f"**{_monthly_reader_house_label(house).upper()}**")
-            try:
-                st.markdown(HOUSE_STRATEGY[house]["action"])
-            except Exception:
-                pass
-
-    # Final move: use the last explicit event move.
-    final_move = next((event["move"] for event in reversed(events) if event["move"]), "")
-    if final_move:
-        st.markdown("## Your move")
-        st.markdown(final_move)
-
-    with st.expander("Why Luna sees this"):
-        st.markdown(
-            "Luna ranks the month's major astronomical events, reads their whole-sign house emphasis, "
-            "and compares the month with earlier structurally similar periods. The detailed calculation stays underneath."
+    for number, event in enumerate(events, start=1):
+        date_kind = "Window" if "–" in event["date_label"] else "Exact"
+        date_box = (
+            f'<div class="timing-date-box"><span>{date_kind}</span>'
+            f'<strong>{escape(event["date_label"].title())}</strong></div>'
+        )
+        body_html = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in event["body"])
+        move_html = (
+            f'<div class="timing-move"><div class="timing-move-label">Your move</div>'
+            f'<strong>{escape(event["move"])}</strong></div>'
+            if event["move"] else ""
         )
 
+        article_html = (
+            '<article class="timing-story">'
+            f'<div class="timing-meta">{number:02d} / {escape(event["signal"])} · active {escape(event["influence"])}</div>'
+            f'<h2>{escape(event["title"] or event["transit"])}</h2>'
+            f'<p><strong>{escape(event["transit"])}</strong></p>'
+            f'<div class="timing-dates">{date_box}</div>'
+            f'<div class="timing-story-copy">{body_html}</div>'
+            f'{move_html}'
+            '</article>'
+        )
+        st.markdown(article_html, unsafe_allow_html=True)
+
+        _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years)
+
+        with st.expander("Why Luna sees this"):
+            st.markdown(f"**{event['transit']}** · active {event['influence']}")
+            if event["houses"]:
+                labels = ", ".join(
+                    f"house {h} — {HOUSE_NAMES.get(h, '')}" for h in sorted(event["houses"])
+                )
+                st.markdown(labels)
+
+    st.markdown("## Where it lands")
+    rendered_area = False
+    for category in ("LOVE","WORK","MONEY"):
+        title, body = _monthly_area_editorial(narrative, result, category)
+        if title or body:
+            rendered_area = True
+            st.markdown(f'<div class="timing-meta">{category}</div>', unsafe_allow_html=True)
+            if title:
+                st.markdown(f"### {title}")
+            if body:
+                st.markdown(body)
+
+    if not rendered_area:
+        dominant = result.get("dominant_houses") or []
+        for item in dominant[:3]:
+            if isinstance(item, dict) and item.get("house"):
+                house = int(item["house"])
+                st.markdown(f"**{_monthly_reader_house_label(house).upper()}**")
+                try:
+                    st.markdown(HOUSE_STRATEGY[house]["action"])
+                except Exception:
+                    pass
+
+    move_title, move_steps = _monthly_action_plan(narrative, result)
+    st.markdown("## Your move")
+    if move_title:
+        st.markdown(f"### {move_title}")
+    if move_steps:
+        for index, step in enumerate(move_steps, start=1):
+            st.markdown(f"{index}. {step}")
+    else:
+        fallback = next((event["move"] for event in reversed(events) if event["move"]), "")
+        if fallback:
+            st.markdown(fallback)
 
 def monthly_sign_page(sign: str) -> None:
     """Unified free Monthly: birth context first, one editorial report, one history section."""
@@ -5760,7 +6023,7 @@ def monthly_sign_page(sign: str) -> None:
     st.markdown("### One moving sky. One personal reference point.")
     _render_monthly_personal_sky(snapshot)
 
-    _render_monthly_transit_style_v2(
+    _render_monthly_transit_style_v3(
         narrative,
         result,
         sign=sign,
