@@ -3563,8 +3563,14 @@ def _house_short(house: int) -> str:
     return name.lower()
 
 
-def _render_monthly_history(sign: str, year: int, month: int, timezone_name: str) -> None:
-    """Reader-facing historical precedent. Internal similarity percentages stay hidden."""
+def _render_monthly_history(
+    sign: str,
+    year: int,
+    month: int,
+    timezone_name: str,
+    birth_date_value: date | None = None,
+) -> None:
+    """Reader-facing precedent: age + shared theme + a concrete then/now contrast."""
     try:
         matches = _monthly_history_matches(sign, int(year), int(month), timezone_name)
     except Exception:
@@ -3574,43 +3580,74 @@ def _render_monthly_history(sign: str, year: int, month: int, timezone_name: str
 
     st.markdown("## Have you been somewhere like this before?")
     st.markdown(
-        "Luna looked backward for earlier months with a similar **astrological structure**. "
-        "This is context, not a claim that the same life event must repeat."
+        "Luna looks backward for earlier months with a similar **sky structure**. "
+        "The point is not to say that the same event repeats. It is to give the present month a reference point."
     )
+
     for index, item in enumerate(matches, start=1):
-        past_label = f"{month_name[int(month)]} {item['year']}"
+        past_year = int(item["year"])
+        past_label = f"{month_name[int(month)]} {past_year}"
         shared = item.get("shared_houses") or []
         now_only = item.get("current_only") or []
         then_only = item.get("past_only") or []
-        if shared:
-            shared_text = " and ".join(_house_short(h) for h in shared[:2])
-            lead = f"Both periods put extra emphasis on **{shared_text}**."
-        else:
-            lead = "The overall sequence of planetary changes is unusually close, even though it lands in different life areas."
 
-        if now_only and then_only:
-            difference = (
-                f"**What is different now:** this month adds **{_house_short(now_only[0])}**, "
-                f"while the earlier pattern leaned more toward **{_house_short(then_only[0])}**."
-            )
-        elif now_only:
-            difference = f"**What is different now:** the present month adds **{_house_short(now_only[0])}** to the pattern."
-        elif then_only:
-            difference = f"**What is different now:** the older pattern carried more **{_house_short(then_only[0])}** than this one."
-        else:
-            difference = "**What is different now:** the supporting transits and exact timing are not identical, so Luna treats this as an echo rather than a replay."
+        age_line = ""
+        if birth_date_value:
+            reference_date = date(past_year, int(month), 15)
+            if reference_date >= birth_date_value:
+                age = reference_date.year - birth_date_value.year - (
+                    (reference_date.month, reference_date.day) < (birth_date_value.month, birth_date_value.day)
+                )
+                age_line = f"You were about **{age}**."
 
         heading = "Think back" if index == 1 else "Another echo"
         st.markdown(f"### {heading} · {past_label}")
-        st.markdown(lead)
-        st.markdown(difference)
-        st.caption(f"Do you remember what was changing around {past_label}? You supply the memory; Luna supplies the sky pattern.")
+        if age_line:
+            st.markdown(age_line)
+
+        if shared:
+            shared_text = " and ".join(_house_short(h) for h in shared[:2])
+            st.markdown(
+                f"**What rhymes:** both periods put unusual weight on **{shared_text}**. "
+                "That is the part worth remembering."
+            )
+        else:
+            st.markdown(
+                "**What rhymes:** the sequence of planetary changes is unusually close, "
+                "even though the emphasis does not land in exactly the same life areas."
+            )
+
+        if now_only and then_only:
+            st.markdown(
+                f"**What changes the meaning now:** the present month adds **{_house_short(now_only[0])}**, "
+                f"while {past_label} leaned more toward **{_house_short(then_only[0])}**."
+            )
+        elif now_only:
+            st.markdown(
+                f"**What changes the meaning now:** this month adds **{_house_short(now_only[0])}** "
+                "to a pattern that was simpler before."
+            )
+        elif then_only:
+            st.markdown(
+                f"**What changes the meaning now:** {past_label} carried more **{_house_short(then_only[0])}**; "
+                "that extra weight is not as dominant now."
+            )
+        else:
+            st.markdown(
+                "**What changes the meaning now:** the same broad structure returns with a different supporting cast. "
+                "Treat it as an echo, not a replay."
+            )
+
+        st.caption(
+            "Memory prompt: what was changing around love, work, money, home or direction? "
+            "You supply the memory; Luna supplies the astronomical reference."
+        )
 
     with st.expander("How Luna chose these dates"):
         st.markdown(
             "Luna compares the month's dominant whole-sign houses and major planetary transition labels with earlier "
             "months for the same sign, ranks the closest structures internally, and shows only the clearest precedents. "
-            "The internal score is a retrieval tool — not a probability of an event happening."
+            "The hidden similarity score is a retrieval tool — not a probability that an event will happen."
         )
 
 
@@ -3637,34 +3674,75 @@ def _previous_transit_echo_date(story) -> date | None:
     return story.hits[0].exact_date - timedelta(days=days)
 
 
+def _transit_human_theme(story) -> str:
+    planet = str(getattr(story, "transit_planet", ""))
+    target = str(getattr(story, "natal_target", ""))
+    house = getattr(story, "natal_house", None)
+    planet_theme = {
+        "Saturn": "responsibility, limits and what has to become sustainable",
+        "Uranus": "freedom, disruption and the cost of staying unchanged",
+        "Jupiter": "growth, visibility and the opening that becomes available",
+        "Neptune": "uncertainty, ideals and what needs clearer boundaries",
+        "Pluto": "power, control and what can no longer remain superficial",
+    }.get(planet, "change and timing")
+    house_text = f" in natal house {house}" if house else ""
+    return f"{planet_theme}{house_text}, working through your natal {target}"
+
+
 def _render_transit_history(story, birth_date_value: date | None = None) -> None:
-    """Human-readable precedent for a major personal transit story."""
+    """Human precedent: age, remembered life theme, and what makes the current transit distinct."""
     earlier = _previous_transit_echo_date(story)
     if earlier is None:
         return
+
     st.markdown("### Have you been here before?")
+    theme = _transit_human_theme(story)
+
     if birth_date_value and earlier >= birth_date_value:
-        age = earlier.year - birth_date_value.year - ((earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day))
-        st.markdown(f"**Think back to {_timing_date_label(earlier)}. You were about {max(age, 0)}.**")
+        age = earlier.year - birth_date_value.year - (
+            (earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day)
+        )
+        st.markdown(f"**Think back to {_timing_date_label(earlier)}. You were about {age}.**")
         st.markdown(
-            f"A previous **{story.transit_planet} {story.aspect} natal {story.natal_target}** cycle was near this part of its orbit. "
-            "Do you remember what was changing then?"
+            f"The same broad **{story.transit_planet}–{story.natal_target} transit family** was returning then. "
+            f"The recurring question is less about a literal event and more about **{theme}**."
+        )
+        st.markdown(
+            "**What do you remember?** Was that period more about home, work, money, relationships, independence, "
+            "responsibility or a change in direction?"
         )
     else:
         st.markdown(f"**Before your time · around {_timing_date_label(earlier)}**")
         st.markdown(
-            f"The same **{story.transit_planet}–{story.natal_target} transit family** has an earlier geometric echo here. "
-            "You may not have lived through it, but it gives the present transit a longer cycle context."
+            f"You may not have lived through this earlier cycle, but the sky did. "
+            f"It gives the present **{story.transit_planet}–{story.natal_target}** contact a longer context: **{theme}**."
         )
-    st.markdown(
-        "**What is different now:** the rest of the sky, the exact orb sequence and your present circumstances are different. "
-        "Luna uses the earlier date as precedent — not as a prediction that history repeats."
+
+    polarity = str(getattr(story, "polarity", "")).lower()
+    if "opportun" in polarity:
+        difference = (
+            "This time the current report ranks the transit as an **opening**. "
+            "The useful question is not whether the old story repeats, but whether you can use the room that exists now."
+        )
+    elif "pressure" in polarity:
+        difference = (
+            "This time the current report ranks the transit as a **test or constraint**. "
+            "The useful comparison is what you tolerated then versus what now needs a clearer limit, term or decision."
+        )
+    else:
+        difference = (
+            "This time the exact dates, supporting transits and your present life stage alter the meaning. "
+            "The earlier cycle is a reference point, not a script."
+        )
+    st.markdown(f"**What is different now:** {difference}")
+    st.caption(
+        "Luna keeps the recurrence calculation behind the scenes. The reader-facing question is simpler: "
+        "what feels familiar, and what is materially different this time?"
     )
-    st.caption("The exact internal recurrence estimate stays behind the scenes. The reader-facing question is simpler: what, if anything, feels familiar?")
 
 
 def render_monthly_preview_workspace() -> None:
-    """Generate a complete monthly report without exposing the paid checkout flow."""
+    """Owner-only Monthly editorial workspace. Public customers use the unified free Monthly page."""
     local_today = browser_local_date()
     default_year_value = min(max(local_today.year, 1950), 2100)
     default_month_value = local_today.month
@@ -4556,70 +4634,212 @@ def _august_preview_narrative(narrative):
     return replace(narrative, hook_headline=hook)
 
 
-def monthly_sign_page(sign: str) -> None:
-    data = monthly_seo_data(sign)
-    narrative = build_monthly_narrative(
-        data,
-        main_focus="General overview",
+
+def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, str, bool]:
+    """Ask for birth/current-location context before revealing the free Monthly."""
+    st.markdown("## See the month through your sky")
+    st.markdown(
+        "The Monthly is free. Birth details let Luna add your age to historical comparisons "
+        "and, when the time and birthplace are reliable, add natal geometry without inventing precision."
     )
+
+    with st.form(f"free-monthly-profile-{sign_slug(sign)}", clear_on_submit=False):
+        birth_date_value = st.date_input(
+            "Birth date",
+            value=st.session_state.get(f"free-monthly-birth-date-{sign_slug(sign)}"),
+            min_value=date(1900, 1, 1),
+            max_value=browser_local_date(),
+            key=f"free-monthly-birth-date-input-{sign_slug(sign)}",
+        )
+        time_known = st.checkbox(
+            "I know my birth time exactly",
+            value=bool(st.session_state.get(f"free-monthly-time-known-{sign_slug(sign)}", False)),
+            key=f"free-monthly-time-known-input-{sign_slug(sign)}",
+        )
+
+        birth_time_value = None
+        birth_city = None
+        birth_timezone = "UTC"
+
+        if time_known:
+            birth_time_value = st.time_input(
+                "Birth time",
+                value=datetime.strptime("12:00", "%H:%M").time(),
+                key=f"free-monthly-birth-time-{sign_slug(sign)}",
+            )
+            city_options = sorted(CITY_LOCATIONS) + ["Not listed — planetary geometry only"]
+            birth_city = st.selectbox(
+                "Birthplace",
+                city_options,
+                index=None,
+                placeholder="Choose your birth city",
+                key=f"free-monthly-birth-city-{sign_slug(sign)}",
+            )
+            if birth_city and birth_city != "Not listed — planetary geometry only":
+                birth_timezone = CITY_LOCATIONS[birth_city].timezone
+            else:
+                birth_timezone = st.selectbox(
+                    "Birth timezone",
+                    TIMEZONES,
+                    index=timezone_select_index(),
+                    key=f"free-monthly-birth-tz-{sign_slug(sign)}",
+                )
+        else:
+            st.caption(
+                "Birth time unknown: Luna can still use your birth date for age/history context, "
+                "but will not invent an Ascendant, Midheaven or timed houses."
+            )
+
+        current_cols = st.columns(2, gap="medium")
+        with current_cols[0]:
+            current_timezone = st.selectbox(
+                "Where are you now? · timezone",
+                TIMEZONES,
+                index=timezone_select_index(),
+                key=f"free-monthly-current-tz-{sign_slug(sign)}",
+            )
+        with current_cols[1]:
+            current_city = st.text_input(
+                "Current city",
+                value=representative_city_name(browser_timezone_name()),
+                key=f"free-monthly-current-city-{sign_slug(sign)}",
+            )
+
+        submitted = st.form_submit_button("Show my free month", type="primary", use_container_width=True)
+
+    ready_key = f"free-monthly-ready-{sign_slug(sign)}"
+    if submitted:
+        st.session_state[ready_key] = True
+        st.session_state[f"free-monthly-birth-date-{sign_slug(sign)}"] = birth_date_value
+        st.session_state[f"free-monthly-time-known-{sign_slug(sign)}"] = time_known
+
+    if not st.session_state.get(ready_key):
+        return None, None, browser_timezone_name(), representative_city_name(browser_timezone_name()), False
+
+    snapshot = None
+    if birth_date_value:
+        try:
+            if time_known and birth_time_value:
+                if birth_city and birth_city in CITY_LOCATIONS:
+                    location = CITY_LOCATIONS[birth_city]
+                    snapshot = build_natal_snapshot(
+                        birth_date=birth_date_value,
+                        birth_time=birth_time_value,
+                        birth_time_known=True,
+                        latitude=location.latitude,
+                        longitude=location.longitude,
+                        timezone_name=location.timezone,
+                        location_name=f"{location.name}, {location.country}",
+                    )
+                else:
+                    snapshot = build_natal_snapshot(
+                        birth_date=birth_date_value,
+                        birth_time=birth_time_value,
+                        birth_time_known=True,
+                        timezone_name=birth_timezone,
+                    )
+            else:
+                snapshot = build_natal_snapshot(
+                    birth_date=birth_date_value,
+                    birth_time_known=False,
+                    timezone_name="UTC",
+                )
+        except Exception as exc:
+            st.warning(f"Luna could not add the natal layer: {exc}")
+
+    return snapshot, birth_date_value, current_timezone, current_city, True
+
+
+def _render_monthly_personal_sky(snapshot) -> None:
+    if snapshot is None:
+        return
+    st.markdown("## Your sky map")
+    if bool(getattr(snapshot, "birth_time_known", False)):
+        st.markdown(
+            "This wheel is your **natal starting geometry**. The ecliptic above shows the shared moving sky; "
+            "the natal wheel shows where you started."
+        )
+    else:
+        st.markdown(
+            "Birth time is unknown, so Luna uses the reliable planetary geometry only. "
+            "Ascendant, Midheaven and timed houses are deliberately omitted."
+        )
+    try:
+        st.markdown(natal_wheel_svg(snapshot, size=720), unsafe_allow_html=True)
+    except Exception:
+        pass
+
+
+def monthly_sign_page(sign: str) -> None:
+    """Unified free Monthly: birth context first, one editorial report, one history section."""
     title = f"{sign} August 2026 Horoscope | Luna Convergence"
     description = (
-        f"{sign} August 2026 horoscope with a concise Luna narrative, "
-        "relationship meaning, concrete scenarios and evidence available on demand."
+        f"Free {sign} August 2026 horoscope with key dates, love/work/money context, "
+        "historical echoes and optional natal context."
     )
     path = f"/august-2026-{sign_slug(sign)}"
     set_page_metadata(title, description, path)
 
-    if EDITOR_PREVIEW_ENABLED:
-        st.warning(
-            f"Editorial preview mode — {BUILD_LABEL}. "
-            "The full report and browser print controls are visible without Stripe."
-        )
-        render_monthly_experience(
-            narrative,
-            data,
-            show_print=True,
-            preview=False,
-        )
-    else:
-        render_monthly_experience(
-            _august_preview_narrative(narrative),
-            data,
-            show_print=False,
-            preview=True,
-        )
+    snapshot, birth_date_value, timezone_name, nearest_city, ready = _free_monthly_profile(sign)
+    if not ready:
+        st.info("Enter the details you know. Luna will not invent missing birth-time precision.")
+        return
+
+    try:
+        with st.spinner(f"Building your free {SEO_MONTH_NAME} {SEO_YEAR}…"):
+            narrative, result = build_production_monthly_report(
+                sign=sign,
+                year=SEO_YEAR,
+                month=SEO_MONTH,
+                timezone_name=timezone_name,
+                nearest_city=nearest_city,
+                main_focus="General overview",
+            )
+            if snapshot is not None:
+                try:
+                    result["natal_overlay"] = build_monthly_natal_overlay(snapshot, result)
+                    result["natal_summary"] = natal_profile_summary(snapshot)
+                except Exception:
+                    pass
+    except Exception as exc:
+        st.error("Luna could not build this Monthly.")
+        if EDITOR_PREVIEW_ENABLED:
+            st.exception(exc)
+        return
+
+    st.markdown("### The shared sky")
+    st.markdown(
+        "The ecliptic line above is the common astronomical clock. Everyone shares the moving sky; "
+        "your birth geometry changes where that movement becomes personally relevant."
+    )
+    _render_monthly_personal_sky(snapshot)
+
+    render_production_monthly_report(narrative, result, show_print=True)
 
     st.markdown(
         '<div class="eyebrow monthly-other-signs-label">Read another August 2026 sign</div>',
         unsafe_allow_html=True,
     )
-    links = [
-        f'<a href="/august-2026-{sign_slug(item)}">{escape(item)}</a>'
-        for item in SIGNS
-    ]
-    st.markdown(
-        '<div class="related-signs">' + "".join(links) + "</div>",
-        unsafe_allow_html=True,
+    links = [f'<a href="/august-2026-{sign_slug(item)}">{escape(item)}</a>' for item in SIGNS]
+    st.markdown('<div class="related-signs">' + "".join(links) + "</div>", unsafe_allow_html=True)
+
+    _render_monthly_history(
+        sign,
+        SEO_YEAR,
+        SEO_MONTH,
+        timezone_name,
+        birth_date_value=birth_date_value,
     )
 
-    _render_monthly_history(sign, SEO_YEAR, SEO_MONTH, DEFAULT_TIMEZONE)
-
-    if not EDITOR_PREVIEW_ENABLED:
-        st.markdown("## Get the complete personalised month")
-        st.markdown(
-            "The paid report goes beyond the free monthly briefing with deeper "
-            "love/work/money guidance, your selected focus, long-range pressure "
-            "timing, full evidence and a downloadable personalised PDF."
-        )
-        report_cta(
-            context=f"august-2026-{sign_slug(sign)}",
-            prefill_sign=sign,
-            prefill_month=f"{SEO_MONTH_NAME} {SEO_YEAR}",
-        )
-    else:
-        st.caption(
-            "Checkout is temporarily hidden on this page while editorial preview mode is active."
-        )
+    st.markdown("## Something specific on your mind?")
+    st.markdown(
+        "Daily, Weekly and Monthly are free. Luna's paid layer is for a **specific question or personal timing across time**."
+    )
+    c1, c2 = st.columns(2, gap="medium")
+    with c1:
+        st.markdown("**Ask Luna · planned launch price A$1.95**<br>One focused question about work, relationships, money or timing.", unsafe_allow_html=True)
+    with c2:
+        st.markdown("**Personal Transits**<br>See when your strongest natal activations build, peak, change and release.", unsafe_allow_html=True)
 
 
 def make_monthly_page(sign: str):
@@ -5125,6 +5345,86 @@ def _timing_birth_snapshot():
     return snapshot, "", prefill_out
 
 
+
+def _timing_signal_type(story) -> str:
+    """Translate a transit story into a neutral human signal type."""
+    planet = str(getattr(story, "transit_planet", ""))
+    polarity = str(getattr(story, "polarity", "")).lower()
+    aspect = str(getattr(story, "aspect", "")).lower()
+
+    if planet == "Uranus":
+        return "CHANGE"
+    if planet == "Pluto":
+        return "POWER SHIFT"
+    if planet == "Neptune":
+        return "CLARITY TEST"
+    if planet == "Jupiter":
+        return "OPENING" if "opportun" in polarity else "EXPANSION"
+    if planet == "Saturn":
+        return "DECISION" if any(x in aspect for x in ("square", "opposition")) else "STRUCTURE"
+    if "opportun" in polarity:
+        return "SUPPORT"
+    if "pressure" in polarity:
+        return "FRICTION"
+    return "MIXED"
+
+
+def _timing_signal_strip(report) -> str:
+    """Show what kind of transit signal dominates each month, separate from intensity."""
+    labels = []
+    for month_index in range(12):
+        month_start = (report.start_date.replace(day=1) + timedelta(days=32 * month_index)).replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        candidates = []
+        for story in report.stories:
+            if any(period.start_date <= month_end and period.end_date >= month_start for period in story.periods):
+                candidates.append(story)
+
+        if candidates:
+            midpoint = month_start + timedelta(days=max(0, (month_end - month_start).days // 2))
+            def distance(story):
+                if not story.hits:
+                    return 9999
+                return min(abs((hit.exact_date - midpoint).days) for hit in story.hits)
+            dominant = sorted(candidates, key=distance)[0]
+            signal = _timing_signal_type(dominant)
+        else:
+            signal = "QUIET"
+
+        labels.append(
+            f'<div style="min-width:0;text-align:center">'
+            f'<span style="font:500 9px IBM Plex Mono,monospace;letter-spacing:.05em">'
+            f'{escape(month_start.strftime("%b").upper())}</span><br>'
+            f'<strong style="font:500 9px Josefin Sans,sans-serif">{escape(signal)}</strong></div>'
+        )
+    return (
+        '<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px;'
+        'margin:.35rem 0 1.2rem">' + "".join(labels) + "</div>"
+    )
+
+
+def _timing_year_story(report) -> list[str]:
+    """Connect the strongest calculated stories into a short deterministic annual arc."""
+    if not report.stories:
+        return []
+    ordered = sorted(
+        report.stories,
+        key=lambda story: story.hits[0].exact_date if getattr(story, "hits", None) else report.end_date,
+    )
+    selected = ordered[:4]
+    lines = []
+    for index, story in enumerate(selected):
+        signal = _timing_signal_type(story).lower()
+        headline = str(getattr(story, "headline", "")).rstrip(".")
+        if index == 0:
+            lines.append(f"The year opens with **{signal}**: **{headline}**.")
+        elif index == len(selected) - 1:
+            lines.append(f"By the later phase, the question becomes **{headline.lower()}**.")
+        else:
+            lines.append(f"That develops into **{signal}**: **{headline}**.")
+    return lines
+
+
 def timing_map_page() -> None:
     set_page_metadata(
         "Personal Transits | Luna Convergence",
@@ -5203,9 +5503,22 @@ def timing_map_page() -> None:
     st.markdown("**Transit intensity**")
     st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
     st.caption(
-        "Intensity measures how strongly major transits cluster in time. It is deliberately neutral: "
-        "a peak can describe support, friction, change, opportunity or a mixed period. Read the story beneath the peak to see its type."
+        "Intensity answers only one question: **how much significant transit activity is clustering here?** "
+        "It does not mean trouble. A high month can be an opening, a decision, a change, support, friction or a mixed period."
     )
+    st.markdown("**What kind of period is it?**")
+    st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
+
+    year_story = _timing_year_story(report)
+    if year_story:
+        st.markdown("## The story of your year")
+        st.markdown("These are not unrelated events. Luna reads the strongest calculated contacts as a sequence:")
+        for line in year_story:
+            st.markdown(line)
+        st.caption(
+            "The sequence is deterministic: Luna orders the strongest calculated transit stories by date, "
+            "then translates their dominant function into a readable arc."
+        )
 
     if not report.stories:
         st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
@@ -5224,7 +5537,7 @@ def timing_map_page() -> None:
             scenario_html = "".join(f"<li>{escape(line)}</li>" for line in story.scenarios)
             st.markdown(
                 f'''<article class="timing-story">
-  <div class="timing-meta">{number:02d} / {escape(story.polarity)} · active {escape(periods_label)}</div>
+  <div class="timing-meta">{number:02d} / {escape(_timing_signal_type(story))} · {escape(story.polarity)} · active {escape(periods_label)}</div>
   <h2>{escape(story.headline)}</h2>
   <p>{escape(story.summary)}</p>
   <div class="timing-dates">{"".join(date_boxes)}</div>
