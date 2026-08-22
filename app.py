@@ -4660,8 +4660,8 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
         """,
         unsafe_allow_html=True,
     )
-    """Ask for birth/current-location context before revealing the free Monthly."""
-    st.markdown("## Your August starts here")
+    st.markdown('<div class="eyebrow">FREE · PERSONAL MONTH</div>', unsafe_allow_html=True)
+    st.markdown("## Your August")
     st.markdown(
         "Add the birth details you know. Luna uses them to anchor the sky map, show your age at earlier echoes, "
         "and add natal geometry only where the data supports it."
@@ -4805,7 +4805,7 @@ def _render_monthly_past_echo_strip(
     timezone_name: str,
     birth_date_value: date | None = None,
 ) -> None:
-    """Place historical context inside the Monthly reading, before the main editorial narrative."""
+    """Monthly precedent rendered in the same full-width editorial rhythm as Personal Transits."""
     try:
         matches = _monthly_history_matches(sign, int(year), int(month), timezone_name)
     except Exception:
@@ -4813,12 +4813,22 @@ def _render_monthly_past_echo_strip(
     if not matches:
         return
 
-    cards = []
-    for index, item in enumerate(matches[:3]):
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">PAST CONTEXT</div>', unsafe_allow_html=True)
+    st.markdown("## Have you been somewhere like this before?")
+    st.markdown(
+        "Before reading the month forward, Luna checks the closest earlier sky patterns. "
+        "They are reference points, not claims that the same life event must repeat."
+    )
+
+    for index, item in enumerate(matches[:3], start=1):
         past_year = int(item["year"])
+        past_label = f"{month_name[int(month)]} {past_year}"
         shared = item.get("shared_houses") or []
         now_only = item.get("current_only") or []
         then_only = item.get("past_only") or []
+
+        st.markdown("---")
 
         age_text = ""
         if birth_date_value:
@@ -4827,127 +4837,72 @@ def _render_monthly_past_echo_strip(
                 age = ref_date.year - birth_date_value.year - (
                     (ref_date.month, ref_date.day) < (birth_date_value.month, birth_date_value.day)
                 )
-                age_text = f" · AGE {age}"
+                age_text = f" · YOU WERE ABOUT {age}"
+
+        st.markdown(
+            f'<div class="eyebrow">PAST ECHO · {escape(past_label.upper())}{escape(age_text)}</div>',
+            unsafe_allow_html=True,
+        )
 
         if shared:
-            rhyme = " + ".join(_monthly_reader_house_label(h) for h in shared[:2])
+            shared_text = " + ".join(_monthly_reader_house_label(h) for h in shared[:2])
         else:
-            rhyme = "similar planetary sequence"
+            shared_text = "a similar planetary sequence"
+
+        st.markdown(f"### {shared_text.title()}")
 
         if now_only and then_only:
-            difference = (
-                f"Now: {_monthly_reader_house_label(now_only[0])}. "
-                f"Then: {_monthly_reader_house_label(then_only[0])}."
+            now_text = _monthly_reader_house_label(now_only[0])
+            then_text = _monthly_reader_house_label(then_only[0])
+            st.markdown(
+                f"**What rhymes:** the earlier month carried the same underlying emphasis around **{shared_text}**."
+            )
+            st.markdown(
+                f"**What is different now:** **{now_text}** has joined the story, while {past_label} "
+                f"leaned more toward **{then_text}**."
             )
         elif now_only:
-            difference = f"Now adds {_monthly_reader_house_label(now_only[0])}."
+            now_text = _monthly_reader_house_label(now_only[0])
+            st.markdown(
+                f"**What rhymes:** the earlier month carried the same underlying emphasis around **{shared_text}**."
+            )
+            st.markdown(
+                f"**What is different now:** this month adds **{now_text}**, changing how the old pattern can express itself."
+            )
         elif then_only:
-            difference = f"Then carried more {_monthly_reader_house_label(then_only[0])}."
+            then_text = _monthly_reader_house_label(then_only[0])
+            st.markdown(
+                f"**What rhymes:** the earlier month carried the same underlying emphasis around **{shared_text}**."
+            )
+            st.markdown(
+                f"**What is different now:** {past_label} carried more **{then_text}** than the present month does."
+            )
         else:
-            difference = "The supporting sky is different this time."
+            st.markdown(
+                f"**What rhymes:** both months share **{shared_text}**."
+            )
+            st.markdown(
+                "**What is different now:** the supporting planets and exact sequence have changed, so treat this as an echo rather than a replay."
+            )
 
-        prompt = (
-            "What was opening then?"
-            if index == 0
-            else "What do you remember?"
+        if birth_date_value and ref_date >= birth_date_value:
+            st.markdown(
+                "**What do you remember?** Was that period more about love, work, money, home, independence, "
+                "responsibility or a change in direction?"
+            )
+        else:
+            st.markdown(
+                "**Before your time:** the earlier sky still gives this month a longer cycle context."
+            )
+
+    with st.expander("Why Luna sees these dates"):
+        st.markdown(
+            "Luna compares the month's dominant whole-sign houses and major planetary transition labels with earlier "
+            "months for the same sign. The similarity score stays internal. What the reader sees is the useful part: "
+            "what rhymes, what changed, and what that difference may mean."
         )
 
-        cards.append(
-            f"""
-            <div class="monthly-echo-card">
-              <div class="monthly-echo-kicker">PAST ECHO · {escape(month_name[int(month)].upper())} {past_year}{escape(age_text)}</div>
-              <div class="monthly-echo-rhyme">{escape(rhyme)}</div>
-              <div class="monthly-echo-diff">{escape(difference)}</div>
-              <div class="monthly-echo-prompt">{escape(prompt)}</div>
-            </div>
-            """
-        )
-
-    st.markdown(
-        """
-        <style>
-        .monthly-echo-wrap{
-            margin:1.4rem 0 1.9rem 0;
-            border-top:1px solid rgba(0,0,0,.55);
-            border-bottom:1px solid rgba(0,0,0,.55);
-            padding:1rem 0 .95rem 0;
-        }
-        .monthly-echo-heading{
-            font-family:"Bauer Bodoni","Bodoni 72","Didot",Georgia,serif;
-            font-size:clamp(1.55rem,3vw,2.25rem);
-            line-height:1.02;
-            margin:0 0 .35rem 0;
-        }
-        .monthly-echo-intro{
-            font-family:"Josefin Sans",Arial,sans-serif;
-            font-size:.92rem;
-            line-height:1.45;
-            max-width:760px;
-            margin-bottom:.9rem;
-        }
-        .monthly-echo-grid{
-            display:grid;
-            grid-template-columns:repeat(3,minmax(0,1fr));
-            gap:0;
-            border-top:1px solid rgba(0,0,0,.22);
-        }
-        .monthly-echo-card{
-            padding:.9rem .9rem .6rem 0;
-            min-height:150px;
-        }
-        .monthly-echo-card + .monthly-echo-card{
-            border-left:1px solid rgba(0,0,0,.22);
-            padding-left:.9rem;
-        }
-        .monthly-echo-kicker{
-            font-family:"IBM Plex Mono",monospace;
-            font-size:.66rem;
-            letter-spacing:.07em;
-            text-transform:uppercase;
-            margin-bottom:.55rem;
-        }
-        .monthly-echo-rhyme{
-            font-family:"Bauer Bodoni","Bodoni 72","Didot",Georgia,serif;
-            font-size:1.15rem;
-            line-height:1.1;
-            margin-bottom:.45rem;
-        }
-        .monthly-echo-diff{
-            font-family:"Josefin Sans",Arial,sans-serif;
-            font-size:.86rem;
-            line-height:1.42;
-            margin-bottom:.5rem;
-        }
-        .monthly-echo-prompt{
-            font-family:"Josefin Sans",Arial,sans-serif;
-            font-size:.78rem;
-            font-style:italic;
-            opacity:.72;
-        }
-        @media (max-width: 760px){
-            .monthly-echo-grid{grid-template-columns:1fr;}
-            .monthly-echo-card + .monthly-echo-card{
-                border-left:0;
-                border-top:1px solid rgba(0,0,0,.22);
-                padding-left:0;
-            }
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="monthly-echo-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="monthly-echo-heading">This month has a history.</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="monthly-echo-intro">'
-        'Before reading the month forward, look backward. These are the closest earlier echoes Luna found. '
-        'They are reference points, not predictions that the same event repeats.'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown('<div class="monthly-echo-grid">' + "".join(cards) + '</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
 
 
 def _render_monthly_personal_sky(snapshot) -> None:
@@ -5007,10 +4962,8 @@ def monthly_sign_page(sign: str) -> None:
             st.exception(exc)
         return
 
-    st.markdown("### The shared sky")
-    st.markdown(
-        "One moving sky. Your birth details give Luna a personal reference point for reading the month."
-    )
+    st.markdown('<div class="eyebrow">THE SKY</div>', unsafe_allow_html=True)
+    st.markdown("### One moving sky. One personal reference point.")
     _render_monthly_personal_sky(snapshot)
 
     _render_monthly_past_echo_strip(
@@ -5021,6 +4974,7 @@ def monthly_sign_page(sign: str) -> None:
         birth_date_value=birth_date_value,
     )
 
+    st.markdown('<div class="eyebrow">THE STORY OF YOUR MONTH</div>', unsafe_allow_html=True)
     render_production_monthly_report(narrative, result, show_print=True)
 
 
