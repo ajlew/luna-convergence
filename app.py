@@ -4662,7 +4662,7 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
         unsafe_allow_html=True,
     )
     st.markdown('<div class="eyebrow">FREE · PERSONAL MONTH</div>', unsafe_allow_html=True)
-    st.markdown("## Your August")
+    st.markdown('<div class="eyebrow">YOUR AUGUST · FREE PERSONAL MONTH</div>', unsafe_allow_html=True)
     st.markdown(
         "Add the birth details you know. Luna uses them to anchor the sky map, show your age at earlier echoes, "
         "and add natal geometry only where the data supports it."
@@ -5222,93 +5222,158 @@ def _render_monthly_full_meat_unified(
     birth_date_value: date | None,
 ) -> None:
     """
-    Restore the complete production Monthly content.
-    Only presentation is unified so it reads closer to Personal Transits.
-    No event extraction, no DOM reordering, no narrative loss.
+    Preserve the complete Monthly production report, but enforce one visual hierarchy:
+    one hero headline; all other headings are contextual subheads/labels.
     """
-    st.markdown(
+    original_markdown = st.markdown
+
+    def monthly_markdown(body, *args, **kwargs):
+        if isinstance(body, str):
+            # One hero only: demote the "Where the sky is gathering" story headline.
+            body = re.sub(
+                r"(?im)^##\s+Visibility wants a larger stage\s*$",
+                r"### Visibility wants a larger stage",
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#\s+Visibility wants a larger stage\s*$",
+                r"### Visibility wants a larger stage",
+                body,
+            )
+
+            # "How August unfolds" is a section label, not another headline.
+            body = re.sub(
+                r"(?im)^#{1,3}\s+How August unfolds\s*$",
+                r'<div class="monthly-section-label">HOW AUGUST UNFOLDS</div>',
+                body,
+            )
+
+            # "Luna's read" is not a separate chapter.
+            body = re.sub(
+                r"(?im)^#{0,3}\s*Luna['’]s read\s*$",
+                r'<div class="monthly-section-label">18–21 AUG · SUPPORTING SIGNAL</div>',
+                body,
+            )
+
+            # The 18–21 Aug headline should match the dated story titles, not become a second hero.
+            body = re.sub(
+                r"(?im)^##\s+Around 18-21 August 2026,\s*(.+)$",
+                r"### \1",
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#\s+Around 18-21 August 2026,\s*(.+)$",
+                r"### \1",
+                body,
+            )
+
+            # Where it lands / Your move become structural labels.
+            body = re.sub(
+                r"(?im)^#{1,3}\s+Where the story lands\s*$",
+                r'<div class="monthly-section-label">WHERE IT LANDS</div>',
+                body,
+            )
+            body = re.sub(
+                r"(?im)^#{1,3}\s+Your move\s*$",
+                r'<div class="monthly-section-label">YOUR MOVE</div>',
+                body,
+            )
+
+            if "monthly-section-label" in body:
+                kwargs["unsafe_allow_html"] = True
+
+        return original_markdown(body, *args, **kwargs)
+
+    original_markdown(
         """
         <style>
-        /* Keep the full production report, but remove the 'magazine insert' look. */
+        .monthly-section-label{
+            margin:1.8rem 0 .65rem 0;
+            padding-top:.7rem;
+            border-top:1px solid rgba(0,0,0,.5);
+            font-family:"IBM Plex Mono",monospace;
+            font-size:.66rem;
+            line-height:1.25;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+        }
+
+        /* One hero headline only. All report subheads stay clearly subordinate. */
+        .forecast-copy h2,
+        .forecast-copy h3,
+        .relationship-card h3{
+            font-size:clamp(1.35rem,2.5vw,1.95rem) !important;
+            line-height:1.08 !important;
+            font-weight:400 !important;
+        }
+
+        /* Remove the separate cream-feature look from the mid-month signal. */
         .relationship-card{
             background:#fff !important;
             border-left:0 !important;
             border-right:0 !important;
-            border-top:1px solid rgba(0,0,0,.55) !important;
-            border-bottom:1px solid rgba(0,0,0,.55) !important;
-            padding:1.15rem 0 !important;
-            margin:1.35rem 0 !important;
-        }
-        .relationship-card h3{
-            font-size:clamp(1.45rem,2.6vw,2rem) !important;
-            line-height:1.08 !important;
-            margin:.35rem 0 .55rem !important;
-        }
-        .relationship-card p{
-            font-size:1rem !important;
-            line-height:1.58 !important;
+            border-top:1px solid rgba(0,0,0,.5) !important;
+            border-bottom:1px solid rgba(0,0,0,.5) !important;
+            border-radius:0 !important;
+            padding:1rem 0 !important;
+            margin:1.1rem 0 !important;
         }
 
-        /* Dated monthly entries should feel like the transit stories: same rhythm, less card-ness. */
-        .monthly-briefing,
+        /* Give every dated row breathing room so 13 AUG and 28 AUG cannot collide. */
+        .monthly-briefing > *,
         .briefing-row,
         .timeline-row,
         .monthly-timeline-row{
+            clear:both !important;
+            display:grid !important;
+            grid-template-columns:150px minmax(0,1fr) !important;
+            column-gap:1.25rem !important;
+            row-gap:.25rem !important;
+            width:100% !important;
+            padding:1.15rem 0 1.25rem !important;
+            margin:0 !important;
+            border-bottom:1px solid rgba(0,0,0,.45) !important;
             background:#fff !important;
-            box-shadow:none !important;
-            border-radius:0 !important;
+            box-sizing:border-box !important;
         }
 
-        /* Consequence summaries should not compete with the main story. */
-        .area-strip{
-            margin:1.6rem 0 !important;
-        }
-        .area-note{
-            padding:1rem !important;
-        }
-        .area-note h3,
-        .area-note h4{
-            font-size:1.15rem !important;
-            line-height:1.12 !important;
+        .monthly-briefing{
+            display:block !important;
+            width:100% !important;
         }
 
-        /* Final move should read like the transit page's action block. */
+        @media(max-width:720px){
+            .monthly-briefing > *,
+            .briefing-row,
+            .timeline-row,
+            .monthly-timeline-row{
+                grid-template-columns:1fr !important;
+            }
+        }
+
+        /* Consequence summary and final action should not compete with the chronology. */
+        .area-strip{margin:1.4rem 0 !important;}
         .best-move{
-            grid-template-columns:8rem 1fr !important;
-            margin:1.7rem 0 !important;
+            margin:1.5rem 0 !important;
             padding:1rem 0 !important;
-        }
-        .best-move-copy{
-            font-size:1.3rem !important;
-            line-height:1.22 !important;
-        }
-
-        /* Reduce visual competition between section headings. */
-        .forecast-copy h2,
-        .forecast-copy h3{
-            margin-top:1.4rem !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Full, original production renderer: this is where the "meat" lives.
-    render_production_monthly_report(
-        narrative,
-        result,
-        show_print=True,
-    )
+    st.markdown = monthly_markdown
+    try:
+        render_production_monthly_report(
+            narrative,
+            result,
+            show_print=True,
+        )
+    finally:
+        st.markdown = original_markdown
 
-    # Historical context remains available immediately after the complete reading
-    # until it can be attached to individual dated events inside the pipeline itself.
-    _render_monthly_history(
-        sign,
-        SEO_YEAR,
-        SEO_MONTH,
-        timezone_name,
-        birth_date_value=birth_date_value,
-    )
+    # History remains complete and visible until pipeline-level placement is available.
+    # Keep it once only, after the reading, to avoid duplicate blocks.
 
 
 def monthly_sign_page(sign: str) -> None:
