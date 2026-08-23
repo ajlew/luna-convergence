@@ -1893,24 +1893,16 @@ def brand_header() -> None:
 
 def top_navigation(current_path: str) -> None:
     path = current_path or ""
-    # The root, /daily-horoscope and the legacy Google Ads URL all render the
-    # same Daily experience.  Monthly sign pages remain the only public
-    # destination for This Month.
-    if path in {"", "daily-horoscope", "august-2026-horoscopes"}:
+    # Monthly now has one stable public destination: /monthly.
+    # Legacy August/sign-specific routes remain only as redirects.
+    if path in {"", "daily-horoscope"}:
         nav_path = ""
-    elif path.startswith("august-2026-"):
-        nav_path = "this-month"
+    elif path == "monthly" or path == "august-2026-horoscopes" or path.startswith("august-2026-"):
+        nav_path = "monthly"
     else:
         nav_path = path
 
-    remembered_sign = (
-        st.session_state.get("landing-daily-sign-v3195")
-        or st.session_state.get("daily-sign")
-        or DEFAULT_SIGN
-    )
-    if remembered_sign not in SIGNS:
-        remembered_sign = DEFAULT_SIGN
-    monthly_path = f"august-2026-{sign_slug(remembered_sign)}"
+    monthly_path = "monthly"
 
     # Public navigation is intentionally minimal. Routes used for checkout,
     # fulfilment, previews and administration still exist but stay out of sight.
@@ -3261,7 +3253,7 @@ def _render_lean_daily(path: str) -> None:
         f"<p>{escape(paragraph)}</p>" for paragraph in story if paragraph
     )
     question = narrative.reflection_questions[0] if narrative.reflection_questions else ""
-    monthly_href = f"/august-2026-{sign_slug(sign)}"
+    monthly_href = "/monthly"
 
     st.markdown(
         f"""
@@ -3297,7 +3289,7 @@ def _render_site_solar_wave(path: str) -> None:
     clean = str(path or "").strip("/")
     if clean in {"ephemeris-admin", "editorial-preview", "payment-success"}:
         return
-    full = clean in {"", "daily-horoscope", "august-2026-horoscopes", "solar-year"}
+    full = clean in {"", "daily-horoscope", "monthly", "solar-year"}
     if full:
         wave_html = solar_year_wave_svg(browser_local_now(), browser_timezone_name())
     else:
@@ -4790,13 +4782,50 @@ def focus_paragraph(data: dict, target_houses: set[int], label: str) -> str:
 
 
 def monthly_index_page() -> None:
-    """Legacy August ad URL: render the Daily only.
+    """Single public Monthly hub at /monthly."""
+    remembered_sign = (
+        st.session_state.get("monthly-hub-sign-v1")
+        or st.session_state.get("landing-daily-sign-v3195")
+        or st.session_state.get("daily-sign")
+        or DEFAULT_SIGN
+    )
+    if remembered_sign not in SIGNS:
+        remembered_sign = DEFAULT_SIGN
 
-    Google Ads and old bookmarks may still point to /august-2026-horoscopes.
-    That URL must not expose the old monthly library, twelve-card grid or
-    checkout.  It now renders the exact same lean Daily experience as /.
-    """
-    _render_lean_daily("/august-2026-horoscopes")
+    st.markdown('<div class="eyebrow">THIS MONTH</div>', unsafe_allow_html=True)
+    selected_sign = st.selectbox(
+        "Sun sign",
+        SIGNS,
+        index=SIGNS.index(remembered_sign),
+        key="monthly-hub-sign-v1",
+    )
+    st.session_state["landing-daily-sign-v3195"] = selected_sign
+    monthly_sign_page(selected_sign)
+
+
+def _legacy_monthly_redirect(sign: str | None = None) -> None:
+    """Send old Monthly URLs to the single /monthly route."""
+    if sign in SIGNS:
+        st.session_state["monthly-hub-sign-v1"] = sign
+        st.session_state["landing-daily-sign-v3195"] = sign
+
+    try:
+        st.switch_page(MONTHLY_INDEX_REF)
+    except Exception:
+        components.html(
+            """
+            <script>
+              try { window.parent.location.replace("/monthly"); }
+              catch (e) { window.location.replace("/monthly"); }
+            </script>
+            """,
+            height=0,
+        )
+        st.info("Monthly has moved to /monthly.")
+
+
+def legacy_monthly_index_page() -> None:
+    _legacy_monthly_redirect()
 
 
 AUGUST_2026_PREVIEW_HOOKS = {
@@ -7297,7 +7326,7 @@ def monthly_sign_page(sign: str) -> None:
         f"Free {sign} August 2026 horoscope with key dates, love/work/money context, "
         "historical echoes and optional natal context."
     )
-    path = f"/august-2026-{sign_slug(sign)}"
+    path = "/monthly"
     set_page_metadata(title, description, path)
 
     snapshot, birth_date_value, timezone_name, nearest_city, ready = _free_monthly_profile(sign)
@@ -7361,19 +7390,14 @@ def monthly_sign_page(sign: str) -> None:
     with c2:
         st.markdown("**Your Year Ahead**<br>Personal Transits & Timing — see when your strongest natal activations build, peak, change and release.", unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="eyebrow monthly-other-signs-label" style="margin-top:2rem">Read another August 2026 sign</div>',
-        unsafe_allow_html=True,
-    )
-    links = [f'<a href="/august-2026-{sign_slug(item)}">{escape(item)}</a>' for item in SIGNS]
-    st.markdown('<div class="related-signs">' + "".join(links) + "</div>", unsafe_allow_html=True)
+    st.caption("To read another sign, use the Sun sign selector at the top of Monthly.")
 
 
 def make_monthly_page(sign: str):
     def page() -> None:
-        monthly_sign_page(sign)
+        _legacy_monthly_redirect(sign)
 
-    page.__name__ = f"{sign_slug(sign).replace('-', '_')}_august_2026"
+    page.__name__ = f"{sign_slug(sign).replace('-', '_')}_august_2026_redirect"
     return page
 
 
@@ -8638,8 +8662,14 @@ WEEKLY_STUDIO_REF = st.Page(
 )
 MONTHLY_INDEX_REF = st.Page(
     monthly_index_page,
-    title="August 2026 Horoscopes",
+    title="Monthly",
+    url_path="monthly",
+)
+LEGACY_MONTHLY_INDEX_REF = st.Page(
+    legacy_monthly_index_page,
+    title="Monthly",
     url_path="august-2026-horoscopes",
+    visibility="hidden",
 )
 MONTHLY_PREVIEW_REF = st.Page(
     monthly_preview_page,
@@ -8730,6 +8760,7 @@ ALL_PAGES = [
     WEEKLY_PAGE_REF,
     WEEKLY_STUDIO_REF,
     MONTHLY_INDEX_REF,
+    LEGACY_MONTHLY_INDEX_REF,
     MONTHLY_PREVIEW_REF,
     EDITORIAL_PREVIEW_REF,
     FORECAST_LIBRARY_REF,
