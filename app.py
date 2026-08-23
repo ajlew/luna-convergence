@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 import json
+import math
 import re
 import secrets
 from calendar import month_name
@@ -145,6 +146,15 @@ STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 LUNA_YOUTUBE_CHANNEL_URL = secret("LUNA_YOUTUBE_CHANNEL_URL")
 LUNA_YOUTUBE_FEATURED_VIDEO_URL = secret("LUNA_YOUTUBE_FEATURED_VIDEO_URL")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
+
+LUNA_TRUST_STATEMENT = (
+    "The astrology is calculated, not guessed. Ephemeris data and programmed rules determine "
+    "what is happening in the chart; Luna then turns those signals into interpretation."
+)
+LUNA_TRUST_DISCLOSURE = (
+    "Luna uses ephemeris data and programmed calculations to identify planetary positions, aspects, "
+    "houses and timing. Astrology is interpretive, and calculations or interpretations may occasionally contain errors."
+)
 DAILY_PAGE_REF = None
 
 
@@ -1695,6 +1705,62 @@ hr {
     .timing-dates { grid-template-columns:1fr; }
 }
 
+
+.timing-product-subtitle{
+    margin:-.6rem 0 1rem;
+    font-family:"Josefin Sans",sans-serif;
+    font-size:clamp(1.15rem,2vw,1.6rem);
+    font-weight:500;
+    letter-spacing:.025em;
+}
+.timing-plain-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin:.8rem 0 1rem;
+}
+.timing-plain-grid > div{background:#fff;padding:.8rem .9rem;}
+.timing-plain-grid span,
+.timing-phase-grid span{
+    display:block;
+    font:500 .62rem "IBM Plex Mono",monospace;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:.28rem;
+}
+.timing-plain-grid strong{font-family:"Josefin Sans",sans-serif;font-size:1rem;line-height:1.35;}
+.timing-phase-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin:.8rem 0 1rem;
+}
+.timing-phase-grid > div{background:#fff;padding:.7rem .8rem;}
+.timing-phase-grid strong{font-family:"Josefin Sans",sans-serif;font-size:.95rem;}
+.timing-confidence{
+    display:inline-block;
+    padding:.18rem .42rem;
+    border:1px solid var(--line);
+    font:500 .66rem "IBM Plex Mono",monospace;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.chart-motion-summary{max-width:850px;font-size:1.06rem;line-height:1.55;margin:.3rem 0 1rem;}
+.chart-motion-legend{display:flex;flex-wrap:wrap;gap:1rem;margin:.7rem 0 .3rem;}
+.chart-motion-key{display:flex;align-items:center;gap:.42rem;font-size:.86rem;}
+.chart-motion-swatch{width:.8rem;height:.8rem;border-radius:50%;display:inline-block;}
+.chart-motion-swatch.house{background:#d9ddff;}
+.chart-motion-swatch.natal{background:#6757c7;}
+.chart-motion-swatch.transit{background:#e58a2f;}
+@media(max-width:720px){
+    .timing-plain-grid,.timing-phase-grid{grid-template-columns:1fr;}
+}
+
 </style>
         """,
         unsafe_allow_html=True,
@@ -1743,7 +1809,7 @@ def top_navigation(current_path: str) -> None:
         ("", "Daily Horoscope"),
         ("weekly-view", "Weekly View"),
         (monthly_path, "This Month"),
-        ("timing-map", "12-Month Map"),
+        ("timing-map", "Your Year Ahead"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
     ]
@@ -4533,16 +4599,18 @@ def method_page() -> None:
 4. Retrogrades are reconstructed as pre-shadow, retrograde, direct and post-shadow phases.
 5. Important events are grouped into **convergence points**.
 6. The interpretation library converts the facts into opportunity, risk and strategic action.
-7. An optional local language model can improve prose without changing the calculated facts.
+7. The narrative layer translates the calculated signals into reader-facing interpretation without changing the astronomical facts.
         """
     )
 
     st.markdown("## Explainable Astrology")
+    st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
     st.markdown(
         "Luna Convergence presents the human story first, then answers three questions: "
-        "**what changed today, why it differs from yesterday, and what evidence supports it**. "
-        "The public Sky Snapshot stays readable; full positions, houses and orbs remain optional."
+        "**what changed, where it lands, and what evidence supports it**. "
+        "The readable interpretation stays on top; positions, houses, aspects and orbs remain available underneath."
     )
+    st.caption(LUNA_TRUST_DISCLOSURE)
 
     st.markdown("## What this is—and is not")
     st.markdown(
@@ -6325,7 +6393,7 @@ def monthly_sign_page(sign: str) -> None:
     with c1:
         st.markdown("**Ask Luna · planned launch price A$1.95**<br>One focused question about work, relationships, money or timing.", unsafe_allow_html=True)
     with c2:
-        st.markdown("**Personal Transits**<br>See when your strongest natal activations build, peak, change and release.", unsafe_allow_html=True)
+        st.markdown("**Your Year Ahead**<br>Personal Transits & Timing — see when your strongest natal activations build, peak, change and release.", unsafe_allow_html=True)
 
     st.markdown(
         '<div class="eyebrow monthly-other-signs-label" style="margin-top:2rem">Read another August 2026 sign</div>',
@@ -6652,7 +6720,7 @@ def natal_snapshot_page() -> None:
         "showing which pattern is active, when it peaks and when the conditions change."
     )
     st.markdown(
-        '<a class="lean-monthly-link" href="/timing-map">Build your 12-Month Timing Map →</a>',
+        '<a class="lean-monthly-link" href="/timing-map">Build your Year Ahead →</a>',
         unsafe_allow_html=True,
     )
     st.markdown('</section>', unsafe_allow_html=True)
@@ -6948,17 +7016,278 @@ def _timing_reader_move(story) -> str:
     return move
 
 
+
+def _timing_story_life_area(story) -> str:
+    house = getattr(story, "natal_house", None)
+    if house:
+        try:
+            return str(HOUSE_NAMES.get(int(house)) or f"House {int(house)}")
+        except Exception:
+            return f"House {house}"
+    target = str(getattr(story, "natal_target", "") or "").strip()
+    if target:
+        return f"Natal {target}"
+    return "Personal timing"
+
+
+def _timing_story_start(story) -> date | None:
+    periods = list(getattr(story, "periods", None) or [])
+    return min((item.start_date for item in periods), default=None)
+
+
+def _timing_story_end(story) -> date | None:
+    periods = list(getattr(story, "periods", None) or [])
+    return max((item.end_date for item in periods), default=None)
+
+
+def _timing_story_peak_label(story) -> str:
+    hits = list(getattr(story, "hits", None) or [])
+    if not hits:
+        return "—"
+    return " · ".join(_timing_date_label(hit.exact_date) for hit in hits[:3])
+
+
+def _timing_story_confidence(story) -> str:
+    hits = list(getattr(story, "hits", None) or [])
+    if not hits:
+        return "Moderate"
+    min_orb = min(float(getattr(hit, "orb", 9.0) or 9.0) for hit in hits)
+    if min_orb <= 0.50:
+        return "High"
+    if min_orb <= 1.00:
+        return "Medium"
+    return "Moderate"
+
+
+def _timing_story_overlap(story, start_date: date, end_date: date) -> bool:
+    for period in list(getattr(story, "periods", None) or []):
+        if period.start_date <= end_date and period.end_date >= start_date:
+            return True
+    return False
+
+
+def _timing_period_window(report, mode: str) -> tuple[date, date]:
+    reference = report.start_date
+    if mode == "Now":
+        return reference, reference
+    if mode == "30 Days":
+        return reference, min(report.end_date, reference + timedelta(days=30))
+    if mode == "90 Days":
+        return reference, min(report.end_date, reference + timedelta(days=90))
+    return reference, report.end_date
+
+
+def _timing_active_stories(report, mode: str) -> list:
+    start_date, end_date = _timing_period_window(report, mode)
+    stories = [story for story in report.stories if _timing_story_overlap(story, start_date, end_date)]
+
+    def nearest_hit(story):
+        hits = list(getattr(story, "hits", None) or [])
+        if not hits:
+            return 999999
+        return min(abs((hit.exact_date - start_date).days) for hit in hits)
+
+    return sorted(stories, key=nearest_hit)
+
+
+def _timing_motion_summary(report, mode: str, stories: list) -> str:
+    if not stories:
+        if mode == "Now":
+            return "The chart is comparatively quiet at the selected starting point. Luna does not force a major story when no strong transit is active."
+        return f"The selected {mode.lower()} window is comparatively quiet. No major transit story passes Luna's current threshold in this period."
+
+    areas = []
+    for story in stories:
+        area = _timing_story_life_area(story)
+        if area not in areas:
+            areas.append(area)
+        if len(areas) >= 2:
+            break
+
+    period_text = {
+        "Now": "At the selected starting point",
+        "30 Days": "Over the next 30 days",
+        "90 Days": "Over the next 90 days",
+        "12 Months": "Across the next 12 months",
+    }[mode]
+
+    area_text = " and ".join(areas) if areas else "your natal chart"
+    lead = str(getattr(stories[0], "headline", "") or "").strip().rstrip(".")
+    if len(stories) > 1:
+        second = str(getattr(stories[1], "headline", "") or "").strip().rstrip(".")
+        return (
+            f"{period_text}, the strongest activation concentrates around {area_text}. "
+            f"The leading story is {lead.lower()}; the next major shift develops through {second.lower()}."
+        )
+    return (
+        f"{period_text}, the strongest activation concentrates around {area_text}. "
+        f"The leading story is {lead.lower()}."
+    )
+
+
+def _timing_activation_wheel_svg(report, mode: str, size: int = 620) -> str:
+    """
+    Restrained activation layer. Colour encodes activity only:
+    shaded sectors = activated houses, violet = natal target, orange = transiting planet.
+    """
+    stories = _timing_active_stories(report, mode)
+    width = height = int(size)
+    cx = cy = width / 2
+    outer = width * 0.39
+    inner = width * 0.25
+    label_r = width * 0.345
+
+    house_counts: dict[int, int] = {}
+    house_stories: dict[int, list] = {}
+    for story in stories:
+        house = getattr(story, "natal_house", None)
+        try:
+            house = int(house) if house else None
+        except Exception:
+            house = None
+        if house and 1 <= house <= 12:
+            house_counts[house] = house_counts.get(house, 0) + 1
+            house_stories.setdefault(house, []).append(story)
+
+    max_count = max(house_counts.values(), default=1)
+
+    def polar(radius, degrees):
+        angle = math.radians(degrees - 90)
+        return cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+
+    def sector_path(house):
+        start_deg = (house - 1) * 30
+        end_deg = house * 30
+        x1, y1 = polar(outer, start_deg)
+        x2, y2 = polar(outer, end_deg)
+        x3, y3 = polar(inner, end_deg)
+        x4, y4 = polar(inner, start_deg)
+        return (
+            f"M {x1:.2f},{y1:.2f} "
+            f"A {outer:.2f},{outer:.2f} 0 0 1 {x2:.2f},{y2:.2f} "
+            f"L {x3:.2f},{y3:.2f} "
+            f"A {inner:.2f},{inner:.2f} 0 0 0 {x4:.2f},{y4:.2f} Z"
+        )
+
+    parts = [
+        f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="Natal chart activation layer">'
+    ]
+
+    for house in range(1, 13):
+        count = house_counts.get(house, 0)
+        opacity = 0.08 if count == 0 else 0.18 + (0.34 * count / max_count)
+        fill = "#f4f4f1" if count == 0 else "#6977df"
+        parts.append(
+            f'<path d="{sector_path(house)}" fill="{fill}" fill-opacity="{opacity:.2f}" '
+            f'stroke="#d8d8d3" stroke-width="1"/>'
+        )
+        lx, ly = polar(label_r, (house - 0.5) * 30)
+        parts.append(
+            f'<text x="{lx:.2f}" y="{ly:.2f}" text-anchor="middle" dominant-baseline="middle" '
+            f'font-family="IBM Plex Mono, monospace" font-size="12" fill="#444">{house}</text>'
+        )
+
+    parts.append(
+        f'<circle cx="{cx}" cy="{cy}" r="{inner}" fill="#fff" stroke="#d8d8d3" stroke-width="1"/>'
+    )
+    parts.append(
+        f'<text x="{cx}" y="{cy-8}" text-anchor="middle" '
+        f'font-family="Bodoni MT, Georgia, serif" font-size="25" fill="#151515">YOUR CHART</text>'
+    )
+    parts.append(
+        f'<text x="{cx}" y="{cy+16}" text-anchor="middle" '
+        f'font-family="IBM Plex Mono, monospace" font-size="10" letter-spacing="1.4" fill="#696963">'
+        f'{escape(mode.upper())}</text>'
+    )
+
+    for house, house_items in house_stories.items():
+        angle = (house - 0.5) * 30
+        natal_x, natal_y = polar(inner + (outer-inner) * 0.38, angle)
+        transit_x, transit_y = polar(outer + 23, angle)
+        story = house_items[0]
+        target = str(getattr(story, "natal_target", "") or "").strip()
+        transit = str(getattr(story, "transit_planet", "") or "").strip()
+
+        hits = list(getattr(story, "hits", None) or [])
+        min_orb = min((float(getattr(hit, "orb", 2.0) or 2.0) for hit in hits), default=2.0)
+        line_width = max(1.2, 3.2 - min(min_orb, 2.0))
+        applying = True
+        if hits:
+            nearest = min(hits, key=lambda hit: abs((hit.exact_date - report.start_date).days))
+            applying = nearest.exact_date >= report.start_date
+        dash = "" if applying else ' stroke-dasharray="6 5"'
+
+        parts.append(
+            f'<line x1="{cx:.2f}" y1="{cy:.2f}" x2="{natal_x:.2f}" y2="{natal_y:.2f}" '
+            f'stroke="#6757c7" stroke-width="{line_width:.2f}" stroke-opacity=".72"{dash}/>'
+        )
+        parts.append(f'<circle cx="{natal_x:.2f}" cy="{natal_y:.2f}" r="9" fill="#6757c7"/>')
+        if target:
+            parts.append(
+                f'<text x="{natal_x:.2f}" y="{natal_y-14:.2f}" text-anchor="middle" '
+                f'font-family="Josefin Sans, sans-serif" font-size="11" font-weight="600" fill="#332a76">'
+                f'{escape(target[:12])}</text>'
+            )
+        parts.append(f'<circle cx="{transit_x:.2f}" cy="{transit_y:.2f}" r="8" fill="#e58a2f"/>')
+        if transit:
+            parts.append(
+                f'<text x="{transit_x:.2f}" y="{transit_y-13:.2f}" text-anchor="middle" '
+                f'font-family="IBM Plex Mono, monospace" font-size="9" fill="#7a4818">'
+                f'{escape(transit[:8].upper())}</text>'
+            )
+
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _timing_chart_in_motion(report, snapshot) -> None:
+    st.markdown("## Your Chart in Motion")
+    st.caption(
+        "Colour shows activity, not good or bad. The natal chart stays restrained; the activation layer shows which houses and natal targets are being contacted in the selected period. Solid lines are approaching contacts; dashed lines are separating."
+    )
+
+    mode = st.radio(
+        "Chart period",
+        ["Now", "30 Days", "90 Days", "12 Months"],
+        index=2,
+        horizontal=True,
+        key="timing-chart-period-v401",
+    )
+    active_stories = _timing_active_stories(report, mode)
+    st.markdown(
+        f'<div class="chart-motion-summary">{escape(_timing_motion_summary(report, mode, active_stories))}</div>',
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown("**Natal reference**")
+        st.markdown(natal_wheel_svg(snapshot, size=620), unsafe_allow_html=True)
+    with right:
+        st.markdown("**Activation layer**")
+        st.markdown(_timing_activation_wheel_svg(report, mode, size=620), unsafe_allow_html=True)
+        st.markdown(
+            '<div class="chart-motion-legend">'
+            '<div class="chart-motion-key"><i class="chart-motion-swatch house"></i>Activated house</div>'
+            '<div class="chart-motion-key"><i class="chart-motion-swatch natal"></i>Natal target</div>'
+            '<div class="chart-motion-key"><i class="chart-motion-swatch transit"></i>Transiting planet</div>'
+            '</div><div class="small-note">Line weight increases as the orb tightens.</div>',
+            unsafe_allow_html=True,
+        )
+
+
+
 def timing_map_page() -> None:
     set_page_metadata(
-        "Personal Transits | Luna Convergence",
+        "Your Year Ahead | Personal Transits & Timing | Luna Convergence",
         "A personalised 12-month transit map showing when major natal activations strengthen, peak, change and release.",
         "/timing-map",
     )
     st.markdown('<section class="timing-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Pilot · personal transits</div>', unsafe_allow_html=True)
-    st.markdown('<div class="editorial-title">Your 12-Month<br>Personal Transits</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Pilot · personal timing</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">Your Year Ahead</div><div class="timing-product-subtitle">Personal Transits &amp; Timing</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="timing-intro">This is not another Sun-sign year. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto across the next 365 days, ranks the strongest contacts and shows the strongest periods first. The calculation stays one click underneath.</div>',
+        '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto, shows when the strongest contacts start, peak and ease, and translates each transit into the life area and decision it activates.</div>',
         unsafe_allow_html=True,
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
@@ -6976,7 +7305,7 @@ def timing_map_page() -> None:
         st.markdown("### Tell Luna when you were born")
         st.caption("If the birth time is unknown, Luna leaves Ascendant, Midheaven and houses out rather than inventing precision.")
         snapshot, validation_message, prefill_out = _timing_birth_snapshot()
-        generate = st.button("Build my 12-month map", type="primary", use_container_width=True, key="timing-generate-v330")
+        generate = st.button("Build my Year Ahead", type="primary", use_container_width=True, key="timing-generate-v330")
 
     if generate:
         if snapshot is None:
@@ -6991,6 +7320,7 @@ def timing_map_page() -> None:
                     max_stories=10,
                 )
             st.session_state["timing-map-report-v330"] = report
+            st.session_state["timing-map-snapshot-v401"] = snapshot
             st.session_state["timing-map-summary-v330"] = natal_profile_summary(snapshot)
             st.session_state["timing-map-time-known-v330"] = bool(snapshot.birth_time_known)
             st.session_state["timing-map-birth-date-v334"] = getattr(snapshot, "birth_date", None) or (prefill_out or {}).get("birth_date")
@@ -7043,33 +7373,44 @@ def timing_map_page() -> None:
             "then translates their dominant function into a readable arc."
         )
 
+    timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
+    if timing_snapshot is not None:
+        _timing_chart_in_motion(report, timing_snapshot)
+
     if not report.stories:
         st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
     else:
         for number, story in enumerate(report.stories, start=1):
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
-            date_boxes = []
-            hit_labels = ["Peak", "Returns", "Final pass"]
-            for hit_index, hit in enumerate(story.hits[:3]):
-                label = hit_labels[min(hit_index, 2)] if len(story.hits) > 1 else "Exact"
-                suffix = " · retrograde" if hit.retrograde else ""
-                date_boxes.append(
-                    f'<div class="timing-date-box"><span>{escape(label)}</span>'
-                    f'<strong>{escape(_timing_date_label(hit.exact_date) + suffix)}</strong></div>'
-                )
+            story_start = _timing_story_start(story)
+            story_end = _timing_story_end(story)
+            starts_label = _timing_date_label(story_start) if story_start else "—"
+            strongest_label = _timing_story_peak_label(story)
+            eases_label = _timing_date_label(story_end) if story_end else "—"
+            where_label = _timing_story_life_area(story)
             scenario_html = "".join(f"<li>{escape(line)}</li>" for line in story.scenarios)
-            st.markdown(
-                f'''<article class="timing-story">
-  <div class="timing-meta">{number:02d} / {escape(_timing_signal_type(story))} · {escape(story.polarity)} · active {escape(periods_label)}</div>
-  <h2>{escape(story.headline)}</h2>
-  <p>{escape(story.summary)}</p>
-  <div class="timing-dates">{"".join(date_boxes)}</div>
-  <ul class="timing-scenarios">{scenario_html}</ul>
-  <div class="timing-move"><div class="timing-move-label">Your move</div><strong>{escape(_timing_reader_move(story))}</strong></div>
-  <p><strong>Watch:</strong> {escape(story.watch)}</p>
-</article>''',
-                unsafe_allow_html=True,
+
+            article_html = (
+                '<article class="timing-story">'
+                f'<div class="timing-meta">{number:02d} / {escape(_timing_signal_type(story))} · '
+                f'{escape(story.polarity)} · active {escape(periods_label)}</div>'
+                f'<h2>{escape(story.headline)}</h2>'
+                '<div class="timing-plain-grid">'
+                f'<div><span>What is happening</span><strong>{escape(story.summary)}</strong></div>'
+                f'<div><span>Where it lands</span><strong>{escape(where_label)}</strong></div>'
+                '</div>'
+                '<div class="timing-phase-grid">'
+                f'<div><span>Starts</span><strong>{escape(starts_label)}</strong></div>'
+                f'<div><span>Strongest</span><strong>{escape(strongest_label)}</strong></div>'
+                f'<div><span>Eases</span><strong>{escape(eases_label)}</strong></div>'
+                '</div>'
+                f'<ul class="timing-scenarios">{scenario_html}</ul>'
+                f'<div class="timing-move"><div class="timing-move-label">Your move</div>'
+                f'<strong>{escape(_timing_reader_move(story))}</strong></div>'
+                f'<p><strong>Watch:</strong> {escape(story.watch)}</p>'
+                '</article>'
             )
+            st.markdown(article_html, unsafe_allow_html=True)
             birth_date_for_history = st.session_state.get("timing-map-birth-date-v334")
             if isinstance(birth_date_for_history, str):
                 try:
@@ -7079,21 +7420,34 @@ def timing_map_page() -> None:
             _render_transit_history(story, birth_date_for_history)
 
             with st.expander("Why Luna sees this"):
+                confidence = _timing_story_confidence(story)
                 st.markdown(
-                    f"**Transit {story.transit_planet} {story.aspect} natal {story.natal_target}**"
+                    f"**{story.transit_planet} {story.aspect} natal {story.natal_target}**"
                     + (f" · natal house {story.natal_house}" if story.natal_house else "")
+                )
+                st.markdown(
+                    f'<span class="timing-confidence">Confidence · {escape(confidence)}</span>',
+                    unsafe_allow_html=True,
+                )
+                st.caption(
+                    f"{story.transit_planet} {story.aspect} natal {story.natal_target} is the technical transit. "
+                    "Luna translates that geometry into the life-area story shown above."
                 )
                 for pass_number, hit in enumerate(story.hits, start=1):
                     motion = "retrograde" if hit.retrograde else "direct"
                     st.markdown(
                         f"- Pass {pass_number}: **{_timing_date_label(hit.exact_date)}** · {motion} · daily minimum orb {hit.orb:.2f}°"
                     )
+                st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
+                st.caption(LUNA_TRUST_DISCLOSURE)
                 st.caption(
-                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
+                    "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, "
+                    "groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
                 )
 
+
     st.markdown(
-        "<div class=\"timing-test\"><strong>Personal Transits · pilot</strong><br>This is Luna's paid-value layer: personal timing, major peaks, historical context and the difference between then and now. Pricing is still being tested; no payment is collected in this pilot.</div>",
+        "<div class=\"timing-test\"><strong>Your Year Ahead · Personal Transits &amp; Timing · pilot</strong><br>This is Luna's paid-value layer: personal timing, major peaks, historical context and the difference between then and now. Pricing is still being tested; no payment is collected in this pilot.</div>",
         unsafe_allow_html=True,
     )
     vote_cols = st.columns(3, gap="small")
@@ -7245,7 +7599,7 @@ optional question is stored in Stripe Checkout metadata and used only to generat
 and support the purchased report. A city is used to
 estimate latitude, hemisphere and daylight; a street address is not requested.
 
-The free Natal Snapshot and the 12-Month Timing Map pilot use birth details in the current app session to calculate the result.
+The free Natal Snapshot and Your Year Ahead pilot use birth details in the current app session to calculate the result.
 Birth details are not placed in the page URL or analytics events by either feature. The Timing Map price test records only the
 response, pilot price and whether an exact birth time was available; it does not record the birth date, time or place.
 For paid Monthly personalisation, the same birth inputs are used in-session to calculate a compact
@@ -7262,7 +7616,7 @@ email displayed during checkout or in the report-delivery message.
 - page views;
 - free daily reading generation;
 - free natal snapshot generation (without birth details in the event payload);
-- 12-month timing-map generation and pilot price-test response (without birth details);
+- Your Year Ahead generation and pilot price-test response (without birth details);
 - monthly report checkout clicks;
 - year-ahead report checkout clicks;
 - confirmed paid-report purchases.
@@ -7278,7 +7632,7 @@ def footer() -> None:
 <div class="small-note">
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 {"<br><strong>Preview build:</strong> " + escape(BUILD_LABEL) if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">12-Month Timing Map</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
+<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,
         unsafe_allow_html=True,
@@ -7365,7 +7719,7 @@ NATAL_SNAPSHOT_REF = st.Page(
 )
 TIMING_MAP_REF = st.Page(
     timing_map_page,
-    title="12-Month Timing Map",
+    title="Your Year Ahead",
     url_path="timing-map",
 )
 METHOD_PAGE_REF = st.Page(
