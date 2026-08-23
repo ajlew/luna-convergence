@@ -7163,7 +7163,7 @@ def _render_monthly_result_actions(sign: str) -> None:
     """
     title = f"{sign} {SEO_MONTH_NAME} {SEO_YEAR} · Luna Convergence"
     safe_title = escape(title)
-    monthly_share_url = f"https://luna-convergence.streamlit.app/{SEO_MONTH_NAME.lower()}-{SEO_YEAR}-{sign_slug(sign)}"
+    monthly_share_url = "https://luna-convergence.streamlit.app/monthly"
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">KEEP OR SHARE YOUR READING</div>', unsafe_allow_html=True)
