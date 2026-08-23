@@ -16,6 +16,7 @@ import difflib
 from PIL import Image
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from astrology_engine import SIGNS, HOUSE_NAMES
 from customer_experience import (
@@ -1516,7 +1517,6 @@ hr {
     .weekly-studio-controls,
     [data-testid="stDownloadButton"],
     [data-testid="stForm"],
-    [data-testid="stExpander"],
     [data-testid="stSelectbox"],
     [data-testid="stCode"],
     .weekly-copy-heading,
@@ -1526,6 +1526,36 @@ hr {
     .block-container {
         max-width:none;
         padding:.3in !important;
+    }
+    /* Print every evidence/house-key expander open, even if the reader left it collapsed. */
+    [data-testid="stExpander"] {
+        display:block !important;
+        visibility:visible !important;
+        overflow:visible !important;
+        break-inside:auto !important;
+        page-break-inside:auto !important;
+    }
+    [data-testid="stExpander"] details,
+    details[data-testid="stExpander"] {
+        display:block !important;
+        overflow:visible !important;
+    }
+    [data-testid="stExpander"] details > *:not(summary),
+    details[data-testid="stExpander"] > *:not(summary),
+    [data-testid="stExpanderDetails"] {
+        display:block !important;
+        visibility:visible !important;
+        height:auto !important;
+        max-height:none !important;
+        overflow:visible !important;
+        opacity:1 !important;
+    }
+    [data-testid="stExpander"] summary {
+        display:block !important;
+        cursor:default !important;
+        list-style:none !important;
+        border-bottom:1px solid var(--line);
+        margin-bottom:.35rem;
     }
     .weekly-grid {
         grid-template-columns:repeat(2,minmax(0,1fr));
@@ -4832,7 +4862,10 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
         "and add natal geometry only where the data supports it."
     )
 
-    with st.form(f"free-monthly-profile-{sign_slug(sign)}", clear_on_submit=False):
+    # Standard widgets deliberately sit outside a Streamlit form.
+    # This lets "I know my birth time exactly" reveal the time/location fields
+    # immediately instead of requiring a first form submission just to rerender them.
+    with st.container(border=True):
         birth_date_value = st.date_input(
             "Birth date",
             value=st.session_state.get(f"free-monthly-birth-date-{sign_slug(sign)}"),
@@ -4894,7 +4927,12 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
                 key=f"free-monthly-current-city-{sign_slug(sign)}",
             )
 
-        submitted = st.form_submit_button("Show my free month", type="primary", use_container_width=True)
+        submitted = st.button(
+            "Show my free month",
+            type="primary",
+            use_container_width=True,
+            key=f"free-monthly-show-{sign_slug(sign)}",
+        )
 
     ready_key = f"free-monthly-ready-{sign_slug(sign)}"
     if submitted:
@@ -7117,6 +7155,141 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         if fallback:
             st.markdown(fallback)
 
+
+def _render_monthly_result_actions(sign: str) -> None:
+    """
+    Reader controls for printing/saving the personalised report and sharing the public page.
+    The public URL deliberately contains no birth data or session state.
+    """
+    title = f"{sign} {SEO_MONTH_NAME} {SEO_YEAR} · Luna Convergence"
+    safe_title = escape(title)
+
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">KEEP OR SHARE YOUR READING</div>', unsafe_allow_html=True)
+
+    components.html(
+        f"""
+        <div id="luna-result-actions" style="
+            display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+            font-family:Arial,sans-serif;margin:0;padding:0 0 2px 0;">
+          <button id="luna-print" type="button" style="
+              min-height:44px;padding:10px 16px;border:1px solid #111;background:#111;color:#fff;
+              font-size:13px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">
+            Print / Save PDF
+          </button>
+          <button id="luna-share" type="button" style="
+              min-height:44px;padding:10px 16px;border:1px solid #111;background:#fff;color:#111;
+              font-size:13px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">
+            Share page link
+          </button>
+          <span id="luna-action-status" style="font-size:12px;color:#666;min-width:160px;"></span>
+        </div>
+
+        <script>
+        (() => {{
+          const printBtn = document.getElementById("luna-print");
+          const shareBtn = document.getElementById("luna-share");
+          const status = document.getElementById("luna-action-status");
+
+          function parentWindow() {{
+            try {{ return window.parent; }} catch (e) {{ return window; }}
+          }}
+
+          function parentDocument() {{
+            try {{ return window.parent.document; }} catch (e) {{ return null; }}
+          }}
+
+          function pageUrl() {{
+            try {{ return window.parent.location.href; }}
+            catch (e) {{ return document.referrer || window.location.href; }}
+          }}
+
+          function openExpandersForPrint() {{
+            const doc = parentDocument();
+            if (!doc) return;
+            const details = doc.querySelectorAll(
+              '[data-testid="stExpander"] details, details[data-testid="stExpander"]'
+            );
+            details.forEach((node) => {{
+              if (!node.open) {{
+                node.dataset.lunaPrintOpened = "1";
+                node.open = true;
+              }}
+            }});
+          }}
+
+          function restoreExpandersAfterPrint() {{
+            const doc = parentDocument();
+            if (!doc) return;
+            doc.querySelectorAll('details[data-luna-print-opened="1"]').forEach((node) => {{
+              node.open = false;
+              delete node.dataset.lunaPrintOpened;
+            }});
+          }}
+
+          try {{
+            const parent = parentWindow();
+            if (!parent.__lunaMonthlyPrintHooksInstalled) {{
+              parent.__lunaMonthlyPrintHooksInstalled = true;
+              parent.addEventListener("beforeprint", openExpandersForPrint);
+              parent.addEventListener("afterprint", restoreExpandersAfterPrint);
+            }}
+          }} catch (e) {{}}
+
+          printBtn.addEventListener("click", () => {{
+            status.textContent = "Opening print dialog…";
+            openExpandersForPrint();
+            setTimeout(() => {{
+              try {{ parentWindow().print(); }}
+              catch (e) {{ window.print(); }}
+              setTimeout(() => {{ status.textContent = ""; }}, 700);
+            }}, 180);
+          }});
+
+          shareBtn.addEventListener("click", async () => {{
+            const url = pageUrl();
+            const payload = {{
+              title: "{safe_title}",
+              text: "Luna Convergence monthly astrology page. Personal birth details are not included in this link.",
+              url
+            }};
+
+            if (navigator.share) {{
+              try {{
+                await navigator.share(payload);
+                status.textContent = "Share sheet opened.";
+                return;
+              }} catch (e) {{
+                if (e && e.name === "AbortError") {{
+                  status.textContent = "";
+                  return;
+                }}
+              }}
+            }}
+
+            try {{
+              await navigator.clipboard.writeText(url);
+              status.textContent = "Page link copied.";
+            }} catch (e) {{
+              window.prompt("Copy this Luna page link:", url);
+              status.textContent = "Copy the link shown.";
+            }}
+          }});
+        }})();
+        </script>
+        """,
+        height=62,
+        scrolling=False,
+    )
+
+    st.caption(
+        "For a personalised copy, choose **Print / Save PDF**. On a phone, save the PDF and use your device's Share sheet "
+        "to send the actual reading. **Share page link** shares only the public Monthly page — birth details and your session "
+        "are deliberately not placed in the URL."
+    )
+
+
+
 def monthly_sign_page(sign: str) -> None:
     """Unified free Monthly: birth context first, one editorial report, one history section."""
     title = f"{sign} August 2026 Horoscope | Luna Convergence"
@@ -7156,7 +7329,16 @@ def monthly_sign_page(sign: str) -> None:
 
     st.markdown('<div class="eyebrow">THE SKY</div>', unsafe_allow_html=True)
     st.markdown("### One moving sky. One personal reference point.")
-    _render_monthly_personal_sky(snapshot)
+    if snapshot is not None:
+        st.markdown(
+            "Your birth details set the personal reference. The natal wheel appears once, "
+            "inside **Your Month in Motion**, beside the coloured activation layer."
+        )
+    else:
+        st.markdown(
+            "Luna uses the shared moving sky and the reliable birth details available. "
+            "Missing birth-time precision is not invented."
+        )
 
     _render_monthly_transit_style_v3(
         narrative,
@@ -7167,6 +7349,7 @@ def monthly_sign_page(sign: str) -> None:
         snapshot=snapshot,
     )
 
+    _render_monthly_result_actions(sign)
 
     st.markdown("## Something specific on your mind?")
     st.markdown(
