@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 import json
+import hashlib
 import math
 import re
 import secrets
@@ -11,6 +12,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 from html import escape
 import base64
+import difflib
 from PIL import Image
 
 import streamlit as st
@@ -5780,6 +5782,297 @@ def _monthly_clean_final_step(step: str) -> str:
     return value
 
 
+
+# ---------------------------------------------------------------------------
+# LUNA VOICE V2
+# Calculations stay locked. This layer only chooses among reviewed, meaning-
+# equivalent editorial realisations, then audits the finished report for echoes.
+# ---------------------------------------------------------------------------
+_LUNA_VOICE_V2_BANK = {
+    "sun_saturn": {
+        "title": [
+            {"text": "The first opening becomes practical", "metaphor": "build", "shape": "declaration", "verbs": ["becomes"]},
+            {"text": "Possibility gets its first real foothold", "metaphor": "ground", "shape": "declaration", "verbs": ["gets"]},
+            {"text": "What looked promising starts to become buildable", "metaphor": "build", "shape": "reversal", "verbs": ["starts", "become"]},
+            {"text": "The idea finally has something solid to stand on", "metaphor": "ground", "shape": "image", "verbs": ["has", "stand"]},
+        ],
+        "lead": [
+            {"text": "Something that lived in the maybe column now has enough structure to test.", "metaphor": "proof", "shape": "contrast", "verbs": ["lived", "test"]},
+            {"text": "The promise is still early, but there is finally something concrete to measure.", "metaphor": "measure", "shape": "contrast", "verbs": ["measure"]},
+            {"text": "This is where an interesting possibility acquires enough weight to be taken seriously.", "metaphor": "weight", "shape": "declaration", "verbs": ["acquires", "taken"]},
+        ],
+        "move": [
+            {"text": "Secure the part that makes the opportunity real; keep the rest reversible.", "metaphor": "structure", "shape": "instruction", "verbs": ["secure", "keep"]},
+            {"text": "Build only the piece you can already support. Leave the rest flexible.", "metaphor": "build", "shape": "instruction", "verbs": ["build", "leave"]},
+            {"text": "Make the useful part concrete before you commit to the whole idea.", "metaphor": "proof", "shape": "instruction", "verbs": ["make", "commit"]},
+        ],
+        "watch": [
+            {"text": "Early support is useful evidence, not permission to overextend.", "metaphor": "evidence", "shape": "contrast", "verbs": ["overextend"]},
+            {"text": "One workable piece does not mean the entire plan is ready.", "metaphor": "build", "shape": "warning", "verbs": ["mean"]},
+            {"text": "Do not confuse the first green light with a blank cheque.", "metaphor": "signal", "shape": "image", "verbs": ["confuse"]},
+        ],
+    },
+    "solar_eclipse": {
+        "title": [
+            {"text": "The opportunity now asks for commitment", "metaphor": "terms", "shape": "declaration", "verbs": ["asks"]},
+            {"text": "The maybe has reached its deadline", "metaphor": "deadline", "shape": "image", "verbs": ["reached"]},
+            {"text": "A promising route needs a real answer", "metaphor": "road", "shape": "declaration", "verbs": ["needs"]},
+            {"text": "Interest turns into a decision", "metaphor": "turn", "shape": "compression", "verbs": ["turns"]},
+        ],
+        "lead": [
+            {"text": "What looked exciting from a distance is close enough now to rearrange the calendar.", "metaphor": "distance", "shape": "reversal", "verbs": ["looked", "rearrange"]},
+            {"text": "The invitation is real enough to require terms, timing and a practical yes or no.", "metaphor": "terms", "shape": "declaration", "verbs": ["require"]},
+            {"text": "This is the point where possibility stops being theoretical and starts costing something.", "metaphor": "cost", "shape": "contrast", "verbs": ["stops", "starts", "costing"]},
+        ],
+        "move": [
+            {"text": "Identify the one practical condition that determines whether you can say yes.", "metaphor": "terms", "shape": "instruction", "verbs": ["identify", "determines"]},
+            {"text": "Name the condition that has to be true before this deserves your commitment.", "metaphor": "threshold", "shape": "instruction", "verbs": ["name", "deserves"]},
+            {"text": "Put one non-negotiable term on the table before enthusiasm makes the choice for you.", "metaphor": "table", "shape": "instruction", "verbs": ["put", "makes"]},
+        ],
+        "watch": [
+            {"text": "A promising route still needs practical terms before it deserves a yes.", "metaphor": "road", "shape": "warning", "verbs": ["needs", "deserves"]},
+            {"text": "Excitement can make an unfinished plan look more complete than it is.", "metaphor": "completion", "shape": "warning", "verbs": ["make", "look"]},
+            {"text": "Do not let urgency negotiate the terms on your behalf.", "metaphor": "terms", "shape": "instruction", "verbs": ["negotiate"]},
+        ],
+    },
+    "venus_jupiter": {
+        "title": [
+            {"text": "Chemistry gets a chance to prove itself", "metaphor": "proof", "shape": "declaration", "verbs": ["gets", "prove"]},
+            {"text": "The spark is easy. Staying power is the question", "metaphor": "spark", "shape": "contrast", "verbs": ["staying"]},
+            {"text": "Something enjoyable may have more life in it", "metaphor": "life", "shape": "possibility", "verbs": ["have"]},
+            {"text": "Pleasure opens the conversation; consistency answers it", "metaphor": "conversation", "shape": "contrast", "verbs": ["opens", "answers"]},
+        ],
+        "lead": [
+            {"text": "The easy part is attraction. The interesting part is what remains after ordinary life walks back into the room.", "metaphor": "room", "shape": "contrast", "verbs": ["remains", "walks"]},
+            {"text": "A lighter moment can be more than relief if it keeps its shape once responsibility returns.", "metaphor": "shape", "shape": "condition", "verbs": ["keeps", "returns"]},
+            {"text": "Enjoyment matters here, but follow-through tells you whether it has somewhere to go.", "metaphor": "direction", "shape": "contrast", "verbs": ["matters", "tells"]},
+        ],
+        "move": [
+            {"text": "Enjoy what opens. Judge it by what remains when timing and responsibility return.", "metaphor": "opening", "shape": "instruction", "verbs": ["enjoy", "judge", "remains"]},
+            {"text": "Let yourself enjoy the warmth, then watch what survives the return of ordinary demands.", "metaphor": "weather", "shape": "instruction", "verbs": ["enjoy", "watch", "survives"]},
+            {"text": "Take the pleasure seriously without asking it to promise more than it has shown.", "metaphor": "promise", "shape": "instruction", "verbs": ["take", "asking", "shown"]},
+        ],
+        "watch": [
+            {"text": "Attraction and ease are encouraging; durability still has to be demonstrated.", "metaphor": "durability", "shape": "contrast", "verbs": ["demonstrated"]},
+            {"text": "A beautiful moment is not automatically a durable arrangement.", "metaphor": "durability", "shape": "warning", "verbs": ["is"]},
+            {"text": "Do not ask chemistry to do the work of consistency.", "metaphor": "work", "shape": "instruction", "verbs": ["ask", "do"]},
+        ],
+    },
+    "lunar_eclipse": {
+        "title": [
+            {"text": "The decision reaches home", "metaphor": "home", "shape": "declaration", "verbs": ["reaches"]},
+            {"text": "The outside plan arrives at your front door", "metaphor": "door", "shape": "image", "verbs": ["arrives"]},
+            {"text": "Expansion meets the life that has to carry it", "metaphor": "weight", "shape": "collision", "verbs": ["meets", "carry"]},
+            {"text": "What changes outside now has an inside cost", "metaphor": "cost", "shape": "contrast", "verbs": ["changes", "has"]},
+        ],
+        "lead": [
+            {"text": "By late month, the decision stops being abstract because home and private life have to absorb its consequences.", "metaphor": "weight", "shape": "cause", "verbs": ["stops", "absorb"]},
+            {"text": "The plan can no longer be judged only by where it might take you; it also has to fit the life waiting at home.", "metaphor": "fit", "shape": "contrast", "verbs": ["judged", "fit"]},
+            {"text": "This is where expansion meets capacity: what your private life can actually hold becomes part of the answer.", "metaphor": "capacity", "shape": "collision", "verbs": ["meets", "hold", "becomes"]},
+        ],
+        "move": [
+            {"text": "Protect the foundation the opportunity depends upon, especially your home and private life.", "metaphor": "foundation", "shape": "instruction", "verbs": ["protect", "depends"]},
+            {"text": "Make room for the change without making home pay the entire bill.", "metaphor": "cost", "shape": "instruction", "verbs": ["make", "pay"]},
+            {"text": "Strengthen the part of your private life that has to carry the decision after the excitement passes.", "metaphor": "weight", "shape": "instruction", "verbs": ["strengthen", "carry", "passes"]},
+        ],
+        "watch": [
+            {"text": "Do not protect the opportunity by quietly overloading home or private life.", "metaphor": "weight", "shape": "instruction", "verbs": ["protect", "overloading"]},
+            {"text": "A larger future is not useful if the private foundation has to crack to support it.", "metaphor": "foundation", "shape": "warning", "verbs": ["crack", "support"]},
+            {"text": "Do not make home absorb a cost the opportunity should be able to justify.", "metaphor": "cost", "shape": "instruction", "verbs": ["absorb", "justify"]},
+        ],
+    },
+}
+
+_LUNA_VOICE_V2_AREA_BANK = {
+    "LOVE": [
+        ("Chemistry opens the door. Follow-through decides what stays.",
+         "Romance, creativity or pleasure offers genuine relief from the month's main demands. Enjoy what opens, then notice what still holds when timing and responsibility return."),
+        ("The spark is welcome. Consistency decides whether it matters.",
+         "A lighter relationship or creative moment can be real without needing to carry the whole month. Let pleasure be pleasure, then watch for follow-through."),
+        ("Enjoyment gets a vote; staying power gets the final say.",
+         "Connection, pleasure and creative attention are easier to access. The useful question is whether the warmth still has substance once ordinary obligations return."),
+    ],
+    "WORK": [
+        ("The path moves from possibility to decision.",
+         "A travel, study, publishing, legal or international opportunity becomes more concrete. Decide what support, time or authority must exist before you commit."),
+        ("A larger option becomes real enough to negotiate.",
+         "Work may expand through study, publishing, travel, legal matters or an international opening. The opportunity matters more once you can name the terms required to carry it."),
+        ("The interesting option now needs workable terms.",
+         "Career movement is less about chasing more and more about deciding which external opportunity can actually be supported by time, authority and resources."),
+    ],
+    "MONEY": [
+        ("Shared resources need clear ownership.",
+         "Shared, borrowed or externally controlled money needs clearer terms. Know who owns what, who owes what and what obligation follows before agreeing."),
+        ("Money gets awkward when the obligation stays unnamed.",
+         "The important financial question is not simply how much is available, but who carries the responsibility attached to shared or borrowed resources."),
+        ("What is shared needs a number, an owner and a boundary.",
+         "Clarify debt, shared costs, outside funding or other people's money before a practical commitment turns an assumption into an obligation."),
+    ],
+}
+
+_LUNA_VOICE_STOP = {
+    "the", "a", "an", "and", "or", "to", "of", "in", "on", "for", "with", "is", "it", "that",
+    "this", "your", "you", "be", "as", "at", "by", "from", "into", "has", "have", "can", "may",
+    "now", "what", "when", "before", "after", "more", "still", "than", "only", "part", "month",
+}
+
+
+def _luna_voice_tokens(text: str) -> set[str]:
+    cleaned = re.sub(r"[^a-z0-9 ]+", " ", str(text or "").lower())
+    return {token for token in cleaned.split() if len(token) > 2 and token not in _LUNA_VOICE_STOP}
+
+
+def _luna_voice_similarity(a: str, b: str) -> float:
+    a_text = re.sub(r"\s+", " ", str(a or "").lower()).strip()
+    b_text = re.sub(r"\s+", " ", str(b or "").lower()).strip()
+    if not a_text or not b_text:
+        return 0.0
+    a_tokens = _luna_voice_tokens(a_text)
+    b_tokens = _luna_voice_tokens(b_text)
+    union = a_tokens | b_tokens
+    jaccard = (len(a_tokens & b_tokens) / len(union)) if union else 0.0
+    sequence = difflib.SequenceMatcher(None, a_text, b_text).ratio()
+    return (0.62 * jaccard) + (0.38 * sequence)
+
+
+def _luna_voice_seed(*parts) -> int:
+    raw = "|".join(str(part) for part in parts)
+    return int(hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12], 16)
+
+
+def _luna_voice_memory(anchor_texts=None) -> dict:
+    memory = {
+        "texts": [],
+        "tokens": {},
+        "metaphors": {},
+        "shapes": {},
+        "verbs": {},
+    }
+    for text in (anchor_texts or []):
+        _luna_voice_register(memory, {"text": str(text or ""), "metaphor": "", "shape": "anchor", "verbs": []})
+    return memory
+
+
+def _luna_voice_register(memory: dict, candidate: dict) -> None:
+    text = str(candidate.get("text") or "").strip()
+    if not text:
+        return
+    memory["texts"].append(text)
+    for token in _luna_voice_tokens(text):
+        memory["tokens"][token] = memory["tokens"].get(token, 0) + 1
+    metaphor = str(candidate.get("metaphor") or "").strip()
+    if metaphor:
+        memory["metaphors"][metaphor] = memory["metaphors"].get(metaphor, 0) + 1
+    shape = str(candidate.get("shape") or "").strip()
+    if shape:
+        memory["shapes"][shape] = memory["shapes"].get(shape, 0) + 1
+    for verb in candidate.get("verbs") or []:
+        memory["verbs"][verb] = memory["verbs"].get(verb, 0) + 1
+
+
+def _luna_voice_candidate_score(candidate: dict, memory: dict, salt: str) -> float:
+    text = str(candidate.get("text") or "").strip()
+    if not text:
+        return -9999.0
+
+    tokens = _luna_voice_tokens(text)
+    token_penalty = sum(max(0, memory["tokens"].get(token, 0) - 1) for token in tokens) * 1.7
+    metaphor = str(candidate.get("metaphor") or "").strip()
+    metaphor_penalty = memory["metaphors"].get(metaphor, 0) * 7.0 if metaphor else 0.0
+    shape = str(candidate.get("shape") or "").strip()
+    shape_penalty = memory["shapes"].get(shape, 0) * 1.6 if shape else 0.0
+    verb_penalty = sum(memory["verbs"].get(verb, 0) for verb in (candidate.get("verbs") or [])) * 1.4
+    similarity_penalty = max((_luna_voice_similarity(text, used) for used in memory["texts"]), default=0.0) * 22.0
+
+    # Stable tiny tie-break. Same sign/month always receives the same approved variant.
+    tie = (_luna_voice_seed(salt, text) % 1000) / 10000.0
+    return 20.0 + tie - token_penalty - metaphor_penalty - shape_penalty - verb_penalty - similarity_penalty
+
+
+def _luna_voice_choose(candidates: list[dict], memory: dict, salt: str, *, register: bool = True) -> dict:
+    if not candidates:
+        return {"text": "", "metaphor": "", "shape": "", "verbs": []}
+    ranked = sorted(candidates, key=lambda item: _luna_voice_candidate_score(item, memory, salt), reverse=True)
+    chosen = dict(ranked[0])
+    if register:
+        _luna_voice_register(memory, chosen)
+    return chosen
+
+
+def _luna_voice_second_pass(events: list[dict], anchor_texts: list[str], sign: str) -> list[dict]:
+    """Second audit: replace later echoing fields with another reviewed candidate."""
+    memory = _luna_voice_memory(anchor_texts)
+    audited = []
+    for event in events:
+        current = dict(event)
+        bank = _LUNA_VOICE_V2_BANK.get(event.get("key"), {})
+        for field, bank_field in (("title", "title"), ("voice_lead", "lead"), ("move", "move"), ("watch", "watch")):
+            text = str(current.get(field) or "").strip()
+            too_close = any(_luna_voice_similarity(text, prior) >= 0.48 for prior in memory["texts"]) if text else False
+            if too_close and bank.get(bank_field):
+                alternatives = [item for item in bank[bank_field] if item.get("text") != text]
+                chosen = _luna_voice_choose(
+                    alternatives or bank[bank_field],
+                    memory,
+                    f"audit:{sign}:{SEO_YEAR}:{SEO_MONTH}:{event.get('key')}:{field}",
+                    register=False,
+                )
+                if chosen.get("text"):
+                    current[field] = chosen["text"]
+                    _luna_voice_register(memory, chosen)
+                else:
+                    _luna_voice_register(memory, {"text": text, "metaphor": "", "shape": field, "verbs": []})
+            else:
+                meta = next((item for item in bank.get(bank_field, []) if item.get("text") == text), None)
+                _luna_voice_register(memory, meta or {"text": text, "metaphor": "", "shape": field, "verbs": []})
+        audited.append(current)
+    return audited
+
+
+def _luna_voice_v2_events(events: list[dict], *, sign: str, hero: str = "", context: str = "") -> list[dict]:
+    """
+    First pass selects vivid, reviewed alternatives using metaphor/verb/shape memory.
+    Second pass compares the finished event fields against one another and swaps any
+    near-duplicate for another meaning-equivalent option.
+    """
+    anchors = [item for item in (hero, context) if item]
+    memory = _luna_voice_memory(anchors)
+    voiced = []
+
+    for event in events:
+        current = dict(event)
+        bank = _LUNA_VOICE_V2_BANK.get(event.get("key"), {})
+        for field, bank_field in (("title", "title"), ("voice_lead", "lead"), ("move", "move"), ("watch", "watch")):
+            candidates = list(bank.get(bank_field) or [])
+            existing = str(current.get(field) or "").strip()
+            if existing and not any(item.get("text") == existing for item in candidates):
+                candidates.append({"text": existing, "metaphor": "", "shape": field, "verbs": []})
+            chosen = _luna_voice_choose(
+                candidates,
+                memory,
+                f"voice:{sign}:{SEO_YEAR}:{SEO_MONTH}:{event.get('key')}:{field}",
+            )
+            if chosen.get("text"):
+                current[field] = chosen["text"]
+        voiced.append(current)
+
+    return _luna_voice_second_pass(voiced, anchors, sign)
+
+
+def _luna_voice_v2_areas(sign: str, used_texts: list[str]) -> dict[str, tuple[str, str]]:
+    memory = _luna_voice_memory(used_texts)
+    output = {}
+    for category in ("LOVE", "WORK", "MONEY"):
+        pairs = _LUNA_VOICE_V2_AREA_BANK[category]
+        candidates = []
+        for title, body in pairs:
+            combined = f"{title} {body}"
+            candidates.append({"text": combined, "title": title, "body": body, "metaphor": category.lower(), "shape": "area", "verbs": []})
+        chosen = _luna_voice_choose(candidates, memory, f"area:{sign}:{SEO_YEAR}:{SEO_MONTH}:{category}")
+        output[category] = (chosen.get("title") or pairs[0][0], chosen.get("body") or pairs[0][1])
+    return output
+
+
 _MONTHLY_CANONICAL_EVENTS = (
     {
         "key":"sun_saturn",
@@ -6206,7 +6499,255 @@ def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_y
     st.caption("What do you remember changing then?")
 
 
-def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None) -> None:
+
+def _monthly_motion_overlay_nodes(result: dict, event: dict) -> list[dict]:
+    """Best-effort read of the existing natal overlay without changing its calculation."""
+    overlay = result.get("natal_overlay") if isinstance(result, dict) else None
+    if not overlay:
+        return []
+
+    event_tokens = _history_tokens(event.get("transit", "")) | _history_tokens(event.get("date_label", ""))
+    nodes = []
+
+    def visit(value, depth=0):
+        if depth > 7:
+            return
+        if isinstance(value, dict):
+            strings = []
+            for key, child in value.items():
+                if isinstance(child, (str, int, float)):
+                    strings.append(f"{key} {child}")
+            combined = " ".join(strings)
+            tokens = _history_tokens(combined)
+            if event_tokens & tokens:
+                house = None
+                for key in ("natal_house", "house", "activated_house", "target_house"):
+                    if key in value:
+                        try:
+                            candidate = int(value[key])
+                            if 1 <= candidate <= 12:
+                                house = candidate
+                                break
+                        except Exception:
+                            pass
+                target = ""
+                for key in ("natal_target", "natal_planet", "target", "target_planet"):
+                    if value.get(key):
+                        target = str(value.get(key)).strip()
+                        break
+                transit = ""
+                for key in ("transit_planet", "transiting_planet", "planet", "transit"):
+                    if value.get(key):
+                        transit = str(value.get(key)).strip()
+                        break
+                if house or target or transit:
+                    nodes.append({"house": house, "target": target, "transit": transit})
+            for child in value.values():
+                visit(child, depth + 1)
+        elif isinstance(value, (list, tuple)):
+            for child in value:
+                visit(child, depth + 1)
+
+    visit(overlay)
+    return nodes
+
+
+def _monthly_motion_planets(event: dict) -> list[str]:
+    return {
+        "sun_saturn": ["SUN", "SATURN"],
+        "solar_eclipse": ["SUN", "MOON"],
+        "venus_jupiter": ["VENUS", "JUPITER"],
+        "lunar_eclipse": ["MOON"],
+    }.get(event.get("key"), [])
+
+
+def _monthly_motion_summary(events: list[dict], selected_key: str) -> str:
+    if selected_key == "whole":
+        if len(events) >= 4:
+            return (
+                f"The month moves in four clear beats: {events[0]['title'].lower()}, then {events[1]['title'].lower()}. "
+                f"A lighter opening follows around mid-month before {events[-1]['title'].lower()}."
+            )
+        return "The whole-month view combines the strongest dated activations into one map."
+
+    event = next((item for item in events if item.get("key") == selected_key), None)
+    if not event:
+        return "Select a dated moment to see where that part of the month lands in the chart."
+    move = str(event.get("move") or "").strip()
+    lead = str(event.get("voice_lead") or "").strip()
+    return " ".join(item for item in (lead, move) if item)
+
+
+def _monthly_activation_wheel_svg(result: dict, events: list[dict], selected_key: str, size: int = 620) -> str:
+    """
+    Monthly version of the Year Ahead activation layer.
+    Colour means activity only. It uses existing Monthly/natal-overlay evidence when
+    available and falls back to the calculated Monthly house emphasis.
+    """
+    selected = events if selected_key == "whole" else [item for item in events if item.get("key") == selected_key]
+    width = height = int(size)
+    cx = cy = width / 2
+    outer = width * 0.39
+    inner = width * 0.25
+    label_r = width * 0.345
+
+    house_counts: dict[int, int] = {}
+    house_targets: dict[int, list[str]] = {}
+    house_planets: dict[int, list[str]] = {}
+
+    for event in selected:
+        overlay_nodes = _monthly_motion_overlay_nodes(result, event)
+        event_houses = set()
+        for node in overlay_nodes:
+            house = node.get("house")
+            if house:
+                event_houses.add(int(house))
+                if node.get("target"):
+                    house_targets.setdefault(int(house), []).append(str(node["target"]))
+                if node.get("transit"):
+                    house_planets.setdefault(int(house), []).append(str(node["transit"]).upper())
+
+        if not event_houses:
+            event_houses = {int(h) for h in (event.get("houses") or set()) if 1 <= int(h) <= 12}
+
+        # Keep the visual readable: an event can activate many technical houses,
+        # but the chart foregrounds the first three strongest available sectors.
+        event_houses = set(sorted(event_houses)[:3])
+        for house in event_houses:
+            house_counts[house] = house_counts.get(house, 0) + 1
+            if not house_planets.get(house):
+                house_planets.setdefault(house, []).extend(_monthly_motion_planets(event))
+
+    max_count = max(house_counts.values(), default=1)
+
+    def polar(radius, degrees):
+        angle = math.radians(degrees - 90)
+        return cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+
+    def sector_path(house):
+        start_deg = (house - 1) * 30
+        end_deg = house * 30
+        x1, y1 = polar(outer, start_deg)
+        x2, y2 = polar(outer, end_deg)
+        x3, y3 = polar(inner, end_deg)
+        x4, y4 = polar(inner, start_deg)
+        return (
+            f"M {x1:.2f},{y1:.2f} "
+            f"A {outer:.2f},{outer:.2f} 0 0 1 {x2:.2f},{y2:.2f} "
+            f"L {x3:.2f},{y3:.2f} "
+            f"A {inner:.2f},{inner:.2f} 0 0 0 {x4:.2f},{y4:.2f} Z"
+        )
+
+    label = "WHOLE MONTH"
+    if selected_key != "whole":
+        event = next((item for item in events if item.get("key") == selected_key), None)
+        if event:
+            label = re.sub(r"\s+2026$", "", event.get("date_label", "")).upper()
+
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="Monthly natal activation layer">']
+
+    for house in range(1, 13):
+        count = house_counts.get(house, 0)
+        opacity = 0.08 if count == 0 else 0.18 + (0.34 * count / max_count)
+        fill = "#f4f4f1" if count == 0 else "#6977df"
+        parts.append(
+            f'<path d="{sector_path(house)}" fill="{fill}" fill-opacity="{opacity:.2f}" '
+            f'stroke="#d8d8d3" stroke-width="1"/>'
+        )
+        lx, ly = polar(label_r, (house - 0.5) * 30)
+        parts.append(
+            f'<text x="{lx:.2f}" y="{ly:.2f}" text-anchor="middle" dominant-baseline="middle" '
+            f'font-family="IBM Plex Mono, monospace" font-size="12" fill="#444">{house}</text>'
+        )
+
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="{inner}" fill="#fff" stroke="#d8d8d3" stroke-width="1"/>')
+    parts.append(
+        f'<text x="{cx}" y="{cy-8}" text-anchor="middle" font-family="Bodoni MT, Georgia, serif" '
+        f'font-size="25" fill="#151515">YOUR MONTH</text>'
+    )
+    parts.append(
+        f'<text x="{cx}" y="{cy+16}" text-anchor="middle" font-family="IBM Plex Mono, monospace" '
+        f'font-size="10" letter-spacing="1.2" fill="#696963">{escape(label)}</text>'
+    )
+
+    for house in sorted(house_counts):
+        angle = (house - 0.5) * 30
+        natal_x, natal_y = polar(inner + (outer-inner) * 0.38, angle)
+        transit_x, transit_y = polar(outer + 23, angle)
+        parts.append(
+            f'<line x1="{cx:.2f}" y1="{cy:.2f}" x2="{natal_x:.2f}" y2="{natal_y:.2f}" '
+            f'stroke="#6757c7" stroke-width="2.2" stroke-opacity=".72"/>'
+        )
+        parts.append(f'<circle cx="{natal_x:.2f}" cy="{natal_y:.2f}" r="9" fill="#6757c7"/>')
+        targets = house_targets.get(house) or []
+        if targets:
+            target = targets[0][:12]
+            parts.append(
+                f'<text x="{natal_x:.2f}" y="{natal_y-14:.2f}" text-anchor="middle" '
+                f'font-family="Josefin Sans, sans-serif" font-size="11" font-weight="600" fill="#332a76">{escape(target)}</text>'
+            )
+        planets = []
+        for item in house_planets.get(house) or []:
+            if item and item not in planets:
+                planets.append(item)
+        planet_text = "/".join(planets[:2])
+        parts.append(f'<circle cx="{transit_x:.2f}" cy="{transit_y:.2f}" r="8" fill="#e58a2f"/>')
+        if planet_text:
+            parts.append(
+                f'<text x="{transit_x:.2f}" y="{transit_y-13:.2f}" text-anchor="middle" '
+                f'font-family="IBM Plex Mono, monospace" font-size="9" fill="#7a4818">{escape(planet_text[:15])}</text>'
+            )
+
+    parts.append('</svg>')
+    return ''.join(parts)
+
+
+def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: str) -> None:
+    if snapshot is None or not events:
+        return
+
+    st.markdown("## Your Month in Motion")
+    st.caption(
+        "Colour shows activity, not good or bad. Choose the whole month or one of the four key August moments to see how the emphasis shifts against your natal reference."
+    )
+
+    option_pairs = [("Whole Month", "whole")]
+    for event in events:
+        short_date = re.sub(r"\s+2026$", "", str(event.get("date_label") or "")).title()
+        option_pairs.append((short_date, event.get("key")))
+    labels = [item[0] for item in option_pairs]
+    chosen_label = st.radio(
+        "Month view",
+        labels,
+        index=0,
+        horizontal=True,
+        key=f"monthly-motion-{sign_slug(sign)}-{SEO_YEAR}-{SEO_MONTH}",
+    )
+    selected_key = dict(option_pairs).get(chosen_label, "whole")
+
+    st.markdown(
+        f'<div class="chart-motion-summary">{escape(_monthly_motion_summary(events, selected_key))}</div>',
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown("**Natal reference**")
+        st.markdown(natal_wheel_svg(snapshot, size=620), unsafe_allow_html=True)
+    with right:
+        st.markdown("**Activation layer**")
+        st.markdown(_monthly_activation_wheel_svg(result, events, selected_key, size=620), unsafe_allow_html=True)
+        st.markdown(
+            '<div class="chart-motion-legend">'
+            '<div class="chart-motion-key"><i class="chart-motion-swatch house"></i>Activated house</div>'
+            '<div class="chart-motion-key"><i class="chart-motion-swatch natal"></i>Natal contact</div>'
+            '<div class="chart-motion-key"><i class="chart-motion-swatch transit"></i>Transiting planet</div>'
+            '</div><div class="small-note">The Monthly layer foregrounds concentration. Technical evidence remains under Why Luna sees this.</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None, snapshot=None) -> None:
     st.markdown(
         """
         <style>
@@ -6214,6 +6755,12 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             margin:.55rem 0 0;
             font-size:.92rem;
             line-height:1.45;
+        }
+        .luna-voice-lead{
+            font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif;
+            font-size:1.12rem;
+            line-height:1.45;
+            margin:.2rem 0 .8rem;
         }
         </style>
         """,
@@ -6245,6 +6792,16 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             st.markdown(paragraph)
 
     events = _monthly_canonical_events(narrative, result)
+    context_for_voice = " ".join(visible_context[:1]) if 'visible_context' in locals() else ""
+    events = _luna_voice_v2_events(
+        events,
+        sign=sign,
+        hero=_monthly_main_headline(narrative, sign),
+        context=context_for_voice,
+    )
+
+    _monthly_chart_in_motion(snapshot, result, events, sign)
+
     st.markdown("## How August unfolds")
 
     if not events:
@@ -6259,7 +6816,8 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             f'<div class="timing-date-box"><span>{date_kind}</span>'
             f'<strong>{escape(event["date_label"].title())}</strong></div>'
         )
-        body_html = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in event["body"])
+        lead_html = f"<p class=\"luna-voice-lead\">{escape(event.get('voice_lead') or '')}</p>" if event.get("voice_lead") else ""
+        body_html = lead_html + "".join(f"<p>{escape(paragraph)}</p>" for paragraph in event["body"])
         move_html = (
             f'<div class="timing-move"><div class="timing-move-label">Your move</div>'
             f'<strong>{escape(event["move"])}</strong></div>'
@@ -6295,28 +6853,18 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
 
     st.markdown("## Where it lands")
 
-    # Reader-facing copy is deliberately fixed here. Internal relevance/scoring
-    # remains available to the engine but is never allowed to become customer prose.
-    area_defaults = {
-        "LOVE": (
-            "Chemistry opens the door. Follow-through decides what stays.",
-            "Romance, creativity or pleasure offers genuine relief from the month's main demands. "
-            "Enjoy what opens, then notice what still holds when timing and responsibility return.",
-        ),
-        "WORK": (
-            "The path moves from possibility to decision.",
-            "A travel, study, publishing, legal or international opportunity becomes more concrete. "
-            "Decide what support, time or authority must exist before you commit.",
-        ),
-        "MONEY": (
-            "Shared resources need clear ownership.",
-            "Shared, borrowed or externally controlled money needs clearer terms. "
-            "Know who owns what, who owes what and what obligation follows before agreeing.",
-        ),
-    }
+    voice_used = [_monthly_main_headline(narrative, sign)]
+    for event in events:
+        voice_used.extend([
+            str(event.get("title") or ""),
+            str(event.get("voice_lead") or ""),
+            str(event.get("move") or ""),
+            str(event.get("watch") or ""),
+        ])
+    area_copy = _luna_voice_v2_areas(sign, voice_used)
 
     for category in ("LOVE", "WORK", "MONEY"):
-        visible_title, visible_body = area_defaults[category]
+        visible_title, visible_body = area_copy[category]
         st.markdown(f'<div class="timing-meta">{category}</div>', unsafe_allow_html=True)
         st.markdown(f"### {visible_title}")
         st.markdown(visible_body)
@@ -6382,6 +6930,7 @@ def monthly_sign_page(sign: str) -> None:
         sign=sign,
         timezone_name=timezone_name,
         birth_date_value=birth_date_value,
+        snapshot=snapshot,
     )
 
 
