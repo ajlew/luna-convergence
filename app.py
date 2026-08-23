@@ -4782,25 +4782,13 @@ def focus_paragraph(data: dict, target_houses: set[int], label: str) -> str:
 
 
 def monthly_index_page() -> None:
-    """Single public Monthly hub at /monthly."""
-    remembered_sign = (
-        st.session_state.get("monthly-hub-sign-v1")
-        or st.session_state.get("landing-daily-sign-v3195")
-        or st.session_state.get("daily-sign")
-        or DEFAULT_SIGN
-    )
-    if remembered_sign not in SIGNS:
-        remembered_sign = DEFAULT_SIGN
+    """Single public Monthly hub at /monthly.
 
-    st.markdown('<div class="eyebrow">THIS MONTH</div>', unsafe_allow_html=True)
-    selected_sign = st.selectbox(
-        "Sun sign",
-        SIGNS,
-        index=SIGNS.index(remembered_sign),
-        key="monthly-hub-sign-v1",
-    )
-    st.session_state["landing-daily-sign-v3195"] = selected_sign
-    monthly_sign_page(selected_sign)
+    The reader supplies birth details first. Luna calculates the Sun sign from
+    that natal reference and uses it consistently throughout the Monthly.
+    """
+    monthly_sign_page()
+
 
 
 def _legacy_monthly_redirect(sign: str | None = None) -> None:
@@ -4860,7 +4848,7 @@ def _august_preview_narrative(narrative):
 
 
 
-def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, str, bool]:
+def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]:
     st.markdown(
         """
         <style id="monthly-profile-uniform-css">
@@ -4887,25 +4875,22 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
     )
     st.markdown('<div class="eyebrow">FREE · PERSONAL MONTH</div>', unsafe_allow_html=True)
     st.markdown(
-        "Add the birth details you know. Luna uses them to anchor the sky map, show your age at earlier echoes, "
-        "and add natal geometry only where the data supports it."
+        "Add the birth details you know. Luna uses them to determine your Sun sign, anchor the sky map, "
+        "show your age at earlier echoes, and add natal geometry only where the data supports it."
     )
 
-    # Standard widgets deliberately sit outside a Streamlit form.
-    # This lets "I know my birth time exactly" reveal the time/location fields
-    # immediately instead of requiring a first form submission just to rerender them.
     with st.container(border=True):
         birth_date_value = st.date_input(
             "Birth date",
-            value=st.session_state.get(f"free-monthly-birth-date-{sign_slug(sign)}"),
+            value=st.session_state.get("free-monthly-birth-date"),
             min_value=date(1900, 1, 1),
             max_value=browser_local_date(),
-            key=f"free-monthly-birth-date-input-{sign_slug(sign)}",
+            key="free-monthly-birth-date-input",
         )
         time_known = st.checkbox(
             "I know my birth time exactly",
-            value=bool(st.session_state.get(f"free-monthly-time-known-{sign_slug(sign)}", False)),
-            key=f"free-monthly-time-known-input-{sign_slug(sign)}",
+            value=bool(st.session_state.get("free-monthly-time-known", False)),
+            key="free-monthly-time-known-input",
         )
 
         birth_time_value = None
@@ -4916,7 +4901,7 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
             birth_time_value = st.time_input(
                 "Birth time",
                 value=datetime.strptime("12:00", "%H:%M").time(),
-                key=f"free-monthly-birth-time-{sign_slug(sign)}",
+                key="free-monthly-birth-time",
             )
             city_options = sorted(CITY_LOCATIONS) + ["Not listed — planetary geometry only"]
             birth_city = st.selectbox(
@@ -4924,7 +4909,7 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
                 city_options,
                 index=None,
                 placeholder="Choose your birth city",
-                key=f"free-monthly-birth-city-{sign_slug(sign)}",
+                key="free-monthly-birth-city",
             )
             if birth_city and birth_city != "Not listed — planetary geometry only":
                 birth_timezone = CITY_LOCATIONS[birth_city].timezone
@@ -4933,11 +4918,11 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
                     "Birth timezone",
                     TIMEZONES,
                     index=timezone_select_index(),
-                    key=f"free-monthly-birth-tz-{sign_slug(sign)}",
+                    key="free-monthly-birth-tz",
                 )
         else:
             st.caption(
-                "Birth time unknown: Luna can still use your birth date for age/history context, "
+                "Birth time unknown: Luna can still calculate your Sun sign and use your birth date for age/history context, "
                 "but will not invent an Ascendant, Midheaven or timed houses."
             )
 
@@ -4947,64 +4932,83 @@ def _free_monthly_profile(sign: str) -> tuple[object | None, date | None, str, s
                 "Where are you now? · timezone",
                 TIMEZONES,
                 index=timezone_select_index(),
-                key=f"free-monthly-current-tz-{sign_slug(sign)}",
+                key="free-monthly-current-tz",
             )
         with current_cols[1]:
             current_city = st.text_input(
                 "Current city",
                 value=representative_city_name(browser_timezone_name()),
-                key=f"free-monthly-current-city-{sign_slug(sign)}",
+                key="free-monthly-current-city",
             )
 
         submitted = st.button(
             "Show my free month",
             type="primary",
             use_container_width=True,
-            key=f"free-monthly-show-{sign_slug(sign)}",
+            key="free-monthly-show",
         )
 
-    ready_key = f"free-monthly-ready-{sign_slug(sign)}"
     if submitted:
-        st.session_state[ready_key] = True
-        st.session_state[f"free-monthly-birth-date-{sign_slug(sign)}"] = birth_date_value
-        st.session_state[f"free-monthly-time-known-{sign_slug(sign)}"] = time_known
+        if birth_date_value is None:
+            st.error("Add your birth date so Luna can calculate which Sun-sign Monthly to build.")
+            st.session_state["free-monthly-ready"] = False
+            return None, None, current_timezone, current_city, False
 
-    if not st.session_state.get(ready_key):
+        st.session_state["free-monthly-ready"] = True
+        st.session_state["free-monthly-birth-date"] = birth_date_value
+        st.session_state["free-monthly-time-known"] = time_known
+
+    if not st.session_state.get("free-monthly-ready"):
         return None, None, browser_timezone_name(), representative_city_name(browser_timezone_name()), False
 
+    if birth_date_value is None:
+        return None, None, current_timezone, current_city, False
+
     snapshot = None
-    if birth_date_value:
-        try:
-            if time_known and birth_time_value:
-                if birth_city and birth_city in CITY_LOCATIONS:
-                    location = CITY_LOCATIONS[birth_city]
-                    snapshot = build_natal_snapshot(
-                        birth_date=birth_date_value,
-                        birth_time=birth_time_value,
-                        birth_time_known=True,
-                        latitude=location.latitude,
-                        longitude=location.longitude,
-                        timezone_name=location.timezone,
-                        location_name=f"{location.name}, {location.country}",
-                    )
-                else:
-                    snapshot = build_natal_snapshot(
-                        birth_date=birth_date_value,
-                        birth_time=birth_time_value,
-                        birth_time_known=True,
-                        timezone_name=birth_timezone,
-                    )
+    try:
+        if time_known and birth_time_value:
+            if birth_city and birth_city in CITY_LOCATIONS:
+                location = CITY_LOCATIONS[birth_city]
+                snapshot = build_natal_snapshot(
+                    birth_date=birth_date_value,
+                    birth_time=birth_time_value,
+                    birth_time_known=True,
+                    latitude=location.latitude,
+                    longitude=location.longitude,
+                    timezone_name=location.timezone,
+                    location_name=f"{location.name}, {location.country}",
+                )
             else:
                 snapshot = build_natal_snapshot(
                     birth_date=birth_date_value,
-                    birth_time_known=False,
-                    timezone_name="UTC",
+                    birth_time=birth_time_value,
+                    birth_time_known=True,
+                    timezone_name=birth_timezone,
                 )
-        except Exception as exc:
-            st.warning(f"Luna could not add the natal layer: {exc}")
+        else:
+            snapshot = build_natal_snapshot(
+                birth_date=birth_date_value,
+                birth_time_known=False,
+                timezone_name="UTC",
+            )
+    except Exception as exc:
+        st.warning(f"Luna could not calculate the natal reference: {exc}")
+
+    if snapshot is None:
+        st.error("Luna needs a valid birth date to determine your Sun sign before building the Monthly.")
+        return None, birth_date_value, current_timezone, current_city, False
 
     return snapshot, birth_date_value, current_timezone, current_city, True
 
+
+def _monthly_sun_sign_from_snapshot(snapshot) -> str | None:
+    """Return the calculated tropical Sun sign from the natal snapshot."""
+    for item in list(getattr(snapshot, "positions", None) or []):
+        if str(getattr(item, "planet", "") or "").strip().lower() == "sun":
+            value = str(getattr(item, "sign", "") or "").strip()
+            if value in SIGNS:
+                return value
+    return None
 
 
 _MONTHLY_READER_LABELS = {
@@ -7319,20 +7323,33 @@ def _render_monthly_result_actions(sign: str) -> None:
 
 
 
-def monthly_sign_page(sign: str) -> None:
-    """Unified free Monthly: birth context first, one editorial report, one history section."""
-    title = f"{sign} August 2026 Horoscope | Luna Convergence"
-    description = (
-        f"Free {sign} August 2026 horoscope with key dates, love/work/money context, "
-        "historical echoes and optional natal context."
+def monthly_sign_page() -> None:
+    """Unified free Monthly: birth details first, calculated Sun sign, one report."""
+    set_page_metadata(
+        "Monthly Astrology | Luna Convergence",
+        "Free personalised Monthly astrology with key dates, love/work/money context, historical echoes and natal timing.",
+        "/monthly",
     )
-    path = "/monthly"
-    set_page_metadata(title, description, path)
 
-    snapshot, birth_date_value, timezone_name, nearest_city, ready = _free_monthly_profile(sign)
+    snapshot, birth_date_value, timezone_name, nearest_city, ready = _free_monthly_profile()
     if not ready:
-        st.info("Enter the details you know. Luna will not invent missing birth-time precision.")
         return
+
+    sign = _monthly_sun_sign_from_snapshot(snapshot)
+    if not sign:
+        st.error("Luna could not determine your Sun sign from the supplied birth details.")
+        return
+
+    # Keep the calculated Sun sign available to other Luna surfaces without
+    # asking the reader to select the same information twice.
+    st.session_state["monthly-calculated-sun-sign"] = sign
+    st.session_state["landing-daily-sign-v3195"] = sign
+
+    set_page_metadata(
+        f"{sign} August 2026 Horoscope | Luna Convergence",
+        f"Free {sign} August 2026 horoscope with key dates, love/work/money context, historical echoes and natal timing.",
+        "/monthly",
+    )
 
     try:
         with st.spinner(f"Building your free {SEO_MONTH_NAME} {SEO_YEAR}…"):
@@ -7356,19 +7373,6 @@ def monthly_sign_page(sign: str) -> None:
             st.exception(exc)
         return
 
-    st.markdown('<div class="eyebrow">THE SKY</div>', unsafe_allow_html=True)
-    st.markdown("### One moving sky. One personal reference point.")
-    if snapshot is not None:
-        st.markdown(
-            "Your birth details set the personal reference. The natal wheel appears once, "
-            "inside **Your Month in Motion**, beside the coloured activation layer."
-        )
-    else:
-        st.markdown(
-            "Luna uses the shared moving sky and the reliable birth details available. "
-            "Missing birth-time precision is not invented."
-        )
-
     _render_monthly_transit_style_v3(
         narrative,
         result,
@@ -7386,12 +7390,17 @@ def monthly_sign_page(sign: str) -> None:
     )
     c1, c2 = st.columns(2, gap="medium")
     with c1:
-        st.markdown("**Ask Luna · planned launch price A$1.95**<br>One focused question about work, relationships, money or timing.", unsafe_allow_html=True)
+        st.markdown(
+            "**Ask Luna · planned launch price A$1.95**<br>"
+            "One focused question about work, relationships, money or timing.",
+            unsafe_allow_html=True,
+        )
     with c2:
-        st.markdown("**Your Year Ahead**<br>Personal Transits & Timing — see when your strongest natal activations build, peak, change and release.", unsafe_allow_html=True)
-
-    st.caption("To read another sign, use the Sun sign selector at the top of Monthly.")
-
+        st.markdown(
+            "**Your Year Ahead**<br>"
+            "Personal Transits & Timing — see when your strongest natal activations build, peak, change and release.",
+            unsafe_allow_html=True,
+        )
 
 def make_monthly_page(sign: str):
     def page() -> None:
