@@ -7163,6 +7163,7 @@ def _render_monthly_result_actions(sign: str) -> None:
     """
     title = f"{sign} {SEO_MONTH_NAME} {SEO_YEAR} · Luna Convergence"
     safe_title = escape(title)
+    monthly_share_url = f"https://luna-convergence.streamlit.app/{SEO_MONTH_NAME.lower()}-{SEO_YEAR}-{sign_slug(sign)}"
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">KEEP OR SHARE YOUR READING</div>', unsafe_allow_html=True)
@@ -7200,8 +7201,7 @@ def _render_monthly_result_actions(sign: str) -> None:
           }}
 
           function pageUrl() {{
-            try {{ return window.parent.location.href; }}
-            catch (e) {{ return document.referrer || window.location.href; }}
+            return "{monthly_share_url}";
           }}
 
           function openExpandersForPrint() {{
