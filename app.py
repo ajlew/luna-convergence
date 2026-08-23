@@ -1763,6 +1763,83 @@ hr {
     .timing-plain-grid,.timing-phase-grid{grid-template-columns:1fr;}
 }
 
+
+.chart-natal-reference{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin:.7rem 0 1rem;
+}
+.chart-natal-reference > div{
+    background:#fff;
+    padding:.62rem .7rem;
+    min-width:0;
+}
+.chart-natal-reference span{
+    display:block;
+    font:500 .58rem "IBM Plex Mono",monospace;
+    letter-spacing:.065em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:.2rem;
+}
+.chart-natal-reference strong{
+    display:block;
+    font-family:"Josefin Sans",sans-serif;
+    font-size:.93rem;
+    line-height:1.2;
+}
+.chart-reader-label{
+    font:500 .62rem "IBM Plex Mono",monospace;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:.85rem 0 .35rem;
+}
+.chart-active-houses{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.42rem;
+    margin:.3rem 0 .8rem;
+}
+.chart-house-chip{
+    border:1px solid var(--line);
+    padding:.34rem .5rem;
+    background:#fff;
+    font-size:.82rem;
+    line-height:1.2;
+}
+.chart-house-chip strong{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.72rem;
+    margin-right:.28rem;
+}
+.house-key-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0 1rem;
+}
+.house-key-item{
+    display:grid;
+    grid-template-columns:1.8rem 1fr;
+    gap:.45rem;
+    padding:.38rem 0;
+    border-bottom:1px solid rgba(0,0,0,.08);
+    font-size:.86rem;
+}
+.house-key-item strong{
+    font-family:"IBM Plex Mono",monospace;
+}
+@media(max-width:900px){
+    .chart-natal-reference{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-width:620px){
+    .chart-natal-reference{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .house-key-grid{grid-template-columns:1fr;}
+}
+
 </style>
         """,
         unsafe_allow_html=True,
@@ -6702,6 +6779,155 @@ def _monthly_activation_wheel_svg(result: dict, events: list[dict], selected_key
     return ''.join(parts)
 
 
+
+_CHART_HOUSE_KEY = {
+    1: "Self + direction",
+    2: "Money + value",
+    3: "Communication + movement",
+    4: "Home + family",
+    5: "Love + creativity",
+    6: "Work + routine",
+    7: "Relationships + agreements",
+    8: "Shared money + obligations",
+    9: "Travel + expansion",
+    10: "Career + public direction",
+    11: "Networks + future plans",
+    12: "Rest + closure",
+}
+
+
+def _chart_natal_reference_items(snapshot) -> list[tuple[str, str]]:
+    """Reader-facing natal shorthand using values already calculated in the snapshot."""
+    by_planet = {}
+    for item in list(getattr(snapshot, "positions", None) or []):
+        planet = str(getattr(item, "planet", "") or "")
+        if planet:
+            by_planet[planet] = item
+
+    def sign_for(planet: str) -> str:
+        item = by_planet.get(planet)
+        return str(getattr(item, "sign", "") or "Not calculated")
+
+    moon_value = sign_for("Moon")
+    moon_uncertain = list(getattr(snapshot, "moon_uncertain", None) or [])
+    if not bool(getattr(snapshot, "birth_time_known", False)) and len(moon_uncertain) > 1:
+        moon_value = " / ".join(str(item) for item in moon_uncertain)
+
+    ascendant = getattr(snapshot, "ascendant", None)
+    rising = str(getattr(ascendant, "sign", "") or "Not calculated")
+
+    return [
+        ("Sun sign", sign_for("Sun")),
+        ("Moon", moon_value),
+        ("Rising", rising),
+        ("Mercury", sign_for("Mercury")),
+        ("Venus", sign_for("Venus")),
+        ("Mars", sign_for("Mars")),
+    ]
+
+
+def _render_chart_natal_reference(snapshot) -> None:
+    items = _chart_natal_reference_items(snapshot)
+    cells = "".join(
+        f'<div><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
+        for label, value in items
+    )
+    st.markdown('<div class="chart-reader-label">YOUR NATAL REFERENCE</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="chart-natal-reference">{cells}</div>', unsafe_allow_html=True)
+    if any(label == "Rising" and value == "Not calculated" for label, value in items):
+        st.caption("Rising sign is shown only when the supplied birth time and location support a reliable calculation.")
+
+
+def _render_active_house_legend(houses: list[int], label: str = "Active in this view") -> None:
+    clean = []
+    for value in houses:
+        try:
+            house = int(value)
+        except Exception:
+            continue
+        if 1 <= house <= 12 and house not in clean:
+            clean.append(house)
+
+    st.markdown(f'<div class="chart-reader-label">{escape(label)}</div>', unsafe_allow_html=True)
+    if not clean:
+        st.caption("No house passed the current activation threshold in this view.")
+        return
+
+    chips = "".join(
+        f'<div class="chart-house-chip"><strong>{house}</strong>{escape(_CHART_HOUSE_KEY[house])}</div>'
+        for house in clean
+    )
+    st.markdown(f'<div class="chart-active-houses">{chips}</div>', unsafe_allow_html=True)
+
+
+def _render_house_key() -> None:
+    with st.expander("House key · what the numbers 1–12 mean"):
+        items = "".join(
+            f'<div class="house-key-item"><strong>{house}</strong><span>{escape(_CHART_HOUSE_KEY[house])}</span></div>'
+            for house in range(1, 13)
+        )
+        st.markdown(
+            '<div class="small-note" style="margin-bottom:.55rem">'
+            'The numbers are astrological houses — life areas, not scores. Colour means activity, not good or bad.'
+            '</div>'
+            f'<div class="house-key-grid">{items}</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _monthly_active_house_numbers(result: dict, events: list[dict], selected_key: str) -> list[int]:
+    """Return the same foregrounded house numbers used by the Monthly activation wheel."""
+    selected = events if selected_key == "whole" else [
+        item for item in events if item.get("key") == selected_key
+    ]
+    active = []
+
+    for event in selected:
+        overlay_nodes = _monthly_motion_overlay_nodes(result, event)
+        event_houses = set()
+
+        for node in overlay_nodes:
+            house = node.get("house")
+            if house:
+                try:
+                    number = int(house)
+                    if 1 <= number <= 12:
+                        event_houses.add(number)
+                except Exception:
+                    pass
+
+        if not event_houses:
+            for value in event.get("houses") or set():
+                try:
+                    number = int(value)
+                    if 1 <= number <= 12:
+                        event_houses.add(number)
+                except Exception:
+                    pass
+
+        # Match the activation wheel's readability rule.
+        event_houses = set(sorted(event_houses)[:3])
+        for house in sorted(event_houses):
+            if house not in active:
+                active.append(house)
+
+    return active
+
+
+def _timing_active_house_numbers(active_stories: list) -> list[int]:
+    houses = []
+    for story in active_stories:
+        value = getattr(story, "natal_house", None)
+        try:
+            house = int(value) if value else None
+        except Exception:
+            house = None
+        if house and 1 <= house <= 12 and house not in houses:
+            houses.append(house)
+    return sorted(houses)
+
+
+
 def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: str) -> None:
     if snapshot is None or not events:
         return
@@ -6710,6 +6936,8 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
     st.caption(
         "Colour shows activity, not good or bad. Choose the whole month or one of the four key August moments to see how the emphasis shifts against your natal reference."
     )
+
+    _render_chart_natal_reference(snapshot)
 
     option_pairs = [("Whole Month", "whole")]
     for event in events:
@@ -6730,6 +6958,10 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
         unsafe_allow_html=True,
     )
 
+    monthly_active_houses = _monthly_active_house_numbers(result, events, selected_key)
+    active_label = "ACTIVE IN THIS VIEW" if selected_key == "whole" else f"ACTIVE · {chosen_label.upper()}"
+    _render_active_house_legend(monthly_active_houses, active_label)
+
     left, right = st.columns(2, gap="large")
     with left:
         st.markdown("**Natal reference**")
@@ -6745,6 +6977,8 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
             '</div><div class="small-note">The Monthly layer foregrounds concentration. Technical evidence remains under Why Luna sees this.</div>',
             unsafe_allow_html=True,
         )
+
+    _render_house_key()
 
 
 def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None, snapshot=None) -> None:
@@ -7795,6 +8029,8 @@ def _timing_chart_in_motion(report, snapshot) -> None:
         "Colour shows activity, not good or bad. The natal chart stays restrained; the activation layer shows which houses and natal targets are being contacted in the selected period. Solid lines are approaching contacts; dashed lines are separating."
     )
 
+    _render_chart_natal_reference(snapshot)
+
     mode = st.radio(
         "Chart period",
         ["Now", "30 Days", "90 Days", "12 Months"],
@@ -7807,6 +8043,10 @@ def _timing_chart_in_motion(report, snapshot) -> None:
         f'<div class="chart-motion-summary">{escape(_timing_motion_summary(report, mode, active_stories))}</div>',
         unsafe_allow_html=True,
     )
+
+    timing_active_houses = _timing_active_house_numbers(active_stories)
+    active_label = "ACTIVE NOW" if mode == "Now" else f"MOST ACTIVE · {mode.upper()}"
+    _render_active_house_legend(timing_active_houses, active_label)
 
     left, right = st.columns(2, gap="large")
     with left:
@@ -7823,6 +8063,8 @@ def _timing_chart_in_motion(report, snapshot) -> None:
             '</div><div class="small-note">Line weight increases as the orb tightens.</div>',
             unsafe_allow_html=True,
         )
+
+    _render_house_key()
 
 
 
