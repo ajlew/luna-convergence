@@ -3551,6 +3551,183 @@ def weekly_page() -> None:
     st.markdown('<a class="lean-monthly-link" href="/daily-horoscope">Open your sign-specific Daily Horoscope →</a>', unsafe_allow_html=True)
 
 
+
+def _weekly_publish_date_range(monday: date) -> str:
+    sunday = monday + timedelta(days=6)
+    if monday.month == sunday.month:
+        return f"{monday.day}–{sunday.day} {monday.strftime('%B')} {sunday.year}"
+    if monday.year == sunday.year:
+        return f"{monday.day} {monday.strftime('%B')}–{sunday.day} {sunday.strftime('%B')} {sunday.year}"
+    return f"{monday.day} {monday.strftime('%B')} {monday.year}–{sunday.day} {sunday.strftime('%B')} {sunday.year}"
+
+
+def _weekly_publish_distinct(values, limit: int = 4) -> list[str]:
+    found = []
+    seen = set()
+    for value in values:
+        clean = " ".join(str(value or "").split()).strip(" .")
+        key = clean.lower()
+        if clean and key not in seen:
+            seen.add(key)
+            found.append(clean)
+        if len(found) >= limit:
+            break
+    return found
+
+
+def _weekly_publish_package(days, monday: date) -> dict:
+    """Copy-ready YouTube/Instagram package derived from the selected weekly sky."""
+    date_range = _weekly_publish_date_range(monday)
+    weekly_url = f"{PUBLIC_SITE_URL}/weekly-view"
+    daily_url = f"{PUBLIC_SITE_URL}/"
+
+    # Editorial treatment for the current 24–30 August 2026 campaign.
+    # The astronomy named here is the already-established weekly source material.
+    if monday == date(2026, 8, 24):
+        title = f"Week Ahead Astrology: Feel It. Then Verify It. | {date_range}"
+        description = (
+            "Seven days. One changing sky.\n\n"
+            "This week tests the gap between feeling and fact. Mars–Neptune opens with fog: "
+            "instinct is loud, but the evidence needs checking. Venus then tests value, appetite and restraint. "
+            "The Sun exposes the difference between how something looks and where it is actually heading. "
+            "By the weekend, the Moon asks the cleanest question of all: does the story still match the evidence?\n\n"
+            "Seven pressure points. Seven practical moves. Monday to Sunday.\n\n"
+            f"See the complete Week Ahead:\n{weekly_url}\n\n"
+            f"Read your Daily Horoscope:\n{daily_url}\n\n"
+            "Feel it. Then verify it. Then make your move.\n\n"
+            "#astrology #weeklyhoroscope #zodiac"
+        )
+        instagram = (
+            "FEEL IT. THEN VERIFY IT.\n\n"
+            "This week tests the gap between instinct and evidence. Mars–Neptune opens with fog. "
+            "Venus tests value and restraint. The Sun exposes where appearance and direction diverge. "
+            "By the weekend, the Moon asks whether the story still matches the facts.\n\n"
+            "Seven days. Seven pressure points. Seven practical moves.\n\n"
+            f"Full Week Ahead: {weekly_url}\n\n"
+            "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
+        )
+        opening_script = (
+            "Feel it. Then verify it. This week opens with more instinct than evidence. "
+            "Mars and Neptune blur the first read; Venus tests what is actually worth your time; "
+            "the Sun exposes the gap between appearance and direction. "
+            "By the weekend, ask one question: does the story still match the facts?"
+        )
+    else:
+        evidence = _weekly_publish_distinct(
+            [getattr(item, "evidence", "") for item in days],
+            limit=4,
+        )
+        headlines = _weekly_publish_distinct(
+            [getattr(item, "headline", "") for item in days],
+            limit=3,
+        )
+
+        title = f"Week Ahead Astrology | {date_range}"
+        evidence_sentence = ""
+        if evidence:
+            if len(evidence) == 1:
+                evidence_sentence = f"The week is anchored by {evidence[0]}."
+            else:
+                evidence_sentence = (
+                    "The week's main pressure points include "
+                    + ", ".join(evidence[:-1])
+                    + f", and {evidence[-1]}."
+                )
+        headline_sentence = ""
+        if headlines:
+            headline_sentence = (
+                "The practical sequence: "
+                + " → ".join(headlines)
+                + "."
+            )
+
+        description = (
+            "Seven days. One changing sky.\n\n"
+            + (evidence_sentence + " " if evidence_sentence else "")
+            + (headline_sentence if headline_sentence else "Luna follows the week's strongest calculated shifts from Monday to Sunday.")
+            + "\n\nSeven pressure points. Seven practical moves. Monday to Sunday.\n\n"
+            + f"See the complete Week Ahead:\n{weekly_url}\n\n"
+            + f"Read your Daily Horoscope:\n{daily_url}\n\n"
+            + "Read the signal. Check the evidence. Make your move.\n\n"
+            + "#astrology #weeklyhoroscope #zodiac"
+        )
+        instagram = (
+            f"THE WEEK AHEAD · {date_range.upper()}\n\n"
+            + (evidence_sentence + "\n\n" if evidence_sentence else "")
+            + "One changing sky. Seven practical moves.\n\n"
+            + f"Full Week Ahead: {weekly_url}\n\n"
+            + "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
+        )
+        opening_script = (
+            "Seven days. One changing sky. "
+            + (evidence_sentence + " " if evidence_sentence else "")
+            + "Luna follows the strongest shifts, then turns each one into a practical move."
+        )
+
+    youtube_tags = (
+        "weekly horoscope, weekly astrology, astrology forecast, zodiac forecast, "
+        "week ahead astrology, horoscope this week, astrology this week, "
+        "Aries horoscope, Taurus horoscope, Gemini horoscope, Cancer horoscope, "
+        "Leo horoscope, Virgo horoscope, Libra horoscope, Scorpio horoscope, "
+        "Sagittarius horoscope, Capricorn horoscope, Aquarius horoscope, Pisces horoscope, "
+        "Luna Convergence"
+    )
+
+    return {
+        "title": title,
+        "youtube_description": description,
+        "instagram_caption": instagram,
+        "opening_script": opening_script,
+        "youtube_tags": youtube_tags,
+    }
+
+
+def _render_weekly_publish_package(days, monday: date) -> None:
+    package = _weekly_publish_package(days, monday)
+
+    st.markdown("## Week Ahead publishing copy")
+    st.caption(
+        "Generated from the selected production week. Copy these directly into YouTube Shorts and Instagram Reels, "
+        "then make any final editorial adjustment before publishing."
+    )
+
+    st.markdown("**YouTube title**")
+    st.code(package["title"], language=None, wrap_lines=True)
+
+    st.markdown("**YouTube description**")
+    st.code(package["youtube_description"], language=None, wrap_lines=True)
+
+    st.markdown("**Instagram Reel caption**")
+    st.code(package["instagram_caption"], language=None, wrap_lines=True)
+
+    st.markdown("**Opening voiceover / first-frame script**")
+    st.code(package["opening_script"], language=None, wrap_lines=True)
+
+    with st.expander("YouTube comma-separated tags"):
+        st.code(package["youtube_tags"], language=None, wrap_lines=True)
+
+    download_copy = (
+        "YOUTUBE TITLE\n"
+        + package["title"]
+        + "\n\nYOUTUBE DESCRIPTION\n"
+        + package["youtube_description"]
+        + "\n\nINSTAGRAM REEL CAPTION\n"
+        + package["instagram_caption"]
+        + "\n\nOPENING VOICEOVER / FIRST FRAME\n"
+        + package["opening_script"]
+        + "\n\nYOUTUBE TAGS\n"
+        + package["youtube_tags"]
+    )
+    st.download_button(
+        "Download Week Ahead publishing copy",
+        data=download_copy,
+        file_name=f"luna_week_{monday.isoformat()}_publishing_copy.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
+
+
+
 def weekly_studio_page() -> None:
     """Hidden owner workspace for the shared weekly sky and 12 sign translations."""
     set_page_metadata(
@@ -3569,7 +3746,8 @@ def weekly_studio_page() -> None:
 4. Use the **1080 × 1920 SOCIAL CARD COPY** inside each sign. Luna automatically compresses the calculated *Where it lands* and *Your move* into four-second, phone-readable wording.
 5. Keep the longer interpretation on the website; do not squeeze it onto the social card.
 6. Use the existing **Monday-Sunday cards** for the seven separate Daily clips and as the evidence behind the weekly synthesis.
-7. Export social/video artwork at **1080 × 1920 (9:16)**.
+7. Use **Week Ahead publishing copy** for the ready-to-paste YouTube title/description, Instagram Reel caption and opening voiceover.
+8. Export social/video artwork at **1080 × 1920 (9:16)**.
 
 **Production rule:** calculate the sky once; translate it twelve ways. Do not manually invent twelve different skies.
         """)
@@ -3593,6 +3771,8 @@ def weekly_studio_page() -> None:
     monday = selected_monday
     days = build_weekly_view(monday, timezone_name)
     st.caption(f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · {timezone_name}")
+
+    _render_weekly_publish_package(days, monday)
 
     st.markdown("## 12 sign translations")
     sign_summaries = []
