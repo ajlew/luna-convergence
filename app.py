@@ -8847,63 +8847,282 @@ def _luna_first_sentence(value: str) -> str:
     return match.group(1).strip() if match else value
 
 
-def _timing_natal_person_summary(snapshot) -> list[str]:
-    """Use Luna's already-calculated natal signatures to describe tendencies, not facts."""
-    signatures = list(getattr(snapshot, "signatures", None) or [])
-    paragraphs = []
-    for signature in signatures[:2]:
-        title = str(getattr(signature, "title", "") or "").strip()
-        body = _luna_first_sentence(getattr(signature, "text", ""))
-        watch = _luna_first_sentence(getattr(signature, "watch", ""))
-        if title and body:
-            line = f"**{title}.** {body}"
-            if watch:
-                line += f" **Watch:** {watch}"
-            paragraphs.append(line)
+_SIGN_IDENTITY = {
+    "Aries": "direct, self-starting and uncomfortable with waiting too long for permission",
+    "Taurus": "steady, value-conscious and slow to abandon what has proved reliable",
+    "Gemini": "curious, mentally mobile and inclined to keep several possibilities alive at once",
+    "Cancer": "protective, emotionally responsive and strongly aware of belonging, safety and loyalty",
+    "Leo": "expressive, proud and motivated by the need to create, contribute and be recognised honestly",
+    "Virgo": "observant, improvement-oriented and inclined to notice what could work better",
+    "Libra": "relationship-aware, fairness-conscious and highly sensitive to reciprocity and reasonable terms",
+    "Scorpio": "private, intense and unwilling to stay indefinitely with superficial explanations",
+    "Sagittarius": "future-facing, freedom-seeking and drawn toward a larger field of possibility",
+    "Capricorn": "responsibility-conscious, strategic and willing to build slowly when the structure deserves it",
+    "Aquarius": "independent-minded, pattern-aware and resistant to rules that no longer make sense",
+    "Pisces": "porous, imaginative and highly responsive to atmosphere, meaning and emotional undercurrents",
+}
 
-    if paragraphs:
-        return paragraphs
+_SIGN_EMOTION = {
+    "Aries": "reacts quickly and usually knows what it feels before it has fully explained why",
+    "Taurus": "needs steadiness and may hold on longer than expected before admitting something no longer feels safe",
+    "Gemini": "processes feeling through thought, language and comparison",
+    "Cancer": "remembers emotional tone deeply and can protect what matters long after others have moved on",
+    "Leo": "needs warmth, loyalty and a sense that the heart is being met openly",
+    "Virgo": "often tries to solve the feeling by improving the situation",
+    "Libra": "looks for balance and may delay confrontation while trying to understand both sides",
+    "Scorpio": "feels deeply, notices what is unsaid and tends to remember what people did more than what they promised",
+    "Sagittarius": "recovers through movement, perspective and a sense that life is still opening",
+    "Capricorn": "contains emotion until there is a practical reason or safe structure for showing it",
+    "Aquarius": "often needs space and perspective before it can name the feeling clearly",
+    "Pisces": "absorbs atmosphere easily and may need solitude to separate its own feelings from everyone else's",
+}
 
+_SIGN_RISING = {
+    "Aries": "more direct, self-contained and ready to act than the inner chart may actually feel",
+    "Taurus": "calmer, steadier and harder to move than the inner chart may actually feel",
+    "Gemini": "quick, adaptable and mentally alert",
+    "Cancer": "careful, receptive and protective",
+    "Leo": "visible, expressive and self-possessed",
+    "Virgo": "observant, useful and composed",
+    "Libra": "socially aware, measured and diplomatic",
+    "Scorpio": "contained, watchful and difficult to read quickly",
+    "Sagittarius": "open, mobile and future-facing",
+    "Capricorn": "competent, contained and responsibility-ready",
+    "Aquarius": "independent, slightly detached and difficult to categorise",
+    "Pisces": "soft-edged, receptive and impressionable",
+}
+
+_SIGN_MERCURY = {
+    "Aries": "thinks quickly and prefers a straight answer",
+    "Taurus": "thinks deliberately and trusts what can be made concrete",
+    "Gemini": "thinks by connecting, comparing and talking things through",
+    "Cancer": "thinks through memory, context and emotional meaning",
+    "Leo": "thinks in large themes and wants the point to matter",
+    "Virgo": "thinks diagnostically, spotting errors, omissions and practical improvements",
+    "Libra": "thinks relationally, weighing fairness, alternatives and how each side will receive the message",
+    "Scorpio": "thinks beneath the surface, looking for motive, leverage and what has not been said",
+    "Sagittarius": "thinks in principles, patterns and larger meaning",
+    "Capricorn": "thinks strategically, asking what is workable and sustainable",
+    "Aquarius": "thinks systemically and is often more interested in the pattern than the convention",
+    "Pisces": "thinks associatively, intuitively and through images or atmosphere",
+}
+
+_SIGN_VENUS = {
+    "Aries": "needs aliveness, honesty and room for each person to remain themselves",
+    "Taurus": "values loyalty, consistency, touch and proof over performance",
+    "Gemini": "needs conversation, curiosity and a relationship that keeps moving mentally",
+    "Cancer": "values emotional safety, care and a sense of home with another person",
+    "Leo": "needs warmth, loyalty and visible appreciation",
+    "Virgo": "often shows love through usefulness, reliability and attention to detail",
+    "Libra": "needs reciprocity, good faith and a relationship in which the terms feel fair",
+    "Scorpio": "needs depth, loyalty and emotional truth more than surface harmony",
+    "Sagittarius": "needs honesty, space and a relationship that enlarges life rather than shrinking it",
+    "Capricorn": "values reliability, maturity and relationships that can carry real-world weight",
+    "Aquarius": "needs friendship, independence and a bond that does not erase individuality",
+    "Pisces": "values tenderness, emotional resonance and a feeling of meaningful connection",
+}
+
+_SIGN_MARS = {
+    "Aries": "acts quickly and would usually rather test something than discuss it forever",
+    "Taurus": "acts slowly but becomes formidable once committed",
+    "Gemini": "acts through movement, conversation and experimentation",
+    "Cancer": "acts protectively and can become highly motivated when security is at stake",
+    "Leo": "acts boldly when pride, creativity or loyalty is involved",
+    "Virgo": "acts by fixing, organising, improving and taking responsibility for what is not working",
+    "Libra": "acts through negotiation and may hesitate until it feels it has considered every side",
+    "Scorpio": "acts strategically and rarely spends force casually",
+    "Sagittarius": "acts toward freedom, experience and a larger horizon",
+    "Capricorn": "acts methodically and is willing to carry a long effort if the objective is worthwhile",
+    "Aquarius": "acts independently and is often willing to break a pattern others have normalised",
+    "Pisces": "acts intuitively and can move strongly when imagination, compassion or meaning is engaged",
+}
+
+
+def _timing_repeated_transit_themes(report) -> list[str]:
+    """Return the dominant slower-planet themes actually present in this report."""
+    counts = {}
+    for story in list(getattr(report, "stories", None) or []):
+        planet = str(getattr(story, "transit_planet", "") or "").strip()
+        if planet:
+            counts[planet] = counts.get(planet, 0) + 1
+    return [planet for planet, _ in sorted(counts.items(), key=lambda item: (-item[1], item[0]))]
+
+
+def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
+    """
+    Build a fuller reader-facing portrait from already-calculated natal placements,
+    then check whether the year's transits reinforce a recurring behavioural tension.
+    """
     refs = dict(_chart_natal_reference_items(snapshot))
     sun = refs.get("Sun sign", "Not calculated")
     moon = refs.get("Moon", "Not calculated")
     rising = refs.get("Rising", "Not calculated")
+    mercury = refs.get("Mercury", "Not calculated")
     venus = refs.get("Venus", "Not calculated")
     mars = refs.get("Mars", "Not calculated")
-    return [
-        f"Luna reads the permanent board as **Sun {sun} · Moon {moon} · Rising {rising}**. "
-        "The Sun describes the central identity, the Moon the emotional reflex, and the Rising sign how the person meets the world.",
-        f"Relationship style is coloured by **Venus {venus}** while action and desire are coloured by **Mars {mars}**. "
-        "These are symbolic tendencies rather than a fixed personality verdict.",
-    ]
+
+    paragraphs = []
+
+    # Core identity + emotional contrast.
+    if sun in _SIGN_IDENTITY and moon in _SIGN_EMOTION:
+        paragraphs.append(
+            f"I would describe this person as **{_SIGN_IDENTITY[sun]}**, but with an inner emotional life that "
+            f"**{_SIGN_EMOTION[moon]}**. That combination matters: the person other people meet may look simpler than the "
+            "person actually making the decision inside."
+        )
+    elif sun in _SIGN_IDENTITY:
+        paragraphs.append(
+            f"The core identity is **{_SIGN_IDENTITY[sun]}**. Luna treats that as a persistent tendency rather than a fixed personality label."
+        )
+
+    # Rising + Mercury: how they appear vs how they think.
+    if rising in _SIGN_RISING and mercury in _SIGN_MERCURY:
+        paragraphs.append(
+            f"With **{rising} Rising**, other people may experience them as **{_SIGN_RISING[rising]}**. "
+            f"Mercury in **{mercury}** adds a mind that **{_SIGN_MERCURY[mercury]}**. "
+            "So the outward style and the private reasoning process are not necessarily the same thing."
+        )
+    elif mercury in _SIGN_MERCURY:
+        paragraphs.append(
+            f"Mercury in **{mercury}** suggests a mind that **{_SIGN_MERCURY[mercury]}**."
+        )
+
+    # Venus + Mars: relationship need + action pattern.
+    if venus in _SIGN_VENUS and mars in _SIGN_MARS:
+        paragraphs.append(
+            f"In relationships, Venus in **{venus}** **{_SIGN_VENUS[venus]}**. "
+            f"Mars in **{mars}** means the person often **{_SIGN_MARS[mars]}**. "
+            "This is where attraction and behaviour can diverge: what they want from another person is not always the same as the way they respond when something goes wrong."
+        )
+
+    # Use the year's actual transit mix to identify a recurring problem pattern.
+    themes = _timing_repeated_transit_themes(report) if report is not None else []
+    if "Saturn" in themes and "Uranus" in themes:
+        paragraphs.append(
+            "This year's transit pattern adds an important tension: **Saturn repeatedly asks for responsibility, limits and explicit terms, "
+            "while Uranus repeatedly asks where the structure has become too restrictive**. "
+            "That often describes somebody who can tolerate a great deal, organise around a problem and keep a system functioning — "
+            "until the cost of carrying it becomes more important than preserving it."
+        )
+        paragraphs.append(
+            "A possible repeating cycle is therefore: **notice what is wrong → try to fix it → carry more than your share → "
+            "keep going because you can → eventually realise the arrangement is costing too much → want freedom very quickly**. "
+            "Luna is not claiming this is the person's biography; it is the behavioural question the natal pattern and this year's transits raise together."
+        )
+    elif "Saturn" in themes:
+        paragraphs.append(
+            "Saturn appears often enough in this year's strongest stories that **capacity itself may become the problem**. "
+            "Someone who is competent can be given more responsibility precisely because they keep proving they can absorb it. "
+            "The useful question is not 'Can I handle this?' but **'Should I still be the person handling it?'**"
+        )
+
+    # Relationship-specific synthesis if Venus / 7th-house stories exist.
+    relationship_relevant = False
+    if report is not None:
+        for story in report.stories:
+            target = str(getattr(story, "natal_target", "") or "").lower()
+            area = _timing_story_life_area(story).lower()
+            house = str(getattr(story, "natal_house", "") or "")
+            if target == "venus" or house == "7" or "relationship" in area or "agreement" in area:
+                relationship_relevant = True
+                break
+
+    if relationship_relevant:
+        paragraphs.append(
+            "The relationship transits make the portrait more specific. This is **not someone who necessarily struggles to form bonds**; "
+            "the harder question is whether they stay too long in arrangements that remain workable only because they are willing to compensate for the imbalance. "
+            "When Luna later says **'THE AGREEMENT GETS TESTED'**, the test is not simply whether love or loyalty exists. "
+            "It is whether the terms are mutual enough that one person no longer has to carry the relationship for both."
+        )
+
+    return paragraphs
+
+
+
+def _timing_recurrence_question(story) -> str:
+    """Human memory question derived from the transit planet + natal target."""
+    planet = str(getattr(story, "transit_planet", "") or "")
+    target = str(getattr(story, "natal_target", "") or "")
+    area = _timing_story_life_area(story)
+
+    if planet == "Saturn" and target == "Midheaven":
+        return (
+            "Were expectations becoming heavier? Did school, family, work or another authority start asking you to become more responsible, "
+            "more visible or more self-controlled than before?"
+        )
+    if planet == "Saturn" and target == "Venus":
+        return (
+            "Did a relationship, friendship or agreement reveal an imbalance in effort, loyalty, money or responsibility? "
+            "Were you learning what you would and would not continue carrying for somebody else?"
+        )
+    if planet == "Jupiter" and target == "Ascendant":
+        return (
+            "Did life suddenly feel larger — more people, confidence, movement, opportunity or permission to become a different version of yourself?"
+        )
+    if planet == "Jupiter" and target == "Moon":
+        return (
+            "Did home, family, emotional security or shared resources expand, become more visible, or ask you to carry a larger emotional or financial field?"
+        )
+    if planet == "Uranus":
+        return (
+            f"Did something in **{area}** stop feeling inevitable? Were you experimenting with freedom, distance, a new direction or a break from an old rule?"
+        )
+    if planet == "Pluto":
+        return (
+            f"Did something in **{area}** make the real power structure harder to ignore — who had leverage, what could no longer be controlled, "
+            "or what needed to be confronted more honestly?"
+        )
+    return (
+        f"What was changing in **{area}** then? Was the issue more about responsibility, growth, freedom, power, relationship terms or a change in direction?"
+    )
 
 
 def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[str]:
-    """Only show a recurrence when the earlier calculated echo happened in the reader's lifetime."""
+    """
+    Show earlier calculated transit-family echoes and make the memory prompt
+    genuinely useful without pretending Luna knows the event that occurred.
+    """
     if not birth_date_value:
         return []
+
     rows = []
     seen = set()
+
     for story in report.stories:
         earlier = _previous_transit_echo_date(story)
         if earlier is None or earlier < birth_date_value:
             continue
+
         key = (str(story.transit_planet), str(story.natal_target), earlier.year)
         if key in seen:
             continue
         seen.add(key)
+
         age = earlier.year - birth_date_value.year - (
             (earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day)
         )
-        rows.append(
+        current_summary = _luna_first_sentence(getattr(story, "summary", ""))
+
+        paragraph = (
             f"**Around {_timing_date_label(earlier)} (about age {age})** the same broad "
             f"**{story.transit_planet}–{story.natal_target}** transit family was active. "
-            f"Luna would ask whether that period involved {_transit_human_theme(story)}. "
-            "This is a memory prompt, not a claim that a particular event happened."
+            f"The repeating theme is **{_transit_human_theme(story)}**."
         )
+
+        if current_summary:
+            paragraph += (
+                f" In the present cycle Luna describes the issue this way: **{current_summary}** "
+                "The earlier period does not have to contain the same event; it is the same kind of developmental pressure returning in a different life."
+            )
+
+        paragraph += f" **What Luna would ask you to remember:** {_timing_recurrence_question(story)}"
+        rows.append(paragraph)
+
         if len(rows) >= 3:
             break
+
     return rows
+
 
 
 def _timing_relationship_timing(report) -> dict:
@@ -8951,9 +9170,10 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
     st.markdown("## The person behind the transits")
     st.markdown(
         "Transits are best at showing **what is being activated**. The natal chart is better at describing "
-        "**the person carrying the activation**. Luna therefore treats this as a pattern summary, not a diagnosis."
+        "**the person carrying the activation**. Luna therefore combines the permanent natal pattern with the year's repeated transit themes "
+        "to describe likely tendencies, tensions and coping styles — **not a diagnosis and not a claim about somebody's biography**."
     )
-    for paragraph in _timing_natal_person_summary(snapshot):
+    for paragraph in _timing_natal_person_summary(snapshot, report):
         st.markdown(paragraph)
 
     past = _timing_past_pattern_summary(report, birth_date_value)
