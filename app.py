@@ -7435,6 +7435,10 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
         unsafe_allow_html=True,
     )
 
+    st.markdown("### What this chart is saying")
+    for paragraph in _monthly_chart_story(result, events, selected_key):
+        st.markdown(paragraph)
+
     monthly_active_houses = _monthly_active_house_numbers(result, events, selected_key)
     active_label = "ACTIVE IN THIS VIEW" if selected_key == "whole" else f"ACTIVE · {chosen_label.upper()}"
     _render_active_house_legend(monthly_active_houses, active_label)
@@ -7510,6 +7514,24 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         hero=_monthly_main_headline(narrative, sign),
         context=context_for_voice,
     )
+
+    month_story = _monthly_story_of_month(events, sign)
+    if month_story:
+        st.markdown("## The story of your month")
+        st.markdown(
+            "Luna reads the month's strongest dates as one developing sequence — what opens the problem, "
+            "what changes the terms, and what the later dates leave you with."
+        )
+        for paragraph in month_story.get("paragraphs", []):
+            st.markdown(paragraph)
+        month_arc = list(month_story.get("arc", []) or [])
+        if month_arc:
+            st.markdown(
+                '<div class="timing-meta" style="margin-top:1.1rem">THE ARC</div>'
+                f'<div style="font:500 13px IBM Plex Mono,monospace;letter-spacing:.035em;'
+                f'line-height:1.8;margin:.25rem 0 1rem">{escape(" → ".join(month_arc))}</div>',
+                unsafe_allow_html=True,
+            )
 
     _monthly_chart_in_motion(snapshot, result, events, sign)
 
@@ -8816,6 +8838,272 @@ def _timing_activation_wheel_svg(report, mode: str, size: int = 620) -> str:
     return "".join(parts)
 
 
+
+def _luna_first_sentence(value: str) -> str:
+    value = re.sub(r"\s+", " ", str(value or "")).strip()
+    if not value:
+        return ""
+    match = re.match(r"^(.+?[.!?])(?:\s|$)", value)
+    return match.group(1).strip() if match else value
+
+
+def _timing_natal_person_summary(snapshot) -> list[str]:
+    """Use Luna's already-calculated natal signatures to describe tendencies, not facts."""
+    signatures = list(getattr(snapshot, "signatures", None) or [])
+    paragraphs = []
+    for signature in signatures[:2]:
+        title = str(getattr(signature, "title", "") or "").strip()
+        body = _luna_first_sentence(getattr(signature, "text", ""))
+        watch = _luna_first_sentence(getattr(signature, "watch", ""))
+        if title and body:
+            line = f"**{title}.** {body}"
+            if watch:
+                line += f" **Watch:** {watch}"
+            paragraphs.append(line)
+
+    if paragraphs:
+        return paragraphs
+
+    refs = dict(_chart_natal_reference_items(snapshot))
+    sun = refs.get("Sun sign", "Not calculated")
+    moon = refs.get("Moon", "Not calculated")
+    rising = refs.get("Rising", "Not calculated")
+    venus = refs.get("Venus", "Not calculated")
+    mars = refs.get("Mars", "Not calculated")
+    return [
+        f"Luna reads the permanent board as **Sun {sun} · Moon {moon} · Rising {rising}**. "
+        "The Sun describes the central identity, the Moon the emotional reflex, and the Rising sign how the person meets the world.",
+        f"Relationship style is coloured by **Venus {venus}** while action and desire are coloured by **Mars {mars}**. "
+        "These are symbolic tendencies rather than a fixed personality verdict.",
+    ]
+
+
+def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[str]:
+    """Only show a recurrence when the earlier calculated echo happened in the reader's lifetime."""
+    if not birth_date_value:
+        return []
+    rows = []
+    seen = set()
+    for story in report.stories:
+        earlier = _previous_transit_echo_date(story)
+        if earlier is None or earlier < birth_date_value:
+            continue
+        key = (str(story.transit_planet), str(story.natal_target), earlier.year)
+        if key in seen:
+            continue
+        seen.add(key)
+        age = earlier.year - birth_date_value.year - (
+            (earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day)
+        )
+        rows.append(
+            f"**Around {_timing_date_label(earlier)} (about age {age})** the same broad "
+            f"**{story.transit_planet}–{story.natal_target}** transit family was active. "
+            f"Luna would ask whether that period involved {_transit_human_theme(story)}. "
+            "This is a memory prompt, not a claim that a particular event happened."
+        )
+        if len(rows) >= 3:
+            break
+    return rows
+
+
+def _timing_relationship_timing(report) -> dict:
+    """Find relationship-opening and relationship-testing windows from the ranked transit stories."""
+    opening_candidates = []
+    test_candidates = []
+
+    for story in report.stories:
+        target = str(getattr(story, "natal_target", "") or "")
+        planet = str(getattr(story, "transit_planet", "") or "")
+        area = _timing_story_life_area(story).lower()
+        house = getattr(story, "natal_house", None)
+        signal = _timing_signal_type(story).upper()
+        polarity = str(getattr(story, "polarity", "") or "").lower()
+
+        relationship_relevant = (
+            target.lower() == "venus"
+            or str(house) == "7"
+            or "relationship" in area
+            or "agreement" in area
+            or "partner" in area
+        )
+        if not relationship_relevant:
+            continue
+
+        if planet == "Jupiter" or signal in {"OPENING", "EXPANSION", "SUPPORT"} or "opportun" in polarity:
+            opening_candidates.append(story)
+        if planet == "Saturn" or signal in {"DECISION", "STRUCTURE", "FRICTION"} or "pressure" in polarity:
+            test_candidates.append(story)
+
+    def start_of(story):
+        return _timing_story_start(story) or report.end_date
+
+    result = {}
+    if opening_candidates:
+        story = sorted(opening_candidates, key=start_of)[0]
+        result["opening"] = story
+    if test_candidates:
+        story = sorted(test_candidates, key=start_of)[0]
+        result["test"] = story
+    return result
+
+
+def _render_timing_person_relationship_summary(report, snapshot, birth_date_value: date | None) -> None:
+    st.markdown("## The person behind the transits")
+    st.markdown(
+        "Transits are best at showing **what is being activated**. The natal chart is better at describing "
+        "**the person carrying the activation**. Luna therefore treats this as a pattern summary, not a diagnosis."
+    )
+    for paragraph in _timing_natal_person_summary(snapshot):
+        st.markdown(paragraph)
+
+    past = _timing_past_pattern_summary(report, birth_date_value)
+    if past:
+        st.markdown("### What may have repeated before")
+        st.markdown(
+            "Slow-planet transits can return to related geometry years later. Luna uses those recurrences to ask better memory questions, "
+            "not to invent a biography."
+        )
+        for paragraph in past:
+            st.markdown(paragraph)
+
+    relationship = _timing_relationship_timing(report)
+    if relationship:
+        st.markdown("## Relationship timing")
+        st.markdown(
+            "Luna separates **an opening for connection** from **a test of whether the relationship can carry real terms**. "
+            "These are astrological windows, not guarantees that a particular person appears."
+        )
+
+        opening = relationship.get("opening")
+        if opening:
+            start = _timing_story_start(opening)
+            end = _timing_story_end(opening)
+            st.markdown(
+                f"**Best opening window · {_timing_date_label(start) if start else '—'} → "
+                f"{_timing_date_label(end) if end else '—'}**  \n"
+                f"**{opening.headline}** is the clearest relationship-opening story in this map. "
+                f"Its strongest dates are **{_timing_story_peak_label(opening)}**. "
+                "This is the better period for meeting, widening the field, becoming more visible to others or allowing an existing connection to grow."
+            )
+
+        test = relationship.get("test")
+        if test:
+            start = _timing_story_start(test)
+            end = _timing_story_end(test)
+            st.markdown(
+                f"**Seriousness / commitment window · {_timing_date_label(start) if start else '—'} → "
+                f"{_timing_date_label(end) if end else '—'}**  \n"
+                f"**{test.headline}** becomes strongest around **{_timing_story_peak_label(test)}**. "
+                "If somebody enters during the earlier opening, this later period is more useful for seeing whether the agreement is mutual, sustainable and worth formalising."
+            )
+
+
+def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]:
+    if not stories:
+        return [
+            "The natal wheel still describes the permanent pattern, but the activation wheel is quiet in this view. "
+            "Luna does not force a major transit story when the slow planets are not making a strong enough contact."
+        ]
+
+    areas = []
+    contacts = []
+    for story in stories[:4]:
+        area = _timing_story_life_area(story)
+        if area not in areas:
+            areas.append(area)
+        contact = f"{story.transit_planet} → natal {story.natal_target}"
+        if contact not in contacts:
+            contacts.append(contact)
+
+    first = stories[0]
+    second = stories[1] if len(stories) > 1 else None
+
+    out = [
+        "The **left wheel** is the permanent natal board. The **right wheel** is the moving pressure map. "
+        "A shaded sector means that life area is unusually active; the contact lines show which natal points are actually being pressed or opened. "
+        "The chart is therefore showing concentration, not fate.",
+        (
+            f"In this **{mode}** view, the strongest concentration falls around "
+            + ", ".join(f"**{area}**" for area in areas[:3])
+            + ". The clearest contacts are "
+            + ", ".join(f"**{contact}**" for contact in contacts[:3])
+            + f". That is why Luna leads with **{first.headline}**"
+            + (f" and then develops the story through **{second.headline}**." if second else ".")
+        ),
+    ]
+    if len(areas) >= 2:
+        out.append(
+            f"The important part is the **connection between {areas[0]} and {areas[1]}**. "
+            "A decision in one area can change the terms in the other. That connection is the convergence the individual transit chapters explain date by date."
+        )
+    return out
+
+
+def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
+    if not events:
+        return {}
+    chosen = events[:4]
+    first = chosen[0]
+    paragraphs = [
+        f"**{sign}, this month has an arc rather than four unrelated dates.** "
+        f"It opens with **{first['title']}** around **{first['date_label']}**. "
+        f"{_luna_first_sentence(first.get('voice_lead') or (first.get('body') or [''])[0])} "
+        "That opening sets the problem the rest of the month keeps answering."
+    ]
+
+    if len(chosen) >= 2:
+        second = chosen[1]
+        paragraphs.append(
+            f"The next turn is **{second['title']}** around **{second['date_label']}**. "
+            f"{_luna_first_sentence(second.get('voice_lead') or (second.get('body') or [''])[0])} "
+            "Read it as a development of the first story: what was only pressure, possibility or uncertainty now has to become a choice, boundary or usable opening."
+        )
+
+    if len(chosen) >= 3:
+        last = chosen[-1]
+        paragraphs.append(
+            f"By the later part of the month, **{last['title']}** shows what remains once the earlier noise clears. "
+            f"The month therefore moves from **{first['signal']} → {chosen[1]['signal'] if len(chosen) > 1 else first['signal']} → {last['signal']}**. "
+            "The value is in following the sequence, not treating every date as a separate horoscope."
+        )
+
+    arc = []
+    for event in chosen:
+        signal = str(event.get("signal") or "").upper()
+        if signal and (not arc or arc[-1] != signal):
+            arc.append(signal)
+    return {"paragraphs": paragraphs, "arc": arc}
+
+
+def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) -> list[str]:
+    selected = events if selected_key == "whole" else [e for e in events if e.get("key") == selected_key]
+    if not selected:
+        return []
+
+    houses = _monthly_active_house_numbers(result, events, selected_key)
+    labels = [_CHART_HOUSE_KEY.get(h, f"House {h}") for h in houses[:4]]
+
+    if selected_key == "whole":
+        first = selected[0]
+        last = selected[-1]
+        return [
+            "The **left wheel** is your natal reference. The **right wheel** shows where this month's sky is landing against it. "
+            "The shaded houses are not good or bad; they show where the month is concentrating activity.",
+            f"Across the month, the chart gathers most strongly around "
+            + ", ".join(f"**{label}**" for label in labels)
+            + f". That is why the narrative begins with **{first['title']}** and ends with **{last['title']}**: "
+            "the pressure is moving between connected life areas rather than producing four disconnected predictions.",
+        ]
+
+    event = selected[0]
+    move = str(event.get("move") or "").strip()
+    return [
+        f"This view isolates **{event['title']}** around **{event['date_label']}**. "
+        "The shaded houses show where that one moment lands against the natal chart.",
+        ("The practical meaning is: " + move) if move else "The chart shows which life area becomes louder before the month moves on.",
+    ]
+
+
 def _timing_chart_in_motion(report, snapshot) -> None:
     st.markdown("## Your Chart in Motion")
     st.caption(
@@ -8836,6 +9124,10 @@ def _timing_chart_in_motion(report, snapshot) -> None:
         f'<div class="chart-motion-summary">{escape(_timing_motion_summary(report, mode, active_stories))}</div>',
         unsafe_allow_html=True,
     )
+
+    st.markdown("### What these two wheels are saying")
+    for paragraph in _timing_chart_story(report, snapshot, mode, active_stories):
+        st.markdown(paragraph)
 
     timing_active_houses = _timing_active_house_numbers(active_stories)
     active_label = "ACTIVE NOW" if mode == "Now" else f"MOST ACTIVE · {mode.upper()}"
@@ -9112,6 +9404,18 @@ def timing_map_page() -> None:
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
     if timing_snapshot is not None:
+        birth_date_for_summary = st.session_state.get("timing-map-birth-date-v334")
+        if isinstance(birth_date_for_summary, str):
+            try:
+                birth_date_for_summary = date.fromisoformat(birth_date_for_summary)
+            except Exception:
+                birth_date_for_summary = None
+
+        _render_timing_person_relationship_summary(
+            report,
+            timing_snapshot,
+            birth_date_for_summary if isinstance(birth_date_for_summary, date) else None,
+        )
         _timing_chart_in_motion(report, timing_snapshot)
 
     if not report.stories:
