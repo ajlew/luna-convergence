@@ -8690,6 +8690,142 @@ def _timing_chart_in_motion(report, snapshot) -> None:
 
 
 
+
+def _render_timing_result_actions() -> None:
+    """
+    Reader controls for printing/saving the personalised Year Ahead report
+    and sharing the public Timing Map page.
+
+    This intentionally mirrors the working Monthly action row.
+    The shared URL contains no birth data or session state.
+    """
+    title = "Your Year Ahead · Personal Transits & Timing · Luna Convergence"
+    safe_title = escape(title)
+    timing_share_url = "https://luna-convergence.streamlit.app/timing-map"
+
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">KEEP OR SHARE YOUR READING</div>', unsafe_allow_html=True)
+
+    components.html(
+        f"""
+        <div id="luna-timing-result-actions" style="
+            display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+            font-family:Arial,sans-serif;margin:0;padding:0 0 2px 0;">
+          <button id="luna-timing-print" type="button" style="
+              min-height:44px;padding:10px 16px;border:1px solid #111;background:#111;color:#fff;
+              font-size:13px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">
+            Print / Save PDF
+          </button>
+          <button id="luna-timing-share" type="button" style="
+              min-height:44px;padding:10px 16px;border:1px solid #111;background:#fff;color:#111;
+              font-size:13px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">
+            Share page link
+          </button>
+          <span id="luna-timing-action-status" style="font-size:12px;color:#666;min-width:160px;"></span>
+        </div>
+
+        <script>
+        (() => {{
+          const printBtn = document.getElementById("luna-timing-print");
+          const shareBtn = document.getElementById("luna-timing-share");
+          const status = document.getElementById("luna-timing-action-status");
+
+          function parentWindow() {{
+            try {{ return window.parent; }} catch (e) {{ return window; }}
+          }}
+
+          function parentDocument() {{
+            try {{ return window.parent.document; }} catch (e) {{ return null; }}
+          }}
+
+          function pageUrl() {{
+            return "{timing_share_url}";
+          }}
+
+          function openExpandersForPrint() {{
+            const doc = parentDocument();
+            if (!doc) return;
+            const details = doc.querySelectorAll(
+              '[data-testid="stExpander"] details, details[data-testid="stExpander"]'
+            );
+            details.forEach((node) => {{
+              if (!node.open) {{
+                node.dataset.lunaPrintOpened = "1";
+                node.open = true;
+              }}
+            }});
+          }}
+
+          function restoreExpandersAfterPrint() {{
+            const doc = parentDocument();
+            if (!doc) return;
+            doc.querySelectorAll('details[data-luna-print-opened="1"]').forEach((node) => {{
+              node.open = false;
+              delete node.dataset.lunaPrintOpened;
+            }});
+          }}
+
+          try {{
+            const parent = parentWindow();
+            if (!parent.__lunaTimingPrintHooksInstalled) {{
+              parent.__lunaTimingPrintHooksInstalled = true;
+              parent.addEventListener("beforeprint", openExpandersForPrint);
+              parent.addEventListener("afterprint", restoreExpandersAfterPrint);
+            }}
+          }} catch (e) {{}}
+
+          printBtn.addEventListener("click", () => {{
+            status.textContent = "Opening print dialog…";
+            openExpandersForPrint();
+            setTimeout(() => {{
+              try {{ parentWindow().print(); }}
+              catch (e) {{ window.print(); }}
+              setTimeout(() => {{ status.textContent = ""; }}, 700);
+            }}, 180);
+          }});
+
+          shareBtn.addEventListener("click", async () => {{
+            const url = pageUrl();
+            const payload = {{
+              title: "{safe_title}",
+              text: "Luna Convergence Year Ahead astrology page. Personal birth details are not included in this link.",
+              url
+            }};
+
+            if (navigator.share) {{
+              try {{
+                await navigator.share(payload);
+                status.textContent = "Share sheet opened.";
+                return;
+              }} catch (e) {{
+                if (e && e.name === "AbortError") {{
+                  status.textContent = "";
+                  return;
+                }}
+              }}
+            }}
+
+            try {{
+              await navigator.clipboard.writeText(url);
+              status.textContent = "Page link copied.";
+            }} catch (e) {{
+              window.prompt("Copy this Luna page link:", url);
+              status.textContent = "Copy the link shown.";
+            }}
+          }});
+        }})();
+        </script>
+        """,
+        height=62,
+        scrolling=False,
+    )
+
+    st.caption(
+        "For a personalised copy, choose **Print / Save PDF**. "
+        "**Share page link** shares only the public Year Ahead page — "
+        "birth details and your session are deliberately not placed in the URL."
+    )
+
 def timing_map_page() -> None:
     set_page_metadata(
         "Your Year Ahead | Personal Transits & Timing | Luna Convergence",
@@ -8758,6 +8894,8 @@ def timing_map_page() -> None:
     profile_summary = str(st.session_state.get("timing-map-summary-v330") or "Personal natal profile")
     st.markdown("## The year at a glance")
     st.caption(f"{profile_summary} · {_timing_date_label(report.start_date)} → {_timing_date_label(report.end_date)}")
+
+    _render_timing_result_actions()
     st.markdown(
         f'''<div class="timing-summary-grid">
   <div><span>Major games</span><strong>{report.major_games}</strong></div>
@@ -8858,11 +8996,6 @@ def timing_map_page() -> None:
                     "groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
                 )
 
-
-    complete_report_print_button(
-        "Print / Save complete Year Ahead",
-        key="timing-map-complete-report",
-    )
 
     st.markdown(
         "<div class=\"timing-test\"><strong>Your Year Ahead · Personal Transits &amp; Timing · pilot</strong><br>This is Luna's paid-value layer: personal timing, major peaks, historical context and the difference between then and now. Pricing is still being tested; no payment is collected in this pilot.</div>",
