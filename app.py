@@ -152,7 +152,7 @@ PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 
 LUNA_TRUST_STATEMENT = (
     "The astrology is calculated, not guessed. Ephemeris data and programmed rules determine "
-    "what is happening in the chart; Luna then turns those signals into interpretation."
+    "what is happening in your chart; Luna turns those signals into interpretation."
 )
 LUNA_TRUST_DISCLOSURE = (
     "Luna uses ephemeris data and programmed calculations to identify planetary positions, aspects, "
@@ -1510,22 +1510,97 @@ hr {
 }
 
 @media print {
+    @page {
+        size:A4 portrait;
+        margin:12mm;
+    }
+
+    /* The printed product is the whole rendered report, never the visible viewport. */
+    html,
+    body,
+    #root,
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    .main,
+    .block-container {
+        width:100% !important;
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+        overflow:visible !important;
+        position:static !important;
+        contain:none !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stMain"] > div,
+    [data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"],
+    [data-testid="column"] {
+        height:auto !important;
+        max-height:none !important;
+        overflow:visible !important;
+    }
+
     .brand-row,
     .top-nav,
     .mobile-nav,
     .solar-year-wave-wrap,
     .weekly-studio-controls,
+    .luna-print-control,
     [data-testid="stDownloadButton"],
     [data-testid="stForm"],
     [data-testid="stSelectbox"],
+    [data-testid="stDateInput"],
+    [data-testid="stTextInput"],
+    [data-testid="stTextArea"],
+    [data-testid="stNumberInput"],
+    [data-testid="stCheckbox"],
+    [data-testid="stRadio"],
+    [data-testid="stButton"],
+    [data-testid="stLinkButton"],
     [data-testid="stCode"],
     .weekly-copy-heading,
     iframe {
         display:none !important;
     }
+
     .block-container {
-        max-width:none;
-        padding:.3in !important;
+        max-width:none !important;
+        padding:0 !important;
+    }
+
+    h1, h2, h3, h4 {
+        break-after:avoid-page;
+        page-break-after:avoid;
+    }
+
+    p, li, .timing-date-box, .timing-move, .relationship-card {
+        orphans:3;
+        widows:3;
+    }
+
+    .weekly-card,
+    .timing-date-box,
+    .timing-summary-grid,
+    .chart-natal-reference,
+    .house-key-item {
+        break-inside:avoid;
+        page-break-inside:avoid;
+    }
+
+    /* Long Monthly/Yearly/Transit prose is allowed to flow across pages. */
+    .forecast-copy,
+    .timing-shell,
+    .timing-story,
+    .natal-shell,
+    .relationship-card,
+    .card {
+        height:auto !important;
+        max-height:none !important;
+        overflow:visible !important;
     }
     /* Print every evidence/house-key expander open, even if the reader left it collapsed. */
     [data-testid="stExpander"] {
@@ -1875,6 +1950,153 @@ hr {
         unsafe_allow_html=True,
     )
 
+
+
+def install_complete_report_print_support() -> None:
+    """Make browser printing capture the complete rendered Luna report.
+
+    This is deliberately global so Weekly, Monthly, Yearly and Personal
+    Transits all use the same print behaviour, including report renderers
+    imported from other modules.
+    """
+    st.html(
+        """
+<script>
+(() => {
+  const rootWindow = window;
+  const rootDocument = document;
+
+  function allDocuments() {
+    const docs = [rootDocument];
+    try {
+      if (window.parent && window.parent.document && window.parent.document !== rootDocument) {
+        docs.push(window.parent.document);
+      }
+    } catch (e) {}
+    return docs;
+  }
+
+  function openAllLunaExpandersForPrint() {
+    allDocuments().forEach((doc) => {
+      const selectors = [
+        '[data-testid="stExpander"] details',
+        'details[data-testid="stExpander"]',
+        '[data-testid="stExpander"]'
+      ];
+      doc.querySelectorAll(selectors.join(",")).forEach((node) => {
+        const details = node.tagName === "DETAILS" ? node : node.querySelector("details");
+        if (details && !details.open) {
+          details.dataset.lunaPrintOpened = "1";
+          details.open = true;
+        }
+      });
+
+      /* Streamlit can retain collapsed-state styles on descendants. */
+      doc.querySelectorAll(
+        '[data-testid="stExpanderDetails"], [data-testid="stExpander"] [role="region"]'
+      ).forEach((node) => {
+        node.dataset.lunaPrintForcedVisible = "1";
+        node.style.setProperty("display", "block", "important");
+        node.style.setProperty("visibility", "visible", "important");
+        node.style.setProperty("height", "auto", "important");
+        node.style.setProperty("max-height", "none", "important");
+        node.style.setProperty("overflow", "visible", "important");
+        node.style.setProperty("opacity", "1", "important");
+      });
+    });
+  }
+
+  function restoreLunaExpandersAfterPrint() {
+    allDocuments().forEach((doc) => {
+      doc.querySelectorAll('details[data-luna-print-opened="1"]').forEach((details) => {
+        details.open = false;
+        delete details.dataset.lunaPrintOpened;
+      });
+      doc.querySelectorAll('[data-luna-print-forced-visible="1"]').forEach((node) => {
+        node.style.removeProperty("display");
+        node.style.removeProperty("visibility");
+        node.style.removeProperty("height");
+        node.style.removeProperty("max-height");
+        node.style.removeProperty("overflow");
+        node.style.removeProperty("opacity");
+        delete node.dataset.lunaPrintForcedVisible;
+      });
+    });
+  }
+
+  function installOn(win) {
+    try {
+      if (win.__lunaCompleteReportPrintInstalled) return;
+      win.__lunaCompleteReportPrintInstalled = true;
+      win.addEventListener("beforeprint", openAllLunaExpandersForPrint);
+      win.addEventListener("afterprint", restoreLunaExpandersAfterPrint);
+    } catch (e) {}
+  }
+
+  installOn(rootWindow);
+  try { installOn(window.parent); } catch (e) {}
+
+  /* Expose one stable function for Luna print buttons in this and imported renderers. */
+  try {
+    window.parent.__lunaPrintCompleteReport = () => {
+      openAllLunaExpandersForPrint();
+      setTimeout(() => {
+        try { window.parent.print(); }
+        catch (e) { window.print(); }
+      }, 220);
+    };
+  } catch (e) {
+    window.__lunaPrintCompleteReport = () => {
+      openAllLunaExpandersForPrint();
+      setTimeout(() => window.print(), 220);
+    };
+  }
+})();
+</script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+
+
+def complete_report_print_button(
+    label: str = "Print / Save complete report",
+    *,
+    key: str = "complete-report",
+) -> None:
+    """A report-level browser print button that never prints only its iframe."""
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "-", key).strip("-") or "complete-report"
+    components.html(
+        f"""
+<div class="luna-print-control" style="margin:8px 0 12px 0;font-family:Arial,sans-serif;">
+  <button id="luna-complete-print-{safe_id}" type="button" style="
+      min-height:44px;padding:10px 16px;border:1px solid #111;background:#111;color:#fff;
+      font-size:13px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">
+    {escape(label)}
+  </button>
+  <span id="luna-complete-print-status-{safe_id}" style="margin-left:10px;font-size:12px;color:#666;"></span>
+</div>
+<script>
+(() => {{
+  const button = document.getElementById("luna-complete-print-{safe_id}");
+  const status = document.getElementById("luna-complete-print-status-{safe_id}");
+  button.addEventListener("click", () => {{
+    status.textContent = "Preparing complete report…";
+    try {{
+      if (window.parent.__lunaPrintCompleteReport) {{
+        window.parent.__lunaPrintCompleteReport();
+      }} else {{
+        window.parent.print();
+      }}
+    }} catch (e) {{
+      window.print();
+    }}
+    setTimeout(() => {{ status.textContent = ""; }}, 1200);
+  }});
+}})();
+</script>
+        """,
+        height=68,
+    )
 
 def brand_header() -> None:
     encoded_icon = base64.b64encode(BRAND_ICON_PATH.read_bytes()).decode("ascii")
@@ -3548,6 +3770,10 @@ def weekly_page() -> None:
             st.exception(exc)
     st.markdown("## The shared sky · Seven days")
     _render_weekly_cards(days, monday, studio=True)
+    complete_report_print_button(
+        "Print / Save complete Week Ahead",
+        key="weekly-view-complete-report",
+    )
     st.markdown('<a class="lean-monthly-link" href="/daily-horoscope">Open your sign-specific Daily Horoscope →</a>', unsafe_allow_html=True)
 
 
@@ -8633,6 +8859,11 @@ def timing_map_page() -> None:
                 )
 
 
+    complete_report_print_button(
+        "Print / Save complete Year Ahead",
+        key="timing-map-complete-report",
+    )
+
     st.markdown(
         "<div class=\"timing-test\"><strong>Your Year Ahead · Personal Transits &amp; Timing · pilot</strong><br>This is Luna's paid-value layer: personal timing, major peaks, historical context and the difference between then and now. Pricing is still being tested; no payment is collected in this pilot.</div>",
         unsafe_allow_html=True,
@@ -8827,6 +9058,7 @@ def footer() -> None:
 
 
 install_css()
+install_complete_report_print_support()
 
 HOME_PAGE_REF = st.Page(
     home_page,
