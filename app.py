@@ -8369,26 +8369,197 @@ def _timing_signal_strip(report) -> str:
     )
 
 
-def _timing_year_story(report) -> list[str]:
-    """Connect the strongest calculated stories into a short deterministic annual arc."""
+def _timing_story_first_sentence(value: str) -> str:
+    """Keep the annual synthesis readable by taking the first complete idea."""
+    value = re.sub(r"\s+", " ", str(value or "")).strip()
+    if not value:
+        return ""
+    match = re.match(r"^(.+?[.!?])(?:\s|$)", value)
+    return match.group(1).strip() if match else value
+
+
+def _timing_story_sort_date(story, fallback: date) -> date:
+    """Chronological anchor used by the annual narrator."""
+    periods = list(getattr(story, "periods", None) or [])
+    if periods:
+        return min(item.start_date for item in periods)
+    hits = list(getattr(story, "hits", None) or [])
+    if hits:
+        return min(hit.exact_date for hit in hits)
+    return fallback
+
+
+def _timing_story_arc_verb(story) -> str:
+    """Turn Luna's neutral signal taxonomy into a concise narrative verb."""
+    signal = _timing_signal_type(story)
+    return {
+        "DECISION": "DEFINE",
+        "STRUCTURE": "STABILISE",
+        "OPENING": "OPEN",
+        "EXPANSION": "EXPAND",
+        "CHANGE": "CHANGE",
+        "POWER SHIFT": "SEE POWER",
+        "CLARITY TEST": "VERIFY",
+        "SUPPORT": "USE SUPPORT",
+        "FRICTION": "TEST",
+        "MIXED": "SORT",
+    }.get(signal, signal)
+
+
+def _timing_pick_story_anchors(ordered: list, limit: int = 6) -> list:
+    """
+    Select anchors across the whole year instead of simply taking the first
+    few stories. This keeps the synthesis representative of the 12-month arc.
+    """
+    if len(ordered) <= limit:
+        return ordered
+
+    last = len(ordered) - 1
+    raw_indices = [
+        0,
+        1,
+        round(last * 0.35),
+        round(last * 0.55),
+        round(last * 0.78),
+        last,
+    ]
+    selected = []
+    seen = set()
+    for index in raw_indices:
+        index = max(0, min(last, int(index)))
+        story = ordered[index]
+        headline = str(getattr(story, "headline", "") or "").strip().upper()
+        identity = headline or id(story)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        selected.append(story)
+    return selected[:limit]
+
+
+def _timing_year_story(report) -> dict:
+    """
+    Luna's annual narrator.
+
+    The individual transit cards remain the detailed evidence. This section
+    connects the strongest calculated contacts into one readable annual arc,
+    using only the report's own dates, headlines, areas and interpretations.
+    """
     if not report.stories:
-        return []
+        return {}
+
     ordered = sorted(
         report.stories,
-        key=lambda story: story.hits[0].exact_date if getattr(story, "hits", None) else report.end_date,
+        key=lambda story: _timing_story_sort_date(story, report.end_date),
     )
-    selected = ordered[:4]
-    lines = []
-    for index, story in enumerate(selected):
-        signal = _timing_signal_type(story).lower()
-        headline = str(getattr(story, "headline", "")).rstrip(".")
-        if index == 0:
-            lines.append(f"The year opens with **{signal}**: **{headline}**.")
-        elif index == len(selected) - 1:
-            lines.append(f"By the later phase, the question becomes **{headline.lower()}**.")
-        else:
-            lines.append(f"That develops into **{signal}**: **{headline}**.")
-    return lines
+    anchors = _timing_pick_story_anchors(ordered, limit=6)
+    if not anchors:
+        return {}
+
+    def story_bits(story) -> dict:
+        start_date = _timing_story_start(story) or _timing_story_sort_date(story, report.end_date)
+        return {
+            "headline": str(getattr(story, "headline", "") or "A major transit").strip(),
+            "planet": str(getattr(story, "transit_planet", "") or "A slower-moving planet").strip(),
+            "signal": _timing_signal_type(story),
+            "area": _timing_story_life_area(story),
+            "summary": _timing_story_first_sentence(getattr(story, "summary", "")),
+            "start": _timing_date_label(start_date),
+            "peak": _timing_story_peak_label(story),
+            "verb": _timing_story_arc_verb(story),
+        }
+
+    bits = [story_bits(story) for story in anchors]
+
+    paragraphs = []
+
+    # Opening phase: establish the central tension instead of listing events.
+    first = bits[0]
+    if len(bits) > 1:
+        second = bits[1]
+        paragraphs.append(
+            f"The year opens with **{first['headline']}** from **{first['start']}**, "
+            f"with {first['planet']} concentrating attention on **{first['area']}**. "
+            f"{first['summary']} "
+            f"Almost alongside it comes **{second['headline']}**, a **{second['signal'].lower()}** "
+            f"story focused on **{second['area']}**. "
+            f"Read together, these are not competing forecasts: the opening phase asks you to "
+            f"**{first['verb'].lower()} what is already demanding an answer while making room for what comes next**."
+        )
+    else:
+        paragraphs.append(
+            f"The year opens with **{first['headline']}** from **{first['start']}**, "
+            f"with {first['planet']} concentrating attention on **{first['area']}**. "
+            f"{first['summary']} "
+            f"The first task of the year is to **{first['verb'].lower()}** rather than treating the transit as an isolated event."
+        )
+
+    # Development phase: connect the middle of the year to the opening.
+    if len(bits) >= 4:
+        third, fourth = bits[2], bits[3]
+        paragraphs.append(
+            f"As the year develops, **{third['headline']}** moves the story into **{third['area']}** "
+            f"from **{third['start']}**. {third['summary']} "
+            f"Then **{fourth['headline']}** shifts the emphasis toward **{fourth['area']}**. "
+            f"The connection is practical: what was defined or opened earlier now has to work in a wider part of life. "
+            f"Luna is therefore reading the middle of the year as a progression from "
+            f"**{third['verb']} → {fourth['verb']}**, not as two unrelated predictions."
+        )
+    elif len(bits) >= 3:
+        third = bits[2]
+        paragraphs.append(
+            f"The next phase is **{third['headline']}**, beginning **{third['start']}** in **{third['area']}**. "
+            f"{third['summary']} "
+            f"This develops the opening story by moving the question from recognition into **{third['verb'].lower()}**."
+        )
+
+    # Later phase: show consequence and resolution.
+    if len(bits) >= 6:
+        fifth, sixth = bits[4], bits[5]
+        paragraphs.append(
+            f"By the later phase, **{fifth['headline']}** brings the deeper consequence into **{fifth['area']}**, "
+            f"with its strongest dates around **{fifth['peak']}**. {fifth['summary']} "
+            f"The cycle then carries into **{sixth['headline']}**, beginning **{sixth['start']}** in **{sixth['area']}**. "
+            f"This is where the year stops being only about understanding the pattern and becomes about changing the terms under which it continues."
+        )
+    elif len(bits) >= 5:
+        fifth = bits[4]
+        paragraphs.append(
+            f"Later, **{fifth['headline']}** concentrates the question in **{fifth['area']}**, "
+            f"with its strongest dates around **{fifth['peak']}**. {fifth['summary']} "
+            f"The later phase therefore asks for **{fifth['verb'].lower()}** rather than a return to the earlier arrangement."
+        )
+
+    # Build a concise annual arc from distinct calculated signal types.
+    arc = []
+    for story in ordered:
+        verb = _timing_story_arc_verb(story)
+        if not arc or arc[-1] != verb:
+            arc.append(verb)
+        if len(arc) >= 6:
+            break
+
+    # Tell the reader what the chart immediately below is proving.
+    areas = []
+    for story in anchors:
+        area = _timing_story_life_area(story)
+        if area not in areas:
+            areas.append(area)
+        if len(areas) >= 4:
+            break
+
+    chart_bridge = (
+        "The chart below is the evidence layer for this narrative. "
+        "Look for the concentration of activity around "
+        + ", ".join(f"**{area}**" for area in areas)
+        + ". The natal wheel stays as the reference; the activation layer shows where the moving sky is making the strongest contact."
+    )
+
+    return {
+        "paragraphs": paragraphs,
+        "arc": arc,
+        "chart_bridge": chart_bridge,
+    }
 
 
 
@@ -8916,12 +9087,27 @@ def timing_map_page() -> None:
     year_story = _timing_year_story(report)
     if year_story:
         st.markdown("## The story of your year")
-        st.markdown("These are not unrelated events. Luna reads the strongest calculated contacts as a sequence:")
-        for line in year_story:
-            st.markdown(line)
+        st.markdown(
+            "These are not unrelated events. Luna reads the strongest calculated contacts as one developing story — "
+            "what begins the year, what changes the terms, and what the later transits ask you to do differently."
+        )
+        for paragraph in year_story.get("paragraphs", []):
+            st.markdown(paragraph)
+
+        arc = list(year_story.get("arc", []) or [])
+        if arc:
+            st.markdown(
+                '<div class="timing-meta" style="margin-top:1.25rem">THE ARC</div>'
+                f'<div style="font:500 13px IBM Plex Mono,monospace;letter-spacing:.035em;'
+                f'line-height:1.8;margin:.25rem 0 1rem">{escape(" → ".join(arc))}</div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(year_story.get("chart_bridge", ""))
         st.caption(
-            "The sequence is deterministic: Luna orders the strongest calculated transit stories by date, "
-            "then translates their dominant function into a readable arc."
+            "How Luna built this story: the report orders the strongest calculated transit contacts across the 12-month window, "
+            "selects anchors from the opening, middle and later phases, and connects their dates, natal targets, life areas and signal types. "
+            "The individual transit chapters below remain the detailed evidence."
         )
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
