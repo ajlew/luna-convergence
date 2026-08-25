@@ -856,6 +856,16 @@ a {
     line-height:1.72;
 }
 
+.lean-daily-meaning {
+    max-width:680px;
+    margin:-1.1rem 0 2rem;
+    padding-left:1rem;
+    border-left:1px solid var(--black);
+    font-size:1rem;
+    line-height:1.65;
+    color:var(--muted);
+}
+
 .lean-daily-move {
     max-width:680px;
     padding:1.55rem 0 1.35rem;
@@ -3474,6 +3484,11 @@ def _render_lean_daily(path: str) -> None:
     story_html = "".join(
         f"<p>{escape(paragraph)}</p>" for paragraph in story if paragraph
     )
+    connected_daily = _daily_connected_meaning(narrative)
+    connected_daily_html = ""
+    if connected_daily:
+        clean_connected = escape(connected_daily).replace("**", "")
+        connected_daily_html = f'<div class="lean-daily-meaning">{clean_connected}</div>'
     question = narrative.reflection_questions[0] if narrative.reflection_questions else ""
     monthly_href = "/monthly"
 
@@ -3486,6 +3501,7 @@ def _render_lean_daily(path: str) -> None:
   </div>
   <h1>{escape(narrative.hook_headline)}</h1>
   <div class="lean-daily-story">{story_html}</div>
+  {connected_daily_html}
   <div class="lean-daily-move">
     <div class="lean-daily-label">Your move</div>
     <p>{escape(narrative.action_today)}</p>
@@ -3688,12 +3704,15 @@ def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> No
     summary = _weekly_sign_summary(sign, monday, timezone_name)
     st.markdown(f"## {escape(sign)} · The Week Ahead")
     st.markdown(f"### {escape(summary['headline'])}")
-    st.markdown("**WHERE IT LANDS**")
-    st.markdown(" · ".join(summary["areas"]))
-    st.markdown(summary["interpretation"])
-    st.markdown("**YOUR STRONGEST MOVE**")
-    st.markdown(f"**{summary['move'].capitalize()}.**")
-
+    st.markdown(
+        "**Where it lands:** " + " · ".join(summary["areas"])
+    )
+    for paragraph in _weekly_connected_interpretation(summary):
+        st.markdown(paragraph)
+    st.markdown(
+        f"**Your strongest move:** {summary['move'].capitalize()}. "
+        "That move is the thread to keep through all seven days below, even as the mood and evidence change."
+    )
 
 
 
@@ -7574,6 +7593,10 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         )
         st.markdown(article_html, unsafe_allow_html=True)
 
+        st.markdown("### How this fits the month")
+        for connection_paragraph in _monthly_event_connection(events, number - 1):
+            st.markdown(connection_paragraph)
+
         _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years)
 
         with st.expander("Why Luna sees this"):
@@ -8051,6 +8074,14 @@ def natal_snapshot_page() -> None:
         for label, value in signature_items
     )
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
+
+    st.markdown("### How these pieces fit together")
+    st.markdown(
+        "The placements above are not six separate personality labels. Luna reads them as one person: "
+        "what the person wants, what they feel, how they appear, how they think, what they need from relationships and how they act when something needs to change."
+    )
+    for paragraph in _timing_natal_person_summary(snapshot, None):
+        st.markdown(paragraph)
 
     birth_bits = [birth_date.strftime("%d %B %Y")]
     if time_known and birth_time_value is not None:
@@ -9509,6 +9540,145 @@ def _render_timing_result_actions() -> None:
         "birth details and your session are deliberately not placed in the URL."
     )
 
+
+def _timing_target_human_meaning(story) -> str:
+    """Translate the natal target into the human function being activated."""
+    target = str(getattr(story, "natal_target", "") or "").strip()
+    mapping = {
+        "Ascendant": "identity, instinct and the way you enter situations",
+        "Midheaven": "career, visibility, authority and the role other people expect you to carry",
+        "Sun": "identity, confidence and the direction that feels most like your own",
+        "Moon": "emotional security, habit, memory and what you need in order to feel safe",
+        "Mercury": "thinking, communication, decisions and the story you tell yourself about what is happening",
+        "Venus": "relationships, reciprocity, value, attraction and the terms under which closeness feels fair",
+        "Mars": "action, conflict, desire, effort and the point at which you stop accommodating and start moving",
+        "Jupiter": "growth, confidence, permission and the part of life that wants more room",
+        "Saturn": "responsibility, limits, endurance and the part of life that must become sustainable",
+    }
+    return mapping.get(target, _timing_story_life_area(story))
+
+
+def _timing_story_connection(report, story_index: int) -> list[str]:
+    """
+    Make each transit chapter belong to the same annual argument.
+    It links the current chapter backward, forward and inward to the natal target.
+    """
+    stories = list(report.stories or [])
+    if not stories or story_index < 0 or story_index >= len(stories):
+        return []
+
+    story = stories[story_index]
+    previous = stories[story_index - 1] if story_index > 0 else None
+    following = stories[story_index + 1] if story_index + 1 < len(stories) else None
+
+    area = _timing_story_life_area(story)
+    target_meaning = _timing_target_human_meaning(story)
+    signal = _timing_signal_type(story).lower()
+    paragraphs = []
+
+    if previous is None:
+        paragraphs.append(
+            f"**Why this belongs at the beginning:** **{story.headline}** establishes the first condition the rest of the year has to work with. "
+            f"This is a **{signal}** story in **{area}**, but the deeper subject is **{target_meaning}**. "
+            "The later transits do not replace this question; they show what happens once you answer it."
+        )
+    else:
+        previous_area = _timing_story_life_area(previous)
+        paragraphs.append(
+            f"**How this connects:** **{previous.headline}** was working through **{previous_area}**. "
+            f"Now **{story.headline}** moves the same developing problem into **{area}**. "
+            "That shift matters because a change in one part of life alters what becomes acceptable, possible or sustainable in the next."
+        )
+
+    if following is not None:
+        following_area = _timing_story_life_area(following)
+        paragraphs.append(
+            f"**What this sets up next:** the consequence is **{following.headline}** in **{following_area}**. "
+            "So the useful question is not 'What does this transit mean by itself?' but "
+            f"**'What must change here so I meet the next phase from a stronger position?'**"
+        )
+    else:
+        paragraphs.append(
+            "**Why this closes the arc:** this final chapter is where the year's earlier insight has to become behaviour. "
+            "The point is no longer to understand the pattern. It is to stop rebuilding the conditions that kept the pattern alive."
+        )
+
+    return paragraphs
+
+
+def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
+    """Connect each monthly date to the same developing monthly story."""
+    if not events or index < 0 or index >= len(events):
+        return []
+
+    event = events[index]
+    previous = events[index - 1] if index > 0 else None
+    following = events[index + 1] if index + 1 < len(events) else None
+    out = []
+
+    if previous is None:
+        out.append(
+            f"**Why this opens the month:** **{event['title']}** is the first pressure point. "
+            "It does not need to resolve everything immediately; it establishes the question the later dates keep developing."
+        )
+    else:
+        out.append(
+            f"**How this connects:** **{previous['title']}** changed the terms first. "
+            f"**{event['title']}** is what that earlier shift looks like once it reaches the next decision point. "
+            "Treat this as continuation, not a separate horoscope."
+        )
+
+    if following is not None:
+        out.append(
+            f"**What it prepares:** **{following['title']}** comes next. "
+            "The best use of this date is therefore the move that leaves you with more clarity, leverage or room when the next part of the month arrives."
+        )
+    else:
+        out.append(
+            "**What remains:** this is the month showing you which part of the original problem still matters after the earlier noise has passed. "
+            "That is the piece worth carrying forward."
+        )
+    return out
+
+
+def _weekly_connected_interpretation(summary: dict) -> list[str]:
+    """Turn the weekly sign layer from a location report into one coherent argument."""
+    areas = list(summary.get("areas") or [])
+    headline = str(summary.get("headline") or "The week comes into focus")
+    move = str(summary.get("move") or "keep the facts visible before committing").strip().rstrip(".")
+    area_one = areas[0] if areas else "your priorities"
+    area_two = areas[1] if len(areas) > 1 else "the choices around them"
+
+    return [
+        f"**{headline}** is not an isolated theme. The shared sky is landing first in **{area_one}**, "
+        f"but it is also pulling on **{area_two}**. That means a choice in one area is likely to change the terms in the other.",
+        f"The week therefore has one practical argument: **{move}**. "
+        "Each day's weather below is a different stage of that same argument — pressure, information, reaction and consequence — rather than seven unrelated predictions.",
+    ]
+
+
+def _daily_connected_meaning(narrative) -> str:
+    """Keep Daily short while making the move feel causally connected to the story."""
+    story = [str(x or "").strip() for x in list(getattr(narrative, "today_story", []) or []) if str(x or "").strip()]
+    action = str(getattr(narrative, "action_today", "") or "").strip()
+    if not story or not action:
+        return ""
+    return (
+        "The point is not simply that this pressure is present. "
+        f"It matters because **{action.rstrip('.')}** is the move that changes what the pressure becomes next."
+    )
+
+
+def _solar_connected_meaning(solar) -> str:
+    """Human bridge from solar mechanics to lived meaning."""
+    return (
+        f"The solar clock is putting **{solar.activated_house_name}** in the foreground while the Sun moves through "
+        f"**{solar.solar_sign} / {solar.solar_process}**. The local-light direction tells you where you are in the physical annual cycle; "
+        "the house tells you where that same timing question lands symbolically. "
+        f"Read together, the message is: **{solar.focus_meaning}**"
+    )
+
+
 def timing_map_page() -> None:
     set_page_metadata(
         "Your Year Ahead | Personal Transits & Timing | Luna Convergence",
@@ -9672,6 +9842,11 @@ def timing_map_page() -> None:
                 '</article>'
             )
             st.markdown(article_html, unsafe_allow_html=True)
+
+            st.markdown("### How this fits the larger story")
+            for connection_paragraph in _timing_story_connection(report, number - 1):
+                st.markdown(connection_paragraph)
+
             birth_date_for_history = st.session_state.get("timing-map-birth-date-v334")
             if isinstance(birth_date_for_history, str):
                 try:
@@ -9823,6 +9998,9 @@ def solar_year_page() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown("### What this means together")
+    st.markdown(_solar_connected_meaning(solar))
 
     st.markdown("## Historical symbolism and factual boundary")
     st.markdown(
