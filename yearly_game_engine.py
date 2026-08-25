@@ -1,4 +1,5 @@
 from __future__ import annotations
+from luna_voice import luna_dry_truth
 
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
@@ -581,6 +582,14 @@ def _narrator_paragraphs(
         f"Then {second.title.lower()} takes over. {second.question} Watch what people do once information, resources and consequences become visible.",
         f"A major rule change begins around {human_date(change_act.start_date)}. {change_act.summary} Adjust early. Do not wait for the old arrangement to fail loudly.",
         f"{strongest_round.month} carries the greatest leverage. {strongest_round.central_storyline} Use the month to improve later options, not merely to feel busy.",
+        luna_dry_truth(
+            "relationship" if first.key in {"attraction_evidence", "independence_partnership"} else
+            "money" if first.key == "value_obligation" else
+            "uncertainty" if first.key == "information_ambiguity" else
+            "work" if first.key in {"expansion_capacity", "public_private"} else
+            "general",
+            first.title,
+        ),
     ]
     if relationship_peak:
         paragraphs.append(

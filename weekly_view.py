@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from astrology_engine import ASPECTS, PLANET_WEIGHTS, Aspect, detect_aspects, positions_for_date
+from luna_voice import finalize_customer_prose
 
 
 FAST_PLANETS = {"Sun", "Moon", "Mercury", "Venus", "Mars"}
@@ -259,10 +260,10 @@ class WeeklyDay:
             f"{self.weekday.upper()} · {self.date_label.upper()}\n\n"
             f"{self.headline}\n\n"
             f"{self.evidence.upper()}\n\n"
-            f"{self.line_one}\n\n"
-            f"{self.line_two}\n\n"
+            f"{finalize_customer_prose(self.line_one, product='weekly')}\n\n"
+            f"{finalize_customer_prose(self.line_two, product='weekly')}\n\n"
             "YOUR MOVE\n"
-            f"{self.action}\n\n"
+            f"{finalize_customer_prose(self.action, product='weekly')}\n\n"
             "LUNA CONVERGENCE"
         )
 

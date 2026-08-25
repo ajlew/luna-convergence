@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import re
 from typing import Literal
 
 
-ProductType = Literal["daily", "monthly", "yearly"]
-VOICE_VERSION = "Luna Narrator v2.1 — Brutalist Oracle"
+ProductType = Literal["daily", "weekly", "monthly", "yearly", "timing", "natal", "solar"]
+VOICE_VERSION = "Luna Narrator v3.0 — Global Narrative Contract"
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,49 @@ VOICE_PROFILES: dict[ProductType, LunaVoiceProfile] = {
 }
 
 
+# The same voice contract applies at different zoom levels.
+VOICE_PROFILES["weekly"] = LunaVoiceProfile(
+    product="weekly",
+    narrator_role="Brutalist Oracle · sequence editor",
+    purpose="Show one changing sky across seven days without resetting the story every morning.",
+    pace="Compact, causal and selective.",
+    preferred_length="One weekly thread plus seven concise moves.",
+    narrator_cues=("The week", "What changes", "Your move"),
+    must_do=_SHARED_MUST_DO + ("Carry one decision thread across the week.",),
+    must_not=_SHARED_MUST_NOT + ("Write seven unrelated miniature horoscopes.",),
+)
+VOICE_PROFILES["timing"] = LunaVoiceProfile(
+    product="timing",
+    narrator_role="Brutalist Oracle · personal timing strategist",
+    purpose="Connect natal pattern, repeated transits, timing windows and consequences.",
+    pace="Personal, strategic and direct.",
+    preferred_length="One human annual argument followed by evidence-rich transit chapters.",
+    narrator_cues=("The story", "What changes", "Your move"),
+    must_do=_SHARED_MUST_DO + ("Tell the human story before the transit catalogue.",),
+    must_not=_SHARED_MUST_NOT + ("Use transit titles as a substitute for interpretation.",),
+)
+VOICE_PROFILES["natal"] = LunaVoiceProfile(
+    product="natal",
+    narrator_role="Brutalist Oracle · portraitist",
+    purpose="Describe one person, not a list of placements.",
+    pace="Observant, intimate and unsentimental.",
+    preferred_length="A few connected contradictions and behavioural patterns.",
+    narrator_cues=("The pattern", "Watch this"),
+    must_do=_SHARED_MUST_DO + ("Connect placements into one recognisable human pattern.",),
+    must_not=_SHARED_MUST_NOT + ("Write six disconnected placement definitions.",),
+)
+VOICE_PROFILES["solar"] = LunaVoiceProfile(
+    product="solar",
+    narrator_role="Brutalist Oracle · natural-clock translator",
+    purpose="Translate the solar clock into one grounded life-area emphasis.",
+    pace="Brief and concrete.",
+    preferred_length="One clock statement and one move.",
+    narrator_cues=("The clock", "Your move"),
+    must_do=_SHARED_MUST_DO + ("Keep astronomy as context and the human consequence in front.",),
+    must_not=_SHARED_MUST_NOT + ("Turn the solar clock into a lecture.",),
+)
+
+
 BANNED_PHRASES = (
     "waiting to be selected",
     "you are not waiting to be selected",
@@ -118,6 +162,220 @@ BANNED_PHRASES = (
     "let the month come toward you",
 )
 
+
+# ---------------------------------------------------------------------------
+# GLOBAL CUSTOMER-PROSE LAYER
+# Every product should pass reader-facing interpretation through this layer.
+# Product engines may differ in scale. The grammatical and editorial contract
+# does not.
+# ---------------------------------------------------------------------------
+
+_EDITORIAL_SCAFFOLD_SENTENCES = (
+    "Start with the argument, not the planets.",
+    "Follow the sequence. What opens early changes what you can choose later.",
+    "Do not solve each chapter in isolation.",
+    "Treat this as continuation, not a separate horoscope.",
+    "How this connects:",
+    "How this fits the month",
+    "How this fits the larger story",
+    "Luna reads it as one changing board.",
+)
+
+_TECHNICAL_TO_HUMAN = {
+    "Natal Midheaven": "career and public direction",
+    "natal Midheaven": "career and public direction",
+    "Natal Ascendant": "identity and direction",
+    "natal Ascendant": "identity and direction",
+    "identity, energy and personal direction": "identity and direction",
+    "travel, publishing, law, education and foreign markets": "travel, study and the wider world",
+    "relationships, clients, contracts and competitors": "relationships and agreements",
+    "work routines, health, service and operations": "work and daily routines",
+    "shared money, debt, tax, inheritance and intimacy": "shared money and obligations",
+    "career, public direction, reputation and authority": "career and authority",
+}
+
+_YOU_GRAMMAR = {
+    "you thinks": "you think",
+    "you needs": "you need",
+    "you acts": "you act",
+    "you reacts": "you react",
+    "you processes": "you process",
+    "you remembers": "you remember",
+    "you looks": "you look",
+    "you values": "you value",
+    "you shows": "you show",
+    "you contains": "you contain",
+    "you absorbs": "you absorb",
+    "you recovers": "you recover",
+    "you gains": "you gain",
+    "you loses": "you lose",
+    "you has": "you have",
+    "you is": "you are",
+    "you does": "you do",
+    "you wants": "you want",
+    "you carries": "you carry",
+    "you keeps": "you keep",
+    "you makes": "you make",
+}
+
+_ARC_WORDS = {
+    "support": "Build",
+    "stabilise": "Set terms",
+    "stabilize": "Set terms",
+    "define": "Define",
+    "decision": "Choose",
+    "choose": "Choose",
+    "opening": "Open",
+    "open": "Open",
+    "change": "Change",
+    "expand": "Expand",
+    "test": "Test",
+    "verify": "Check",
+    "release": "Release",
+    "close": "Close",
+    "integrate": "Integrate",
+    "protect": "Protect",
+    "act": "Act",
+}
+
+_DRY_TRUTHS = {
+    "work": (
+        "A title cannot carry the workload for you.",
+        "The inbox will survive a boundary.",
+        "A full calendar is not a personality.",
+    ),
+    "relationship": (
+        "Chemistry is not a contract.",
+        "Attention is cheap. Consistency costs something.",
+        "A good conversation is not yet a good agreement.",
+    ),
+    "money": (
+        "Numbers remain rude enough to be useful.",
+        "A budget has no interest in your preferred storyline.",
+        "The spreadsheet is less charming than hope and usually more informative.",
+    ),
+    "routine": (
+        "Tuesday morning is where grand plans go for verification.",
+        "The body keeps receipts.",
+        "A broken routine does not become noble because you endured it.",
+    ),
+    "uncertainty": (
+        "A convincing story still has to survive Tuesday.",
+        "Fog is atmospheric. It is not evidence.",
+        "The missing fact will not become less missing because the story is elegant.",
+    ),
+    "general": (
+        "The calendar is where possibility becomes a bill.",
+        "Reality has an irritating habit of asking for details.",
+        "A good idea still has to fit through the front door.",
+    ),
+}
+
+
+def _editorial_title_case(value: str) -> str:
+    raw = re.sub(r"\s+", " ", str(value or "")).strip()
+    letters = "".join(ch for ch in raw if ch.isalpha())
+    if not letters or not letters.isupper():
+        return raw
+
+    small_words = {
+        "a", "an", "and", "as", "at", "but", "by", "for", "in",
+        "nor", "of", "on", "or", "the", "to", "up", "via", "with",
+    }
+    words = raw.lower().split()
+    result = []
+    for index, word in enumerate(words):
+        core = re.sub(r"[^a-z]", "", word)
+        if index not in {0, len(words) - 1} and core in small_words:
+            result.append(word)
+        else:
+            result.append(word[:1].upper() + word[1:])
+    return " ".join(result)
+
+
+def inline_story_title(value: str) -> str:
+    """Use Title Case when a standalone ALL-CAPS story title enters prose."""
+    return _editorial_title_case(value)
+
+
+def simplify_life_area(value: str) -> str:
+    raw = re.sub(r"\s+", " ", str(value or "")).strip()
+    return _TECHNICAL_TO_HUMAN.get(raw, raw)
+
+
+def human_arc(values) -> tuple[str, ...]:
+    """Translate engine-state labels into a short human sequence."""
+    result = []
+    for value in values or ():
+        raw = str(value or "").strip()
+        if not raw:
+            continue
+        key = raw.lower()
+        human = _ARC_WORDS.get(key, raw.title() if raw.isupper() else raw)
+        if not result or result[-1].lower() != human.lower():
+            result.append(human)
+    return tuple(result[:5])
+
+
+def luna_dry_truth(topic: str = "general", seed_text: str = "") -> str:
+    """Return one stable dry observation. Humour stays sparse and grounded."""
+    key = str(topic or "general").strip().lower()
+    bank = _DRY_TRUTHS.get(key, _DRY_TRUTHS["general"])
+    seed = sum(ord(ch) for ch in str(seed_text or key))
+    return bank[seed % len(bank)]
+
+
+def _titlecase_inline_caps(text: str) -> str:
+    # Two or more all-cap words inside prose are treated as a story/reference,
+    # not as an acronym. Standalone headings are rendered separately and do not
+    # pass through customer-prose finalisation.
+    pattern = re.compile(r"\b(?:[A-Z][A-Z'’\-]*\s+){1,}[A-Z][A-Z'’\-]*\b")
+    return pattern.sub(lambda match: _editorial_title_case(match.group(0)), text)
+
+
+def finalize_customer_prose(
+    value: str,
+    product: ProductType | str = "timing",
+) -> str:
+    """Apply Luna's global reader-facing prose contract.
+
+    This function deliberately performs conservative editorial normalisation.
+    It does not invent astrology or rewrite the underlying calculation.
+    """
+    text = str(value or "")
+    text = text.replace("\u00a0", " ").replace("\u200b", "").replace("\ufeff", "")
+    text = text.replace("**", "").replace("__", "")
+
+    for phrase in _EDITORIAL_SCAFFOLD_SENTENCES:
+        text = text.replace(phrase, " ")
+
+    for technical, human in _TECHNICAL_TO_HUMAN.items():
+        text = text.replace(technical, human)
+
+    # Keep the voice active and second-person where legacy templates leaked
+    # third-person verb endings.
+    lowered = text.lower()
+    for wrong, right in _YOU_GRAMMAR.items():
+        if wrong in lowered:
+            text = re.sub(re.escape(wrong), right, text, flags=re.I)
+            lowered = text.lower()
+
+    # Remove exuberant punctuation. Luna does not shout.
+    text = text.replace("!", ".")
+
+    text = _titlecase_inline_caps(text)
+
+    # Strip obvious meta-narration that survived old templates.
+    text = re.sub(r"\bLuna (?:reads|separates|therefore combines)\b[^.]*\.\s*", "", text, flags=re.I)
+    text = re.sub(r"\bthe reader\b", "you", text, flags=re.I)
+    text = re.sub(r"\bthis person\b", "you", text, flags=re.I)
+
+    text = re.sub(r"[ \t\f\v]+", " ", text)
+    text = re.sub(r"\s+([,.;:])", r"\1", text)
+    text = re.sub(r"([.!?])\s*([.!?])+", r"\1", text)
+    text = text.strip(" \n\t")
+
+    return text
 
 def voice_profile(product: ProductType) -> LunaVoiceProfile:
     return VOICE_PROFILES[product]

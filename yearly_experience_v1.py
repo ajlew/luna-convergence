@@ -19,7 +19,7 @@ from luna_editorial_system import (
 )
 from monthly_experience_v1 import PRINT_ORIENTATIONS, PRINT_PAPERS
 from monthly_narrative_v1 import HOUSE_DISPLAY, HOUSE_NATURAL
-from luna_voice import narrator_cue
+from luna_voice import finalize_customer_prose, narrator_cue
 
 
 YEARLY_HOOKS = {
@@ -40,6 +40,13 @@ YEARLY_HOOKS = {
 
 def _safe(value: object) -> str:
     return escape(str(value or ""), quote=True)
+
+
+def _prose_safe(value: object) -> str:
+    return escape(
+        finalize_customer_prose(str(value or ""), product="yearly"),
+        quote=True,
+    )
 
 
 def _top_houses(result: dict) -> tuple[int, int]:
@@ -255,7 +262,7 @@ def _technical_rows(result: dict) -> str:
 
 
 def _paragraphs(values: tuple[str, ...] | list[str]) -> str:
-    return "".join(f"<p>{_safe(value)}</p>" for value in values if value)
+    return "".join(f"<p>{_prose_safe(value)}</p>" for value in values if value)
 
 
 def _print_controls(default_paper: str, default_orientation: str) -> str:
@@ -326,10 +333,10 @@ def build_yearly_experience_html(
   font-family:"Bodoni MT","Bodoni 72","Bodoni Moda",Didot,Georgia,serif;
   font-weight:500; letter-spacing:-.035em;
 }}
-.luna-yearly-report p {{ font-size:clamp(.98rem,1.35vw,1.12rem); line-height:1.58; }}
+.luna-yearly-report p {{ font-size:clamp(.98rem,1.35vw,1.12rem); line-height:1.68; font-weight:300; }}
 
-.luna-yearly-report p strong { font-weight:inherit; font-size:inherit; line-height:inherit; }
-.luna-year-prose p { max-width:760px; margin-bottom:1.3rem; line-height:1.72; }
+.luna-yearly-report p strong {{ font-weight:inherit; font-size:inherit; line-height:inherit; }}
+.luna-year-prose p {{ max-width:760px; margin-bottom:1.3rem; line-height:1.72; }}
 
 .luna-year-hero {{ display:grid; gap:.85rem; padding:clamp(1.15rem,2.8vw,2rem); background:#050505; color:#fff; min-height:0!important; }}
 .luna-year-meta {{ display:flex; justify-content:space-between; gap:1rem; padding-bottom:.8rem; border-bottom:1px solid rgba(255,255,255,.28); font-family:"IBM Plex Mono",monospace; font-size:.65rem; text-transform:uppercase; }}
@@ -473,8 +480,8 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
     <div class="luna-eyebrow">{_safe(narrator_cue('yearly', 0))}</div>
     <div class="luna-year-prose">{_paragraphs(_luna_says(result))}</div>
     <div class="luna-do-dont luna-do-dont-light">
-      <div><span>{_safe(DO_LABEL)}</span><strong>{_safe(do_line)}</strong></div>
-      <div><span>{_safe(DONT_LABEL)}</span><strong>{_safe(dont_line)}</strong></div>
+      <div><span>{_safe(DO_LABEL)}</span><strong>{_prose_safe(do_line)}</strong></div>
+      <div><span>{_safe(DONT_LABEL)}</span><strong>{_prose_safe(dont_line)}</strong></div>
     </div>
   </section>
 
@@ -509,14 +516,14 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
     <div class="luna-eyebrow">Romance and validation</div>
     <h2 class="luna-section-title">Whether attention becomes consistent—or stays entertaining</h2>
     <div class="luna-romance-grid">
-      <article><span>When romance is active</span><p>{_safe(active)}</p></article>
-      <article><span>When romance is quiet</span><p>{_safe(quiet)}</p></article>
+      <article><span>When romance is active</span><p>{_prose_safe(active)}</p></article>
+      <article><span>When romance is quiet</span><p>{_prose_safe(quiet)}</p></article>
     </div>
   </section>
 
   <section class="luna-section luna-next-move">
     <div><div class="luna-eyebrow">{_safe(YOUR_MOVE_LABEL)}</div><h2>{_safe(GATEKEEPER_LINE)}</h2></div>
-    <ol>{''.join(f'<li>{_safe(item)}</li>' for item in moves)}</ol>
+    <ol>{''.join(f'<li>{_prose_safe(item)}</li>' for item in moves)}</ol>
   </section>
 
   <section class="luna-evidence">

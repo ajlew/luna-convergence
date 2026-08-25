@@ -40,7 +40,15 @@ from monthly_report_pipeline import (
 from yearly_experience_v1 import render_yearly_experience
 from forecast_inventory import EDITORIAL_STATUSES, build_inventory, inventory_json
 from ephemeris_admin import render_ephemeris_admin
-from luna_voice import narrator_principle, voice_profile
+from luna_voice import (
+    finalize_customer_prose,
+    human_arc,
+    inline_story_title,
+    luna_dry_truth,
+    narrator_principle,
+    simplify_life_area,
+    voice_profile,
+)
 from solar_cycle import (
     CITY_LOCATIONS,
     city_input_help,
@@ -872,7 +880,7 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
     font-size:clamp(1rem,1.15vw,1.08rem);
     line-height:1.72;
-    font-weight:400;
+    font-weight:300;
     letter-spacing:0;
     color:var(--black);
 }
@@ -892,13 +900,13 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
     font-size:1rem;
     line-height:1.72;
-    font-weight:400;
+    font-weight:300;
 }
 .timing-story-copy p {
     max-width:760px;
     margin:0 0 1.15rem;
     line-height:1.72;
-    font-weight:400;
+    font-weight:300;
 }
 .timing-story {
     padding-bottom:2.7rem;
@@ -3612,11 +3620,11 @@ def _weekly_cards_html(days) -> str:
   </div>
   <div class="weekly-evidence">{escape(item.evidence)}</div>
   <h2>{escape(item.headline)}</h2>
-  <p>{escape(item.line_one)}</p>
-  <p>{escape(item.line_two)}</p>
+  <p>{escape(finalize_customer_prose(item.line_one, product="weekly"))}</p>
+  <p>{escape(finalize_customer_prose(item.line_two, product="weekly"))}</p>
   <div class="weekly-move">
     <div class="weekly-move-label">Your move</div>
-    <p>{escape(item.action)}</p>
+    <p>{escape(finalize_customer_prose(item.action, product="weekly"))}</p>
   </div>
 </article>
             """
@@ -3759,7 +3767,7 @@ def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> No
         "**Where it lands:** " + " · ".join(summary["areas"])
     )
     for paragraph in _weekly_connected_interpretation(summary):
-        _render_luna_prose(paragraph)
+        _render_luna_prose(paragraph, product="weekly")
     st.markdown(
         f"**Your strongest move:** {summary['move'].capitalize()}. "
         "That move is the thread to keep through all seven days below, even as the mood and evidence change."
@@ -4352,56 +4360,44 @@ def _transit_human_theme(story) -> str:
 
 
 def _render_transit_history(story, birth_date_value: date | None = None) -> None:
-    """Human precedent: age, remembered life theme, and what makes the current transit distinct."""
+    """One recurrence. One memory prompt. No methodology narration."""
     earlier = _previous_transit_echo_date(story)
     if earlier is None:
         return
 
     st.markdown("### Have you been here before?")
-    theme = _transit_human_theme(story)
+
+    question = finalize_customer_prose(
+        _timing_recurrence_question(story),
+        product="timing",
+    )
+    area = simplify_life_area(_timing_story_life_area(story))
 
     if birth_date_value and earlier >= birth_date_value:
         age = earlier.year - birth_date_value.year - (
             (earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day)
         )
-        st.markdown(f"**Think back to {_timing_date_label(earlier)}. You were about {age}.**")
-        st.markdown(
-            f"The same broad **{story.transit_planet}–{story.natal_target} transit family** was returning then. "
-            f"The recurring question is less about a literal event and more about **{theme}**."
-        )
-        st.markdown(
-            "**What do you remember?** Was that period more about home, work, money, relationships, independence, "
-            "responsibility or a change in direction?"
+        _render_luna_prose(
+            f"Think back to {_timing_date_label(earlier)}. You were about {age}. "
+            f"{question} The event can differ. The pressure can rhyme.",
+            product="timing",
         )
     else:
-        st.markdown(f"**Before your time · around {_timing_date_label(earlier)}**")
-        st.markdown(
-            f"You may not have lived through this earlier cycle, but the sky did. "
-            f"It gives the present **{story.transit_planet}–{story.natal_target}** contact a longer context: **{theme}**."
+        _render_luna_prose(
+            f"Look further back: around {_timing_date_label(earlier)} the same broad transit family touched {area}. "
+            "You may not have lived through it. Use the date as context, not biography.",
+            product="timing",
         )
 
-    polarity = str(getattr(story, "polarity", "")).lower()
+    polarity = str(getattr(story, "polarity", "") or "").lower()
     if "opportun" in polarity:
-        difference = (
-            "This time the current report ranks the transit as an **opening**. "
-            "The useful question is not whether the old story repeats, but whether you can use the room that exists now."
-        )
+        close = "Use the room that exists now. Do not wait for the old event to repeat."
     elif "pressure" in polarity:
-        difference = (
-            "This time the current report ranks the transit as a **test or constraint**. "
-            "The useful comparison is what you tolerated then versus what now needs a clearer limit, term or decision."
-        )
+        close = "Name what you tolerated then. Set the clearer limit now."
     else:
-        difference = (
-            "This time the exact dates, supporting transits and your present life stage alter the meaning. "
-            "The earlier cycle is a reference point, not a script."
-        )
-    st.markdown(f"**What is different now:** {difference}")
-    st.caption(
-        "Luna keeps the recurrence calculation behind the scenes. The reader-facing question is simpler: "
-        "what feels familiar, and what is materially different this time?"
-    )
+        close = "Keep the old pattern as context. Make the present decision from present facts."
 
+    _render_luna_prose(close, product="timing")
 
 def render_monthly_preview_workspace() -> None:
     """Owner-only Monthly editorial workspace. Public customers use the unified free Monthly page."""
@@ -7507,7 +7503,7 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
 
     st.markdown("### Read the month, not the picture")
     for paragraph in _monthly_chart_story(result, events, selected_key):
-        _render_luna_prose(paragraph)
+        _render_luna_prose(paragraph, product="monthly")
 
     monthly_active_houses = _monthly_active_house_numbers(result, events, selected_key)
     active_label = "ACTIVE IN THIS VIEW" if selected_key == "whole" else f"ACTIVE · {chosen_label.upper()}"
@@ -7588,14 +7584,13 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     month_story = _monthly_story_of_month(events, sign)
     if month_story:
         st.markdown("## The story of your month")
-        _render_luna_prose("Follow the sequence. What opens early changes what you can choose later.")
         for paragraph in month_story.get("paragraphs", []):
-            _render_luna_prose(paragraph)
+            _render_luna_prose(paragraph, product="monthly")
         month_arc = list(month_story.get("arc", []) or [])
         if month_arc:
             st.markdown(
-                '<div class="timing-meta" style="margin-top:1.1rem">THE ARC</div>'
-                f'<div style="font:500 13px IBM Plex Mono,monospace;letter-spacing:.035em;'
+                '<div class="timing-meta" style="margin-top:1.1rem;text-transform:none">The arc</div>'
+                f'<div style="font:400 13px IBM Plex Mono,monospace;letter-spacing:.02em;'
                 f'line-height:1.8;margin:.25rem 0 1rem">{escape(" → ".join(month_arc))}</div>',
                 unsafe_allow_html=True,
             )
@@ -7616,15 +7611,22 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             f'<div class="timing-date-box"><span>{date_kind}</span>'
             f'<strong>{escape(event["date_label"].title())}</strong></div>'
         )
-        lead_html = f"<p class=\"luna-voice-lead\">{escape(event.get('voice_lead') or '')}</p>" if event.get("voice_lead") else ""
-        body_html = lead_html + "".join(f"<p>{escape(paragraph)}</p>" for paragraph in event["body"])
+        lead_html = (
+            f"<p class=\"luna-voice-lead\">{escape(finalize_customer_prose(event.get('voice_lead') or '', product='monthly'))}</p>"
+            if event.get("voice_lead") else ""
+        )
+        body_html = lead_html + "".join(
+            f"<p>{escape(finalize_customer_prose(paragraph, product='monthly'))}</p>"
+            for paragraph in event["body"]
+        )
         move_html = (
             f'<div class="timing-move"><div class="timing-move-label">Your move</div>'
-            f'<strong>{escape(event["move"])}</strong></div>'
+            f'<p>{escape(finalize_customer_prose(event["move"], product="monthly"))}</p></div>'
             if event["move"] else ""
         )
         watch_html = (
-            f'<div class="timing-watch"><span class="timing-meta-inline">WATCH</span> {escape(event["watch"])}</div>'
+            f'<div class="timing-watch"><span class="timing-meta-inline">WATCH</span> '
+            f'{escape(finalize_customer_prose(event["watch"], product="monthly"))}</div>'
             if event.get("watch") else ""
         )
 
@@ -7643,7 +7645,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
 
         for connection_paragraph in _monthly_event_connection(events, number - 1):
             st.markdown(
-                f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph))}</div>',
+                f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product='monthly'))}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -8131,7 +8133,7 @@ def natal_snapshot_page() -> None:
         "what you need from relationships and how you act under pressure belong to the same person: you."
     )
     for paragraph in _timing_natal_person_summary(snapshot, None):
-        _render_luna_prose(paragraph)
+        _render_luna_prose(paragraph, product="natal")
 
     birth_bits = [birth_date.strftime("%d %B %Y")]
     if time_known and birth_time_value is not None:
@@ -8234,41 +8236,29 @@ def natal_snapshot_page() -> None:
     st.markdown('</section>', unsafe_allow_html=True)
 
 def _luna_inline_story_title(value: str) -> str:
-    """
-    Story names may remain ALL CAPS as standalone headings.
-    Inside a sentence, convert an all-caps story name to editorial Title Case
-    so it reads as prose rather than interrupting the sentence like a subheading.
-    """
-    raw = re.sub(r"\s+", " ", str(value or "")).strip()
-    letters = "".join(ch for ch in raw if ch.isalpha())
-    if not letters or not letters.isupper():
-        return raw
+    """Standalone headings may use caps. Inline prose does not."""
+    return inline_story_title(value)
 
-    small_words = {"a", "an", "and", "as", "at", "but", "by", "for", "in", "nor", "of", "on", "or", "the", "to", "up", "via", "with"}
-    words = raw.lower().split(" ")
-    titled = []
-    for index, word in enumerate(words):
-        core = re.sub(r"[^a-z]", "", word)
-        if index not in {0, len(words) - 1} and core in small_words:
-            titled.append(word)
-        else:
-            titled.append(word[:1].upper() + word[1:])
-    return " ".join(titled)
+def _luna_plain_prose(value: str, product: str = "timing") -> str:
+    """One global customer-prose gate for every Luna product."""
+    return finalize_customer_prose(value, product=product)
 
-
-def _luna_plain_prose(value: str) -> str:
-    """Reader-facing prose stays visually plain. No inline Markdown emphasis."""
-    clean = str(value or "").replace("**", "").replace("__", "")
-    return re.sub(r"\s+", " ", clean).strip()
-
-
-def _render_luna_prose(value: str) -> None:
-    clean = _luna_plain_prose(value)
+def _render_luna_prose(value: str, product: str = "timing") -> None:
+    clean = _luna_plain_prose(value, product=product)
     if clean:
         st.markdown(
             f'<p class="luna-prose">{escape(clean)}</p>',
             unsafe_allow_html=True,
         )
+
+def _brief_story_date(value: str) -> str:
+    """Make engine date labels read like prose: 07 AUG 2026 -> 7 Aug 2026."""
+    raw = re.sub(r"\s+", " ", str(value or "")).strip()
+    match = re.fullmatch(r"0?(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})", raw)
+    if match:
+        day, month, year = match.groups()
+        return f"{int(day)} {month.title()} {year}"
+    return raw.title() if raw.isupper() else raw
 
 
 def _timing_date_label(value: date) -> str:
@@ -8579,7 +8569,7 @@ def _timing_pick_story_anchors(ordered: list, limit: int = 6) -> list:
 
 
 def _timing_year_story(report) -> dict:
-    """One annual argument. Direct. Second person. No editorial scaffolding."""
+    """Tell the human annual argument first. Keep transit names for detailed chapters."""
     if not report.stories:
         return {}
 
@@ -8591,91 +8581,88 @@ def _timing_year_story(report) -> dict:
     if not anchors:
         return {}
 
-    def bits(story):
-        start_date = _timing_story_start(story) or _timing_story_sort_date(story, report.end_date)
-        return {
-            "headline": _luna_inline_story_title(
-                str(getattr(story, "headline", "") or "A major transit").strip()
-            ),
+    rows = []
+    for story in anchors:
+        rows.append({
             "planet": str(getattr(story, "transit_planet", "") or "").strip(),
-            "area": _timing_story_life_area(story),
-            "start": _timing_date_label(start_date),
+            "area": simplify_life_area(_timing_story_life_area(story)),
+            "start": _timing_date_label(
+                _timing_story_start(story)
+                or _timing_story_sort_date(story, report.end_date)
+            ),
             "peak": _timing_story_peak_label(story),
             "verb": _timing_story_arc_verb(story).lower(),
-        }
+        })
 
-    rows = [bits(story) for story in anchors]
     paragraphs = []
-
     first = rows[0]
-    if len(rows) > 1:
-        second = rows[1]
+    second = rows[1] if len(rows) > 1 else None
+
+    if second:
         paragraphs.append(
-            f"Start with {first['headline']} on {first['start']}. "
-            f"{first['planet']} puts pressure on {first['area']}. "
-            f"Then {second['headline']} moves the same problem into {second['area']}. "
-            f"{first['verb'].capitalize()} what already demands an answer. Leave room for what comes next."
+            f"Set the terms first. {first['area'].capitalize()} meets {second['area']}. "
+            "Name the responsibility. Name the cost. Put a boundary around what you are willing to carry. "
+            "Do not prove that you can handle more. Decide whether more deserves you."
         )
     else:
         paragraphs.append(
-            f"Start with {first['headline']} on {first['start']}. "
-            f"{first['planet']} puts pressure on {first['area']}. "
-            f"{first['verb'].capitalize()} what already demands an answer."
+            f"Set the terms first. {first['area'].capitalize()} needs a clearer answer. "
+            "Name the responsibility. Name the cost. Decide what you are willing to carry."
         )
 
     if len(rows) >= 4:
         third, fourth = rows[2], rows[3]
         paragraphs.append(
-            f"Then the pressure moves. {third['headline']} reaches {third['area']} from {third['start']}. "
-            f"{fourth['headline']} shifts the terms again through {fourth['area']}. "
-            "Do not solve each chapter in isolation. Make the earlier decision improve the position you carry into the next one."
+            f"Then widen the field. {third['area'].capitalize()} opens first. {fourth['area'].capitalize()} comes next. "
+            "Take the useful opening. Do not turn more choice into more obligation. "
+            + luna_dry_truth("general", third["area"] + fourth["area"])
         )
     elif len(rows) >= 3:
         third = rows[2]
         paragraphs.append(
-            f"Next comes {third['headline']} on {third['start']} in {third['area']}. "
-            f"{third['verb'].capitalize()} here. Do not drag the opening problem into the next phase unchanged."
+            f"Then widen the field through {third['area']}. Take the opening. Keep the terms clean."
         )
 
-    if len(rows) >= 6:
-        fifth, sixth = rows[4], rows[5]
-        paragraphs.append(
-            f"By the later phase, {fifth['headline']} makes the deeper consequence visible in {fifth['area']}, "
-            f"strongest around {fifth['peak']}. Then {sixth['headline']} reaches {sixth['area']} from {sixth['start']}. "
-            "Stop analysing the old pattern once the choice is clear. Change the conditions that keep rebuilding it."
+    if len(rows) >= 5:
+        later_areas = list(dict.fromkeys(row["area"] for row in rows[4:6]))
+        first_later = later_areas[0]
+        second_later = later_areas[1] if len(later_areas) > 1 else None
+        topic = (
+            "relationship"
+            if any("relationship" in area for area in later_areas)
+            else "routine"
+            if any("work" in area or "routine" in area for area in later_areas)
+            else "general"
         )
-    elif len(rows) >= 5:
-        fifth = rows[4]
+        later_open = f"Later, test what survives. {first_later.capitalize()} returns to the foreground."
+        if second_later:
+            later_open += f" {second_later.capitalize()} becomes the proof."
         paragraphs.append(
-            f"Later, {fifth['headline']} concentrates the question in {fifth['area']}, strongest around {fifth['peak']}. "
-            f"{fifth['verb'].capitalize()} what is real now. Do not return to the earlier arrangement because it is familiar."
+            later_open
+            + " Stop compensating for an old arrangement once the choice is clear. "
+            "Change the conditions that keep rebuilding the same problem. "
+            + luna_dry_truth(topic, " ".join(later_areas))
         )
 
-    arc = []
-    for story in ordered:
-        verb = _timing_story_arc_verb(story)
-        if not arc or arc[-1] != verb:
-            arc.append(verb)
-        if len(arc) >= 6:
-            break
+    arc = list(human_arc(_timing_story_arc_verb(story) for story in ordered))
 
     areas = []
     for story in anchors:
-        area = _timing_story_life_area(story)
+        area = simplify_life_area(_timing_story_life_area(story))
         if area not in areas:
             areas.append(area)
-        if len(areas) >= 4:
+        if len(areas) >= 3:
             break
 
-    return {
-        "paragraphs": paragraphs,
-        "arc": arc,
-        "chart_bridge": (
-            "Now look at the chart. "
-            + ", ".join(areas)
-            + " are active together. A choice in one area changes what becomes acceptable in the others."
-        ),
-    }
+    if len(areas) >= 2:
+        chart_bridge = (
+            f"Read the chart as one system. {areas[0].capitalize()} and {areas[1]} move together. "
+            "Change one and the terms of the other change too."
+        )
+    else:
+        chart_bridge = "Read the chart as one system. Change the condition that keeps rebuilding the same problem."
+
+    return {"paragraphs": paragraphs, "arc": arc, "chart_bridge": chart_bridge}
 
 def _timing_reader_move(story) -> str:
     """
@@ -8711,14 +8698,13 @@ def _timing_story_life_area(story) -> str:
     house = getattr(story, "natal_house", None)
     if house:
         try:
-            return str(HOUSE_NAMES.get(int(house)) or f"House {int(house)}")
+            return simplify_life_area(str(HOUSE_NAMES.get(int(house)) or f"House {int(house)}"))
         except Exception:
             return f"House {house}"
     target = str(getattr(story, "natal_target", "") or "").strip()
     if target:
-        return f"Natal {target}"
-    return "Personal timing"
-
+        return simplify_life_area(f"Natal {target}")
+    return "personal timing"
 
 def _timing_story_start(story) -> date | None:
     periods = list(getattr(story, "periods", None) or [])
@@ -9273,68 +9259,64 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
 
 def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]:
     if not stories:
-        return [
-            "Do not force a story here. Your natal pattern remains the baseline, but the slow planets are not concentrating enough pressure in this window to justify one."
-        ]
+        return ["Do not force a story here. The selected window is comparatively quiet."]
 
     areas = []
     for story in stories[:4]:
-        area = _timing_story_life_area(story)
+        area = simplify_life_area(_timing_story_life_area(story))
         if area not in areas:
             areas.append(area)
 
-    first = stories[0]
-    second = stories[1] if len(stories) > 1 else None
-
-    out = [
-        "Start with the left wheel. That is you before this period moves. The right wheel shows where the year presses hardest. "
-        "Ignore the colour as good or bad. Use it as concentration.",
-        (
-            f"In this {mode} view, {' and '.join(areas[:3])} move together. "
-            f"That is why {_luna_inline_story_title(first.headline)} matters"
-            + (f" before {_luna_inline_story_title(second.headline)} arrives." if second else ".")
-        ),
-    ]
     if len(areas) >= 2:
-        out.append(
-            f"A decision in {areas[0]} changes the terms in {areas[1]}. "
-            "Do not read those houses separately. Read the trade-off."
-        )
-    return out
+        return [
+            f"Read the pressure, not the picture. {areas[0].capitalize()} and {areas[1]} move together.",
+            "Change one and the terms of the other change too. Read the trade-off.",
+        ]
+    return [f"Watch {areas[0] if areas else 'the active area'}. Act on the consequence, not the decoration."]
 
 def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
+    """One human sequence: possibility -> choice -> consequence."""
     if not events:
         return {}
 
     chosen = events[:4]
     first = chosen[0]
+    first_sentence = _luna_first_sentence(
+        first.get("voice_lead") or (first.get("body") or [""])[0]
+    )
+    first_sentence = first_sentence[:1].lower() + first_sentence[1:] if first_sentence else "a possibility becomes real"
+
     paragraphs = [
-        f"{sign}, start with {_luna_inline_story_title(first['title'])} around {first['date_label']}. "
-        f"{_luna_first_sentence(first.get('voice_lead') or (first.get('body') or [''])[0])} "
-        "Do not solve the whole month here. Let the first date show you what deserves the next move."
+        f"Around {_brief_story_date(first['date_label'])}, {first_sentence}. "
+        "Take it seriously. Do not commit before the details hold."
     ]
 
     if len(chosen) >= 2:
         second = chosen[1]
+        second_sentence = _luna_first_sentence(
+            second.get("voice_lead") or (second.get("body") or [""])[0]
+        )
+        second_sentence = second_sentence[:1].lower() + second_sentence[1:] if second_sentence else "interest becomes a decision"
         paragraphs.append(
-            f"Then {_luna_inline_story_title(second['title'])} arrives around {second['date_label']}. "
-            f"{_luna_first_sentence(second.get('voice_lead') or (second.get('body') or [''])[0])} "
-            "Choose what has enough substance to continue. Let the weaker option lose priority."
+            f"By {_brief_story_date(second['date_label'])}, {second_sentence}. "
+            "Choose what has substance. Let the weaker option lose priority."
         )
 
     if len(chosen) >= 3:
         last = chosen[-1]
+        last_sentence = _luna_first_sentence(
+            last.get("voice_lead") or (last.get("body") or [""])[0]
+        )
+        last_sentence = last_sentence[:1].lower() + last_sentence[1:] if last_sentence else "the plan reaches daily life"
         paragraphs.append(
-            f"By the later part of the month, {_luna_inline_story_title(last['title'])} shows what survives the earlier noise. "
-            "Keep what still matters after the excitement fades. Carry that forward."
+            f"Later, {last_sentence}. Keep what still works once the excitement wears off. "
+            + luna_dry_truth("general", str(last.get("title") or sign))
         )
 
-    arc = []
-    for event in chosen:
-        signal = str(event.get("signal") or "").upper()
-        if signal and (not arc or arc[-1] != signal):
-            arc.append(signal)
-    return {"paragraphs": paragraphs, "arc": arc}
+    return {
+        "paragraphs": paragraphs,
+        "arc": list(human_arc(str(event.get("signal") or "") for event in chosen)),
+    }
 
 def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) -> list[str]:
     selected = events if selected_key == "whole" else [e for e in events if e.get("key") == selected_key]
@@ -9342,24 +9324,20 @@ def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) ->
         return []
 
     houses = _monthly_active_house_numbers(result, events, selected_key)
-    labels = [_CHART_HOUSE_KEY.get(h, f"House {h}") for h in houses[:4]]
+    labels = [simplify_life_area(_CHART_HOUSE_KEY.get(h, f"House {h}")) for h in houses[:3]]
 
     if selected_key == "whole":
-        if labels:
+        if len(labels) >= 2:
             return [
-                "Start with the left wheel. That is your baseline. The right wheel shows where this month gets loud.",
-                f"{' and '.join(labels)} are active together. Do not read them as separate topics. "
-                "A decision in one changes what you can promise, protect or pursue in the others.",
+                f"Read the month as one system. {labels[0].capitalize()} and {labels[1]} move together.",
+                "Change one and the terms of the other change too. Keep the same decision thread.",
             ]
-        return [
-            "Start with the left wheel. That is your baseline. The right wheel shows where this month gets loud.",
-            "The month is concentrated rather than random. Follow the strongest dates. Keep the same decision thread.",
-        ]
+        return ["Follow the strongest dates. Keep the same decision thread."]
 
     event = selected[0]
     move = str(event.get("move") or "").strip()
     return [
-        f"This date puts one part of the pattern under the light. Watch where {_luna_inline_story_title(event['title'])} lands. Act on the consequence.",
+        "Use this date as a pressure point, not a separate horoscope.",
         move if move else "Notice what becomes harder to postpone. Decide from there.",
     ]
 
@@ -9386,7 +9364,7 @@ def _timing_chart_in_motion(report, snapshot) -> None:
 
     st.markdown("### Read the pressure, not the picture")
     for paragraph in _timing_chart_story(report, snapshot, mode, active_stories):
-        _render_luna_prose(paragraph)
+        _render_luna_prose(paragraph, product="timing")
 
     timing_active_houses = _timing_active_house_numbers(active_stories)
     active_label = "ACTIVE NOW" if mode == "Now" else f"MOST ACTIVE · {mode.upper()}"
@@ -9735,20 +9713,19 @@ def timing_map_page() -> None:
     year_story = _timing_year_story(report)
     if year_story:
         st.markdown("## The story of your year")
-        _render_luna_prose("Start with the argument, not the planets. This year keeps returning to the same few choices in different parts of your life.")
         for paragraph in year_story.get("paragraphs", []):
-            _render_luna_prose(paragraph)
+            _render_luna_prose(paragraph, product="timing")
 
         arc = list(year_story.get("arc", []) or [])
         if arc:
             st.markdown(
-                '<div class="timing-meta" style="margin-top:1.25rem">THE ARC</div>'
-                f'<div style="font:500 13px IBM Plex Mono,monospace;letter-spacing:.035em;'
+                '<div class="timing-meta" style="margin-top:1.25rem;text-transform:none">The arc</div>'
+                f'<div style="font:400 13px IBM Plex Mono,monospace;letter-spacing:.02em;'
                 f'line-height:1.8;margin:.25rem 0 1rem">{escape(" → ".join(arc))}</div>',
                 unsafe_allow_html=True,
             )
 
-        _render_luna_prose(year_story.get("chart_bridge", ""))
+        _render_luna_prose(year_story.get("chart_bridge", ""), product="timing")
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
     if timing_snapshot is not None:
@@ -9777,7 +9754,10 @@ def timing_map_page() -> None:
             strongest_label = _timing_story_peak_label(story)
             eases_label = _timing_date_label(story_end) if story_end else "—"
             where_label = _timing_story_life_area(story)
-            scenario_html = "".join(f"<li>{escape(line)}</li>" for line in story.scenarios)
+            scenario_html = "".join(
+                f"<li>{escape(finalize_customer_prose(line, product='timing'))}</li>"
+                for line in story.scenarios
+            )
 
             article_html = (
                 '<article class="timing-story">'
@@ -9785,8 +9765,8 @@ def timing_map_page() -> None:
                 f'{escape(story.polarity)} · active {escape(periods_label)}</div>'
                 f'<h2>{escape(story.headline)}</h2>'
                 '<div class="timing-plain-grid">'
-                f'<div><span>What is happening</span><strong>{escape(story.summary)}</strong></div>'
-                f'<div><span>Where it lands</span><strong>{escape(where_label)}</strong></div>'
+                f'<div><span>What is happening</span><p>{escape(finalize_customer_prose(story.summary, product="timing"))}</p></div>'
+                f'<div><span>Where it lands</span><p>{escape(simplify_life_area(where_label))}</p></div>'
                 '</div>'
                 '<div class="timing-phase-grid">'
                 f'<div><span>Starts</span><strong>{escape(starts_label)}</strong></div>'
@@ -9795,15 +9775,15 @@ def timing_map_page() -> None:
                 '</div>'
                 f'<ul class="timing-scenarios">{scenario_html}</ul>'
                 f'<div class="timing-move"><div class="timing-move-label">Your move</div>'
-                f'<strong>{escape(_timing_reader_move(story))}</strong></div>'
-                f'<p><strong>Watch:</strong> {escape(story.watch)}</p>'
+                f'<p>{escape(finalize_customer_prose(_timing_reader_move(story), product="timing"))}</p></div>'
+                f'<p><span class="timing-meta-inline">WATCH</span> {escape(finalize_customer_prose(story.watch, product="timing"))}</p>'
                 '</article>'
             )
             st.markdown(article_html, unsafe_allow_html=True)
 
             for connection_paragraph in _timing_story_connection(report, number - 1):
                 st.markdown(
-                    f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph))}</div>',
+                    f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product='timing'))}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -9960,7 +9940,7 @@ def solar_year_page() -> None:
     )
 
     st.markdown("### What this means together")
-    _render_luna_prose(_solar_connected_meaning(solar))
+    _render_luna_prose(_solar_connected_meaning(solar), product="solar")
 
     st.markdown("## Historical symbolism and factual boundary")
     st.markdown(

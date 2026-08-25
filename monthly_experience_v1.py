@@ -23,7 +23,7 @@ from luna_editorial_system import (
     YOUR_MOVE_LABEL,
 )
 from monthly_narrative_v1 import MonthlyNarrative
-from luna_voice import narrator_cue
+from luna_voice import finalize_customer_prose, narrator_cue
 from solar_cycle import solar_gate_label
 from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_png
 
@@ -458,6 +458,15 @@ def _safe(value: object) -> str:
     return escape(_normalise_render_text(value), quote=True)
 
 
+def _prose_safe(value: object) -> str:
+    return escape(
+        _normalise_render_text(
+            finalize_customer_prose(str(value or ""), product="monthly")
+        ),
+        quote=True,
+    )
+
+
 def _monthly_sky_map_html(result: dict) -> str:
     try:
         snapshot = build_monthly_sky_snapshot(result)
@@ -557,7 +566,7 @@ def _paragraphs(values: Iterable[str], maximum: int | None = None) -> str:
     selected = list(values)
     if maximum is not None:
         selected = selected[:maximum]
-    return "".join(f"<p>{_safe(value)}</p>" for value in selected if value)
+    return "".join(f"<p>{_prose_safe(value)}</p>" for value in selected if value)
 
 
 def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict[str, str]:
@@ -625,8 +634,8 @@ def _key_date_cards(narrative: MonthlyNarrative) -> str:
         f"""
 <article class="luna-date-card">
   <span>{_safe(item.date_label)}</span>
-  <strong>{_safe(item.consequence)}</strong>
-  <p>{_safe(item.response)}</p>
+  <strong>{_prose_safe(item.consequence)}</strong>
+  <p>{_prose_safe(item.response)}</p>
   <small>{_safe(item.evidence)}</small>
 </article>
         """
@@ -653,8 +662,8 @@ def _story_date_cards(narrative: MonthlyNarrative) -> str:
         f"""
 <article class="luna-story-date-card">
   <span>{_safe(item.date_label)}</span>
-  <strong>{_safe(item.consequence)}</strong>
-  <p>{_safe(item.response)}</p>
+  <strong>{_prose_safe(item.consequence)}</strong>
+  <p>{_prose_safe(item.response)}</p>
 </article>
         """
         for item in selected
@@ -1405,22 +1414,23 @@ def build_monthly_experience_html(
 }}
 .luna-monthly-report p {{
   font-size:clamp(.98rem,1.35vw,1.12rem);
-  line-height:1.58;
-  margin:.4rem 0 .9rem;
+  line-height:1.68;
+  margin:.45rem 0 1.15rem;
+  font-weight:300;
 }}
 
-.luna-monthly-report p strong {
+.luna-monthly-report p strong {{
   font-weight:inherit;
   font-size:inherit;
   line-height:inherit;
-}
-.luna-monthly-report p {
+}}
+.luna-monthly-report p {{
   max-width:760px;
   margin-bottom:1.25rem;
-}
-.luna-monthly-section {
+}}
+.luna-monthly-section {{
   margin-top:clamp(2.8rem,6vw,5.2rem);
-}
+}}
 
 .luna-monthly-sky-map {{
   padding-bottom:1.25rem;

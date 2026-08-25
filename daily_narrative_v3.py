@@ -24,7 +24,7 @@ from luna_editorial_system import (
     WHY_LUNA_LABEL,
     luna_do_dont,
 )
-from luna_voice import narrator_cue
+from luna_voice import finalize_customer_prose, narrator_cue
 from solar_cycle import solar_gate_label
 from strategic_horizon import describe_slow_planet_horizon
 
@@ -1621,7 +1621,11 @@ def build_daily_narrative(
 
 
 def _paragraph_html(paragraphs: Iterable[str]) -> str:
-    return "".join(f"<p>{escape(item)}</p>" for item in paragraphs if item)
+    return "".join(
+        f"<p>{escape(finalize_customer_prose(item, product='daily'))}</p>"
+        for item in paragraphs
+        if item
+    )
 
 
 def _render_css() -> None:
@@ -2013,11 +2017,11 @@ def render_daily_narrative_v3(
   <div class="do-dont-strip">
     <div class="do-dont-item">
       <div class="do-dont-label">{escape(DO_LABEL)}</div>
-      <div class="do-dont-copy">{escape(narrative.action_today)}</div>
+      <div class="do-dont-copy">{escape(finalize_customer_prose(narrative.action_today, product='daily'))}</div>
     </div>
     <div class="do-dont-item">
       <div class="do-dont-label">{escape(DONT_LABEL)}</div>
-      <div class="do-dont-copy">{escape(narrative.watch_out)}</div>
+      <div class="do-dont-copy">{escape(finalize_customer_prose(narrative.watch_out, product='daily'))}</div>
     </div>
   </div>
 </section>
@@ -2061,7 +2065,7 @@ def render_daily_narrative_v3(
         )
 
         st.markdown("### Hidden opportunity")
-        st.markdown(narrative.hidden_opportunity)
+        st.markdown(finalize_customer_prose(narrative.hidden_opportunity, product='daily'))
 
         if solar:
             direction = str(solar.get("light_direction", "Unavailable"))
@@ -2086,7 +2090,7 @@ def render_daily_narrative_v3(
                 """,
                 unsafe_allow_html=True,
             )
-            st.markdown(str(solar.get("focus_meaning", "")))
+            st.markdown(finalize_customer_prose(str(solar.get("focus_meaning", "")), product='solar'))
 
         st.markdown("### Sky Snapshot")
         snapshot_rows = [
@@ -2131,18 +2135,18 @@ def render_daily_narrative_v3(
         if remaining_story:
             st.markdown("### Continue today’s story")
             for paragraph in remaining_story:
-                st.markdown(paragraph)
+                st.markdown(finalize_customer_prose(paragraph, product='daily'))
 
         st.markdown("### Relationships")
-        st.markdown(narrative.relationship_story)
+        st.markdown(finalize_customer_prose(narrative.relationship_story, product='daily'))
 
         left, right = st.columns(2, gap="large")
         with left:
             st.markdown("### Work")
-            st.markdown(narrative.work_note)
+            st.markdown(finalize_customer_prose(narrative.work_note, product='daily'))
         with right:
             st.markdown("### Money")
-            st.markdown(narrative.money_note)
+            st.markdown(finalize_customer_prose(narrative.money_note, product='daily'))
 
     with st.expander("Questions to consider"):
         question_html = "".join(
