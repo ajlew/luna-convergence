@@ -8233,6 +8233,29 @@ def natal_snapshot_page() -> None:
     )
     st.markdown('</section>', unsafe_allow_html=True)
 
+def _luna_inline_story_title(value: str) -> str:
+    """
+    Story names may remain ALL CAPS as standalone headings.
+    Inside a sentence, convert an all-caps story name to editorial Title Case
+    so it reads as prose rather than interrupting the sentence like a subheading.
+    """
+    raw = re.sub(r"\s+", " ", str(value or "")).strip()
+    letters = "".join(ch for ch in raw if ch.isalpha())
+    if not letters or not letters.isupper():
+        return raw
+
+    small_words = {"a", "an", "and", "as", "at", "but", "by", "for", "in", "nor", "of", "on", "or", "the", "to", "up", "via", "with"}
+    words = raw.lower().split(" ")
+    titled = []
+    for index, word in enumerate(words):
+        core = re.sub(r"[^a-z]", "", word)
+        if index not in {0, len(words) - 1} and core in small_words:
+            titled.append(word)
+        else:
+            titled.append(word[:1].upper() + word[1:])
+    return " ".join(titled)
+
+
 def _luna_plain_prose(value: str) -> str:
     """Reader-facing prose stays visually plain. No inline Markdown emphasis."""
     clean = str(value or "").replace("**", "").replace("__", "")
@@ -8571,7 +8594,9 @@ def _timing_year_story(report) -> dict:
     def bits(story):
         start_date = _timing_story_start(story) or _timing_story_sort_date(story, report.end_date)
         return {
-            "headline": str(getattr(story, "headline", "") or "A major transit").strip(),
+            "headline": _luna_inline_story_title(
+                str(getattr(story, "headline", "") or "A major transit").strip()
+            ),
             "planet": str(getattr(story, "transit_planet", "") or "").strip(),
             "area": _timing_story_life_area(story),
             "start": _timing_date_label(start_date),
@@ -9087,7 +9112,7 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
         paragraphs.append(
             "Test the bond. You do not necessarily struggle to form relationships. "
             "The harder risk is keeping them alive after the terms stop being equal. "
-            "When THE AGREEMENT GETS TESTED arrives, ask who is carrying the relationship. "
+            "When The Agreement Gets Tested arrives, ask who is carrying the relationship. "
             "Stop compensating. Keep what remains mutual."
         )
 
@@ -9231,7 +9256,7 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
             _render_luna_prose(
                 f"Best opening window · {_timing_date_label(start) if start else '—'} → "
                 f"{_timing_date_label(end) if end else '—'}. "
-                f"{opening.headline}. Strongest around {_timing_story_peak_label(opening)}. "
+                f"{_luna_inline_story_title(opening.headline)}. Strongest around {_timing_story_peak_label(opening)}. "
                 "Meet people. Widen the field. Let an existing connection grow only if the effort stays mutual."
             )
 
@@ -9242,7 +9267,7 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
             _render_luna_prose(
                 f"Seriousness window · {_timing_date_label(start) if start else '—'} → "
                 f"{_timing_date_label(end) if end else '—'}. "
-                f"{test.headline}. Strongest around {_timing_story_peak_label(test)}. "
+                f"{_luna_inline_story_title(test.headline)}. Strongest around {_timing_story_peak_label(test)}. "
                 "Watch what happens when life becomes ordinary. Keep what is mutual. Renegotiate what is not."
             )
 
@@ -9266,8 +9291,8 @@ def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]
         "Ignore the colour as good or bad. Use it as concentration.",
         (
             f"In this {mode} view, {' and '.join(areas[:3])} move together. "
-            f"That is why {first.headline} matters"
-            + (f" before {second.headline} arrives." if second else ".")
+            f"That is why {_luna_inline_story_title(first.headline)} matters"
+            + (f" before {_luna_inline_story_title(second.headline)} arrives." if second else ".")
         ),
     ]
     if len(areas) >= 2:
@@ -9284,7 +9309,7 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
     chosen = events[:4]
     first = chosen[0]
     paragraphs = [
-        f"{sign}, start with {first['title']} around {first['date_label']}. "
+        f"{sign}, start with {_luna_inline_story_title(first['title'])} around {first['date_label']}. "
         f"{_luna_first_sentence(first.get('voice_lead') or (first.get('body') or [''])[0])} "
         "Do not solve the whole month here. Let the first date show you what deserves the next move."
     ]
@@ -9292,7 +9317,7 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
     if len(chosen) >= 2:
         second = chosen[1]
         paragraphs.append(
-            f"Then {second['title']} arrives around {second['date_label']}. "
+            f"Then {_luna_inline_story_title(second['title'])} arrives around {second['date_label']}. "
             f"{_luna_first_sentence(second.get('voice_lead') or (second.get('body') or [''])[0])} "
             "Choose what has enough substance to continue. Let the weaker option lose priority."
         )
@@ -9300,7 +9325,7 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
     if len(chosen) >= 3:
         last = chosen[-1]
         paragraphs.append(
-            f"By the later part of the month, {last['title']} shows what survives the earlier noise. "
+            f"By the later part of the month, {_luna_inline_story_title(last['title'])} shows what survives the earlier noise. "
             "Keep what still matters after the excitement fades. Carry that forward."
         )
 
@@ -9334,7 +9359,7 @@ def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) ->
     event = selected[0]
     move = str(event.get("move") or "").strip()
     return [
-        f"This date puts one part of the pattern under the light. Watch where {event['title']} lands. Act on the consequence.",
+        f"This date puts one part of the pattern under the light. Watch where {_luna_inline_story_title(event['title'])} lands. Act on the consequence.",
         move if move else "Notice what becomes harder to postpone. Decide from there.",
     ]
 
