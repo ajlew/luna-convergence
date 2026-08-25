@@ -533,7 +533,7 @@ def build_story_language(
     if not pair:
         pair = (
             f"{target.capitalize()} is under pressure. "
-            "Stop asking what the transit means in the abstract. Ask what has become harder to ignore in the decision already in front of you."
+            "Name what has become harder to ignore. Decide from the fact in front of you, not from the label on the transit."
         )
 
     lead = _pick(ASPECT_LEADS[aspect], seed + 1)

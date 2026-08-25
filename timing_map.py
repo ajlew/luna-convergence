@@ -295,7 +295,7 @@ def _scenario_lines(target: NatalPosition, transit_planet: str, aspect: str) -> 
     house_domain = HOUSE_NAMES.get(target.house or 0, "")
 
     if aspect in {"square", "opposition"}:
-        first = f"Stop postponing the choice around {domain}; the tension is already showing you where the weak point is."
+        first = f"Name the weak point around {domain}. Stop postponing the choice."
     elif aspect in {"trine", "sextile"}:
         first = f"Use the support around {domain} while the opening is active. Make one concrete move."
     else:

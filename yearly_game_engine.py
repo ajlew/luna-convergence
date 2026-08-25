@@ -577,23 +577,23 @@ def _narrator_paragraphs(
     change_act = acts[1] if len(acts) > 1 else acts[0]
 
     paragraphs = [
-        f"Start {year} with **{first.title}**. {first.advantage} Use that rule before you add another commitment.",
-        f"Then **{second.title.lower()}** takes over. {second.question} Watch what people actually do once information, resources and consequences become visible.",
+        f"Start {year} with {first.title}. {first.advantage} Use that rule before you add another commitment.",
+        f"Then {second.title.lower()} takes over. {second.question} Watch what people do once information, resources and consequences become visible.",
         f"A major rule change begins around {human_date(change_act.start_date)}. {change_act.summary} Adjust early. Do not wait for the old arrangement to fail loudly.",
-        f"**{strongest_round.month} carries the greatest leverage.** {strongest_round.central_storyline} Use the month to improve later options, not merely to feel busy.",
+        f"{strongest_round.month} carries the greatest leverage. {strongest_round.central_storyline} Use the month to improve later options, not merely to feel busy.",
     ]
     if relationship_peak:
         paragraphs.append(
-            f"**Relationships get their clearest test in {relationship_peak.month}.** {relationship_peak.relationship_test} "
+            f"Relationships get their clearest test in {relationship_peak.month}. {relationship_peak.relationship_test} "
             "Enjoy attention. Demand consistency."
         )
     else:
         paragraphs.append(
-            "**Do not manufacture a relationship plot if the evidence is quiet.** Watch who returns, who contributes and which connections make your future easier to build."
+            "Do not manufacture a relationship plot if the evidence is quiet. Watch who returns, who contributes and which connections make your future easier to build."
         )
     paragraphs.append(
-        f"By **{final_round.month}**, stop collecting options. {final_round.central_storyline} "
-        "**Choose the position that improves both your leverage and your daily life.**"
+        f"By {final_round.month}, stop collecting options. {final_round.central_storyline} "
+        "Choose the position that improves both your leverage and your daily life."
     )
     return tuple(paragraphs)
 

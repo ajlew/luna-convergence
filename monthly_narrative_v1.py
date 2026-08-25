@@ -1,4 +1,5 @@
 from __future__ import annotations
+MONTHLY_VOICE_STANDARD = "Brutalist Oracle v2.1"
 
 from dataclasses import dataclass
 from datetime import date, datetime

@@ -866,6 +866,47 @@ a {
     line-height: inherit !important;
 }
 
+.luna-prose {
+    max-width:760px;
+    margin:0 0 1.35rem;
+    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
+    font-size:clamp(1rem,1.15vw,1.08rem);
+    line-height:1.72;
+    font-weight:400;
+    letter-spacing:0;
+    color:var(--black);
+}
+.luna-prose strong,
+.luna-connection strong,
+.timing-story-copy p strong,
+.natal-signature-reading p strong {
+    font-size:inherit !important;
+    line-height:inherit !important;
+    font-weight:inherit !important;
+}
+.luna-connection {
+    max-width:760px;
+    margin:1.45rem 0 2rem;
+    padding-left:1rem;
+    border-left:1px solid rgba(17,17,17,.22);
+    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
+    font-size:1rem;
+    line-height:1.72;
+    font-weight:400;
+}
+.timing-story-copy p {
+    max-width:760px;
+    margin:0 0 1.15rem;
+    line-height:1.72;
+    font-weight:400;
+}
+.timing-story {
+    padding-bottom:2.7rem;
+}
+.timing-story h2 {
+    margin-bottom:1.15rem;
+}
+
 .lean-daily-meaning {
     max-width:680px;
     margin:-1.1rem 0 2rem;
@@ -3718,7 +3759,7 @@ def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> No
         "**Where it lands:** " + " · ".join(summary["areas"])
     )
     for paragraph in _weekly_connected_interpretation(summary):
-        st.markdown(paragraph)
+        _render_luna_prose(paragraph)
     st.markdown(
         f"**Your strongest move:** {summary['move'].capitalize()}. "
         "That move is the thread to keep through all seven days below, even as the mood and evidence change."
@@ -7466,7 +7507,7 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
 
     st.markdown("### Read the month, not the picture")
     for paragraph in _monthly_chart_story(result, events, selected_key):
-        st.markdown(paragraph)
+        _render_luna_prose(paragraph)
 
     monthly_active_houses = _monthly_active_house_numbers(result, events, selected_key)
     active_label = "ACTIVE IN THIS VIEW" if selected_key == "whole" else f"ACTIVE · {chosen_label.upper()}"
@@ -7547,9 +7588,9 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     month_story = _monthly_story_of_month(events, sign)
     if month_story:
         st.markdown("## The story of your month")
-        st.markdown("**Follow the sequence.** What opens early changes what you can choose later.")
+        _render_luna_prose("Follow the sequence. What opens early changes what you can choose later.")
         for paragraph in month_story.get("paragraphs", []):
-            st.markdown(paragraph)
+            _render_luna_prose(paragraph)
         month_arc = list(month_story.get("arc", []) or [])
         if month_arc:
             st.markdown(
@@ -7583,7 +7624,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             if event["move"] else ""
         )
         watch_html = (
-            f'<div class="timing-watch"><strong>Watch:</strong> {escape(event["watch"])}</div>'
+            f'<div class="timing-watch"><span class="timing-meta-inline">WATCH</span> {escape(event["watch"])}</div>'
             if event.get("watch") else ""
         )
 
@@ -7591,7 +7632,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             '<article class="timing-story">'
             f'<div class="timing-meta">{number:02d} / {escape(event["signal"])} · active {escape(event["influence"])}</div>'
             f'<h2>{escape(event["title"] or event["transit"])}</h2>'
-            f'<p><strong>{escape(event["transit"])}</strong></p>'
+            f'<p class="timing-transit-line">{escape(event["transit"])}</p>'
             f'<div class="timing-dates">{date_box}</div>'
             f'<div class="timing-story-copy">{body_html}</div>'
             f'{move_html}'
@@ -7601,7 +7642,10 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         st.markdown(article_html, unsafe_allow_html=True)
 
         for connection_paragraph in _monthly_event_connection(events, number - 1):
-            st.markdown(f'<div class="luna-connection">{connection_paragraph}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph))}</div>',
+                unsafe_allow_html=True,
+            )
 
         _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years)
 
@@ -8082,12 +8126,12 @@ def natal_snapshot_page() -> None:
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
 
     st.markdown("### How these pieces fit together")
-    st.markdown(
-        "**Read these placements together.** What you want, what you feel, how you appear, how you think, what you need from relationships "
-        "and how you act under pressure belong to the same person: you."
+    _render_luna_prose(
+        "Read these placements together. What you want, what you feel, how you appear, how you think, "
+        "what you need from relationships and how you act under pressure belong to the same person: you."
     )
     for paragraph in _timing_natal_person_summary(snapshot, None):
-        st.markdown(paragraph)
+        _render_luna_prose(paragraph)
 
     birth_bits = [birth_date.strftime("%d %B %Y")]
     if time_known and birth_time_value is not None:
@@ -8188,6 +8232,21 @@ def natal_snapshot_page() -> None:
         unsafe_allow_html=True,
     )
     st.markdown('</section>', unsafe_allow_html=True)
+
+def _luna_plain_prose(value: str) -> str:
+    """Reader-facing prose stays visually plain. No inline Markdown emphasis."""
+    clean = str(value or "").replace("**", "").replace("__", "")
+    return re.sub(r"\s+", " ", clean).strip()
+
+
+def _render_luna_prose(value: str) -> None:
+    clean = _luna_plain_prose(value)
+    if clean:
+        st.markdown(
+            f'<p class="luna-prose">{escape(clean)}</p>',
+            unsafe_allow_html=True,
+        )
+
 
 def _timing_date_label(value: date) -> str:
     return value.strftime("%d %b %Y").lstrip("0")
@@ -8497,7 +8556,7 @@ def _timing_pick_story_anchors(ordered: list, limit: int = 6) -> list:
 
 
 def _timing_year_story(report) -> dict:
-    """Connect the calculated year into one direct, reader-facing argument."""
+    """One annual argument. Direct. Second person. No editorial scaffolding."""
     if not report.stories:
         return {}
 
@@ -8517,7 +8576,7 @@ def _timing_year_story(report) -> dict:
             "area": _timing_story_life_area(story),
             "start": _timing_date_label(start_date),
             "peak": _timing_story_peak_label(story),
-            "verb": _timing_story_arc_verb(story),
+            "verb": _timing_story_arc_verb(story).lower(),
         }
 
     rows = [bits(story) for story in anchors]
@@ -8527,45 +8586,44 @@ def _timing_year_story(report) -> dict:
     if len(rows) > 1:
         second = rows[1]
         paragraphs.append(
-            f"You enter the year with **{first['headline']}** on **{first['start']}**. "
-            f"{first['planet']} puts pressure on **{first['area']}**. "
-            f"Almost immediately, **{second['headline']}** moves the question into **{second['area']}**. "
-            f"These are not separate forecasts. **{first['verb'].title()} what already demands an answer. Leave room for what comes next.**"
+            f"Start with {first['headline']} on {first['start']}. "
+            f"{first['planet']} puts pressure on {first['area']}. "
+            f"Then {second['headline']} moves the same problem into {second['area']}. "
+            f"{first['verb'].capitalize()} what already demands an answer. Leave room for what comes next."
         )
     else:
         paragraphs.append(
-            f"You enter the year with **{first['headline']}** on **{first['start']}**. "
-            f"{first['planet']} puts pressure on **{first['area']}**. "
-            f"**{first['verb'].title()} what already demands an answer.**"
+            f"Start with {first['headline']} on {first['start']}. "
+            f"{first['planet']} puts pressure on {first['area']}. "
+            f"{first['verb'].capitalize()} what already demands an answer."
         )
 
     if len(rows) >= 4:
         third, fourth = rows[2], rows[3]
         paragraphs.append(
-            f"Then the pressure moves. **{third['headline']}** reaches **{third['area']}** from **{third['start']}**. "
-            f"After that, **{fourth['headline']}** shifts the terms again through **{fourth['area']}**. "
-            "**Do not solve each chapter in isolation. Let the earlier decision improve the position you carry into the next one.**"
+            f"Then the pressure moves. {third['headline']} reaches {third['area']} from {third['start']}. "
+            f"{fourth['headline']} shifts the terms again through {fourth['area']}. "
+            "Do not solve each chapter in isolation. Make the earlier decision improve the position you carry into the next one."
         )
     elif len(rows) >= 3:
         third = rows[2]
         paragraphs.append(
-            f"Next comes **{third['headline']}** on **{third['start']}** in **{third['area']}**. "
-            f"**{third['verb'].title()} here. Do not drag the opening problem into the next phase unchanged.**"
+            f"Next comes {third['headline']} on {third['start']} in {third['area']}. "
+            f"{third['verb'].capitalize()} here. Do not drag the opening problem into the next phase unchanged."
         )
 
     if len(rows) >= 6:
         fifth, sixth = rows[4], rows[5]
         paragraphs.append(
-            f"By the later phase, **{fifth['headline']}** makes the deeper consequence visible in **{fifth['area']}**, "
-            f"with the strongest pressure around **{fifth['peak']}**. "
-            f"Then **{sixth['headline']}** reaches **{sixth['area']}** from **{sixth['start']}**. "
-            "**Stop analysing the old pattern once the choice is clear. Change the conditions that keep rebuilding it.**"
+            f"By the later phase, {fifth['headline']} makes the deeper consequence visible in {fifth['area']}, "
+            f"strongest around {fifth['peak']}. Then {sixth['headline']} reaches {sixth['area']} from {sixth['start']}. "
+            "Stop analysing the old pattern once the choice is clear. Change the conditions that keep rebuilding it."
         )
     elif len(rows) >= 5:
         fifth = rows[4]
         paragraphs.append(
-            f"Later, **{fifth['headline']}** concentrates the question in **{fifth['area']}**, strongest around **{fifth['peak']}**. "
-            f"**{fifth['verb'].title()} what is real now. Do not return to the earlier arrangement just because it is familiar.**"
+            f"Later, {fifth['headline']} concentrates the question in {fifth['area']}, strongest around {fifth['peak']}. "
+            f"{fifth['verb'].capitalize()} what is real now. Do not return to the earlier arrangement because it is familiar."
         )
 
     arc = []
@@ -8584,13 +8642,15 @@ def _timing_year_story(report) -> dict:
         if len(areas) >= 4:
             break
 
-    chart_bridge = (
-        "**Now look at the chart.** The concentration is not random. "
-        + ", ".join(f"**{area}**" for area in areas)
-        + " are being activated together. A choice in one area changes what becomes acceptable in the others."
-    )
-
-    return {"paragraphs": paragraphs, "arc": arc, "chart_bridge": chart_bridge}
+    return {
+        "paragraphs": paragraphs,
+        "arc": arc,
+        "chart_bridge": (
+            "Now look at the chart. "
+            + ", ".join(areas)
+            + " are active together. A choice in one area changes what becomes acceptable in the others."
+        ),
+    }
 
 def _timing_reader_move(story) -> str:
     """
@@ -8855,93 +8915,93 @@ def _luna_first_sentence(value: str) -> str:
 
 
 _SIGN_IDENTITY = {
-    "Aries": "direct, self-starting and uncomfortable with waiting too long for permission",
-    "Taurus": "steady, value-conscious and slow to abandon what has proved reliable",
-    "Gemini": "curious, mentally mobile and inclined to keep several possibilities alive at once",
-    "Cancer": "protective, emotionally responsive and strongly aware of belonging, safety and loyalty",
-    "Leo": "expressive, proud and motivated by the need to create, contribute and be recognised honestly",
-    "Virgo": "observant, improvement-oriented and inclined to notice what could work better",
-    "Libra": "relationship-aware, fairness-conscious and highly sensitive to reciprocity and reasonable terms",
-    "Scorpio": "private, intense and unwilling to stay indefinitely with superficial explanations",
-    "Sagittarius": "future-facing, freedom-seeking and drawn toward a larger field of possibility",
-    "Capricorn": "responsibility-conscious, strategic and willing to build slowly when the structure deserves it",
-    "Aquarius": "independent-minded, pattern-aware and resistant to rules that no longer make sense",
-    "Pisces": "porous, imaginative and highly responsive to atmosphere, meaning and emotional undercurrents",
+    "Aries": 'direct, self-starting and impatient with permission',
+    "Taurus": 'steady, value-conscious and slow to abandon what has proved reliable',
+    "Gemini": 'curious, mentally mobile and comfortable keeping several possibilities alive',
+    "Cancer": 'protective, emotionally responsive and highly aware of loyalty and belonging',
+    "Leo": 'expressive, proud and driven to create something worth being seen for',
+    "Virgo": 'observant, improvement-minded and quick to notice what could work better',
+    "Libra": 'relationship-aware, fairness-conscious and sensitive to reciprocity and reasonable terms',
+    "Scorpio": 'private, intense and unwilling to live indefinitely with superficial explanations',
+    "Sagittarius": 'future-facing, freedom-seeking and drawn toward a larger field of possibility',
+    "Capricorn": 'responsibility-conscious, strategic and willing to build slowly when the structure deserves it',
+    "Aquarius": 'independent-minded, pattern-aware and resistant to rules that no longer make sense',
+    "Pisces": 'imaginative, receptive and highly responsive to atmosphere, meaning and emotional undercurrents',
 }
 
 _SIGN_EMOTION = {
-    "Aries": "reacts quickly and usually knows what it feels before it has fully explained why",
-    "Taurus": "needs steadiness and may hold on longer than expected before admitting something no longer feels safe",
-    "Gemini": "processes feeling through thought, language and comparison",
-    "Cancer": "remembers emotional tone deeply and can protect what matters long after others have moved on",
-    "Leo": "needs warmth, loyalty and a sense that the heart is being met openly",
-    "Virgo": "often tries to solve the feeling by improving the situation",
-    "Libra": "looks for balance and may delay confrontation while trying to understand both sides",
-    "Scorpio": "feels deeply, notices what is unsaid and tends to remember what people did more than what they promised",
-    "Sagittarius": "recovers through movement, perspective and a sense that life is still opening",
-    "Capricorn": "contains emotion until there is a practical reason or safe structure for showing it",
-    "Aquarius": "often needs space and perspective before it can name the feeling clearly",
-    "Pisces": "absorbs atmosphere easily and may need solitude to separate its own feelings from everyone else's",
+    "Aries": 'react quickly and usually know what you feel before you can explain why',
+    "Taurus": 'need steadiness and may hold on too long before admitting something no longer feels safe',
+    "Gemini": 'process feeling through thought, language and comparison',
+    "Cancer": 'remember emotional tone deeply and protect what matters long after other people move on',
+    "Leo": 'need warmth, loyalty and proof that your heart is being met openly',
+    "Virgo": 'try to solve the feeling by improving the situation',
+    "Libra": 'look for balance and may delay confrontation while you understand both sides',
+    "Scorpio": 'feel deeply, notice what is unsaid and remember what people did more than what they promised',
+    "Sagittarius": 'recover through movement, perspective and proof that life is still opening',
+    "Capricorn": 'contain emotion until there is a practical reason or safe structure for showing it',
+    "Aquarius": 'need space and perspective before you can name the feeling cleanly',
+    "Pisces": "absorb atmosphere easily and need solitude to separate your feelings from everyone else's",
 }
 
 _SIGN_RISING = {
-    "Aries": "more direct, self-contained and ready to act than the inner chart may actually feel",
-    "Taurus": "calmer, steadier and harder to move than the inner chart may actually feel",
-    "Gemini": "quick, adaptable and mentally alert",
-    "Cancer": "careful, receptive and protective",
-    "Leo": "visible, expressive and self-possessed",
-    "Virgo": "observant, useful and composed",
-    "Libra": "socially aware, measured and diplomatic",
-    "Scorpio": "contained, watchful and difficult to read quickly",
-    "Sagittarius": "open, mobile and future-facing",
-    "Capricorn": "competent, contained and responsibility-ready",
-    "Aquarius": "independent, slightly detached and difficult to categorise",
-    "Pisces": "soft-edged, receptive and impressionable",
+    "Aries": 'direct, self-contained and ready to act before the inside of you feels ready',
+    "Taurus": 'calm, steady and harder to move than the inside of you may feel',
+    "Gemini": 'quick, adaptable and mentally alert',
+    "Cancer": 'careful, receptive and protective',
+    "Leo": 'visible, expressive and self-possessed',
+    "Virgo": 'observant, useful and composed',
+    "Libra": 'socially aware, measured and diplomatic',
+    "Scorpio": 'contained, watchful and difficult to read quickly',
+    "Sagittarius": 'open, mobile and future-facing',
+    "Capricorn": 'competent, contained and ready to carry responsibility',
+    "Aquarius": 'independent, slightly detached and difficult to categorise',
+    "Pisces": 'soft-edged, receptive and impressionable',
 }
 
 _SIGN_MERCURY = {
-    "Aries": "thinks quickly and prefers a straight answer",
-    "Taurus": "thinks deliberately and trusts what can be made concrete",
-    "Gemini": "thinks by connecting, comparing and talking things through",
-    "Cancer": "thinks through memory, context and emotional meaning",
-    "Leo": "thinks in large themes and wants the point to matter",
-    "Virgo": "thinks diagnostically, spotting errors, omissions and practical improvements",
-    "Libra": "thinks relationally, weighing fairness, alternatives and how each side will receive the message",
-    "Scorpio": "thinks beneath the surface, looking for motive, leverage and what has not been said",
-    "Sagittarius": "thinks in principles, patterns and larger meaning",
-    "Capricorn": "thinks strategically, asking what is workable and sustainable",
-    "Aquarius": "thinks systemically and is often more interested in the pattern than the convention",
-    "Pisces": "thinks associatively, intuitively and through images or atmosphere",
+    "Aries": 'think quickly and prefer a straight answer',
+    "Taurus": 'think deliberately and trust what can be made concrete',
+    "Gemini": 'think by connecting, comparing and talking things through',
+    "Cancer": 'think through memory, context and emotional meaning',
+    "Leo": 'think in large themes and want the point to matter',
+    "Virgo": 'think diagnostically and spot errors, omissions and practical improvements',
+    "Libra": 'think relationally and weigh fairness, alternatives and how each side will receive the message',
+    "Scorpio": 'think beneath the surface and look for motive, leverage and what has not been said',
+    "Sagittarius": 'think in principles, patterns and larger meaning',
+    "Capricorn": 'think strategically and ask what is workable and sustainable',
+    "Aquarius": 'think systemically and care more about the pattern than the convention',
+    "Pisces": 'think associatively, intuitively and through images or atmosphere',
 }
 
 _SIGN_VENUS = {
-    "Aries": "needs aliveness, honesty and room for each person to remain themselves",
-    "Taurus": "values loyalty, consistency, touch and proof over performance",
-    "Gemini": "needs conversation, curiosity and a relationship that keeps moving mentally",
-    "Cancer": "values emotional safety, care and a sense of home with another person",
-    "Leo": "needs warmth, loyalty and visible appreciation",
-    "Virgo": "often shows love through usefulness, reliability and attention to detail",
-    "Libra": "needs reciprocity, good faith and a relationship in which the terms feel fair",
-    "Scorpio": "needs depth, loyalty and emotional truth more than surface harmony",
-    "Sagittarius": "needs honesty, space and a relationship that enlarges life rather than shrinking it",
-    "Capricorn": "values reliability, maturity and relationships that can carry real-world weight",
-    "Aquarius": "needs friendship, independence and a bond that does not erase individuality",
-    "Pisces": "values tenderness, emotional resonance and a feeling of meaningful connection",
+    "Aries": 'need aliveness, honesty and room for each person to remain themselves',
+    "Taurus": 'value loyalty, consistency, touch and proof over performance',
+    "Gemini": 'need conversation, curiosity and a relationship that keeps moving mentally',
+    "Cancer": 'value emotional safety, care and a sense of home with another person',
+    "Leo": 'need warmth, loyalty and visible appreciation',
+    "Virgo": 'show love through usefulness, reliability and attention to detail',
+    "Libra": 'need reciprocity, good faith and terms that feel fair',
+    "Scorpio": 'need depth, loyalty and emotional truth more than surface harmony',
+    "Sagittarius": 'need honesty, space and a relationship that enlarges life rather than shrinking it',
+    "Capricorn": 'value reliability, maturity and relationships that can carry real-world weight',
+    "Aquarius": 'need friendship, independence and a bond that does not erase individuality',
+    "Pisces": 'value tenderness, emotional resonance and meaningful connection',
 }
 
 _SIGN_MARS = {
-    "Aries": "acts quickly and would usually rather test something than discuss it forever",
-    "Taurus": "acts slowly but becomes formidable once committed",
-    "Gemini": "acts through movement, conversation and experimentation",
-    "Cancer": "acts protectively and can become highly motivated when security is at stake",
-    "Leo": "acts boldly when pride, creativity or loyalty is involved",
-    "Virgo": "acts by fixing, organising, improving and taking responsibility for what is not working",
-    "Libra": "acts through negotiation and may hesitate until it feels it has considered every side",
-    "Scorpio": "acts strategically and rarely spends force casually",
-    "Sagittarius": "acts toward freedom, experience and a larger horizon",
-    "Capricorn": "acts methodically and is willing to carry a long effort if the objective is worthwhile",
-    "Aquarius": "acts independently and is often willing to break a pattern others have normalised",
-    "Pisces": "acts intuitively and can move strongly when imagination, compassion or meaning is engaged",
+    "Aries": 'act quickly and would rather test something than discuss it forever',
+    "Taurus": 'act slowly but become formidable once committed',
+    "Gemini": 'act through movement, conversation and experimentation',
+    "Cancer": 'act protectively and become highly motivated when security is at stake',
+    "Leo": 'act boldly when pride, creativity or loyalty is involved',
+    "Virgo": 'act by fixing, organising, improving and taking responsibility for what is not working',
+    "Libra": 'act through negotiation and may hesitate until you have considered every side',
+    "Scorpio": 'act strategically and rarely spend force casually',
+    "Sagittarius": 'act toward freedom, experience and a larger horizon',
+    "Capricorn": 'act methodically and will carry a long effort when the objective is worth it',
+    "Aquarius": 'act independently and will break a pattern other people have normalised',
+    "Pisces": 'act intuitively and move strongly when imagination, compassion or meaning is engaged',
 }
 
 
@@ -8956,10 +9016,7 @@ def _timing_repeated_transit_themes(report) -> list[str]:
 
 
 def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
-    """
-    Build a fuller reader-facing portrait from already-calculated natal placements,
-    then check whether the year's transits reinforce a recurring behavioural tension.
-    """
+    """Write the portrait natively to you. Never convert third-person grammar."""
     refs = dict(_chart_natal_reference_items(snapshot))
     sun = refs.get("Sun sign", "Not calculated")
     moon = refs.get("Moon", "Not calculated")
@@ -8970,58 +9027,52 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
 
     paragraphs = []
 
-    # Core identity + emotional contrast.
     if sun in _SIGN_IDENTITY and moon in _SIGN_EMOTION:
         paragraphs.append(
-            f"You are **{_SIGN_IDENTITY[sun]}**. Your inner emotional life **{_SIGN_EMOTION[moon]}**. "
-            "That contrast matters. You may look simpler from the outside than the decision-making process feels from inside."
+            f"Notice the contradiction. You are {_SIGN_IDENTITY[sun]}. You {_SIGN_EMOTION[moon]}. "
+            "Do not confuse the surface with the decision-making underneath."
         )
     elif sun in _SIGN_IDENTITY:
         paragraphs.append(
-            f"The core identity is **{_SIGN_IDENTITY[sun]}**. Luna treats that as a persistent tendency rather than a fixed personality label."
+            f"Start with the baseline. You are {_SIGN_IDENTITY[sun]}. Do not turn that tendency into a fixed identity."
         )
 
-    # Rising + Mercury: how they appear vs how they think.
     if rising in _SIGN_RISING and mercury in _SIGN_MERCURY:
         paragraphs.append(
-            f"With **{rising} Rising**, you may come across as **{_SIGN_RISING[rising]}**. "
-            f"Mercury in **{mercury}** means you **{_SIGN_MERCURY[mercury]}**. "
-            "What people see first is not always what is happening underneath."
+            f"Watch how you enter a room. {rising} Rising makes you look {_SIGN_RISING[rising]}. "
+            f"Mercury in {mercury} means you {_SIGN_MERCURY[mercury]}. "
+            "Trust what you notice. Verify it before you act."
         )
     elif mercury in _SIGN_MERCURY:
         paragraphs.append(
-            f"Mercury in **{mercury}** suggests a mind that **{_SIGN_MERCURY[mercury]}**."
+            f"Watch your thinking. Mercury in {mercury} means you {_SIGN_MERCURY[mercury]}. "
+            "Name the assumption before it becomes a conclusion."
         )
 
-    # Venus + Mars: relationship need + action pattern.
     if venus in _SIGN_VENUS and mars in _SIGN_MARS:
         paragraphs.append(
-            f"In relationships, Venus in **{venus}** means you **{_SIGN_VENUS[venus]}**. "
-            f"Mars in **{mars}** means you often **{_SIGN_MARS[mars]}**. "
-            "That is where desire and behaviour can split. What you want from another person is not always how you respond when something goes wrong."
+            f"Name what you need. Venus in {venus} means you {_SIGN_VENUS[venus]}. "
+            f"Mars in {mars} means you {_SIGN_MARS[mars]}. "
+            "What you want from another person is not always how you behave when something goes wrong. "
+            "Stop compensating before the imbalance becomes invisible."
         )
 
-    # Use the year's actual transit mix to identify a recurring problem pattern.
     themes = _timing_repeated_transit_themes(report) if report is not None else []
     if "Saturn" in themes and "Uranus" in themes:
         paragraphs.append(
-            "**Saturn asks you to define the responsibility. Uranus asks where the structure has become too restrictive.** "
-            "You may tolerate a great deal, organise around the problem and keep a system functioning long after other people would stop. "
-            "That works — until carrying it costs more than preserving it is worth."
+            "Count the load. Saturn asks you to define responsibility. Uranus asks where the structure has become too restrictive. "
+            "You can keep a bad arrangement alive because you are capable. Capability is not proof that the arrangement deserves you."
         )
         paragraphs.append(
-            "Watch this repeating cycle: **notice what is wrong → fix it → carry more than your share → keep going because you can → "
-            "realise the arrangement costs too much → want freedom immediately**. "
-            "Do not treat capability as proof that the arrangement still deserves you."
+            "Break the cycle earlier. Notice the problem. Fix it. Carry more. Keep going. Get tired. Want out immediately. "
+            "Stop before freedom requires destruction."
         )
     elif "Saturn" in themes:
         paragraphs.append(
-            "Saturn appears often enough in this year's strongest stories that **capacity itself may become the problem**. "
-            "Someone who is competent can be given more responsibility precisely because they keep proving they can absorb it. "
-            "The useful question is not 'Can I handle this?' but **'Should I still be the person handling it?'**"
+            "Count what you are carrying. Saturn keeps returning to responsibility, limits and terms. "
+            "Do not ask only whether you can handle it. Ask whether you should still be the person handling it."
         )
 
-    # Relationship-specific synthesis if Venus / 7th-house stories exist.
     relationship_relevant = False
     if report is not None:
         for story in report.stories:
@@ -9034,14 +9085,13 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
 
     if relationship_relevant:
         paragraphs.append(
-            "You do **not** necessarily struggle to form bonds. The harder question is whether you stay too long in arrangements "
-            "that remain workable because you compensate for the imbalance. When **THE AGREEMENT GETS TESTED** arrives, do not ask only whether love or loyalty exists. "
-            "**Ask whether the terms are mutual enough that you no longer have to carry the relationship for both of you.**"
+            "Test the bond. You do not necessarily struggle to form relationships. "
+            "The harder risk is keeping them alive after the terms stop being equal. "
+            "When THE AGREEMENT GETS TESTED arrives, ask who is carrying the relationship. "
+            "Stop compensating. Keep what remains mutual."
         )
 
     return paragraphs
-
-
 
 def _timing_recurrence_question(story) -> str:
     """Human memory question derived from the transit planet + natal target."""
@@ -9082,16 +9132,12 @@ def _timing_recurrence_question(story) -> str:
 
 
 def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[str]:
-    """
-    Show earlier calculated transit-family echoes and make the memory prompt
-    genuinely useful without pretending Luna knows the event that occurred.
-    """
+    """Use recurrence as memory. Never invent the biography."""
     if not birth_date_value:
         return []
 
     rows = []
     seen = set()
-
     for story in report.stories:
         earlier = _previous_transit_echo_date(story)
         if earlier is None or earlier < birth_date_value:
@@ -9105,29 +9151,15 @@ def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[
         age = earlier.year - birth_date_value.year - (
             (earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day)
         )
-        current_summary = _luna_first_sentence(getattr(story, "summary", ""))
-
-        paragraph = (
-            f"**Around {_timing_date_label(earlier)} (about age {age})** the same broad "
-            f"**{story.transit_planet}–{story.natal_target}** transit family was active. "
-            f"The repeating theme is **{_transit_human_theme(story)}**."
+        rows.append(
+            f"{_timing_date_label(earlier)} · about age {age}. "
+            f"The same broad {story.transit_planet}–{story.natal_target} transit family was active. "
+            f"Think back. {_timing_recurrence_question(story)} "
+            "The event can differ. The pressure can rhyme. Ask what you learned to carry then that you are still carrying now."
         )
-
-        if current_summary:
-            paragraph += (
-                f" In the present cycle Luna describes the issue this way: **{current_summary}** "
-                "The earlier period does not have to contain the same event; it is the same kind of developmental pressure returning in a different life."
-            )
-
-        paragraph += f" **What Luna would ask you to remember:** {_timing_recurrence_question(story)}"
-        rows.append(paragraph)
-
         if len(rows) >= 3:
             break
-
     return rows
-
-
 
 def _timing_relationship_timing(report) -> dict:
     """Find relationship-opening and relationship-testing windows from the ranked transit stories."""
@@ -9173,54 +9205,51 @@ def _timing_relationship_timing(report) -> dict:
 def _render_timing_person_relationship_summary(report, snapshot, birth_date_value: date | None) -> None:
     st.markdown("## The person behind the transits")
     for paragraph in _timing_natal_person_summary(snapshot, report):
-        st.markdown(paragraph)
+        _render_luna_prose(paragraph)
 
     past = _timing_past_pattern_summary(report, birth_date_value)
     if past:
         st.markdown("### What may have repeated before")
-        st.markdown(
-            "**Think back.** The event can be different while the pressure feels familiar. "
-            "Use the dates below as memory prompts, not as claims about what happened."
+        _render_luna_prose(
+            "Think back. Use these dates as memory prompts. Do not force the old event to match the present one."
         )
         for paragraph in past:
-            st.markdown(paragraph)
+            _render_luna_prose(paragraph)
 
     relationship = _timing_relationship_timing(report)
     if relationship:
         st.markdown("## Relationship timing")
-        st.markdown(
-            "**This is an opening. Not a promise.** Let someone get closer. Keep your eyes open. "
-            "The later test is simpler: can the relationship carry equal terms when chemistry is no longer doing all the work?"
+        _render_luna_prose(
+            "Treat the first window as an opening. Not a promise. Let someone get closer. Keep your eyes open. "
+            "Use the later window to test whether the relationship can carry equal terms when chemistry stops doing all the work."
         )
 
         opening = relationship.get("opening")
         if opening:
             start = _timing_story_start(opening)
             end = _timing_story_end(opening)
-            st.markdown(
-                f"**Best opening window · {_timing_date_label(start) if start else '—'} → "
-                f"{_timing_date_label(end) if end else '—'}**  \n"
-                f"**{opening.headline}** is the clearest relationship-opening story in this map. "
-                f"Its strongest dates are **{_timing_story_peak_label(opening)}**. "
-                "**Meet people. Widen the field. Let an existing connection grow if the effort stays mutual.**"
+            _render_luna_prose(
+                f"Best opening window · {_timing_date_label(start) if start else '—'} → "
+                f"{_timing_date_label(end) if end else '—'}. "
+                f"{opening.headline}. Strongest around {_timing_story_peak_label(opening)}. "
+                "Meet people. Widen the field. Let an existing connection grow only if the effort stays mutual."
             )
 
         test = relationship.get("test")
         if test:
             start = _timing_story_start(test)
             end = _timing_story_end(test)
-            st.markdown(
-                f"**Seriousness / commitment window · {_timing_date_label(start) if start else '—'} → "
-                f"{_timing_date_label(end) if end else '—'}**  \n"
-                f"**{test.headline}** becomes strongest around **{_timing_story_peak_label(test)}**. "
-                "If somebody entered earlier, **watch what happens when life becomes ordinary.** Keep what is mutual. Renegotiate what is not."
+            _render_luna_prose(
+                f"Seriousness window · {_timing_date_label(start) if start else '—'} → "
+                f"{_timing_date_label(end) if end else '—'}. "
+                f"{test.headline}. Strongest around {_timing_story_peak_label(test)}. "
+                "Watch what happens when life becomes ordinary. Keep what is mutual. Renegotiate what is not."
             )
-
 
 def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]:
     if not stories:
         return [
-            "**Nothing needs forcing here.** Your natal pattern remains the baseline, but the slow planets are not concentrating enough pressure in this window to justify a major story."
+            "Do not force a story here. Your natal pattern remains the baseline, but the slow planets are not concentrating enough pressure in this window to justify one."
         ]
 
     areas = []
@@ -9233,48 +9262,46 @@ def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]
     second = stories[1] if len(stories) > 1 else None
 
     out = [
-        "**Start with the left wheel: that is you before this period moves.** The right wheel shows where the year presses hardest. "
+        "Start with the left wheel. That is you before this period moves. The right wheel shows where the year presses hardest. "
         "Ignore the colour as good or bad. Use it as concentration.",
         (
-            f"In this **{mode}** view, **"
-            + " and ".join(areas[:3])
-            + f"** are moving together. That is why **{first.headline}** matters"
-            + (f" before **{second.headline}** arrives." if second else ".")
+            f"In this {mode} view, {' and '.join(areas[:3])} move together. "
+            f"That is why {first.headline} matters"
+            + (f" before {second.headline} arrives." if second else ".")
         ),
     ]
     if len(areas) >= 2:
         out.append(
-            f"**A decision in {areas[0]} changes the terms in {areas[1]}.** "
-            "Do not read those houses separately. Read the trade-off between them."
+            f"A decision in {areas[0]} changes the terms in {areas[1]}. "
+            "Do not read those houses separately. Read the trade-off."
         )
     return out
 
 def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
     if not events:
         return {}
+
     chosen = events[:4]
     first = chosen[0]
     paragraphs = [
-        f"**{sign}, this month has an arc rather than four unrelated dates.** "
-        f"It opens with **{first['title']}** around **{first['date_label']}**. "
+        f"{sign}, start with {first['title']} around {first['date_label']}. "
         f"{_luna_first_sentence(first.get('voice_lead') or (first.get('body') or [''])[0])} "
-        "That opening sets the problem the rest of the month keeps answering."
+        "Do not solve the whole month here. Let the first date show you what deserves the next move."
     ]
 
     if len(chosen) >= 2:
         second = chosen[1]
         paragraphs.append(
-            f"The next turn is **{second['title']}** around **{second['date_label']}**. "
+            f"Then {second['title']} arrives around {second['date_label']}. "
             f"{_luna_first_sentence(second.get('voice_lead') or (second.get('body') or [''])[0])} "
-            "**Choose what has enough substance to continue. Let the rest lose priority.**"
+            "Choose what has enough substance to continue. Let the weaker option lose priority."
         )
 
     if len(chosen) >= 3:
         last = chosen[-1]
         paragraphs.append(
-            f"By the later part of the month, **{last['title']}** shows what remains once the earlier noise clears. "
-            f"The month therefore moves from **{first['signal']} → {chosen[1]['signal'] if len(chosen) > 1 else first['signal']} → {last['signal']}**. "
-            "**Carry the lesson forward. Do not reset to zero at every date.**"
+            f"By the later part of the month, {last['title']} shows what survives the earlier noise. "
+            "Keep what still matters after the excitement fades. Carry that forward."
         )
 
     arc = []
@@ -9283,7 +9310,6 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
         if signal and (not arc or arc[-1] != signal):
             arc.append(signal)
     return {"paragraphs": paragraphs, "arc": arc}
-
 
 def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) -> list[str]:
     selected = events if selected_key == "whole" else [e for e in events if e.get("key") == selected_key]
@@ -9296,20 +9322,20 @@ def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) ->
     if selected_key == "whole":
         if labels:
             return [
-                "**Start with the left wheel: that is your baseline.** The right wheel shows where this month gets loud.",
-                "**" + " and ".join(labels) + "** are active together. "
-                "Do not treat them as separate topics. A decision in one changes what you can promise, protect or pursue in the others.",
+                "Start with the left wheel. That is your baseline. The right wheel shows where this month gets loud.",
+                f"{' and '.join(labels)} are active together. Do not read them as separate topics. "
+                "A decision in one changes what you can promise, protect or pursue in the others.",
             ]
         return [
-            "**Start with the left wheel: that is your baseline.** The right wheel shows where this month gets loud.",
-            "**The month is concentrated rather than random.** Follow the strongest dates and keep the same decision thread.",
+            "Start with the left wheel. That is your baseline. The right wheel shows where this month gets loud.",
+            "The month is concentrated rather than random. Follow the strongest dates. Keep the same decision thread.",
         ]
 
     event = selected[0]
     move = str(event.get("move") or "").strip()
     return [
-        f"**This date puts the spotlight on one part of the larger pattern.** Watch where **{event['title']}** lands, then act on the consequence.",
-        (f"**{move}**" if move else "**Notice what becomes harder to postpone. Decide from there.**"),
+        f"This date puts one part of the pattern under the light. Watch where {event['title']} lands. Act on the consequence.",
+        move if move else "Notice what becomes harder to postpone. Decide from there.",
     ]
 
 def _timing_chart_in_motion(report, snapshot) -> None:
@@ -9335,7 +9361,7 @@ def _timing_chart_in_motion(report, snapshot) -> None:
 
     st.markdown("### Read the pressure, not the picture")
     for paragraph in _timing_chart_story(report, snapshot, mode, active_stories):
-        st.markdown(paragraph)
+        _render_luna_prose(paragraph)
 
     timing_active_houses = _timing_active_house_numbers(active_stories)
     active_label = "ACTIVE NOW" if mode == "Now" else f"MOST ACTIVE · {mode.upper()}"
@@ -9551,7 +9577,6 @@ def _timing_story_connection(report, story_index: int) -> list[str]:
     return out
 
 def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
-    """Keep each date inside one monthly story. No editorial scaffolding."""
     if not events or index < 0 or index >= len(events):
         return []
 
@@ -9560,22 +9585,14 @@ def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
     out = []
 
     if previous is None:
-        out.append(
-            "**Do not force the whole month to resolve here.** Let this date show you what has enough weight to deserve the next move."
-        )
+        out.append("Do not force the whole month to resolve here. Let this date show you what deserves the next move.")
     else:
-        out.append(
-            "**Now choose.** The earlier possibility has become concrete enough to test. Keep what proves itself. Let the weaker option lose priority."
-        )
+        out.append("Now choose. The earlier possibility is concrete enough to test. Keep what proves itself. Let the weaker option lose priority.")
 
     if following is not None:
-        out.append(
-            "**Leave room for the next shift.** What you decide here should give you more clarity, not another promise to carry."
-        )
+        out.append("Leave room for the next shift. Make this decision give you clarity, not another promise to carry.")
     else:
-        out.append(
-            "**Keep what still matters after the excitement fades.** That is the part worth carrying into next month."
-        )
+        out.append("Keep what still matters after the excitement fades. Carry that into next month.")
     return out
 
 def _weekly_connected_interpretation(summary: dict) -> list[str]:
@@ -9585,8 +9602,8 @@ def _weekly_connected_interpretation(summary: dict) -> list[str]:
     area_two = areas[1] if len(areas) > 1 else "the choices around them"
 
     return [
-        f"**{area_one} and {area_two} are pulling on each other.** A choice in one changes what you can realistically give in the other.",
-        f"**{move.capitalize()}.** Keep that rule all week. The mood can change. The standard does not have to."
+        f"Watch {area_one} and {area_two}. They pull on each other this week. A choice in one changes what you can realistically give in the other.",
+        f"{move.capitalize()}. Keep that rule all week. The mood can change. The standard does not have to.",
     ]
 
 def _daily_connected_meaning(narrative) -> str:
@@ -9598,9 +9615,9 @@ def _daily_connected_meaning(narrative) -> str:
 
 def _solar_connected_meaning(solar) -> str:
     return (
-        f"**{solar.activated_house_name} is in the foreground.** The Sun is moving through "
-        f"**{solar.solar_sign} / {solar.solar_process}** while local light is **{solar.light_direction.lower()}**. "
-        f"**{solar.focus_meaning}** Use that as the move."
+        f"Put {solar.activated_house_name} in the foreground. The Sun is moving through "
+        f"{solar.solar_sign} / {solar.solar_process} while local light is {solar.light_direction.lower()}. "
+        f"{solar.focus_meaning} Use that as the move."
     )
 
 def timing_map_page() -> None:
@@ -9693,9 +9710,9 @@ def timing_map_page() -> None:
     year_story = _timing_year_story(report)
     if year_story:
         st.markdown("## The story of your year")
-        st.markdown("**Start with the argument, not the planets.** This year keeps returning to the same few choices in different parts of your life.")
+        _render_luna_prose("Start with the argument, not the planets. This year keeps returning to the same few choices in different parts of your life.")
         for paragraph in year_story.get("paragraphs", []):
-            st.markdown(paragraph)
+            _render_luna_prose(paragraph)
 
         arc = list(year_story.get("arc", []) or [])
         if arc:
@@ -9706,7 +9723,7 @@ def timing_map_page() -> None:
                 unsafe_allow_html=True,
             )
 
-        st.markdown(year_story.get("chart_bridge", ""))
+        _render_luna_prose(year_story.get("chart_bridge", ""))
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
     if timing_snapshot is not None:
@@ -9760,7 +9777,10 @@ def timing_map_page() -> None:
             st.markdown(article_html, unsafe_allow_html=True)
 
             for connection_paragraph in _timing_story_connection(report, number - 1):
-                st.markdown(f'<div class="luna-connection">{connection_paragraph}</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph))}</div>',
+                    unsafe_allow_html=True,
+                )
 
             birth_date_for_history = st.session_state.get("timing-map-birth-date-v334")
             if isinstance(birth_date_for_history, str):
@@ -9915,7 +9935,7 @@ def solar_year_page() -> None:
     )
 
     st.markdown("### What this means together")
-    st.markdown(_solar_connected_meaning(solar))
+    _render_luna_prose(_solar_connected_meaning(solar))
 
     st.markdown("## Historical symbolism and factual boundary")
     st.markdown(

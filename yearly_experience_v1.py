@@ -327,6 +327,10 @@ def build_yearly_experience_html(
   font-weight:500; letter-spacing:-.035em;
 }}
 .luna-yearly-report p {{ font-size:clamp(.98rem,1.35vw,1.12rem); line-height:1.58; }}
+
+.luna-yearly-report p strong { font-weight:inherit; font-size:inherit; line-height:inherit; }
+.luna-year-prose p { max-width:760px; margin-bottom:1.3rem; line-height:1.72; }
+
 .luna-year-hero {{ display:grid; gap:.85rem; padding:clamp(1.15rem,2.8vw,2rem); background:#050505; color:#fff; min-height:0!important; }}
 .luna-year-meta {{ display:flex; justify-content:space-between; gap:1rem; padding-bottom:.8rem; border-bottom:1px solid rgba(255,255,255,.28); font-family:"IBM Plex Mono",monospace; font-size:.65rem; text-transform:uppercase; }}
 .luna-year-hero h1 {{ max-width:760px; margin:.45rem 0 .3rem; color:#fff; font-size:clamp(2.45rem,5.5vw,4.45rem); line-height:.95; }}

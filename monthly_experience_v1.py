@@ -1408,6 +1408,20 @@ def build_monthly_experience_html(
   line-height:1.58;
   margin:.4rem 0 .9rem;
 }}
+
+.luna-monthly-report p strong {
+  font-weight:inherit;
+  font-size:inherit;
+  line-height:inherit;
+}
+.luna-monthly-report p {
+  max-width:760px;
+  margin-bottom:1.25rem;
+}
+.luna-monthly-section {
+  margin-top:clamp(2.8rem,6vw,5.2rem);
+}
+
 .luna-monthly-sky-map {{
   padding-bottom:1.25rem;
 }}
