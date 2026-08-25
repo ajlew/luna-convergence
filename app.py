@@ -7645,7 +7645,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
 
         for connection_paragraph in _monthly_event_connection(events, number - 1):
             st.markdown(
-                f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product='monthly'))}</div>',
+                f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product="monthly"))}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -9783,7 +9783,7 @@ def timing_map_page() -> None:
 
             for connection_paragraph in _timing_story_connection(report, number - 1):
                 st.markdown(
-                    f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product='timing'))}</div>',
+                    f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product="timing"))}</div>',
                     unsafe_allow_html=True,
                 )
 
