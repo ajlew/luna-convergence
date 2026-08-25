@@ -648,7 +648,7 @@ def _luna_voice(
             "does not cancel the opportunity. It shows what the opportunity needs "
             "in order to become real.",
             f"By {final_date}, the story moves from possibility to placement. "
-            "Career, visibility, home and emotional security ask where this person "
+            "Career, visibility, home and emotional security ask where you "
             "or opportunity actually fits. A real connection can discuss timing, "
             "money and expectations without losing warmth. What continues has "
             "earned its place; what fades has still given you useful information.",
@@ -2101,7 +2101,7 @@ def monthly_narrative_markdown(narrative: MonthlyNarrative) -> str:
         "",
         narrative.subtitle,
         "",
-        "## Luna says",
+        "## What matters now",
         "",
         *narrative.luna_says,
         "",

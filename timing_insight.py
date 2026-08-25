@@ -200,34 +200,34 @@ TRANSIT_FRAME = {
 
 TRANSIT_OPENINGS = {
     "Jupiter": (
-        "Jupiter increases room, reach or confidence",
-        "The available field gets wider under Jupiter",
-        "Jupiter makes a larger option easier to see and easier to believe in",
-        "Scale becomes possible under Jupiter, but selection matters more than enthusiasm",
+        "You have more room than before",
+        "A larger option is becoming visible",
+        "Confidence is rising; use it on something that creates future choice",
+        "More is available, but more is not automatically better",
     ),
     "Saturn": (
-        "Saturn makes cost, duty and consequence harder to keep implicit",
-        "What has been carried informally starts asking for terms under Saturn",
-        "Saturn slows the situation until responsibility can be counted",
-        "A vague obligation becomes more measurable when Saturn reaches this part of the chart",
+        "What you have carried informally now needs terms",
+        "Responsibility is getting heavier; make the cost explicit",
+        "Stop treating the obligation as background noise",
+        "The structure now has to prove it can carry its own weight",
     ),
     "Uranus": (
-        "Uranus exposes where freedom and flexibility have become non-negotiable",
-        "The old arrangement loses some of its inevitability under Uranus",
-        "Uranus makes the cost of staying unchanged easier to notice",
-        "A different route becomes thinkable once Uranus disturbs the old default",
+        "What felt fixed is becoming negotiable",
+        "You can see where the arrangement has too little room",
+        "The cost of staying unchanged is getting harder to ignore",
+        "A different route is becoming possible",
     ),
     "Neptune": (
-        "Neptune weakens false certainty and enlarges imagination",
-        "The line between signal and projection gets thinner under Neptune",
-        "Neptune makes the story more compelling while making proof more important",
-        "Certainty softens here, which can deepen insight or enlarge confusion",
+        "The story is getting louder while the evidence gets thinner",
+        "Do not confuse a compelling feeling with proof",
+        "Imagination is useful here; certainty is not",
+        "Slow the interpretation down before you make the irreversible move",
     ),
     "Pluto": (
-        "Pluto reveals where leverage, dependency or control has already shifted",
-        "The hidden power structure becomes harder to ignore under Pluto",
-        "Pluto concentrates the issue until neutrality stops being a convincing position",
-        "An old balance of power becomes less stable once Pluto reaches this part of the chart",
+        "The real power structure is becoming harder to ignore",
+        "Leverage has shifted; stop negotiating with the old balance",
+        "Neutrality is becoming less believable",
+        "Look at who can actually decide, withhold or redirect the outcome",
     ),
 }
 
@@ -532,8 +532,8 @@ def build_story_language(
     pair = PAIR_INSIGHT.get((transit_planet, target_planet))
     if not pair:
         pair = (
-            f"This puts {target} under a different kind of pressure. "
-            f"The useful question is not what the transit 'means' in the abstract, but what becomes harder to ignore in the decisions already in front of you."
+            f"{target.capitalize()} is under pressure. "
+            "Stop asking what the transit means in the abstract. Ask what has become harder to ignore in the decision already in front of you."
         )
 
     lead = _pick(ASPECT_LEADS[aspect], seed + 1)
@@ -701,11 +701,11 @@ def dates_to_remember(stories: Sequence, limit: int = 3) -> tuple[RememberDate, 
 
 def year_closing(stories: Sequence, games: Sequence[MajorGame]) -> str:
     if not stories:
-        return "The year is unusually quiet at Luna's current threshold; no single long-range pattern dominates the map."
+        return "Nothing needs forcing. No single long-range pattern dominates this map at Luna's current threshold."
     dominant = games[0] if games else None
     strongest = strongest_story(stories)
     if dominant is None or strongest is None:
-        return "The useful result is not a prediction but a hierarchy: which pressures deserve attention first, and when the board changes."
+        return "Choose the pressures that deserve attention first. Ignore the rest until the board changes."
 
     frame = TRANSIT_FRAME[dominant.transit_planet]
     second = games[1] if len(games) > 1 else None
@@ -713,14 +713,12 @@ def year_closing(stories: Sequence, games: Sequence[MajorGame]) -> str:
     if second is not None:
         bridge = COUNTERCURRENT.get(
             (dominant.transit_planet, second.transit_planet),
-            f" {second.transit_planet} complicates that story by asking a different question at the same time.",
+            f"{second.transit_planet} is active at the same time, so one answer will not solve every part of the year.",
         )
-        if bridge and not bridge.startswith(" "):
-            bridge = " " + bridge
 
     return (
-        f"The year keeps returning to one central problem: {frame['game_question'].lower()} "
-        f"The strongest single contact is {strongest.transit_planet} {strongest.aspect} natal {strongest.natal_target}, "
-        f"but the useful reading is larger than that one transit.{bridge} "
-        f"By the end of the map, the advantage belongs to the choices that still make sense after both opportunity and cost are visible."
+        f"Keep returning to this question: {frame['game_question']} "
+        f"The strongest single contact is {strongest.transit_planet} {strongest.aspect} natal {strongest.natal_target}. "
+        f"{bridge} Choose what still makes sense after both opportunity and cost are visible."
     )
+

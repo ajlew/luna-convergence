@@ -295,41 +295,46 @@ def _scenario_lines(target: NatalPosition, transit_planet: str, aspect: str) -> 
     house_domain = HOUSE_NAMES.get(target.house or 0, "")
 
     if aspect in {"square", "opposition"}:
-        first = f"A tension around {domain} becomes harder to solve by postponing the choice."
+        first = f"Stop postponing the choice around {domain}; the tension is already showing you where the weak point is."
     elif aspect in {"trine", "sextile"}:
-        first = f"Support around {domain} becomes easier to use if you make a concrete move while the opening is active."
+        first = f"Use the support around {domain} while the opening is active. Make one concrete move."
     else:
-        first = f"A concentrated reset around {domain} makes the old default less neutral than it used to be."
+        first = f"Treat {domain} as active, not background. The old default is no longer neutral."
 
     if house_domain:
-        second = f"The most visible real-world arena is likely to involve {house_domain}."
+        second = f"Watch {house_domain}. That is where the consequence is most likely to become visible."
     else:
-        second = "Watch for the pattern in the part of life already demanding the clearest decision."
+        second = "Watch the part of life already asking for the clearest decision."
 
     if transit_planet == "Neptune":
-        third = "A promise, impression or fear may feel convincing before the facts are complete."
+        third = "Verify the promise, impression or fear before you let it make the decision."
     elif transit_planet == "Uranus":
-        third = "An unexpected change can reveal where the current arrangement has too little room to move."
+        third = "Test more freedom before you destroy the structure that currently contains it."
     elif transit_planet == "Saturn":
-        third = "A responsibility, deadline or boundary may expose what the arrangement actually costs to maintain."
+        third = "Count the cost. Put the responsibility, deadline or boundary into explicit terms."
     elif transit_planet == "Jupiter":
-        third = "An offer, introduction or increase in scope may be useful precisely because it asks you to think bigger."
+        third = "Take the larger option only if it gives you more usable capacity, not just more activity."
     else:
-        third = "A control issue, dependency or old power arrangement may become visible enough that neutrality is no longer realistic."
+        third = "Name the real power structure. Stop pretending neutrality will keep the old balance intact."
     return (first, second, third)
-
 
 def _summary(target: NatalPosition, transit_planet: str, aspect: str) -> str:
     domain = TARGET_DOMAINS.get(target.planet, target.planet.lower())
-    transit_function = TRANSIT_FUNCTION[transit_planet]
     if aspect in {"square", "opposition"}:
-        relation = "The friction is useful because it exposes the condition that cannot remain vague."
+        relation = "The friction is useful. It exposes the condition you can no longer leave vague."
     elif aspect in {"trine", "sextile"}:
-        relation = "The support is real, but it still needs a decision before it becomes a result."
+        relation = "The support is real. Use it before it becomes background."
     else:
-        relation = "The two themes are temporarily concentrated, so the issue becomes difficult to treat as background noise."
-    return f"{transit_planet} {transit_function}. In your chart this lands on {domain}. {relation}"
+        relation = "The two themes are concentrated now. Stop treating the issue as background noise."
 
+    transit_line = {
+        "Jupiter": "More room is available.",
+        "Saturn": "The cost and responsibility need terms.",
+        "Uranus": "The old structure has too little room.",
+        "Neptune": "The story needs proof.",
+        "Pluto": "The real power structure is showing itself.",
+    }[transit_planet]
+    return f"{transit_line} In your chart this lands on {domain}. {relation}"
 
 def _story_score(transit_planet: str, target: NatalPosition, aspect: str, hit_count: int) -> float:
     score = TRANSIT_WEIGHTS[transit_planet]

@@ -856,6 +856,16 @@ a {
     line-height:1.72;
 }
 
+.stMarkdown p strong,
+.stMarkdown li strong,
+.stMarkdown blockquote strong,
+.timing-story-copy strong,
+.chart-motion-summary strong,
+.luna-connection strong {
+    font-size: inherit !important;
+    line-height: inherit !important;
+}
+
 .lean-daily-meaning {
     max-width:680px;
     margin:-1.1rem 0 2rem;
@@ -3779,7 +3789,7 @@ def weekly_page() -> None:
     st.markdown('<div class="weekly-kicker">Week ahead · Monday to Sunday</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="weekly-range">{escape(week_label(monday))}</div>', unsafe_allow_html=True)
     st.markdown("# One changing sky.")
-    st.markdown("The planets make one shared pattern. **Where that pattern lands depends on your sign.**")
+    st.markdown("**Choose your sign. See where the week lands. Keep one rule while the mood changes.**")
     sign = st.selectbox("Where does it land for you?", SIGNS, key="weekly-sign-v331")
     try:
         _render_weekly_sign_layer(sign, monday, timezone_name)
@@ -7454,7 +7464,7 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
         unsafe_allow_html=True,
     )
 
-    st.markdown("### What this chart is saying")
+    st.markdown("### Read the month, not the picture")
     for paragraph in _monthly_chart_story(result, events, selected_key):
         st.markdown(paragraph)
 
@@ -7537,10 +7547,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     month_story = _monthly_story_of_month(events, sign)
     if month_story:
         st.markdown("## The story of your month")
-        st.markdown(
-            "Luna reads the month's strongest dates as one developing sequence — what opens the problem, "
-            "what changes the terms, and what the later dates leave you with."
-        )
+        st.markdown("**Follow the sequence.** What opens early changes what you can choose later.")
         for paragraph in month_story.get("paragraphs", []):
             st.markdown(paragraph)
         month_arc = list(month_story.get("arc", []) or [])
@@ -7593,9 +7600,8 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         )
         st.markdown(article_html, unsafe_allow_html=True)
 
-        st.markdown("### How this fits the month")
         for connection_paragraph in _monthly_event_connection(events, number - 1):
-            st.markdown(connection_paragraph)
+            st.markdown(f'<div class="luna-connection">{connection_paragraph}</div>', unsafe_allow_html=True)
 
         _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years)
 
@@ -7871,8 +7877,8 @@ def natal_snapshot_page() -> None:
     st.markdown('<div class="eyebrow">Free · natal snapshot</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">What keeps<br>repeating?</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="natal-intro">Luna reads the natal chart as a persistent pattern, not a verdict. '
-        'Give the birth time only if you know it. If the time or location is uncertain, Luna leaves the Ascendant and houses out rather than inventing precision.</div>',
+        '<div class="natal-intro"><strong>This is your baseline.</strong> Your Sun, Moon, Rising, Mercury, Venus and Mars describe different parts of the same person. '
+        'Give the birth time only if you know it. If the time or location is uncertain, the angles stay out rather than pretending to know more than the data supports.</div>',
         unsafe_allow_html=True,
     )
 
@@ -8077,8 +8083,8 @@ def natal_snapshot_page() -> None:
 
     st.markdown("### How these pieces fit together")
     st.markdown(
-        "The placements above are not six separate personality labels. Luna reads them as one person: "
-        "what the person wants, what they feel, how they appear, how they think, what they need from relationships and how they act when something needs to change."
+        "**Read these placements together.** What you want, what you feel, how you appear, how you think, what you need from relationships "
+        "and how you act under pressure belong to the same person: you."
     )
     for paragraph in _timing_natal_person_summary(snapshot, None):
         st.markdown(paragraph)
@@ -8491,13 +8497,7 @@ def _timing_pick_story_anchors(ordered: list, limit: int = 6) -> list:
 
 
 def _timing_year_story(report) -> dict:
-    """
-    Luna's annual narrator.
-
-    The individual transit cards remain the detailed evidence. This section
-    connects the strongest calculated contacts into one readable annual arc,
-    using only the report's own dates, headlines, areas and interpretations.
-    """
+    """Connect the calculated year into one direct, reader-facing argument."""
     if not report.stories:
         return {}
 
@@ -8509,81 +8509,65 @@ def _timing_year_story(report) -> dict:
     if not anchors:
         return {}
 
-    def story_bits(story) -> dict:
+    def bits(story):
         start_date = _timing_story_start(story) or _timing_story_sort_date(story, report.end_date)
         return {
             "headline": str(getattr(story, "headline", "") or "A major transit").strip(),
-            "planet": str(getattr(story, "transit_planet", "") or "A slower-moving planet").strip(),
-            "signal": _timing_signal_type(story),
+            "planet": str(getattr(story, "transit_planet", "") or "").strip(),
             "area": _timing_story_life_area(story),
-            "summary": _timing_story_first_sentence(getattr(story, "summary", "")),
             "start": _timing_date_label(start_date),
             "peak": _timing_story_peak_label(story),
             "verb": _timing_story_arc_verb(story),
         }
 
-    bits = [story_bits(story) for story in anchors]
-
+    rows = [bits(story) for story in anchors]
     paragraphs = []
 
-    # Opening phase: establish the central tension instead of listing events.
-    first = bits[0]
-    if len(bits) > 1:
-        second = bits[1]
+    first = rows[0]
+    if len(rows) > 1:
+        second = rows[1]
         paragraphs.append(
-            f"The year opens with **{first['headline']}** from **{first['start']}**, "
-            f"with {first['planet']} concentrating attention on **{first['area']}**. "
-            f"{first['summary']} "
-            f"Almost alongside it comes **{second['headline']}**, a **{second['signal'].lower()}** "
-            f"story focused on **{second['area']}**. "
-            f"Read together, these are not competing forecasts: the opening phase asks you to "
-            f"**{first['verb'].lower()} what is already demanding an answer while making room for what comes next**."
+            f"You enter the year with **{first['headline']}** on **{first['start']}**. "
+            f"{first['planet']} puts pressure on **{first['area']}**. "
+            f"Almost immediately, **{second['headline']}** moves the question into **{second['area']}**. "
+            f"These are not separate forecasts. **{first['verb'].title()} what already demands an answer. Leave room for what comes next.**"
         )
     else:
         paragraphs.append(
-            f"The year opens with **{first['headline']}** from **{first['start']}**, "
-            f"with {first['planet']} concentrating attention on **{first['area']}**. "
-            f"{first['summary']} "
-            f"The first task of the year is to **{first['verb'].lower()}** rather than treating the transit as an isolated event."
+            f"You enter the year with **{first['headline']}** on **{first['start']}**. "
+            f"{first['planet']} puts pressure on **{first['area']}**. "
+            f"**{first['verb'].title()} what already demands an answer.**"
         )
 
-    # Development phase: connect the middle of the year to the opening.
-    if len(bits) >= 4:
-        third, fourth = bits[2], bits[3]
+    if len(rows) >= 4:
+        third, fourth = rows[2], rows[3]
         paragraphs.append(
-            f"As the year develops, **{third['headline']}** moves the story into **{third['area']}** "
-            f"from **{third['start']}**. {third['summary']} "
-            f"Then **{fourth['headline']}** shifts the emphasis toward **{fourth['area']}**. "
-            f"The connection is practical: what was defined or opened earlier now has to work in a wider part of life. "
-            f"Luna is therefore reading the middle of the year as a progression from "
-            f"**{third['verb']} → {fourth['verb']}**, not as two unrelated predictions."
+            f"Then the pressure moves. **{third['headline']}** reaches **{third['area']}** from **{third['start']}**. "
+            f"After that, **{fourth['headline']}** shifts the terms again through **{fourth['area']}**. "
+            "**Do not solve each chapter in isolation. Let the earlier decision improve the position you carry into the next one.**"
         )
-    elif len(bits) >= 3:
-        third = bits[2]
+    elif len(rows) >= 3:
+        third = rows[2]
         paragraphs.append(
-            f"The next phase is **{third['headline']}**, beginning **{third['start']}** in **{third['area']}**. "
-            f"{third['summary']} "
-            f"This develops the opening story by moving the question from recognition into **{third['verb'].lower()}**."
+            f"Next comes **{third['headline']}** on **{third['start']}** in **{third['area']}**. "
+            f"**{third['verb'].title()} here. Do not drag the opening problem into the next phase unchanged.**"
         )
 
-    # Later phase: show consequence and resolution.
-    if len(bits) >= 6:
-        fifth, sixth = bits[4], bits[5]
+    if len(rows) >= 6:
+        fifth, sixth = rows[4], rows[5]
         paragraphs.append(
-            f"By the later phase, **{fifth['headline']}** brings the deeper consequence into **{fifth['area']}**, "
-            f"with its strongest dates around **{fifth['peak']}**. {fifth['summary']} "
-            f"The cycle then carries into **{sixth['headline']}**, beginning **{sixth['start']}** in **{sixth['area']}**. "
-            f"This is where the year stops being only about understanding the pattern and becomes about changing the terms under which it continues."
+            f"By the later phase, **{fifth['headline']}** makes the deeper consequence visible in **{fifth['area']}**, "
+            f"with the strongest pressure around **{fifth['peak']}**. "
+            f"Then **{sixth['headline']}** reaches **{sixth['area']}** from **{sixth['start']}**. "
+            "**Stop analysing the old pattern once the choice is clear. Change the conditions that keep rebuilding it.**"
         )
-    elif len(bits) >= 5:
-        fifth = bits[4]
+    elif len(rows) >= 5:
+        fifth = rows[4]
         paragraphs.append(
-            f"Later, **{fifth['headline']}** concentrates the question in **{fifth['area']}**, "
-            f"with its strongest dates around **{fifth['peak']}**. {fifth['summary']} "
-            f"The later phase therefore asks for **{fifth['verb'].lower()}** rather than a return to the earlier arrangement."
+            f"Later, **{fifth['headline']}** concentrates the question in **{fifth['area']}**, strongest around **{fifth['peak']}**. "
+            f"**{fifth['verb'].title()} what is real now. Do not return to the earlier arrangement just because it is familiar.**"
         )
 
-    # Build a concise annual arc from distinct calculated signal types.
     arc = []
     for story in ordered:
         verb = _timing_story_arc_verb(story)
@@ -8592,7 +8576,6 @@ def _timing_year_story(report) -> dict:
         if len(arc) >= 6:
             break
 
-    # Tell the reader what the chart immediately below is proving.
     areas = []
     for story in anchors:
         area = _timing_story_life_area(story)
@@ -8602,19 +8585,12 @@ def _timing_year_story(report) -> dict:
             break
 
     chart_bridge = (
-        "The chart below is the evidence layer for this narrative. "
-        "Look for the concentration of activity around "
+        "**Now look at the chart.** The concentration is not random. "
         + ", ".join(f"**{area}**" for area in areas)
-        + ". The natal wheel stays as the reference; the activation layer shows where the moving sky is making the strongest contact."
+        + " are being activated together. A choice in one area changes what becomes acceptable in the others."
     )
 
-    return {
-        "paragraphs": paragraphs,
-        "arc": arc,
-        "chart_bridge": chart_bridge,
-    }
-
-
+    return {"paragraphs": paragraphs, "arc": arc, "chart_bridge": chart_bridge}
 
 def _timing_reader_move(story) -> str:
     """
@@ -8997,9 +8973,8 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
     # Core identity + emotional contrast.
     if sun in _SIGN_IDENTITY and moon in _SIGN_EMOTION:
         paragraphs.append(
-            f"I would describe this person as **{_SIGN_IDENTITY[sun]}**, but with an inner emotional life that "
-            f"**{_SIGN_EMOTION[moon]}**. That combination matters: the person other people meet may look simpler than the "
-            "person actually making the decision inside."
+            f"You are **{_SIGN_IDENTITY[sun]}**. Your inner emotional life **{_SIGN_EMOTION[moon]}**. "
+            "That contrast matters. You may look simpler from the outside than the decision-making process feels from inside."
         )
     elif sun in _SIGN_IDENTITY:
         paragraphs.append(
@@ -9009,9 +8984,9 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
     # Rising + Mercury: how they appear vs how they think.
     if rising in _SIGN_RISING and mercury in _SIGN_MERCURY:
         paragraphs.append(
-            f"With **{rising} Rising**, other people may experience them as **{_SIGN_RISING[rising]}**. "
-            f"Mercury in **{mercury}** adds a mind that **{_SIGN_MERCURY[mercury]}**. "
-            "So the outward style and the private reasoning process are not necessarily the same thing."
+            f"With **{rising} Rising**, you may come across as **{_SIGN_RISING[rising]}**. "
+            f"Mercury in **{mercury}** means you **{_SIGN_MERCURY[mercury]}**. "
+            "What people see first is not always what is happening underneath."
         )
     elif mercury in _SIGN_MERCURY:
         paragraphs.append(
@@ -9021,24 +8996,23 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
     # Venus + Mars: relationship need + action pattern.
     if venus in _SIGN_VENUS and mars in _SIGN_MARS:
         paragraphs.append(
-            f"In relationships, Venus in **{venus}** **{_SIGN_VENUS[venus]}**. "
-            f"Mars in **{mars}** means the person often **{_SIGN_MARS[mars]}**. "
-            "This is where attraction and behaviour can diverge: what they want from another person is not always the same as the way they respond when something goes wrong."
+            f"In relationships, Venus in **{venus}** means you **{_SIGN_VENUS[venus]}**. "
+            f"Mars in **{mars}** means you often **{_SIGN_MARS[mars]}**. "
+            "That is where desire and behaviour can split. What you want from another person is not always how you respond when something goes wrong."
         )
 
     # Use the year's actual transit mix to identify a recurring problem pattern.
     themes = _timing_repeated_transit_themes(report) if report is not None else []
     if "Saturn" in themes and "Uranus" in themes:
         paragraphs.append(
-            "This year's transit pattern adds an important tension: **Saturn repeatedly asks for responsibility, limits and explicit terms, "
-            "while Uranus repeatedly asks where the structure has become too restrictive**. "
-            "That often describes somebody who can tolerate a great deal, organise around a problem and keep a system functioning — "
-            "until the cost of carrying it becomes more important than preserving it."
+            "**Saturn asks you to define the responsibility. Uranus asks where the structure has become too restrictive.** "
+            "You may tolerate a great deal, organise around the problem and keep a system functioning long after other people would stop. "
+            "That works — until carrying it costs more than preserving it is worth."
         )
         paragraphs.append(
-            "A possible repeating cycle is therefore: **notice what is wrong → try to fix it → carry more than your share → "
-            "keep going because you can → eventually realise the arrangement is costing too much → want freedom very quickly**. "
-            "Luna is not claiming this is the person's biography; it is the behavioural question the natal pattern and this year's transits raise together."
+            "Watch this repeating cycle: **notice what is wrong → fix it → carry more than your share → keep going because you can → "
+            "realise the arrangement costs too much → want freedom immediately**. "
+            "Do not treat capability as proof that the arrangement still deserves you."
         )
     elif "Saturn" in themes:
         paragraphs.append(
@@ -9060,10 +9034,9 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
 
     if relationship_relevant:
         paragraphs.append(
-            "The relationship transits make the portrait more specific. This is **not someone who necessarily struggles to form bonds**; "
-            "the harder question is whether they stay too long in arrangements that remain workable only because they are willing to compensate for the imbalance. "
-            "When Luna later says **'THE AGREEMENT GETS TESTED'**, the test is not simply whether love or loyalty exists. "
-            "It is whether the terms are mutual enough that one person no longer has to carry the relationship for both."
+            "You do **not** necessarily struggle to form bonds. The harder question is whether you stay too long in arrangements "
+            "that remain workable because you compensate for the imbalance. When **THE AGREEMENT GETS TESTED** arrives, do not ask only whether love or loyalty exists. "
+            "**Ask whether the terms are mutual enough that you no longer have to carry the relationship for both of you.**"
         )
 
     return paragraphs
@@ -9199,11 +9172,6 @@ def _timing_relationship_timing(report) -> dict:
 
 def _render_timing_person_relationship_summary(report, snapshot, birth_date_value: date | None) -> None:
     st.markdown("## The person behind the transits")
-    st.markdown(
-        "Transits are best at showing **what is being activated**. The natal chart is better at describing "
-        "**the person carrying the activation**. Luna therefore combines the permanent natal pattern with the year's repeated transit themes "
-        "to describe likely tendencies, tensions and coping styles — **not a diagnosis and not a claim about somebody's biography**."
-    )
     for paragraph in _timing_natal_person_summary(snapshot, report):
         st.markdown(paragraph)
 
@@ -9211,8 +9179,8 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
     if past:
         st.markdown("### What may have repeated before")
         st.markdown(
-            "Slow-planet transits can return to related geometry years later. Luna uses those recurrences to ask better memory questions, "
-            "not to invent a biography."
+            "**Think back.** The event can be different while the pressure feels familiar. "
+            "Use the dates below as memory prompts, not as claims about what happened."
         )
         for paragraph in past:
             st.markdown(paragraph)
@@ -9221,8 +9189,8 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
     if relationship:
         st.markdown("## Relationship timing")
         st.markdown(
-            "Luna separates **an opening for connection** from **a test of whether the relationship can carry real terms**. "
-            "These are astrological windows, not guarantees that a particular person appears."
+            "**This is an opening. Not a promise.** Let someone get closer. Keep your eyes open. "
+            "The later test is simpler: can the relationship carry equal terms when chemistry is no longer doing all the work?"
         )
 
         opening = relationship.get("opening")
@@ -9234,7 +9202,7 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
                 f"{_timing_date_label(end) if end else '—'}**  \n"
                 f"**{opening.headline}** is the clearest relationship-opening story in this map. "
                 f"Its strongest dates are **{_timing_story_peak_label(opening)}**. "
-                "This is the better period for meeting, widening the field, becoming more visible to others or allowing an existing connection to grow."
+                "**Meet people. Widen the field. Let an existing connection grow if the effort stays mutual.**"
             )
 
         test = relationship.get("test")
@@ -9245,50 +9213,41 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
                 f"**Seriousness / commitment window · {_timing_date_label(start) if start else '—'} → "
                 f"{_timing_date_label(end) if end else '—'}**  \n"
                 f"**{test.headline}** becomes strongest around **{_timing_story_peak_label(test)}**. "
-                "If somebody enters during the earlier opening, this later period is more useful for seeing whether the agreement is mutual, sustainable and worth formalising."
+                "If somebody entered earlier, **watch what happens when life becomes ordinary.** Keep what is mutual. Renegotiate what is not."
             )
 
 
 def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]:
     if not stories:
         return [
-            "The natal wheel still describes the permanent pattern, but the activation wheel is quiet in this view. "
-            "Luna does not force a major transit story when the slow planets are not making a strong enough contact."
+            "**Nothing needs forcing here.** Your natal pattern remains the baseline, but the slow planets are not concentrating enough pressure in this window to justify a major story."
         ]
 
     areas = []
-    contacts = []
     for story in stories[:4]:
         area = _timing_story_life_area(story)
         if area not in areas:
             areas.append(area)
-        contact = f"{story.transit_planet} → natal {story.natal_target}"
-        if contact not in contacts:
-            contacts.append(contact)
 
     first = stories[0]
     second = stories[1] if len(stories) > 1 else None
 
     out = [
-        "The **left wheel** is the permanent natal board. The **right wheel** is the moving pressure map. "
-        "A shaded sector means that life area is unusually active; the contact lines show which natal points are actually being pressed or opened. "
-        "The chart is therefore showing concentration, not fate.",
+        "**Start with the left wheel: that is you before this period moves.** The right wheel shows where the year presses hardest. "
+        "Ignore the colour as good or bad. Use it as concentration.",
         (
-            f"In this **{mode}** view, the strongest concentration falls around "
-            + ", ".join(f"**{area}**" for area in areas[:3])
-            + ". The clearest contacts are "
-            + ", ".join(f"**{contact}**" for contact in contacts[:3])
-            + f". That is why Luna leads with **{first.headline}**"
-            + (f" and then develops the story through **{second.headline}**." if second else ".")
+            f"In this **{mode}** view, **"
+            + " and ".join(areas[:3])
+            + f"** are moving together. That is why **{first.headline}** matters"
+            + (f" before **{second.headline}** arrives." if second else ".")
         ),
     ]
     if len(areas) >= 2:
         out.append(
-            f"The important part is the **connection between {areas[0]} and {areas[1]}**. "
-            "A decision in one area can change the terms in the other. That connection is the convergence the individual transit chapters explain date by date."
+            f"**A decision in {areas[0]} changes the terms in {areas[1]}.** "
+            "Do not read those houses separately. Read the trade-off between them."
         )
     return out
-
 
 def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
     if not events:
@@ -9307,7 +9266,7 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
         paragraphs.append(
             f"The next turn is **{second['title']}** around **{second['date_label']}**. "
             f"{_luna_first_sentence(second.get('voice_lead') or (second.get('body') or [''])[0])} "
-            "Read it as a development of the first story: what was only pressure, possibility or uncertainty now has to become a choice, boundary or usable opening."
+            "**Choose what has enough substance to continue. Let the rest lose priority.**"
         )
 
     if len(chosen) >= 3:
@@ -9315,7 +9274,7 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
         paragraphs.append(
             f"By the later part of the month, **{last['title']}** shows what remains once the earlier noise clears. "
             f"The month therefore moves from **{first['signal']} → {chosen[1]['signal'] if len(chosen) > 1 else first['signal']} → {last['signal']}**. "
-            "The value is in following the sequence, not treating every date as a separate horoscope."
+            "**Carry the lesson forward. Do not reset to zero at every date.**"
         )
 
     arc = []
@@ -9335,25 +9294,23 @@ def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) ->
     labels = [_CHART_HOUSE_KEY.get(h, f"House {h}") for h in houses[:4]]
 
     if selected_key == "whole":
-        first = selected[0]
-        last = selected[-1]
+        if labels:
+            return [
+                "**Start with the left wheel: that is your baseline.** The right wheel shows where this month gets loud.",
+                "**" + " and ".join(labels) + "** are active together. "
+                "Do not treat them as separate topics. A decision in one changes what you can promise, protect or pursue in the others.",
+            ]
         return [
-            "The **left wheel** is your natal reference. The **right wheel** shows where this month's sky is landing against it. "
-            "The shaded houses are not good or bad; they show where the month is concentrating activity.",
-            f"Across the month, the chart gathers most strongly around "
-            + ", ".join(f"**{label}**" for label in labels)
-            + f". That is why the narrative begins with **{first['title']}** and ends with **{last['title']}**: "
-            "the pressure is moving between connected life areas rather than producing four disconnected predictions.",
+            "**Start with the left wheel: that is your baseline.** The right wheel shows where this month gets loud.",
+            "**The month is concentrated rather than random.** Follow the strongest dates and keep the same decision thread.",
         ]
 
     event = selected[0]
     move = str(event.get("move") or "").strip()
     return [
-        f"This view isolates **{event['title']}** around **{event['date_label']}**. "
-        "The shaded houses show where that one moment lands against the natal chart.",
-        ("The practical meaning is: " + move) if move else "The chart shows which life area becomes louder before the month moves on.",
+        f"**This date puts the spotlight on one part of the larger pattern.** Watch where **{event['title']}** lands, then act on the consequence.",
+        (f"**{move}**" if move else "**Notice what becomes harder to postpone. Decide from there.**"),
     ]
-
 
 def _timing_chart_in_motion(report, snapshot) -> None:
     st.markdown("## Your Chart in Motion")
@@ -9376,7 +9333,7 @@ def _timing_chart_in_motion(report, snapshot) -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("### What these two wheels are saying")
+    st.markdown("### Read the pressure, not the picture")
     for paragraph in _timing_chart_story(report, snapshot, mode, active_stories):
         st.markdown(paragraph)
 
@@ -9559,10 +9516,7 @@ def _timing_target_human_meaning(story) -> str:
 
 
 def _timing_story_connection(report, story_index: int) -> list[str]:
-    """
-    Make each transit chapter belong to the same annual argument.
-    It links the current chapter backward, forward and inward to the natal target.
-    """
+    """Keep each transit inside the same annual conversation without narrating the report structure."""
     stories = list(report.stories or [])
     if not stories or story_index < 0 or story_index >= len(stories):
         return []
@@ -9570,114 +9524,84 @@ def _timing_story_connection(report, story_index: int) -> list[str]:
     story = stories[story_index]
     previous = stories[story_index - 1] if story_index > 0 else None
     following = stories[story_index + 1] if story_index + 1 < len(stories) else None
-
     area = _timing_story_life_area(story)
-    target_meaning = _timing_target_human_meaning(story)
-    signal = _timing_signal_type(story).lower()
-    paragraphs = []
+    out = []
 
     if previous is None:
-        paragraphs.append(
-            f"**Why this belongs at the beginning:** **{story.headline}** establishes the first condition the rest of the year has to work with. "
-            f"This is a **{signal}** story in **{area}**, but the deeper subject is **{target_meaning}**. "
-            "The later transits do not replace this question; they show what happens once you answer it."
+        out.append(
+            f"**Start here.** What you decide in **{area}** becomes the starting condition for the rest of the year. "
+            "Do not carry a vague answer forward just because it is familiar."
         )
     else:
         previous_area = _timing_story_life_area(previous)
-        paragraphs.append(
-            f"**How this connects:** **{previous.headline}** was working through **{previous_area}**. "
-            f"Now **{story.headline}** moves the same developing problem into **{area}**. "
-            "That shift matters because a change in one part of life alters what becomes acceptable, possible or sustainable in the next."
+        out.append(
+            f"You have already been dealing with **{previous_area}**. Now the pressure reaches **{area}**. "
+            "**Use what you learned earlier. Do not make the same compromise twice.**"
         )
 
     if following is not None:
         following_area = _timing_story_life_area(following)
-        paragraphs.append(
-            f"**What this sets up next:** the consequence is **{following.headline}** in **{following_area}**. "
-            "So the useful question is not 'What does this transit mean by itself?' but "
-            f"**'What must change here so I meet the next phase from a stronger position?'**"
+        out.append(
+            f"**Handle this cleanly now.** **{following_area}** is next, and what you tolerate here becomes part of the price there."
         )
     else:
-        paragraphs.append(
-            "**Why this closes the arc:** this final chapter is where the year's earlier insight has to become behaviour. "
-            "The point is no longer to understand the pattern. It is to stop rebuilding the conditions that kept the pattern alive."
+        out.append(
+            "**Close the loop.** Stop studying the pattern once you can see it. Change the routine, term or boundary that keeps recreating it."
         )
-
-    return paragraphs
-
+    return out
 
 def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
-    """Connect each monthly date to the same developing monthly story."""
+    """Keep each date inside one monthly story. No editorial scaffolding."""
     if not events or index < 0 or index >= len(events):
         return []
 
-    event = events[index]
     previous = events[index - 1] if index > 0 else None
     following = events[index + 1] if index + 1 < len(events) else None
     out = []
 
     if previous is None:
         out.append(
-            f"**Why this opens the month:** **{event['title']}** is the first pressure point. "
-            "It does not need to resolve everything immediately; it establishes the question the later dates keep developing."
+            "**Do not force the whole month to resolve here.** Let this date show you what has enough weight to deserve the next move."
         )
     else:
         out.append(
-            f"**How this connects:** **{previous['title']}** changed the terms first. "
-            f"**{event['title']}** is what that earlier shift looks like once it reaches the next decision point. "
-            "Treat this as continuation, not a separate horoscope."
+            "**Now choose.** The earlier possibility has become concrete enough to test. Keep what proves itself. Let the weaker option lose priority."
         )
 
     if following is not None:
         out.append(
-            f"**What it prepares:** **{following['title']}** comes next. "
-            "The best use of this date is therefore the move that leaves you with more clarity, leverage or room when the next part of the month arrives."
+            "**Leave room for the next shift.** What you decide here should give you more clarity, not another promise to carry."
         )
     else:
         out.append(
-            "**What remains:** this is the month showing you which part of the original problem still matters after the earlier noise has passed. "
-            "That is the piece worth carrying forward."
+            "**Keep what still matters after the excitement fades.** That is the part worth carrying into next month."
         )
     return out
 
-
 def _weekly_connected_interpretation(summary: dict) -> list[str]:
-    """Turn the weekly sign layer from a location report into one coherent argument."""
     areas = list(summary.get("areas") or [])
-    headline = str(summary.get("headline") or "The week comes into focus")
     move = str(summary.get("move") or "keep the facts visible before committing").strip().rstrip(".")
     area_one = areas[0] if areas else "your priorities"
     area_two = areas[1] if len(areas) > 1 else "the choices around them"
 
     return [
-        f"**{headline}** is not an isolated theme. The shared sky is landing first in **{area_one}**, "
-        f"but it is also pulling on **{area_two}**. That means a choice in one area is likely to change the terms in the other.",
-        f"The week therefore has one practical argument: **{move}**. "
-        "Each day's weather below is a different stage of that same argument — pressure, information, reaction and consequence — rather than seven unrelated predictions.",
+        f"**{area_one} and {area_two} are pulling on each other.** A choice in one changes what you can realistically give in the other.",
+        f"**{move.capitalize()}.** Keep that rule all week. The mood can change. The standard does not have to."
     ]
 
-
 def _daily_connected_meaning(narrative) -> str:
-    """Keep Daily short while making the move feel causally connected to the story."""
-    story = [str(x or "").strip() for x in list(getattr(narrative, "today_story", []) or []) if str(x or "").strip()]
+    """One causal bridge. Daily stays short."""
     action = str(getattr(narrative, "action_today", "") or "").strip()
-    if not story or not action:
+    if not action:
         return ""
-    return (
-        "The point is not simply that this pressure is present. "
-        f"It matters because **{action.rstrip('.')}** is the move that changes what the pressure becomes next."
-    )
-
+    return f"Do not just notice the pressure. {action.rstrip('.')}."
 
 def _solar_connected_meaning(solar) -> str:
-    """Human bridge from solar mechanics to lived meaning."""
     return (
-        f"The solar clock is putting **{solar.activated_house_name}** in the foreground while the Sun moves through "
-        f"**{solar.solar_sign} / {solar.solar_process}**. The local-light direction tells you where you are in the physical annual cycle; "
-        "the house tells you where that same timing question lands symbolically. "
-        f"Read together, the message is: **{solar.focus_meaning}**"
+        f"**{solar.activated_house_name} is in the foreground.** The Sun is moving through "
+        f"**{solar.solar_sign} / {solar.solar_process}** while local light is **{solar.light_direction.lower()}**. "
+        f"**{solar.focus_meaning}** Use that as the move."
     )
-
 
 def timing_map_page() -> None:
     set_page_metadata(
@@ -9769,10 +9693,7 @@ def timing_map_page() -> None:
     year_story = _timing_year_story(report)
     if year_story:
         st.markdown("## The story of your year")
-        st.markdown(
-            "These are not unrelated events. Luna reads the strongest calculated contacts as one developing story — "
-            "what begins the year, what changes the terms, and what the later transits ask you to do differently."
-        )
+        st.markdown("**Start with the argument, not the planets.** This year keeps returning to the same few choices in different parts of your life.")
         for paragraph in year_story.get("paragraphs", []):
             st.markdown(paragraph)
 
@@ -9786,11 +9707,6 @@ def timing_map_page() -> None:
             )
 
         st.markdown(year_story.get("chart_bridge", ""))
-        st.caption(
-            "How Luna built this story: the report orders the strongest calculated transit contacts across the 12-month window, "
-            "selects anchors from the opening, middle and later phases, and connects their dates, natal targets, life areas and signal types. "
-            "The individual transit chapters below remain the detailed evidence."
-        )
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
     if timing_snapshot is not None:
@@ -9843,9 +9759,8 @@ def timing_map_page() -> None:
             )
             st.markdown(article_html, unsafe_allow_html=True)
 
-            st.markdown("### How this fits the larger story")
             for connection_paragraph in _timing_story_connection(report, number - 1):
-                st.markdown(connection_paragraph)
+                st.markdown(f'<div class="luna-connection">{connection_paragraph}</div>', unsafe_allow_html=True)
 
             birth_date_for_history = st.session_state.get("timing-map-birth-date-v334")
             if isinstance(birth_date_for_history, str):
@@ -9915,9 +9830,9 @@ def solar_year_page() -> None:
     st.markdown('<a class="lean-monthly-link" href="/natal-snapshot">Create your free Natal Snapshot →</a>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">The Solar<br>Convergence</div>', unsafe_allow_html=True)
     st.markdown(
-        "**The Sun is Luna's primary natural clock.** The Aries Gate at the March Equinox is the head of the "
-        "universal Aries-to-Pisces solar-zodiacal cycle. Your location does not reverse that sequence; it tells Luna "
-        "what the Sun is physically doing where you stand — whether local daylight is increasing, decreasing or near a turning point."
+        "**Use the Sun as the clock. Then ask where that timing lands in your life.** "
+        "The tropical sequence stays the same. Your location changes the light around you — increasing, decreasing or turning — "
+        "and your sign shows which life area carries the symbolic emphasis."
     )
 
     st.markdown("## The Luna Solar Clock")

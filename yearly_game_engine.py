@@ -575,25 +575,27 @@ def _narrator_paragraphs(
     relationship_peak = max(relationship_rounds, key=lambda item: item.score, default=None)
     final_round = rounds[-1]
     change_act = acts[1] if len(acts) > 1 else acts[0]
+
     paragraphs = [
-        f"{year} does not arrive as twelve separate forecasts. Luna reads it as one changing board. {first.title} controls the opening position, and the reader's advantage comes from this rule: {first.advantage}",
-        f"The second game is {second.title.lower()}. It asks: {second.question} The answer changes as information, resources and other people's behaviour become visible.",
-        f"The first major rule change begins around {human_date(change_act.start_date)}. {change_act.summary}",
-        f"{strongest_round.month} carries the strongest concentration of the year. {strongest_round.central_storyline} This is not automatically the happiest month; it is the round with the greatest ability to change later options.",
+        f"Start {year} with **{first.title}**. {first.advantage} Use that rule before you add another commitment.",
+        f"Then **{second.title.lower()}** takes over. {second.question} Watch what people actually do once information, resources and consequences become visible.",
+        f"A major rule change begins around {human_date(change_act.start_date)}. {change_act.summary} Adjust early. Do not wait for the old arrangement to fail loudly.",
+        f"**{strongest_round.month} carries the greatest leverage.** {strongest_round.central_storyline} Use the month to improve later options, not merely to feel busy.",
     ]
     if relationship_peak:
         paragraphs.append(
-            f"Relationships have their own test in {relationship_peak.month}. {relationship_peak.relationship_test} Luna is not asking whether the attention feels good. She is asking whether it can become consistent."
+            f"**Relationships get their clearest test in {relationship_peak.month}.** {relationship_peak.relationship_test} "
+            "Enjoy attention. Demand consistency."
         )
     else:
         paragraphs.append(
-            "Romance may be active or quiet, but validation still has a storyline. Luna watches who returns, who contributes and which connections make the future easier to build."
+            "**Do not manufacture a relationship plot if the evidence is quiet.** Watch who returns, who contributes and which connections make your future easier to build."
         )
     paragraphs.append(
-        f"By {final_round.month}, the year's result is less about collecting options and more about position. {final_round.central_storyline} The strongest outcome is the one that improves both leverage and daily life."
+        f"By **{final_round.month}**, stop collecting options. {final_round.central_storyline} "
+        "**Choose the position that improves both your leverage and your daily life.**"
     )
     return tuple(paragraphs)
-
 
 def build_yearly_game_map(
     sign: str,
@@ -613,8 +615,8 @@ def build_yearly_game_map(
     top_game = games[0]
     first_change = acts[1].start_date if len(acts) > 1 else f"{year}-07-01"
     central = (
-        f"The year's main game is {top_game.title.lower()}. The rules shift around "
-        f"{human_date(first_change)}, and the twelve monthly rounds show where the reader gains or loses leverage."
+        f"Your main game is {top_game.title.lower()}. The rules shift around "
+        f"{human_date(first_change)}. Use the monthly rounds to see where your leverage grows, weakens or changes hands."
     )
     return YearlyGameMap(
         sign=sign,

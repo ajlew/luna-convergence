@@ -5,7 +5,7 @@ from typing import Literal
 
 
 ProductType = Literal["daily", "monthly", "yearly"]
-VOICE_VERSION = "Luna Narrator v1.1 — Active Agency"
+VOICE_VERSION = "Luna Narrator v2.0 — Direct Human Voice"
 
 
 @dataclass(frozen=True)
@@ -24,23 +24,27 @@ class LunaVoiceProfile:
 
 
 _SHARED_MUST_DO = (
-    "Use active voice and concrete verbs.",
-    "Give the reader an active verb in every recommendation.",
-    "Keep the reader as the decision-maker and author of the next move.",
+    "Speak directly to the reader in second person: you / your.",
+    "Use active voice, concrete verbs and imperative mood when a decision is required.",
+    "Identify the human consequence before explaining the astrology.",
+    "Connect every interpretation to what came before and what changes next.",
     "Translate planetary structure into recognisable human situations.",
-    "Connect opportunity and difficulty inside one coherent story.",
-    "Treat attention, chemistry and approval as information rather than proof.",
-    "Use dry humour sparingly, mainly in hooks and Do / Don't lines.",
+    "Use short sentences, sharp juxtapositions and emotional realism.",
+    "Keep the reader as the decision-maker and author of the next move.",
+    "Keep technical evidence behind Why Luna sees this unless the reader asks for it.",
 )
 
 _SHARED_MUST_NOT = (
-    "Promise a guaranteed event or measured probability.",
-    "Pretend Luna is a human psychic or speak about Luna's personal life.",
+    "Narrate the machinery of the report in customer-facing interpretation.",
+    "Use third-person labels such as the reader or this person when speaking about the customer.",
+    "Use preambles such as Luna reads, Luna separates, or here is how this connects when the interpretation itself can do the work.",
+    "Repeat a headline or idea merely to prove continuity.",
     "Use passive applicant language such as waiting to be selected.",
     "Frame the reader as waiting, receiving permission or letting the month decide for her.",
     "Repeat technical house descriptions in customer-facing prose.",
     "Use vague spiritual filler or moral judgement.",
-    "Let humour interrupt serious financial, health, grief or safety themes.",
+    "Promise a guaranteed event or measured probability.",
+    "Pretend Luna is a human psychic or speak about Luna's personal life.",
 )
 
 
@@ -51,7 +55,7 @@ VOICE_PROFILES: dict[ProductType, LunaVoiceProfile] = {
         purpose="Identify today's strongest move, emotional consequence and one useful response.",
         pace="Quick, sharp and punchy.",
         preferred_length="One hook, one short interpretation, one Do and one Don't.",
-        narrator_cues=("Luna says", "Luna's read"),
+        narrator_cues=("What matters now", "Your move"),
         must_do=_SHARED_MUST_DO + (
             "Lead with the five-second emotional hook.",
             "End before the insight becomes a lecture.",
@@ -67,7 +71,7 @@ VOICE_PROFILES: dict[ProductType, LunaVoiceProfile] = {
         purpose="Connect carryover, opening, complication, relationship test, climax and resolution.",
         pace="Narrative, selective and emotionally intelligent.",
         preferred_length="A substantial story with three or four acts, key dates and practical consequences.",
-        narrator_cues=("Luna says", "Luna's read", "What Luna would circle", "Luna's reality check"),
+        narrator_cues=("The story", "What changes now", "Your move", "Watch this"),
         must_do=_SHARED_MUST_DO + (
             "Show how one development creates the next.",
             "Give the strongest relationship test its own place when the evidence supports it.",
@@ -84,7 +88,7 @@ VOICE_PROFILES: dict[ProductType, LunaVoiceProfile] = {
         purpose="Map the players, board, dominant games, rule changes, twelve rounds and final position.",
         pace="Strategic, panoramic and decisive.",
         preferred_length="Three to five annual acts plus twelve concise monthly moves.",
-        narrator_cues=("Luna says", "Luna's read", "The year's game", "What Luna would watch"),
+        narrator_cues=("The year", "What changes", "Your leverage", "Watch this"),
         must_do=_SHARED_MUST_DO + (
             "Explain which planets hold initiative and where the reader has leverage.",
             "Treat months as rounds whose outcomes change later options.",
@@ -126,6 +130,6 @@ def validate_luna_voice(text: str) -> tuple[str, ...]:
 
 def narrator_principle() -> str:
     return (
-        "Luna sees the pattern, understands the emotional stakes and keeps "
-        "the reader in control of the decision."
+        "Speak to the human. Connect the pattern. Name the consequence. "
+        "Give the reader a clean move."
     )
