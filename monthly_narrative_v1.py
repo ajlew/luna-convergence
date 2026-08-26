@@ -46,33 +46,33 @@ HOUSE_DISPLAY = {
 }
 
 HOUSE_PROSE = {
-    1: "identity, confidence and personal direction",
-    2: "income, value, possessions and security",
-    3: "messages, decisions, learning and everyday movement",
-    4: "home, family and emotional foundations",
-    5: "romance, pleasure, children and creative expression",
-    6: "workload, health, routines and practical systems",
-    7: "partners, clients, agreements and significant relationships",
-    8: "trust, intimacy, debt and shared financial responsibilities",
-    9: "travel, education, publishing and a wider world",
-    10: "career, visibility, authority and public direction",
-    11: "friends, audiences, communities and future plans",
-    12: "rest, closure, private feelings and unfinished matters",
+    1: "how you show up and what you are willing to carry",
+    2: "the price, payment or purchase in front of you",
+    3: "the message, document or conversation that needs an answer",
+    4: "home and the arrangement you live with every day",
+    5: "the person, pleasure or creative project pulling your attention",
+    6: "the workload and routine your ordinary week has to sustain",
+    7: "the person across the table and the promises between you",
+    8: "money, trust and responsibility you share with someone else",
+    9: "the trip, course, application or outside opportunity in front of you",
+    10: "the job, role or public responsibility with your name on it",
+    11: "the friends, groups and plans shaping what you build next",
+    12: "what needs privacy, rest or a clean ending",
 }
 
 HOUSE_NATURAL = {
-    1: "who you are becoming",
-    2: "money, value and security",
-    3: "messages, decisions and everyday movement",
-    4: "home and private life",
-    5: "love, creativity and what brings you alive",
-    6: "work, wellbeing and daily rhythm",
-    7: "relationships and agreements",
-    8: "trust, intimacy and shared money",
-    9: "new horizons, learning and expansion",
-    10: "work, reputation and visible results",
-    11: "your circle and future plans",
-    12: "rest, closure and private feelings",
+    1: "how you are choosing to show up",
+    2: "what the choice costs",
+    3: "the message or decision that needs an answer",
+    4: "what home and private life can actually hold",
+    5: "who or what you genuinely want",
+    6: "what the ordinary week can sustain",
+    7: "what the other person is prepared to carry",
+    8: "what you share, owe or trust to someone else",
+    9: "the outside opportunity and its real logistics",
+    10: "the role, responsibility and result attached to your name",
+    11: "who helps turn the next plan into something real",
+    12: "what needs rest, privacy or closure",
 }
 
 
@@ -1494,18 +1494,18 @@ _TRAJECTORY_MIDDLE_ACTIONS = {
 }
 
 _TRAJECTORY_SECONDARY_SHORT = {
-    1: "your energy and personal direction",
-    2: "your money and security",
-    3: "your decisions and everyday movement",
-    4: "your home and private life",
-    5: "your creativity, pleasure and romantic life",
-    6: "your workload, health and routines",
-    7: "your relationships and agreements",
-    8: "shared money, trust and obligations",
-    9: "travel, study and the wider world",
-    10: "career and visible results",
-    11: "friends, audiences and future plans",
-    12: "rest, closure and private renewal",
+    1: "how you show up",
+    2: "the price and payment",
+    3: "the message and decision",
+    4: "home and private life",
+    5: "the person or project you want",
+    6: "the workload and routine",
+    7: "the other person and the promise",
+    8: "shared money, trust and responsibility",
+    9: "the trip, course or outside opportunity",
+    10: "the role and visible result",
+    11: "the people helping build what comes next",
+    12: "what needs rest or closure",
 }
 
 _TRAJECTORY_LATE_PAIR_HOOKS = {
@@ -1557,7 +1557,7 @@ def _trajectory_action(posture: str) -> str:
         "ADVANCE": "Use the clean support while it is present, but keep timing and terms visible.",
         "QUESTION": "Enjoy what opens, but verify the missing fact before increasing commitment.",
         "NEGOTIATE": "Keep the essential part, but change the terms before accepting more exposure.",
-        "HOLD": "Do what is necessary and preserve optionality while the pressure is still moving.",
+        "HOLD": "Do what must be done. Keep everything else reversible while the situation is still moving.",
         "PASS": "Let the optional demand pass; protect time, money and freedom of movement.",
     }.get(str(posture).upper(), "Let the evidence determine the next move.")
 

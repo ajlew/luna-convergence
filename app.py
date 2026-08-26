@@ -41,9 +41,14 @@ from yearly_experience_v1 import render_yearly_experience
 from forecast_inventory import EDITORIAL_STATUSES, build_inventory, inventory_json
 from ephemeris_admin import render_ephemeris_admin
 from luna_voice import (
+    convergent_bridge,
     finalize_customer_prose,
     human_arc,
+    human_arc_sentence,
+    imperative_for,
     inline_story_title,
+    life_domain,
+    life_scene,
     luna_dry_truth,
     narrator_principle,
     simplify_life_area,
@@ -3658,7 +3663,7 @@ def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
 
 
 def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
-    """Translate the shared Monday-Sunday sky into a compact sign-specific layer."""
+    """Translate the shared sky into one sign-specific human rule."""
     sunday = monday + timedelta(days=6)
     data = period_report(
         sign,
@@ -3672,57 +3677,52 @@ def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
     house_numbers = [int(item.get("house", 1)) for item in dominant if item.get("house")]
     if not house_numbers:
         house_numbers = [1]
-    areas = [HOUSE_NAMES.get(h, f"House {h}") for h in house_numbers[:2]]
-    transitions = data.get("major_transitions", [])
-    first = transitions[0] if transitions else None
-    primary = house_numbers[0]
-    strategy = HOUSE_STRATEGY.get(primary, {})
-    action = strategy.get("action", "keep the facts visible before committing")
+
+    raw_areas = [HOUSE_NAMES.get(h, f"House {h}") for h in house_numbers[:2]]
+    areas = [simplify_life_area(area) for area in raw_areas]
+    primary = raw_areas[0]
+    strategy = HOUSE_STRATEGY.get(house_numbers[0], {})
+    action = strategy.get("action", "keep the facts visible before committing").rstrip(".")
     risk = strategy.get("risk", "moving before the pattern is clear")
-    headline = f"{areas[0]} comes into focus"
+
+    headline = imperative_for(primary, seed_text=f"weekly-headline-{sign}-{monday.isoformat()}")
     interpretation = (
-        f"This week's shared sky concentrates most strongly around {', '.join(a.lower() for a in areas)}. "
-        f"The useful response is to {action}; the main risk is {risk}."
+        f"{life_scene(primary, f'weekly-{sign}-{monday.isoformat()}', count=1)} "
+        f"Act on what is concrete. Do not let {risk} choose for you."
     )
-    if first:
-        first_title = first.get("title") or "The week's leading shift"
-        interpretation = f"{first_title} sets the first pressure point. " + interpretation
+
     return {
         "sign": sign,
         "headline": headline,
         "areas": areas,
+        "raw_areas": raw_areas,
         "interpretation": interpretation,
-        "move": action.rstrip("."),
+        "move": action,
     }
 
-
-
 def _weekly_social_area(summary: dict) -> str:
-    """Compress calculated weekly life areas into a phone-readable social-card label."""
-    raw = " · ".join(str(x) for x in summary.get("areas", []) if x)
-    replacements = (
-        ("income, possessions and self-worth", "MONEY · VALUE · SELF-WORTH"),
-        ("rest, hidden matters, closure and psychological patterns", "REST · CLOSURE · INNER LIFE"),
-        ("identity, body and self-direction", "IDENTITY · DIRECTION"),
-        ("money, possessions and self-worth", "MONEY · VALUE · SELF-WORTH"),
-        ("communication, learning and local movement", "COMMUNICATION · LEARNING"),
-        ("home, family and foundations", "HOME · FAMILY"),
-        ("creativity, romance and pleasure", "CREATIVITY · ROMANCE"),
-        ("work, health and daily systems", "WORK · ROUTINE"),
-        ("partnerships, agreements and open rivals", "RELATIONSHIPS · AGREEMENTS"),
-        ("shared money, intimacy and deep change", "SHARED MONEY · CHANGE"),
-        ("travel, belief and higher learning", "TRAVEL · BELIEF · LEARNING"),
-        ("career, reputation and public direction", "CAREER · DIRECTION"),
-        ("friends, networks and future aims", "NETWORKS · FUTURE"),
-    )
-    value = raw.lower()
-    for long_form, short_form in replacements:
-        if long_form in value:
-            return short_form
-    first = str((summary.get("areas") or ["YOUR PRIORITIES"])[0])
-    first = first.replace(" and ", " · ").replace(",", " ·")
-    return " ".join(first.upper().split()[:5]).rstrip(" ·,")
+    """Compress weekly focus into ordinary human language for social cards."""
+    raw_areas = list(summary.get("raw_areas") or summary.get("areas") or [])
+    if not raw_areas:
+        return "YOUR NEXT MOVE"
 
+    domain = life_domain(raw_areas[0])
+    labels = {
+        "identity": "YOU · DIRECTION",
+        "money": "MONEY · PRICE",
+        "communication": "MESSAGE · DECISION",
+        "home": "HOME · FAMILY",
+        "romance": "ATTRACTION · CREATIVE WORK",
+        "routine": "WORKLOAD · ROUTINE",
+        "relationship": "PEOPLE · PROMISES",
+        "shared": "SHARED MONEY · TRUST",
+        "travel": "TRIP · COURSE · OUTSIDE PLAN",
+        "career": "ROLE · RESPONSIBILITY",
+        "friends": "FRIENDS · NEXT PLAN",
+        "rest": "REST · CLOSURE",
+        "general": "YOUR NEXT MOVE",
+    }
+    return labels.get(domain, "YOUR NEXT MOVE")
 
 def _weekly_social_move(summary: dict) -> str:
     """Compress the calculated strongest move without changing its meaning."""
@@ -3763,15 +3763,8 @@ def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> No
     summary = _weekly_sign_summary(sign, monday, timezone_name)
     st.markdown(f"## {escape(sign)} · The Week Ahead")
     st.markdown(f"### {escape(summary['headline'])}")
-    st.markdown(
-        "**Where it lands:** " + " · ".join(summary["areas"])
-    )
     for paragraph in _weekly_connected_interpretation(summary):
         _render_luna_prose(paragraph, product="weekly")
-    st.markdown(
-        f"**Your strongest move:** {summary['move'].capitalize()}. "
-        "That move is the thread to keep through all seven days below, even as the mood and evidence change."
-    )
 
 
 
@@ -4366,12 +4359,8 @@ def _render_transit_history(story, birth_date_value: date | None = None) -> None
         return
 
     st.markdown("### Have you been here before?")
-
-    question = finalize_customer_prose(
-        _timing_recurrence_question(story),
-        product="timing",
-    )
-    area = simplify_life_area(_timing_story_life_area(story))
+    question = finalize_customer_prose(_timing_recurrence_question(story), product="timing")
+    area = _timing_story_life_area(story)
 
     if birth_date_value and earlier >= birth_date_value:
         age = earlier.year - birth_date_value.year - (
@@ -4384,7 +4373,8 @@ def _render_transit_history(story, birth_date_value: date | None = None) -> None
         )
     else:
         _render_luna_prose(
-            f"Look further back: around {_timing_date_label(earlier)} the same broad transit family touched {area}. "
+            f"Look further back: around {_timing_date_label(earlier)} a similar pressure was active. "
+            f"{life_scene(area, f'older-{earlier.year}', count=1)} "
             "You may not have lived through it. Use the date as context, not biography.",
             product="timing",
         )
@@ -4396,7 +4386,6 @@ def _render_transit_history(story, birth_date_value: date | None = None) -> None
         close = "Name what you tolerated then. Set the clearer limit now."
     else:
         close = "Keep the old pattern as context. Make the present decision from present facts."
-
     _render_luna_prose(close, product="timing")
 
 def render_monthly_preview_workspace() -> None:
@@ -5513,7 +5502,7 @@ def _render_monthly_past_echo_strip(
     timezone_name: str,
     birth_date_value: date | None = None,
 ) -> None:
-    """Monthly precedent rendered in the same full-width editorial rhythm as Personal Transits."""
+    """Show earlier echoes as human memory prompts. Keep the matching method in evidence."""
     try:
         matches = _monthly_history_matches(sign, int(year), int(month), timezone_name)
     except Exception:
@@ -5524,94 +5513,59 @@ def _render_monthly_past_echo_strip(
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">PAST CONTEXT</div>', unsafe_allow_html=True)
     st.markdown("## Have you been somewhere like this before?")
-    st.markdown(
-        "Before reading the month forward, Luna checks the closest earlier sky patterns. "
-        "They are reference points, not claims that the same life event must repeat."
+    _render_luna_prose(
+        "Use these dates as memory prompts. Do not force the old event to match the present one.",
+        product="monthly",
     )
 
     for index, item in enumerate(matches[:3], start=1):
         past_year = int(item["year"])
         past_label = f"{month_name[int(month)]} {past_year}"
-        shared = item.get("shared_houses") or []
-        now_only = item.get("current_only") or []
-        then_only = item.get("past_only") or []
+        shared = list(item.get("shared_houses") or [])
+        now_only = list(item.get("current_only") or [])
+
+        if shared:
+            area = HOUSE_NAMES.get(int(shared[0]), "general")
+        elif now_only:
+            area = HOUSE_NAMES.get(int(now_only[0]), "general")
+        else:
+            area = "general"
 
         st.markdown("---")
+        st.markdown(f"### {escape(past_label)}")
 
-        age_text = ""
         if birth_date_value:
             ref_date = date(past_year, int(month), 15)
             if ref_date >= birth_date_value:
                 age = ref_date.year - birth_date_value.year - (
                     (ref_date.month, ref_date.day) < (birth_date_value.month, birth_date_value.day)
                 )
-                age_text = f" · YOU WERE ABOUT {age}"
+                _render_luna_prose(
+                    f"Think back. You were about {age}. "
+                    f"{life_scene(area, f'month-history-{past_year}-{index}', count=1)} "
+                    "What changed after the first excitement, problem or invitation became real?",
+                    product="monthly",
+                )
+                if now_only:
+                    _render_luna_prose(
+                        "Do not reuse the old answer automatically. A new condition is in the room now.",
+                        product="monthly",
+                    )
+                continue
 
-        st.markdown(
-            f'<div class="eyebrow">PAST ECHO · {escape(past_label.upper())}{escape(age_text)}</div>',
-            unsafe_allow_html=True,
+        _render_luna_prose(
+            f"Use this as longer-cycle context, not biography. "
+            f"{life_scene(area, f'month-history-{past_year}-{index}', count=1)}",
+            product="monthly",
         )
-
-        if shared:
-            shared_text = " + ".join(_monthly_reader_house_label(h) for h in shared[:2])
-        else:
-            shared_text = "a similar planetary sequence"
-
-        st.markdown(f"### {shared_text.title()}")
-
-        if now_only and then_only:
-            now_text = _monthly_reader_house_label(now_only[0])
-            then_text = _monthly_reader_house_label(then_only[0])
-            st.markdown(
-                f"**What rhymes:** the earlier month carried the same underlying emphasis around **{shared_text}**."
-            )
-            st.markdown(
-                f"**What is different now:** **{now_text}** has joined the story, while {past_label} "
-                f"leaned more toward **{then_text}**."
-            )
-        elif now_only:
-            now_text = _monthly_reader_house_label(now_only[0])
-            st.markdown(
-                f"**What rhymes:** the earlier month carried the same underlying emphasis around **{shared_text}**."
-            )
-            st.markdown(
-                f"**What is different now:** this month adds **{now_text}**, changing how the old pattern can express itself."
-            )
-        elif then_only:
-            then_text = _monthly_reader_house_label(then_only[0])
-            st.markdown(
-                f"**What rhymes:** the earlier month carried the same underlying emphasis around **{shared_text}**."
-            )
-            st.markdown(
-                f"**What is different now:** {past_label} carried more **{then_text}** than the present month does."
-            )
-        else:
-            st.markdown(
-                f"**What rhymes:** both months share **{shared_text}**."
-            )
-            st.markdown(
-                "**What is different now:** the supporting planets and exact sequence have changed, so treat this as an echo rather than a replay."
-            )
-
-        if birth_date_value and ref_date >= birth_date_value:
-            st.markdown(
-                "**What do you remember?** Was that period more about love, work, money, home, independence, "
-                "responsibility or a change in direction?"
-            )
-        else:
-            st.markdown(
-                "**Before your time:** the earlier sky still gives this month a longer cycle context."
-            )
 
     with st.expander("Why Luna sees these dates"):
         st.markdown(
-            "Luna compares the month's dominant whole-sign houses and major planetary transition labels with earlier "
-            "months for the same sign. The similarity score stays internal. What the reader sees is the useful part: "
-            "what rhymes, what changed, and what that difference may mean."
+            "Luna compares the month's dominant whole-sign houses and major planetary transitions "
+            "with earlier months for the same sign. The similarity score stays in the evidence layer."
         )
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-
 
 def _render_monthly_personal_sky(snapshot) -> None:
     if snapshot is None:
@@ -5884,6 +5838,14 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
                 _monthly_history_for_event(sign, SEO_YEAR, SEO_MONTH, timezone_name, birth_date_value, index)
     else:
         st.info("Luna found the month, but this pipeline version did not expose the dated briefing structure.")
+
+    _render_monthly_past_echo_strip(
+        sign,
+        SEO_YEAR,
+        SEO_MONTH,
+        timezone_name,
+        birth_date_value,
+    )
 
     st.markdown("## Where it lands")
     dominant = result.get("dominant_houses") or []
@@ -6294,47 +6256,19 @@ def _monthly_candidate_from_container(value, path=()):
 
 
 def _monthly_clean_reader_paragraph(event_key: str, paragraph: str) -> str:
-    """Remove template/debug/technical leakage while preserving useful interpretation."""
+    """Remove template/debug/technical leakage and return ordinary human prose."""
     value = re.sub(r"\s+", " ", str(paragraph or "")).strip()
     if not value:
         return ""
 
     low = value.lower()
-
-    # Generic template/filler sentences add nothing to the specific story.
     if low.startswith("ask the question this development makes unavoidable"):
         return ""
     if low.startswith("a new opening enters the month and begins to shift the available future"):
         return ""
-
     if _monthly_internal_text(value):
         return ""
 
-    # Internal House-9 taxonomy stays in the engine; translate only when needed.
-    value = value.replace(
-        "travel, publishing, law, education and foreign markets",
-        "travel, study, publishing, legal matters and international opportunities",
-    )
-    value = value.replace(
-        "Travel, publishing, law, education and foreign markets",
-        "Travel, study, publishing, legal matters and international opportunities",
-    )
-
-    # Reduce repetitive "wider" language in reader-facing prose.
-    replacements = (
-        ("the wider possibility", "the possibility"),
-        ("The wider possibility", "The possibility"),
-        ("the wider opportunity", "the opportunity"),
-        ("The wider opportunity", "The opportunity"),
-        ("the wider world", "the external story"),
-        ("The wider world", "The external story"),
-        ("wider horizons", "external plans"),
-        ("Wider horizons", "External plans"),
-    )
-    for old, new in replacements:
-        value = value.replace(old, new)
-
-    # Technical aspect lists belong in evidence, not in the human story.
     if event_key == "solar_eclipse":
         aspect_hits = re.findall(
             r"\b(?:Mercury|Venus|Mars|Jupiter|Saturn|Uranus|Neptune|Pluto)\s+"
@@ -6344,40 +6278,29 @@ def _monthly_clean_reader_paragraph(event_key: str, paragraph: str) -> str:
             flags=re.I,
         )
         if len(aspect_hits) >= 2:
-            return "There is support around the decision, but it does not remove the need to choose."
+            return "Use the support. Keep the choice concrete."
 
-    return value
-
+    return finalize_customer_prose(value, product="monthly")
 
 def _monthly_clean_context_paragraph(paragraph: str) -> str:
-    """Translate the concentration theme into one concrete reader-facing sentence."""
+    """Turn concentration-theme prose into a command plus an ordinary-life scene."""
     value = re.sub(r"\s+", " ", str(paragraph or "")).strip()
     if not value or _monthly_internal_text(value):
         return ""
 
     low = value.lower()
-
     if (
         ("sun (" in low and "mercury (" in low and "jupiter (" in low)
         or "one connected story" in low
         or "reacting to each transit separately" in low
     ):
+        area = "travel, publishing, law, education and foreign markets"
         return (
-            "Travel, study, publishing, legal matters and international opportunities "
-            "are converging into one decision this month."
+            f"{imperative_for(area, 'monthly-context')} "
+            f"{life_scene(area, 'monthly-context', count=2)}"
         )
 
-    value = value.replace(
-        "travel, publishing, law, education and foreign markets",
-        "travel, study, publishing, legal matters and international opportunities",
-    )
-    value = value.replace(
-        "Travel, publishing, law, education and foreign markets",
-        "Travel, study, publishing, legal matters and international opportunities",
-    )
-
-    return value
-
+    return finalize_customer_prose(value, product="monthly")
 
 def _monthly_clean_final_step(step: str) -> str:
     """Translate engine-ish action language into ordinary reader language."""
@@ -6399,7 +6322,7 @@ def _monthly_clean_final_step(step: str) -> str:
     )
     for old, new in replacements:
         value = value.replace(old, new)
-    return value
+    return finalize_customer_prose(value, product="monthly")
 
 
 
@@ -6419,7 +6342,7 @@ _LUNA_VOICE_V2_BANK = {
         "lead": [
             {"text": "Something that lived in the maybe column now has enough structure to test.", "metaphor": "proof", "shape": "contrast", "verbs": ["lived", "test"]},
             {"text": "The promise is still early, but there is finally something concrete to measure.", "metaphor": "measure", "shape": "contrast", "verbs": ["measure"]},
-            {"text": "This is where an interesting possibility acquires enough weight to be taken seriously.", "metaphor": "weight", "shape": "declaration", "verbs": ["acquires", "taken"]},
+            {"text": "Take the possibility seriously once it has enough weight to affect the calendar.", "metaphor": "weight", "shape": "declaration", "verbs": ["acquires", "taken"]},
         ],
         "move": [
             {"text": "Secure the part that makes the opportunity real; keep the rest reversible.", "metaphor": "structure", "shape": "instruction", "verbs": ["secure", "keep"]},
@@ -6442,7 +6365,7 @@ _LUNA_VOICE_V2_BANK = {
         "lead": [
             {"text": "What looked exciting from a distance is close enough now to rearrange the calendar.", "metaphor": "distance", "shape": "reversal", "verbs": ["looked", "rearrange"]},
             {"text": "The invitation is real enough to require terms, timing and a practical yes or no.", "metaphor": "terms", "shape": "declaration", "verbs": ["require"]},
-            {"text": "This is the point where possibility stops being theoretical and starts costing something.", "metaphor": "cost", "shape": "contrast", "verbs": ["stops", "starts", "costing"]},
+            {"text": "Put a price, date or obligation beside the possibility. It is no longer theoretical.", "metaphor": "cost", "shape": "contrast", "verbs": ["stops", "starts", "costing"]},
         ],
         "move": [
             {"text": "Identify the one practical condition that determines whether you can say yes.", "metaphor": "terms", "shape": "instruction", "verbs": ["identify", "determines"]},
@@ -6488,7 +6411,7 @@ _LUNA_VOICE_V2_BANK = {
         "lead": [
             {"text": "By late month, the decision stops being abstract because home and private life have to absorb its consequences.", "metaphor": "weight", "shape": "cause", "verbs": ["stops", "absorb"]},
             {"text": "The plan can no longer be judged only by where it might take you; it also has to fit the life waiting at home.", "metaphor": "fit", "shape": "contrast", "verbs": ["judged", "fit"]},
-            {"text": "This is where expansion meets capacity: what your private life can actually hold becomes part of the answer.", "metaphor": "capacity", "shape": "collision", "verbs": ["meets", "hold", "becomes"]},
+            {"text": "Check what your private life can actually hold. Make capacity part of the answer.", "metaphor": "capacity", "shape": "collision", "verbs": ["meets", "hold", "becomes"]},
         ],
         "move": [
             {"text": "Protect the foundation the opportunity depends upon, especially your home and private life.", "metaphor": "foundation", "shape": "instruction", "verbs": ["protect", "depends"]},
@@ -7185,18 +7108,17 @@ def _monthly_motion_summary(events: list[dict], selected_key: str) -> str:
     if selected_key == "whole":
         if len(events) >= 4:
             return (
-                f"The month moves in four clear beats: {events[0]['title'].lower()}, then {events[1]['title'].lower()}. "
-                f"A lighter opening follows around mid-month before {events[-1]['title'].lower()}."
+                "Start with what is solid. Make the decision when the evidence arrives. "
+                "Use the lighter opening. Then change what no longer fits."
             )
-        return "The whole-month view combines the strongest dated activations into one map."
+        return "Follow the strongest date. Make one decision thread carry the month."
 
     event = next((item for item in events if item.get("key") == selected_key), None)
     if not event:
-        return "Select a dated moment to see where that part of the month lands in the chart."
+        return "Choose a date. Read the consequence. Make the move."
     move = str(event.get("move") or "").strip()
     lead = str(event.get("voice_lead") or "").strip()
-    return " ".join(item for item in (lead, move) if item)
-
+    return finalize_customer_prose(" ".join(item for item in (lead, move) if item), product="monthly")
 
 def _monthly_activation_wheel_svg(result: dict, events: list[dict], selected_key: str, size: int = 620) -> str:
     """
@@ -7324,17 +7246,17 @@ def _monthly_activation_wheel_svg(result: dict, events: list[dict], selected_key
 
 
 _CHART_HOUSE_KEY = {
-    1: "Self + direction",
-    2: "Money + value",
-    3: "Communication + movement",
+    1: "You + direction",
+    2: "Money + price",
+    3: "Message + decision",
     4: "Home + family",
-    5: "Love + creativity",
-    6: "Work + routine",
-    7: "Relationships + agreements",
-    8: "Shared money + obligations",
-    9: "Travel + expansion",
-    10: "Career + public direction",
-    11: "Networks + future plans",
+    5: "Attraction + creative work",
+    6: "Workload + routine",
+    7: "People + promises",
+    8: "Shared money + trust",
+    9: "Trip + course + outside plan",
+    10: "Role + responsibility",
+    11: "Friends + next plan",
     12: "Rest + closure",
 }
 
@@ -7589,11 +7511,10 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         month_arc = list(month_story.get("arc", []) or [])
         if month_arc:
             st.markdown(
-                '<div class="timing-meta" style="margin-top:1.1rem;text-transform:none">The arc</div>'
-                f'<div style="font:400 13px IBM Plex Mono,monospace;letter-spacing:.02em;'
-                f'line-height:1.8;margin:.25rem 0 1rem">{escape(" → ".join(month_arc))}</div>',
+                '<div class="timing-meta" style="margin-top:1.1rem;text-transform:none">The month in four moves</div>',
                 unsafe_allow_html=True,
             )
+            _render_luna_prose(human_arc_sentence(month_arc), product="monthly")
 
     _monthly_chart_in_motion(snapshot, result, events, sign)
 
@@ -7649,8 +7570,6 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
                 unsafe_allow_html=True,
             )
 
-        _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years)
-
         with st.expander("Why Luna sees this"):
             st.markdown(f"**{event['transit']}** · active {event['influence']}")
             if event["houses"]:
@@ -7674,13 +7593,13 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     for category in ("LOVE", "WORK", "MONEY"):
         visible_title, visible_body = area_copy[category]
         st.markdown(f'<div class="timing-meta">{category}</div>', unsafe_allow_html=True)
-        st.markdown(f"### {visible_title}")
-        st.markdown(visible_body)
+        st.markdown(f"### {escape(finalize_customer_prose(visible_title, product='monthly'))}")
+        _render_luna_prose(visible_body, product="monthly")
 
     move_title, move_steps = _monthly_action_plan(narrative, result)
     st.markdown("## Your move")
     if move_title:
-        st.markdown(f"### {move_title}")
+        st.markdown(f"### {finalize_customer_prose(move_title, product='monthly')}")
     if move_steps:
         for index, step in enumerate(move_steps, start=1):
             cleaned_step = _monthly_clean_final_step(step)
@@ -7689,7 +7608,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     else:
         fallback = next((event["move"] for event in reversed(events) if event["move"]), "")
         if fallback:
-            st.markdown(fallback)
+            _render_luna_prose(fallback, product="monthly")
 
 
 def _render_monthly_result_actions(sign: str) -> None:
@@ -7923,8 +7842,8 @@ def natal_snapshot_page() -> None:
     st.markdown('<div class="eyebrow">Free · natal snapshot</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">What keeps<br>repeating?</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="natal-intro"><strong>This is your baseline.</strong> Your Sun, Moon, Rising, Mercury, Venus and Mars describe different parts of the same person. '
-        'Give the birth time only if you know it. If the time or location is uncertain, the angles stay out rather than pretending to know more than the data supports.</div>',
+        '<div class="natal-intro">Start with the baseline. Read your Sun, Moon, Rising, Mercury, Venus and Mars as parts of one person: you. '
+        'Give the birth time only if you know it. If the time or location is uncertain, Luna leaves the angles out rather than inventing precision.</div>',
         unsafe_allow_html=True,
     )
 
@@ -8127,10 +8046,10 @@ def natal_snapshot_page() -> None:
     )
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
 
-    st.markdown("### How these pieces fit together")
+    st.markdown("### Read the pattern")
     _render_luna_prose(
-        "Read these placements together. What you want, what you feel, how you appear, how you think, "
-        "what you need from relationships and how you act under pressure belong to the same person: you."
+        "Put the placements together. Notice where what you want, what you feel, how you appear and how you act pull in different directions. "
+        "Use the contradiction. That is where the behavioural pattern becomes visible."
     )
     for paragraph in _timing_natal_person_summary(snapshot, None):
         _render_luna_prose(paragraph, product="natal")
@@ -8180,7 +8099,7 @@ def natal_snapshot_page() -> None:
             f'''<div class="natal-chart-emphasis">
   <span>Chart emphasis · the forest</span>
   <strong>{escape(headline)}</strong>
-  <p>{escape(str(concentration.get("summary") or ""))}</p>
+  <p>{escape(finalize_customer_prose(str(concentration.get("summary") or ""), product="natal"))}</p>
 </div>''',
             unsafe_allow_html=True,
         )
@@ -8193,17 +8112,17 @@ def natal_snapshot_page() -> None:
         )
         for signature in snapshot.signatures:
             question_html = (
-                f'<div class="natal-signature-question">{escape(signature.question)}</div>'
+                f'<div class="natal-signature-question">{escape(finalize_customer_prose(signature.question, product="natal"))}</div>'
                 if signature.question else ""
             )
             st.markdown(
                 f'''<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(signature.evidence)}</div>
   <h3>{escape(signature.title)}</h3>
-  <p>{escape(signature.text)}</p>
+  <p>{escape(finalize_customer_prose(signature.text, product="natal"))}</p>
   <div class="natal-signature-meta">
     <div><span>Strength</span>{escape(signature.strength)}</div>
-    <div><span>Watch</span>{escape(signature.watch)}</div>
+    <div><span>Watch</span>{escape(finalize_customer_prose(signature.watch, product="natal"))}</div>
   </div>
   {question_html}
 </div>''',
@@ -8225,9 +8144,10 @@ def natal_snapshot_page() -> None:
         for aspect in snapshot.aspects[:10]:
             st.markdown(f"- {aspect.label()}")
 
-    st.markdown(
-        "**Next layer:** compare these persistent natal patterns with the next 12 months — "
-        "showing which pattern is active, when it peaks and when the conditions change."
+    _render_luna_prose(
+        "Take the next step. Compare these persistent patterns with the next 12 months. "
+        "See which pattern becomes active, when it peaks and when the conditions change.",
+        product="natal",
     )
     st.markdown(
         '<a class="lean-monthly-link" href="/timing-map">Build your Year Ahead →</a>',
@@ -8569,7 +8489,7 @@ def _timing_pick_story_anchors(ordered: list, limit: int = 6) -> list:
 
 
 def _timing_year_story(report) -> dict:
-    """Tell the human annual argument first. Keep transit names for detailed chapters."""
+    """Tell the annual human argument before the transit catalogue."""
     if not report.stories:
         return {}
 
@@ -8581,87 +8501,56 @@ def _timing_year_story(report) -> dict:
     if not anchors:
         return {}
 
-    rows = []
-    for story in anchors:
-        rows.append({
-            "planet": str(getattr(story, "transit_planet", "") or "").strip(),
-            "area": simplify_life_area(_timing_story_life_area(story)),
-            "start": _timing_date_label(
-                _timing_story_start(story)
-                or _timing_story_sort_date(story, report.end_date)
-            ),
-            "peak": _timing_story_peak_label(story),
-            "verb": _timing_story_arc_verb(story).lower(),
-        })
+    areas = [simplify_life_area(_timing_story_life_area(story)) for story in anchors]
 
     paragraphs = []
-    first = rows[0]
-    second = rows[1] if len(rows) > 1 else None
+    first = areas[0]
+    second = areas[1] if len(areas) > 1 else first
+    paragraphs.append(
+        "Set the terms first. "
+        f"{imperative_for(first, 'year-start-a')} "
+        f"{imperative_for(second, 'year-start-b')} "
+        f"{life_scene(second, 'year-start', count=1)} "
+        "Do not prove that you can handle more. Decide whether more deserves you."
+    )
 
-    if second:
+    if len(areas) >= 4:
+        third, fourth = areas[2], areas[3]
         paragraphs.append(
-            f"Set the terms first. {first['area'].capitalize()} meets {second['area']}. "
-            "Name the responsibility. Name the cost. Put a boundary around what you are willing to carry. "
-            "Do not prove that you can handle more. Decide whether more deserves you."
+            "Widen the field without widening the mess. "
+            f"{imperative_for(third, 'year-middle-a')} "
+            f"{life_scene(third, 'year-middle', count=1)} "
+            f"{imperative_for(fourth, 'year-middle-b')} "
+            + luna_dry_truth("general", third + fourth)
         )
-    else:
+    elif len(areas) >= 3:
+        third = areas[2]
         paragraphs.append(
-            f"Set the terms first. {first['area'].capitalize()} needs a clearer answer. "
-            "Name the responsibility. Name the cost. Decide what you are willing to carry."
-        )
-
-    if len(rows) >= 4:
-        third, fourth = rows[2], rows[3]
-        paragraphs.append(
-            f"Then widen the field. {third['area'].capitalize()} opens first. {fourth['area'].capitalize()} comes next. "
-            "Take the useful opening. Do not turn more choice into more obligation. "
-            + luna_dry_truth("general", third["area"] + fourth["area"])
-        )
-    elif len(rows) >= 3:
-        third = rows[2]
-        paragraphs.append(
-            f"Then widen the field through {third['area']}. Take the opening. Keep the terms clean."
+            "Widen the field. "
+            f"{convergent_bridge(third, seed_text='year-middle', include_scene=True)}"
         )
 
-    if len(rows) >= 5:
-        later_areas = list(dict.fromkeys(row["area"] for row in rows[4:6]))
-        first_later = later_areas[0]
-        second_later = later_areas[1] if len(later_areas) > 1 else None
-        topic = (
-            "relationship"
-            if any("relationship" in area for area in later_areas)
-            else "routine"
-            if any("work" in area or "routine" in area for area in later_areas)
-            else "general"
-        )
-        later_open = f"Later, test what survives. {first_later.capitalize()} returns to the foreground."
-        if second_later:
-            later_open += f" {second_later.capitalize()} becomes the proof."
+    if len(areas) >= 5:
+        later = areas[4]
+        final = areas[5] if len(areas) > 5 else later
+        topic = life_domain(final)
         paragraphs.append(
-            later_open
-            + " Stop compensating for an old arrangement once the choice is clear. "
-            "Change the conditions that keep rebuilding the same problem. "
-            + luna_dry_truth(topic, " ".join(later_areas))
+            "Test what survives ordinary life. "
+            f"{imperative_for(later, 'year-late-a')} "
+            f"{life_scene(later, 'year-late', count=1)} "
+            f"{imperative_for(final, 'year-late-b')} "
+            "Stop compensating for an old arrangement once the choice is clear. "
+            + luna_dry_truth(topic, later + final)
         )
 
     arc = list(human_arc(_timing_story_arc_verb(story) for story in ordered))
 
-    areas = []
-    for story in anchors:
-        area = simplify_life_area(_timing_story_life_area(story))
-        if area not in areas:
-            areas.append(area)
-        if len(areas) >= 3:
-            break
-
-    if len(areas) >= 2:
-        chart_bridge = (
-            f"Read the chart as one system. {areas[0].capitalize()} and {areas[1]} move together. "
-            "Change one and the terms of the other change too."
-        )
-    else:
-        chart_bridge = "Read the chart as one system. Change the condition that keeps rebuilding the same problem."
-
+    chart_bridge = (
+        "Use the chart to test the trade-off. "
+        f"{imperative_for(first, 'chart-a')} "
+        f"{imperative_for(second, 'chart-b')} "
+        "Finish the decision in real life, not on the diagram."
+    )
     return {"paragraphs": paragraphs, "arc": arc, "chart_bridge": chart_bridge}
 
 def _timing_reader_move(story) -> str:
@@ -9143,7 +9032,7 @@ def _timing_recurrence_question(story) -> str:
 
 
 def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[str]:
-    """Use recurrence as memory. Never invent the biography."""
+    """Use recurrence as memory. Never invent biography or expose transit-family jargon."""
     if not birth_date_value:
         return []
 
@@ -9162,11 +9051,12 @@ def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[
         age = earlier.year - birth_date_value.year - (
             (earlier.month, earlier.day) < (birth_date_value.month, birth_date_value.day)
         )
+        area = _timing_story_life_area(story)
         rows.append(
             f"{_timing_date_label(earlier)} · about age {age}. "
-            f"The same broad {story.transit_planet}–{story.natal_target} transit family was active. "
             f"Think back. {_timing_recurrence_question(story)} "
-            "The event can differ. The pressure can rhyme. Ask what you learned to carry then that you are still carrying now."
+            f"{life_scene(area, f'history-{earlier.year}', count=1)} "
+            "The event can differ. The pressure can rhyme. Name what you learned to carry then."
         )
         if len(rows) >= 3:
             break
@@ -9188,9 +9078,7 @@ def _timing_relationship_timing(report) -> dict:
         relationship_relevant = (
             target.lower() == "venus"
             or str(house) == "7"
-            or "relationship" in area
-            or "agreement" in area
-            or "partner" in area
+            or life_domain(area) == "relationship"
         )
         if not relationship_relevant:
             continue
@@ -9259,20 +9147,27 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
 
 def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]:
     if not stories:
-        return ["Do not force a story here. The selected window is comparatively quiet."]
+        return ["Do not force a story here. Use the quiet window to finish what is already open."]
 
-    areas = []
+    raw_areas = []
     for story in stories[:4]:
-        area = simplify_life_area(_timing_story_life_area(story))
-        if area not in areas:
-            areas.append(area)
+        area = _timing_story_life_area(story)
+        if area not in raw_areas:
+            raw_areas.append(area)
 
-    if len(areas) >= 2:
+    first = raw_areas[0]
+    if len(raw_areas) >= 2:
+        second = raw_areas[1]
         return [
-            f"Read the pressure, not the picture. {areas[0].capitalize()} and {areas[1]} move together.",
-            "Change one and the terms of the other change too. Read the trade-off.",
+            f"{imperative_for(first, f'chart-{mode}-a')} "
+            f"{life_scene(first, f'chart-{mode}-a', count=1)}",
+            f"{imperative_for(second, f'chart-{mode}-b')} "
+            "Check who pays, waits or reorganises when you make the first move.",
         ]
-    return [f"Watch {areas[0] if areas else 'the active area'}. Act on the consequence, not the decoration."]
+    return [
+        f"{imperative_for(first, f'chart-{mode}')} "
+        f"{life_scene(first, f'chart-{mode}', count=1)}"
+    ]
 
 def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
     """One human sequence: possibility -> choice -> consequence."""
@@ -9324,21 +9219,28 @@ def _monthly_chart_story(result: dict, events: list[dict], selected_key: str) ->
         return []
 
     houses = _monthly_active_house_numbers(result, events, selected_key)
-    labels = [simplify_life_area(_CHART_HOUSE_KEY.get(h, f"House {h}")) for h in houses[:3]]
+    raw_areas = [HOUSE_NAMES.get(h, f"House {h}") for h in houses[:2]]
 
     if selected_key == "whole":
-        if len(labels) >= 2:
+        if len(raw_areas) >= 2:
             return [
-                f"Read the month as one system. {labels[0].capitalize()} and {labels[1]} move together.",
-                "Change one and the terms of the other change too. Keep the same decision thread.",
+                f"{imperative_for(raw_areas[0], 'month-chart-a')} "
+                f"{life_scene(raw_areas[0], 'month-chart-a', count=1)}",
+                f"{imperative_for(raw_areas[1], 'month-chart-b')} "
+                "Keep one standard while the dates change.",
             ]
-        return ["Follow the strongest dates. Keep the same decision thread."]
+        if raw_areas:
+            return [convergent_bridge(raw_areas[0], seed_text="month-chart", include_scene=True)]
+        return ["Follow the strongest date. Make the move concrete."]
 
     event = selected[0]
     move = str(event.get("move") or "").strip()
+    area = raw_areas[0] if raw_areas else str(event.get("title") or "general")
     return [
-        "Use this date as a pressure point, not a separate horoscope.",
-        move if move else "Notice what becomes harder to postpone. Decide from there.",
+        f"{imperative_for(area, f'month-date-{selected_key}')} "
+        f"{life_scene(area, f'month-date-{selected_key}', count=1)}",
+        finalize_customer_prose(move, product="monthly")
+        if move else "Name what becomes harder to postpone. Decide from there.",
     ]
 
 def _timing_chart_in_motion(report, snapshot) -> None:
@@ -9528,54 +9430,53 @@ def _render_timing_result_actions() -> None:
 
 
 def _timing_target_human_meaning(story) -> str:
-    """Translate the natal target into the human function being activated."""
+    """Translate a natal target into the ordinary decision it affects."""
     target = str(getattr(story, "natal_target", "") or "").strip()
     mapping = {
-        "Ascendant": "identity, instinct and the way you enter situations",
-        "Midheaven": "career, visibility, authority and the role other people expect you to carry",
-        "Sun": "identity, confidence and the direction that feels most like your own",
-        "Moon": "emotional security, habit, memory and what you need in order to feel safe",
-        "Mercury": "thinking, communication, decisions and the story you tell yourself about what is happening",
-        "Venus": "relationships, reciprocity, value, attraction and the terms under which closeness feels fair",
-        "Mars": "action, conflict, desire, effort and the point at which you stop accommodating and start moving",
-        "Jupiter": "growth, confidence, permission and the part of life that wants more room",
-        "Saturn": "responsibility, limits, endurance and the part of life that must become sustainable",
+        "Ascendant": "how you show up, what you say yes to and how much of yourself you put on the line",
+        "Midheaven": "the job, title, manager or public responsibility attached to your name",
+        "Sun": "the choice that affects your confidence, identity and direction",
+        "Moon": "home, family, habit and what your nervous system has to live with",
+        "Mercury": "the message, document, conversation or decision that needs a clear answer",
+        "Venus": "the person you want, the value you place on the bond and whether effort is mutual",
+        "Mars": "the workload, conflict or desire that makes you stop accommodating and act",
+        "Jupiter": "the bigger option and whether your actual life has room for it",
+        "Saturn": "the responsibility, deadline or limit that needs proper terms",
     }
-    return mapping.get(target, _timing_story_life_area(story))
-
+    return mapping.get(target, simplify_life_area(_timing_story_life_area(story)))
 
 def _timing_story_connection(report, story_index: int) -> list[str]:
-    """Keep each transit inside the same annual conversation without narrating the report structure."""
+    """Carry one decision standard through the year without narrating the report."""
     stories = list(report.stories or [])
     if not stories or story_index < 0 or story_index >= len(stories):
         return []
 
     story = stories[story_index]
-    previous = stories[story_index - 1] if story_index > 0 else None
     following = stories[story_index + 1] if story_index + 1 < len(stories) else None
     area = _timing_story_life_area(story)
+    seed = f"{story_index}-{getattr(story, 'headline', '')}"
     out = []
 
-    if previous is None:
+    if story_index == 0:
         out.append(
-            f"**Start here.** What you decide in **{area}** becomes the starting condition for the rest of the year. "
-            "Do not carry a vague answer forward just because it is familiar."
+            "Set the standard now. "
+            + convergent_bridge(area, seed_text=seed, include_scene=True)
         )
     else:
-        previous_area = _timing_story_life_area(previous)
         out.append(
-            f"You have already been dealing with **{previous_area}**. Now the pressure reaches **{area}**. "
-            "**Use what you learned earlier. Do not make the same compromise twice.**"
+            "Carry the standard forward. "
+            + convergent_bridge(area, seed_text=seed, include_scene=True)
         )
 
     if following is not None:
-        following_area = _timing_story_life_area(following)
+        next_area = _timing_story_life_area(following)
         out.append(
-            f"**Handle this cleanly now.** **{following_area}** is next, and what you tolerate here becomes part of the price there."
+            "Finish this before the next demand arrives. "
+            + life_scene(next_area, seed_text=f"next-{seed}", count=1)
         )
     else:
         out.append(
-            "**Close the loop.** Stop studying the pattern once you can see it. Change the routine, term or boundary that keeps recreating it."
+            "Close the loop. Change the routine, term or boundary that keeps rebuilding the same problem."
         )
     return out
 
@@ -9583,45 +9484,64 @@ def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
     if not events or index < 0 or index >= len(events):
         return []
 
-    previous = events[index - 1] if index > 0 else None
+    event = events[index]
     following = events[index + 1] if index + 1 < len(events) else None
-    out = []
 
-    if previous is None:
-        out.append("Do not force the whole month to resolve here. Let this date show you what deserves the next move.")
+    houses = list(event.get("houses") or [])
+    if houses:
+        current_area = HOUSE_NAMES.get(int(sorted(houses)[0]), "the decision in front of you")
     else:
-        out.append("Now choose. The earlier possibility is concrete enough to test. Keep what proves itself. Let the weaker option lose priority.")
+        current_area = str(event.get("title") or "the decision in front of you")
+
+    seed = f"monthly-{index}-{event.get('title', '')}"
+    out = [
+        ("Set the standard here. " if index == 0 else "Carry the standard forward. ")
+        + convergent_bridge(current_area, seed_text=seed, include_scene=True)
+    ]
 
     if following is not None:
-        out.append("Leave room for the next shift. Make this decision give you clarity, not another promise to carry.")
+        next_houses = list(following.get("houses") or [])
+        next_area = (
+            HOUSE_NAMES.get(int(sorted(next_houses)[0]), str(following.get("title") or "the next decision"))
+            if next_houses
+            else str(following.get("title") or "the next decision")
+        )
+        out.append(
+            "Leave the next decision room to breathe. "
+            + life_scene(next_area, seed_text=f"next-{seed}", count=1)
+        )
     else:
-        out.append("Keep what still matters after the excitement fades. Carry that into next month.")
+        out.append(
+            "Keep what still works after the excitement fades. "
+            + imperative_for(current_area, seed_text=f"close-{seed}")
+        )
     return out
 
 def _weekly_connected_interpretation(summary: dict) -> list[str]:
-    areas = list(summary.get("areas") or [])
+    raw_areas = list(summary.get("raw_areas") or summary.get("areas") or [])
     move = str(summary.get("move") or "keep the facts visible before committing").strip().rstrip(".")
-    area_one = areas[0] if areas else "your priorities"
-    area_two = areas[1] if len(areas) > 1 else "the choices around them"
+    first = raw_areas[0] if raw_areas else "general"
+    second = raw_areas[1] if len(raw_areas) > 1 else first
+    seed = f"{summary.get('sign', '')}-weekly"
 
     return [
-        f"Watch {area_one} and {area_two}. They pull on each other this week. A choice in one changes what you can realistically give in the other.",
+        f"{imperative_for(first, seed)} {life_scene(first, seed, count=1)} "
+        f"{imperative_for(second, seed + '-2')}",
         f"{move.capitalize()}. Keep that rule all week. The mood can change. The standard does not have to.",
     ]
 
 def _daily_connected_meaning(narrative) -> str:
-    """One causal bridge. Daily stays short."""
-    action = str(getattr(narrative, "action_today", "") or "").strip()
-    if not action:
-        return ""
-    return f"Do not just notice the pressure. {action.rstrip('.')}."
+    """Daily already has a Your Move block. Do not repeat it in the story."""
+    return ""
 
 def _solar_connected_meaning(solar) -> str:
+    area = str(getattr(solar, "activated_house_name", "") or "general")
+    seed = f"solar-{getattr(solar, 'solar_sign', '')}"
     return (
-        f"Put {solar.activated_house_name} in the foreground. The Sun is moving through "
-        f"{solar.solar_sign} / {solar.solar_process} while local light is {solar.light_direction.lower()}. "
-        f"{solar.focus_meaning} Use that as the move."
-    )
+        f"{imperative_for(area, seed)} "
+        f"{life_scene(area, seed, count=1)} "
+        f"{str(getattr(solar, 'focus_meaning', '') or '').strip()}"
+    ).strip()
 
 def timing_map_page() -> None:
     set_page_metadata(
@@ -9630,7 +9550,7 @@ def timing_map_page() -> None:
         "/timing-map",
     )
     st.markdown('<section class="timing-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Pilot · personal timing</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Personal timing</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Your Year Ahead</div><div class="timing-product-subtitle">Personal Transits &amp; Timing</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto, shows when the strongest contacts start, peak and ease, and translates each transit into the life area and decision it activates.</div>',
@@ -9644,7 +9564,7 @@ def timing_map_page() -> None:
         min_value=date(1950, 1, 1),
         max_value=date(2100, 12, 31),
         key="timing-start-date-v330",
-        help="The pilot defaults to today in your browser timezone. You can test another 12-month window.",
+        help="This defaults to today in your browser timezone. Choose another start date if you want a different 12-month window.",
     )
 
     with st.container(border=True):
@@ -9682,7 +9602,7 @@ def timing_map_page() -> None:
     report = st.session_state.get("timing-map-report-v330")
     if report is None:
         st.markdown(
-            '<div class="lean-bookmark-note">Birth details stay out of the page URL and analytics. This pilot calculates the natal geometry in the current app session.</div>',
+            '<div class="lean-bookmark-note">Birth details stay out of the page URL and analytics. The natal geometry is calculated inside the current app session.</div>',
             unsafe_allow_html=True,
         )
         st.markdown('</section>', unsafe_allow_html=True)
@@ -9695,7 +9615,7 @@ def timing_map_page() -> None:
     _render_timing_result_actions()
     st.markdown(
         f'''<div class="timing-summary-grid">
-  <div><span>Major games</span><strong>{report.major_games}</strong></div>
+  <div><span>Main themes</span><strong>{report.major_games}</strong></div>
   <div><span>Turning points</span><strong>{report.turning_points}</strong></div>
   <div><span>Rule changes</span><strong>{report.rule_changes}</strong></div>
 </div>''',
@@ -9719,11 +9639,10 @@ def timing_map_page() -> None:
         arc = list(year_story.get("arc", []) or [])
         if arc:
             st.markdown(
-                '<div class="timing-meta" style="margin-top:1.25rem;text-transform:none">The arc</div>'
-                f'<div style="font:400 13px IBM Plex Mono,monospace;letter-spacing:.02em;'
-                f'line-height:1.8;margin:.25rem 0 1rem">{escape(" → ".join(arc))}</div>',
+                '<div class="timing-meta" style="margin-top:1.25rem;text-transform:none">The year in five moves</div>',
                 unsafe_allow_html=True,
             )
+            _render_luna_prose(human_arc_sentence(arc), product="timing")
 
         _render_luna_prose(year_story.get("chart_bridge", ""), product="timing")
 
@@ -9744,7 +9663,7 @@ def timing_map_page() -> None:
         _timing_chart_in_motion(report, timing_snapshot)
 
     if not report.stories:
-        st.info("No major exact contacts passed the pilot threshold in this 12-month window. Try a different start date.")
+        st.info("No major exact contacts passed the current threshold in this 12-month window. Try a different start date.")
     else:
         for number, story in enumerate(report.stories, start=1):
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
@@ -9787,14 +9706,6 @@ def timing_map_page() -> None:
                     unsafe_allow_html=True,
                 )
 
-            birth_date_for_history = st.session_state.get("timing-map-birth-date-v334")
-            if isinstance(birth_date_for_history, str):
-                try:
-                    birth_date_for_history = date.fromisoformat(birth_date_for_history)
-                except Exception:
-                    birth_date_for_history = None
-            _render_transit_history(story, birth_date_for_history)
-
             with st.expander("Why Luna sees this"):
                 confidence = _timing_story_confidence(story)
                 st.markdown(
@@ -9823,7 +9734,7 @@ def timing_map_page() -> None:
 
 
     st.markdown(
-        "<div class=\"timing-test\"><strong>Your Year Ahead · Personal Transits &amp; Timing · pilot</strong><br>This is Luna's paid-value layer: personal timing, major peaks, historical context and the difference between then and now. Pricing is still being tested; no payment is collected in this pilot.</div>",
+        "<div class=\"timing-test\"><strong>Was this Year Ahead useful?</strong><br>Judge the reading by one thing: did it make the timing and the next move clearer?</div>",
         unsafe_allow_html=True,
     )
     vote_cols = st.columns(3, gap="small")
@@ -9841,7 +9752,7 @@ def timing_map_page() -> None:
                     },
                 )
     if st.session_state.get("timing-map-vote-v330"):
-        st.success("Recorded. This pilot records only the response and product context — not your birth details.")
+        st.success("Recorded. This feedback stores the response and product context — not your birth details.")
 
     st.markdown('</section>', unsafe_allow_html=True)
 
@@ -9854,10 +9765,11 @@ def solar_year_page() -> None:
     st.markdown('<div class="eyebrow">Explainable astrology / solar structure</div>', unsafe_allow_html=True)
     st.markdown('<a class="lean-monthly-link" href="/natal-snapshot">Create your free Natal Snapshot →</a>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">The Solar<br>Convergence</div>', unsafe_allow_html=True)
-    st.markdown(
-        "**Use the Sun as the clock. Then ask where that timing lands in your life.** "
-        "The tropical sequence stays the same. Your location changes the light around you — increasing, decreasing or turning — "
-        "and your sign shows which life area carries the symbolic emphasis."
+    _render_luna_prose(
+        "Use the Sun as the clock. Then make the timing practical. "
+        "Your location changes the light around you while the tropical sequence stays the same. "
+        "Use your sign to see which part of life needs the next move.",
+        product="solar",
     )
 
     st.markdown("## The Luna Solar Clock")
@@ -9939,7 +9851,7 @@ def solar_year_page() -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("### What this means together")
+    st.markdown("### Your move")
     _render_luna_prose(_solar_connected_meaning(solar), product="solar")
 
     st.markdown("## Historical symbolism and factual boundary")
@@ -9978,9 +9890,9 @@ optional question is stored in Stripe Checkout metadata and used only to generat
 and support the purchased report. A city is used to
 estimate latitude, hemisphere and daylight; a street address is not requested.
 
-The free Natal Snapshot and Your Year Ahead pilot use birth details in the current app session to calculate the result.
-Birth details are not placed in the page URL or analytics events by either feature. The Timing Map price test records only the
-response, pilot price and whether an exact birth time was available; it does not record the birth date, time or place.
+The free Natal Snapshot and Your Year Ahead use birth details in the current app session to calculate the result.
+Birth details are not placed in the page URL or analytics events by either feature. Year Ahead feedback records only the
+response and whether an exact birth time was available; it does not record the birth date, time or place.
 For paid Monthly personalisation, the same birth inputs are used in-session to calculate a compact
 derived natal profile. Stripe receives that derived geometry and a Sun/Moon/Rising summary for
 fulfilment; it does **not** receive the raw birth date, birth time or birthplace.
@@ -9995,7 +9907,7 @@ email displayed during checkout or in the report-delivery message.
 - page views;
 - free daily reading generation;
 - free natal snapshot generation (without birth details in the event payload);
-- Your Year Ahead generation and pilot price-test response (without birth details);
+- Your Year Ahead generation and feedback response (without birth details);
 - monthly report checkout clicks;
 - year-ahead report checkout clicks;
 - confirmed paid-report purchases.

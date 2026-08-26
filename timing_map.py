@@ -1,4 +1,5 @@
 from __future__ import annotations
+from luna_life_scenes import domain_command, human_focus, life_scene_line
 
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -291,20 +292,10 @@ def _polarity(transit_planet: str, aspect: str) -> str:
 
 
 def _scenario_lines(target: NatalPosition, transit_planet: str, aspect: str) -> tuple[str, ...]:
-    domain = TARGET_DOMAINS.get(target.planet, target.planet.lower())
-    house_domain = HOUSE_NAMES.get(target.house or 0, "")
-
-    if aspect in {"square", "opposition"}:
-        first = f"Name the weak point around {domain}. Stop postponing the choice."
-    elif aspect in {"trine", "sextile"}:
-        first = f"Use the support around {domain} while the opening is active. Make one concrete move."
-    else:
-        first = f"Treat {domain} as active, not background. The old default is no longer neutral."
-
-    if house_domain:
-        second = f"Watch {house_domain}. That is where the consequence is most likely to become visible."
-    else:
-        second = "Watch the part of life already asking for the clearest decision."
+    raw_domain = HOUSE_NAMES.get(target.house or 0, TARGET_DOMAINS.get(target.planet, target.planet.lower()))
+    seed = f"{transit_planet}-{target.planet}-{aspect}-{target.house}"
+    first = domain_command(raw_domain, seed)
+    second = life_scene_line(raw_domain, seed_text=seed, count=1)
 
     if transit_planet == "Neptune":
         third = "Verify the promise, impression or fear before you let it make the decision."
@@ -318,23 +309,27 @@ def _scenario_lines(target: NatalPosition, transit_planet: str, aspect: str) -> 
         third = "Name the real power structure. Stop pretending neutrality will keep the old balance intact."
     return (first, second, third)
 
+
 def _summary(target: NatalPosition, transit_planet: str, aspect: str) -> str:
-    domain = TARGET_DOMAINS.get(target.planet, target.planet.lower())
+    raw_domain = HOUSE_NAMES.get(target.house or 0, TARGET_DOMAINS.get(target.planet, target.planet.lower()))
+    seed = f"summary-{transit_planet}-{target.planet}-{aspect}-{target.house}"
+
     if aspect in {"square", "opposition"}:
-        relation = "The friction is useful. It exposes the condition you can no longer leave vague."
+        relation = "Use the friction. Name the condition you can no longer leave vague."
     elif aspect in {"trine", "sextile"}:
-        relation = "The support is real. Use it before it becomes background."
+        relation = "Use the support before it becomes background."
     else:
-        relation = "The two themes are concentrated now. Stop treating the issue as background noise."
+        relation = "Stop treating the issue as background noise."
 
     transit_line = {
-        "Jupiter": "More room is available.",
-        "Saturn": "The cost and responsibility need terms.",
-        "Uranus": "The old structure has too little room.",
-        "Neptune": "The story needs proof.",
-        "Pluto": "The real power structure is showing itself.",
+        "Jupiter": "Use the extra room.",
+        "Saturn": "Put the cost and responsibility into terms.",
+        "Uranus": "Make more room before you break the structure.",
+        "Neptune": "Make the story survive the facts.",
+        "Pluto": "Name where the power actually sits.",
     }[transit_planet]
-    return f"{transit_line} In your chart this lands on {domain}. {relation}"
+    return f"{transit_line} {domain_command(raw_domain, seed)} {relation}"
+
 
 def _story_score(transit_planet: str, target: NatalPosition, aspect: str, hit_count: int) -> float:
     score = TRANSIT_WEIGHTS[transit_planet]

@@ -74,8 +74,8 @@ GENERIC_COPY_VARIANTS = {
             "Decide what you are willing to make louder.",
         ),
         (
-            "{First} and {second} are fused into one demand.",
-            "There is no neutral setting while both signals occupy the controls.",
+            "Stop trying to run both signals at full volume. {First} and {second} are fused into one demand.",
+            "Choose the setting before the noise chooses it for you.",
             "Give the combined force one precise job.",
         ),
     ),
@@ -86,8 +86,8 @@ GENERIC_COPY_VARIANTS = {
             "Fix the structure before forcing the result.",
         ),
         (
-            "{First} is pressing harder than {second} can absorb.",
-            "The irritation is useful. It points directly at the bad assumption.",
+            "Find the weak assumption. {First} and {second} are colliding around it.",
+            "Use the irritation as evidence, not permission to overreact.",
             "Remove the false assumption, then make the move.",
         ),
         (
@@ -103,12 +103,12 @@ GENERIC_COPY_VARIANTS = {
             "Name the trade-off. Then choose consciously.",
         ),
         (
-            "{First} is visible on one side. {Second} is collecting leverage on the other.",
+            "Name both sides. {First} wants one outcome; {Second} wants another.",
             "The stalemate survives only while nobody names the cost.",
             "State both prices. Choose the cost you can carry.",
         ),
         (
-            "{First} says yes. {Second} answers from across the table.",
+            "Choose the direction first. {First} can say yes while {Second} asks what it will cost.",
             "Compromise without a clear priority becomes slow surrender.",
             "Choose the priority. Negotiate everything else.",
         ),

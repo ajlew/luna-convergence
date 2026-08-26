@@ -24,7 +24,7 @@ from luna_editorial_system import (
     WHY_LUNA_LABEL,
     luna_do_dont,
 )
-from luna_voice import finalize_customer_prose, narrator_cue
+from luna_voice import finalize_customer_prose, imperative_for, life_scene, narrator_cue
 from solar_cycle import solar_gate_label
 from strategic_horizon import describe_slow_planet_horizon
 
@@ -49,33 +49,33 @@ HOUSE_LABELS = {
 }
 
 HOUSE_INLINE = {
-    1: "identity and personal direction",
-    2: "money and self-worth",
-    3: "communication and everyday decisions",
-    4: "home and family",
-    5: "romance and creativity",
-    6: "work and wellbeing",
-    7: "relationships and agreements",
-    8: "trust and shared obligations",
-    9: "travel and learning",
-    10: "career and reputation",
-    11: "friends and future plans",
-    12: "rest and private reflection",
+    1: "how you show up",
+    2: "the price, payment or purchase in front of you",
+    3: "the message, document or conversation that needs an answer",
+    4: "home and the arrangement you live with every day",
+    5: "the person, pleasure or creative project pulling your attention",
+    6: "the workload and routine your ordinary week has to sustain",
+    7: "the person across the table and the promises between you",
+    8: "money, trust and responsibility you share with someone else",
+    9: "the trip, course, application or outside opportunity in front of you",
+    10: "the job, role or public responsibility with your name on it",
+    11: "the friends, groups and plans shaping what you build next",
+    12: "what needs privacy, rest or a clean ending",
 }
 
 HOUSE_PROSE = {
-    1: "your identity and personal direction",
-    2: "money, value and security",
-    3: "communication and everyday decisions",
-    4: "home, family and private life",
-    5: "romance, pleasure and creative expression",
-    6: "work, health and daily routines",
-    7: "relationships, agreements and other people",
-    8: "trust, intimacy and shared finances",
-    9: "travel, learning and the wider world",
-    10: "career, reputation and public direction",
-    11: "friends, communities and future plans",
-    12: "rest, closure and private reflection",
+    1: "how you show up and what you are willing to carry",
+    2: "the price, payment or purchase in front of you",
+    3: "the message, document or conversation that needs an answer",
+    4: "home and the arrangement you live with every day",
+    5: "the person, pleasure or creative project pulling your attention",
+    6: "the workload and routine your ordinary week has to sustain",
+    7: "the person across the table and the promises between you",
+    8: "money, trust and responsibility you share with someone else",
+    9: "the trip, course, application or outside opportunity in front of you",
+    10: "the job, role or public responsibility with your name on it",
+    11: "the friends, groups and plans shaping what you build next",
+    12: "what needs privacy, rest or a clean ending",
 }
 
 HOUSE_CLIMATE = {
@@ -94,18 +94,18 @@ HOUSE_CLIMATE = {
 }
 
 HOUSE_STORY = {
-    1: "A personal decision may ask you to lead instead of waiting for approval.",
-    2: "A price, purchase or money conversation may make you reconsider what is genuinely worth your energy.",
-    3: "A message, invitation or overlooked detail may change the direction of a conversation.",
-    4: "Something at home or within the family may need a calmer response than expected.",
-    5: "A romantic or creative possibility may become harder to dismiss.",
-    6: "A routine problem may reveal the small adjustment that makes the whole day easier.",
-    7: "Another person's honesty may show you where a relationship or agreement really stands.",
-    8: "A shared cost, promise or trust issue may need to be named directly.",
-    9: "An invitation to learn, travel or think bigger may suddenly feel more realistic.",
-    10: "A work opportunity or visible responsibility may put you in a stronger position.",
-    11: "A friend, audience or useful contact may open an unexpected possibility.",
-    12: "A quiet realisation may help you close a draining chapter.",
+    1: "Choose the direction before you ask for approval.",
+    2: "Put the price on paper before you decide what is worth it.",
+    3: "Ask the direct question before you build a story around the message.",
+    4: "Fix the home arrangement you have to live with after the conversation ends.",
+    5: "Enjoy the spark. Then make it survive ordinary life.",
+    6: "Change the method before adding effort.",
+    7: "Ask who is carrying the relationship.",
+    8: "Write down who carries what.",
+    9: "Check the booking, deadline and paperwork before you say yes.",
+    10: "Price the responsibility before you accept the title.",
+    11: "Watch who turns enthusiasm into a plan.",
+    12: "End the input. Close what is finished.",
 }
 
 HOUSE_EXAMPLES = {
@@ -216,46 +216,22 @@ HOUSE_ASPECT_QUESTIONS = {
 
 STORY_BRIDGE_TEMPLATES = {
     "hard": (
-        "The two areas are competing for attention, and the real issue becomes clearer when neither is allowed to hide behind the other.",
-        "A decision involving {first} is exposing what has been avoided in {second}.",
-        "A change involving {first} now has consequences for {second}, so a direct response matters more than a fast one.",
-        "Two priorities are pulling against each other: {first}; {second}. One honest priority will help more than two partial answers.",
-        "These parts of life can no longer be managed separately; the useful move is to name the point of conflict.",
-        "Pressure in {first} is revealing an unmet need in {second}.",
-        "The day asks you to reconcile {first} with {second} instead of allowing urgency to choose for you.",
-        "A small reaction in {first} could become a larger problem in {second} unless the underlying issue is addressed.",
-        "The issue begins in {first}, but its effects are already reaching {second}; respond in the order that creates clarity.",
-        "What looks like a problem in {first} may actually be a boundary issue in {second}.",
-        "The real decision is not whether both priorities matter, but what must be organised first: {first} or {second}.",
-        "A reaction in {first} is pointing toward a deeper concern in {second}; address the concern, not only the reaction.",
+        "Name the trade-off between {first} and {second}. Choose what gets protected first.",
+        "Stop trying to satisfy {first} and {second} at the same time. Set the order.",
+        "Find the weak assumption connecting {first} and {second}. Fix that before you act.",
+        "Put {first} beside {second}. Refuse the compromise that weakens both.",
     ),
     "flow": (
-        "Progress in {first} can now strengthen {second}.",
-        "An opening in {first} is making the next step in {second} easier to recognise.",
-        "The cooperation between {first} and {second} rewards a practical move made at the right moment.",
-        "What becomes easier in {first} can restore confidence in {second}.",
-        "The two areas are supporting each other, provided the opportunity is used rather than merely admired.",
-        "A constructive choice in {first} creates movement in {second}.",
-        "The day links {first} with {second} in a way that makes a modest step unusually useful.",
-        "An easier exchange between {first} and {second} can turn possibility into evidence.",
-        "A useful development in {first} gives {second} more room to grow.",
-        "What opens in {first} can now be translated into a practical gain in {second}.",
-        "The support moving through {first} is also improving the outlook for {second}.",
-        "A timely choice in {first} helps the promise inside {second} become more concrete.",
+        "Use the opening in {first} to make one concrete move in {second}.",
+        "Take the easy support. Turn it into evidence in {second}.",
+        "Move while {first} makes {second} easier.",
+        "Use what is working in {first}. Give {second} something concrete to build on.",
     ),
     "blend": (
-        "The day places {first} beside {second}, making one decision carry meaning in both areas.",
-        "A development in {first} is changing how {second} needs to be handled.",
-        "The connection between {first} and {second} is becoming more visible.",
-        "One choice now links {first} with {second}, even if they first appeared unrelated.",
-        "The story begins in {first} but its meaning becomes clearer through {second}.",
-        "The day moves between {first} and {second}, asking for a response that respects both.",
-        "A shift in {first} is bringing a second issue in {second} into focus.",
-        "These two parts of life are meeting inside the same decision.",
-        "What begins in {first} will need to be understood through {second}.",
-        "The meaning of {first} is changing because {second} is now part of the picture.",
-        "A choice involving {first} is also redefining what is possible in {second}.",
-        "The day brings {first} and {second} together without allowing either one to remain theoretical.",
+        "Put {first} beside {second}. Make one decision that works in both.",
+        "Choose the shared priority between {first} and {second}.",
+        "Name what both {first} and {second} need from the same decision.",
+        "Stop treating {first} and {second} as separate problems. Choose one rule for both.",
     ),
 }
 
@@ -290,18 +266,18 @@ HOUSE_ACTIONS = {
 }
 
 HOUSE_OPPORTUNITIES = {
-    1: "Use the pressure to define a more authentic personal position.",
-    2: "A clearer value or limit can restore confidence and leverage.",
-    3: "One precise sentence can create understanding and movement.",
-    4: "Honesty can make home, family or private life feel safer rather than heavier.",
-    5: "A creative or romantic risk can become real when it is expressed plainly.",
-    6: "A small systems change can improve energy, health or workload quickly.",
-    7: "A direct conversation can replace uncertainty with workable relationship terms.",
-    8: "Naming the hidden condition can deepen trust or protect shared resources.",
-    9: "A wider world becomes accessible through one practical commitment.",
-    10: "Clear standards can strengthen your professional position and reputation.",
-    11: "The right ally can turn a private ambition into a shared future plan.",
-    12: "Stepping back can reveal the truth that constant activity has concealed.",
+    1: "Choose the position that still feels like yours after the room reacts.",
+    2: "Put the real price beside the desire. Keep what is still worth it.",
+    3: "Send the precise sentence. Let the reply become evidence.",
+    4: "Say the private concern plainly. Make home safer by making the issue visible.",
+    5: "Show the interest. Then make the romance or creative idea survive an ordinary day.",
+    6: "Change one routine. Let your energy tell you whether the method works.",
+    7: "Ask the direct question. Make the other person's effort part of the answer.",
+    8: "Name the hidden condition. Put a number or boundary around what is shared.",
+    9: "Enquire, book, apply or submit. Make the outside opportunity survive logistics.",
+    10: "Set the professional standard. Make the role, title or result carry its real responsibility.",
+    11: "Call the useful person. Turn the shared idea into a date, task or next step.",
+    12: "Step back. Close the unfinished thing before you add another demand.",
 }
 
 HOUSE_WATCH_OUT = {
@@ -1408,29 +1384,32 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
         else "blend"
     )
     templates = STORY_BRIDGE_TEMPLATES[bridge_tone]
-    variant = (
-        trigger - 1 + reading.reading_date.toordinal()
-    ) % len(templates)
+    variant = (trigger - 1 + reading.reading_date.toordinal()) % len(templates)
     bridge = templates[variant].format(
         first=HOUSE_PROSE[trigger],
         second=HOUSE_PROSE[other],
     )
+    scene = life_scene(
+        HOUSE_PROSE[trigger],
+        seed_text=f"daily-{reading.sign}-{reading.reading_date.isoformat()}-{trigger}",
+        count=2,
+    )
 
     paragraphs = [
         f"{consequence} {bridge}",
-        HOUSE_EXAMPLES[trigger],
+        scene,
         _sign_specific_relationship(reading),
     ]
 
-    # The visible story is sign-specific. Shared astronomy remains in the
-    # evidence and Sky Snapshot rather than becoming duplicated public copy.
     result: list[str] = []
     for paragraph in paragraphs:
-        if paragraph and _repetition_count(paragraph, previous_texts) < 3:
-            result.append(paragraph)
+        cleaned = finalize_customer_prose(paragraph, product="daily")
+        if cleaned and _repetition_count(cleaned, previous_texts) < 3:
+            result.append(cleaned)
     if len(result) < 3:
-        result = paragraphs
+        result = [finalize_customer_prose(item, product="daily") for item in paragraphs if item]
     return tuple(result[:3])
+
 
 
 def _why_today_points(reading, evidence: EvidenceSnapshot) -> tuple[str, str, str]:

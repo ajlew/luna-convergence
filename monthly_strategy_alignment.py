@@ -20,18 +20,18 @@ HOUSE_TO_DOMAIN = {
 }
 
 HOUSE_LABELS = {
-    1: "identity and direction",
-    2: "money and value",
-    3: "communication and decisions",
-    4: "home and private life",
-    5: "romance and creativity",
-    6: "work and wellbeing",
-    7: "relationships and agreements",
-    8: "shared money and responsibility",
-    9: "travel and wider horizons",
-    10: "career and visibility",
-    11: "friends, networks and future plans",
-    12: "rest, closure and private renewal",
+    1: "how you show up",
+    2: "the price and payment",
+    3: "the message and decision",
+    4: "home and private reality",
+    5: "the person or project you want",
+    6: "the workload and routine",
+    7: "the other person and the promise",
+    8: "shared money, trust and responsibility",
+    9: "the trip, course or outside opportunity",
+    10: "the role and public responsibility",
+    11: "the people helping build what comes next",
+    12: "what needs rest or closure",
 }
 
 
@@ -62,7 +62,7 @@ def _response_for(posture: str, role: str) -> str:
     if posture == "NEGOTIATE":
         return "Use this evidence to name the term that must change before you increase commitment."
     if posture == "HOLD":
-        return "Do what is essential, but preserve optionality until this pressure separates or the information improves."
+        return "Do what is essential. Keep the rest reversible until the facts improve."
     if posture == "PASS":
         return "Do not chase this development; let the optional demand pass and protect time, money and freedom of movement."
     return "Let the evidence determine the move rather than the excitement of the moment."
@@ -100,10 +100,10 @@ def strategy_rule(decision: Mapping[str, object] | None) -> str:
     rules = {
         "FULL ADVANCE": "Follow the evidence that keeps strengthening; increase commitment only where the terms remain visible.",
         "SELECTIVE ADVANCE": "Advance where support is clean. Negotiate mixed terms. Let poor-risk/reward demands pass.",
-        "TIMED ADVANCE": "Preserve optionality through the difficult window, then move when the sky has materially improved.",
+        "TIMED ADVANCE": "Keep the hard-to-reverse part open. Move when the evidence improves.",
         "PROBE": "Use the month to improve information before you improve commitment.",
         "RENEGOTIATE": "Visibility is leverage, not permission. Change the terms before you change your exposure.",
-        "DEFENSIVE HOLD": "Protect capacity and optionality; essential action only until the pressure separates.",
+        "DEFENSIVE HOLD": "Protect capacity. Do only what must be done until the immediate pressure passes.",
         "PASS": "Not every opening deserves a move. Preserve the position when waiting costs less than being wrong.",
     }
     if portfolio in rules:
@@ -114,7 +114,7 @@ def strategy_rule(decision: Mapping[str, object] | None) -> str:
         "ADVANCE": "Make the supported move concrete and let the next response become evidence.",
         "QUESTION": "Ask before committing; the missing answer matters more than the first impression.",
         "NEGOTIATE": "Change the terms before increasing commitment.",
-        "HOLD": "Preserve optionality while pressure and information are still moving.",
+        "HOLD": "Keep the hard-to-reverse part open while the facts are still moving.",
         "PASS": "Let the optional demand pass when the downside is larger than the clean upside.",
     }.get(posture, "Let the evidence determine the move.")
 

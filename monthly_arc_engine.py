@@ -18,18 +18,18 @@ TRIGGER_WEIGHTS = {
 }
 
 HOUSE_SHORT = {
-    1: "identity and direction",
-    2: "income and personal money",
-    3: "messages, contracts and movement",
-    4: "home and private life",
-    5: "romance and creativity",
-    6: "work and wellbeing",
-    7: "relationships and agreements",
-    8: "shared money and obligations",
-    9: "travel, publishing and opportunity",
-    10: "career and visibility",
-    11: "friends, audiences and future plans",
-    12: "rest, closure and private matters",
+    1: "how you show up",
+    2: "the price and payment",
+    3: "the message and decision",
+    4: "home and private reality",
+    5: "the person or project you want",
+    6: "the workload and routine",
+    7: "the other person and the promise",
+    8: "shared money, trust and responsibility",
+    9: "the trip, course or outside opportunity",
+    10: "the role and public responsibility",
+    11: "the people helping build what comes next",
+    12: "what needs rest or closure",
 }
 
 HOUSE_THEME = {
@@ -51,18 +51,18 @@ HOUSE_THEME = {
 # when it is astronomically present in BOTH the primary and secondary event
 # clusters, making it a genuine bridge between the two main plots.
 HOUSE_BRIDGE_COPY = {
-    1: "Your own agency is the bridge: what begins and what follows only belong together if the choice still feels like yours.",
-    2: "Money and value are the bridge: the opening and outcome only belong together if the cost and return make sense.",
-    3: "Communication is the bridge: a message, document, conversation or decision connects the opening to the outcome.",
-    4: "Home and private reality are the bridge: the larger plan only works if it has somewhere workable to land.",
-    5: "Desire and creativity are the bridge: what you genuinely want to make, enjoy or pursue determines how the story joins up.",
-    6: "Daily capacity is the bridge: the opportunity and outcome only belong together if the workload, routine and wellbeing can carry them.",
-    7: "Another person is the bridge: a partner, client, collaborator or agreement connects the opening to what happens next.",
-    8: "Shared stakes are the bridge: ownership, trust, debt, funding or responsibility connects the opening to the outcome.",
-    9: "The wider-world path is the bridge: travel, study, publishing, legal or international matters connect the opening to the result.",
-    10: "Career and visibility are the bridge: the part that becomes public or professionally consequential connects the opening to the outcome.",
-    11: "Networks and future plans are the bridge: the people, audience or alliance around you determine how the opening can move forward.",
-    12: "Private reality is the bridge: what must be finished, protected or released first determines how the opening can become an outcome.",
+    1: "Keep the choice yours. Do not let the next step require a version of you that you no longer want to be.",
+    2: "Put a number on it. Make the opening survive the real cost.",
+    3: "Ask the direct question. Make the message, document or conversation carry the next step.",
+    4: "Make the plan fit the house, family or private life that has to live with it.",
+    5: "Choose what you genuinely want. Do not confuse attention with commitment.",
+    6: "Make the ordinary week carry the opportunity. Change the method before adding effort.",
+    7: "Ask what the other person will carry. Make mutual effort part of the evidence.",
+    8: "Write down who carries the money, risk or responsibility. Do not leave the shared part vague.",
+    9: "Check the booking, deadline and paperwork. Make the outside opportunity survive logistics.",
+    10: "Price the responsibility before you accept the visibility. Make authority come with terms.",
+    11: "Watch who turns enthusiasm into a plan. Choose the people who carry the next step with you.",
+    12: "Close what is finished. Protect the private space the next move needs.",
 }
 
 
@@ -755,7 +755,7 @@ def _relationship_test_copy(cluster: dict | None, sign: str = "") -> tuple[str, 
         first_options = (
             f"Around {window}, a connection or agreement becomes more revealing once the next step has to be mutual.",
             f"Around {window}, another person's response matters more than the first wave of attention.",
-            f"Around {window}, partnership energy moves from interest into terms, timing and reciprocity.",
+            f"Around {window}, put timing, effort and reciprocity on the table. Watch what the other person does next.",
             f"Around {window}, the useful question is no longer whether there is interest, but whether both sides can carry the plan.",
         )
     else:
@@ -1154,8 +1154,8 @@ def _july_style_story(
             f"Near {complication_date}, another attempt to organise the situation can bring a mortgage, "
             "loan, grant, insurance matter, investment, business plan or shared-money decision into view. "
             "The process may require more forms, proof and conservative estimates than anticipated.",
-            "This is where the opportunity meets Saturn's standard: accurate, verifiable and sustainable. "
-            "A delay is not automatically a refusal, but vague numbers and incomplete documents will not carry the story forward.",
+            "Make the opportunity survive Saturn's standard: keep the numbers accurate, the documents verifiable and the commitment sustainable. "
+            "Treat a delay as information, not rejection. Fix vague numbers and incomplete documents before you move.",
         )
         pivot_text = (
             f"Around {pivot_date}, communication begins to clear. Messages resume, stalled applications can move "
@@ -1164,13 +1164,13 @@ def _july_style_story(
             else f"Around {pivot_date}, the month changes direction as information, timing or support becomes easier to use."
         )
         climax = (
-            f"By {climax_date}, the story widens dramatically. Travel, publishing, study, legal matters, international "
-            "opportunities, an interview or an important agreement can move from possibility into a visible result.",
-            "What felt delayed at the beginning of the month may not resolve in exactly the original form. "
-            "The larger gain is movement: a future that was blocked begins to answer back.",
+            f"By {climax_date}, make the outside opportunity concrete. A trip, course, publication, legal matter, international "
+            "opportunity, interview or important agreement can move from possibility into a visible result.",
+            "Do not insist on the original form simply because it was the first plan. "
+            "Use the movement. Let the workable route replace the imagined one.",
         )
         resolution = (
-            "The month does not erase the early financial lesson. It uses that lesson to improve the terms of the opportunity that follows.",
+            "Carry the early money lesson forward. Improve the terms before you accept the opportunity that follows.",
         )
         return (
             opening,

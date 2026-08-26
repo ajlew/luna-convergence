@@ -129,12 +129,12 @@ def _game_cards(result: dict) -> str:
         cards.append(
             f"""
 <article class="luna-game-card">
-  <span>Game {index}</span>
+  <span>Theme {index}</span>
   <h3>{_safe(game.get('title'))}</h3>
-  <p>{_safe(game.get('question'))}</p>
+  <p>{_prose_safe(game.get('question'))}</p>
   <dl>
-    <dt>Your leverage</dt><dd>{_safe(game.get('advantage'))}</dd>
-    <dt>Main risk</dt><dd>{_safe(game.get('risk'))}</dd>
+    <dt>Your advantage</dt><dd>{_prose_safe(game.get('advantage'))}</dd>
+    <dt>Main risk</dt><dd>{_prose_safe(game.get('risk'))}</dd>
   </dl>
 </article>
             """
@@ -165,7 +165,7 @@ def _act_cards(result: dict) -> str:
   </div>
   <div>
     <h3>{_safe(item.get('dominant_game'))}</h3>
-    <p>{_safe(item.get('summary'))}</p>
+    <p>{_prose_safe(item.get('summary'))}</p>
     <small>Rule change: {_safe(item.get('trigger'))}</small>
   </div>
 </article>
@@ -180,7 +180,7 @@ def _round_cards(result: dict) -> str:
 <article class="luna-round-card">
   <div class="luna-round-meta"><span>{_safe(item.get('month'))}</span><small>{_safe(item.get('role'))}</small></div>
   <h3>{_safe(item.get('headline'))}</h3>
-  <p>{_safe(item.get('central_storyline'))}</p>
+  <p>{_prose_safe(item.get('central_storyline'))}</p>
   <div class="luna-round-footer"><strong>{_safe(item.get('dominant_game'))}</strong><span>{_safe(item.get('key_window'))}</span></div>
 </article>
         """
@@ -208,8 +208,8 @@ def _moves(result: dict) -> list[str]:
         values.append(str(games[0].get("do_line", "Back what proves itself.")))
     acts = game_map.get("acts") or []
     if acts:
-        values.append("Use the strongest rule change to revise the plan, not repeat the old position.")
-    values.append("End the year with fewer options and more leverage.")
+        values.append("When the rules change, revise the plan. Do not drag the old position forward.")
+    values.append("End the year with fewer options and cleaner terms.")
     return values[:3]
 
 
@@ -473,7 +473,7 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   <section class="luna-year-hero">
     <div class="luna-year-meta"><span>Year ahead / {_safe(sign)}</span><span>{_safe(label)}</span></div>
     <h1>{_safe(_hook(result))}</h1>
-    <div class="luna-year-theme"><span>The year's game</span><strong>{_safe(game_map.get('central_storyline', 'The long game becomes visible.'))}</strong></div>
+    <div class="luna-year-theme"><span>The year's central question</span><strong>{_safe(game_map.get('central_storyline', 'The long game becomes visible.'))}</strong></div>
   </section>
 
   <section class="luna-section luna-year-opening">
@@ -486,8 +486,8 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   </section>
 
   <section class="luna-section">
-    <div class="luna-eyebrow">The year's game board</div>
-    <h2 class="luna-section-title">Three games organise the year</h2>
+    <div class="luna-eyebrow">The year at a glance</div>
+    <h2 class="luna-section-title">Three themes organise the year</h2>
     <div class="luna-game-grid">{_game_cards(result)}</div>
   </section>
 
@@ -505,10 +505,10 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   <section class="luna-section">
     <div class="luna-eyebrow">Love / work / money / home</div>
     <div class="luna-domain-grid">
-      {_annual_arc_section(result, 'relationship_arc', 'Relationship game')}
-      {_annual_arc_section(result, 'career_arc', 'Career game')}
-      {_annual_arc_section(result, 'money_arc', 'Money game')}
-      {_annual_arc_section(result, 'home_arc', 'Home game')}
+      {_annual_arc_section(result, 'relationship_arc', 'Relationships')}
+      {_annual_arc_section(result, 'career_arc', 'Work and career')}
+      {_annual_arc_section(result, 'money_arc', 'Money')}
+      {_annual_arc_section(result, 'home_arc', 'Home')}
     </div>
   </section>
 
@@ -536,7 +536,7 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
     <details><summary>{_safe(SOLAR_LABEL)} <span>+</span></summary><div class="luna-detail"><div class="luna-year-grid">{_chapter_cards(result)}</div></div></details>
     <details><summary>{_safe(TIMING_LABEL)} <span>+</span></summary><div class="luna-detail"><div class="luna-date-grid">{_timing_cards(result)}</div></div></details>
     <details><summary>{_safe(TECHNICAL_LABEL)} <span>+</span></summary><div class="luna-detail">
-      <h3>Annual game scores</h3>
+      <h3>Annual theme scores</h3>
       <div class="luna-table-wrap"><table><thead><tr><th>Game</th><th>Score</th><th>Evidence months</th></tr></thead><tbody>{_game_rows(result)}</tbody></table></div>
       <h3>Dominant houses</h3>
       <div class="luna-table-wrap"><table><thead><tr><th>House</th><th>Life area</th><th>Weight</th></tr></thead><tbody>{_technical_rows(result)}</tbody></table></div>

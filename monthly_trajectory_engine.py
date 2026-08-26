@@ -24,33 +24,33 @@ from scenario_engine import event_importance_score
 TRAJECTORY_VERSION = "1.2"
 
 LIFE_AREAS = {
-    1: "identity, energy and personal direction",
-    2: "income, pricing and personal security",
-    3: "communication, decisions and everyday movement",
-    4: "home, family and private foundations",
-    5: "romance, creativity, children and pleasure",
-    6: "work, routines and wellbeing",
-    7: "relationships, clients and agreements",
-    8: "shared money, trust and obligations",
-    9: "travel, education, publishing and the wider world",
-    10: "career, reputation, authority and visible results",
-    11: "friends, networks, audiences and future plans",
-    12: "rest, closure and private renewal",
+    1: "how you show up and what you are willing to carry",
+    2: "the price, payment or purchase in front of you",
+    3: "the message, document or conversation that needs an answer",
+    4: "home and the arrangement you live with every day",
+    5: "the person, pleasure or creative project pulling your attention",
+    6: "the workload and routine your ordinary week has to sustain",
+    7: "the person across the table and the promises between you",
+    8: "money, trust and responsibility you share with someone else",
+    9: "the trip, course, application or outside opportunity in front of you",
+    10: "the job, role or public responsibility with your name on it",
+    11: "the friends, groups and plans shaping what you build next",
+    12: "what needs privacy, rest or a clean ending",
 }
 
 SHORT_AREAS = {
-    1: "personal direction",
-    2: "money and security",
-    3: "communication and decisions",
+    1: "how you show up",
+    2: "money and price",
+    3: "the message and decision",
     4: "home and family",
-    5: "romance and creativity",
-    6: "work and wellbeing",
-    7: "relationships and agreements",
-    8: "shared money and obligations",
-    9: "travel and wider horizons",
-    10: "work and career",
-    11: "friends and future plans",
-    12: "rest and private life",
+    5: "the person or project you want",
+    6: "workload and routine",
+    7: "the other person and the promise",
+    8: "shared money and responsibility",
+    9: "the trip or outside opportunity",
+    10: "the role and responsibility",
+    11: "friends and the next plan",
+    12: "rest and closure",
 }
 
 COUNTERCURRENT_DOMAINS = {
@@ -268,7 +268,7 @@ def _trajectory_portfolio(trajectory: str) -> tuple[str, str, tuple[str, ...]]:
     if trajectory in {"recovery", "easing"}:
         return (
             "TIMED ADVANCE",
-            "Do not let the difficult opening dictate the whole month. Preserve optionality early, then use the cleaner window once support has materially improved.",
+            "Do not let the difficult opening dictate the whole month. Keep the early choice reversible. Move when the evidence improves.",
             (
                 "Keep the opening reversible while the pressure is still dominant.",
                 "Reassess when the evidence improves; advance only in the window that has earned it.",
@@ -278,50 +278,50 @@ def _trajectory_portfolio(trajectory: str) -> tuple[str, str, tuple[str, ...]]:
     if trajectory == "late_storm":
         return (
             "DEFENSIVE HOLD",
-            "Use the cleaner early or middle window for essentials, then reduce exposure before the late pressure peak.",
+            "Do the essential thing while the window is cleaner. Stop adding commitments before the late-month pressure builds.",
             (
-                "Complete essential moves before the pressure peak where possible.",
-                "Renegotiate unavoidable commitments as the difficult cluster builds.",
-                "Let optional exposure pass until the hard contacts separate.",
+                "Finish the essential move before the late-month pressure builds.",
+                "Renegotiate the commitment you cannot remove. Put the new term in writing.",
+                "Let the non-essential demand pass until the immediate pressure eases.",
             ),
         )
     if trajectory == "pressure_builds":
         return (
             "DEFENSIVE HOLD",
-            "Pressure strengthens through the month, so preserve room to move rather than adding exposure into a worsening trend.",
+            "Keep room to move. Stop adding commitments while the month is getting harder to carry.",
             (
-                "Use early information without overcommitting.",
-                "Tighten terms as friction increases.",
-                "Protect capacity near the strongest pressure window.",
+                "Use the early information. Keep the hard-to-reverse decision open.",
+                "Tighten the terms when the cost rises.",
+                "Protect your time, money and energy near the hardest window.",
             ),
         )
     if trajectory in {"support_builds", "support_strengthens"}:
         return (
             "SELECTIVE ADVANCE",
-            "Support strengthens or remains consistently cleaner than friction; use the strongest supported window without generalising that permission to every domain.",
+            "Use the cleanest opening. Do not turn one good signal into permission to say yes to everything.",
             (
-                "Advance the cleanest supported move.",
-                "Keep cost, timing and ownership visible as momentum grows.",
-                "Preserve optionality in any domain that does not share the supportive pattern.",
+                "Make the cleanest supported move.",
+                "Keep the cost, date and owner visible as momentum grows.",
+                "Keep the unsupported part reversible.",
             ),
         )
     if trajectory == "reversal":
         return (
             "PROBE",
-            "The month's polarity reverses, so timing is more important than a single monthly verdict; test each window before increasing commitment.",
+            "Let the month change your answer. Test each window before you increase commitment.",
             (
-                "Use the smallest reversible move that improves information.",
-                "Change posture when the evidence changes instead of defending an earlier decision.",
-                "Commit only after the new direction has held long enough to become credible.",
+                "Make the smallest move that gives you better information.",
+                "Change the plan when the evidence changes. Stop defending an old answer.",
+                "Commit only after the new direction survives ordinary life.",
             ),
         )
     return (
         "PROBE",
-        "The month oscillates; use timing and local evidence rather than forcing one posture across every window.",
+        "Let each window earn its own answer. Stop forcing one rule across the whole month.",
         (
-            "Treat each major window as a fresh decision point.",
-            "Advance only where support clearly outweighs friction.",
-            "Keep the rest reversible until the pattern settles.",
+            "Treat each major window as a new decision.",
+            "Move only where the support is clear.",
+            "Keep the rest easy to change until the pattern settles.",
         ),
     )
 
@@ -531,7 +531,7 @@ def build_monthly_trajectory(
         )
         trajectory_portfolio_plan = (
             f"Use the strongest supported move around {primary_short}.",
-            (f"Let {bridge['short']} carry information and introductions between the opening and the later result." if bridge else "Keep cost, timing and ownership visible as momentum grows."),
+            (f"Let {bridge['short']} carry information and introductions between the opening and the later result." if bridge else "Keep the cost, date and owner visible as momentum grows."),
             f"Keep {secondary_area} selective where its own terms remain mixed.",
         )
     elif trajectory in {"late_storm", "pressure_builds"}:
@@ -540,7 +540,7 @@ def build_monthly_trajectory(
         )
         trajectory_portfolio_plan = (
             f"Complete essential {primary_short} moves before the pressure peak where possible.",
-            "Renegotiate unavoidable commitments as the difficult cluster builds.",
+            "Renegotiate the commitment you cannot remove. Put the new term in writing.",
             f"Let optional exposure pass when late pressure spreads into {secondary_area}.",
         )
 
@@ -651,13 +651,13 @@ def build_monthly_trajectory(
     elif trajectory == "pressure_builds":
         strategy = "Reduce optional exposure as pressure strengthens; negotiate the essential parts and keep the rest reversible."
     elif trajectory in {"recovery", "easing"}:
-        strategy = "Do not let the difficult opening dictate the whole month. Preserve optionality early, then use the cleaner window once support has materially improved."
+        strategy = "Do not let the difficult opening dictate the whole month. Keep the early choice reversible. Move when the evidence improves."
     elif trajectory in {"support_builds", "support_strengthens"}:
         strategy = "Advance where support remains clean, but keep terms visible so momentum does not outrun evidence."
     elif trajectory == "reversal":
         strategy = "The correct move changes with the timing. Keep early decisions reversible and change posture when the sky has genuinely changed direction."
     else:
-        strategy = "Treat timing as part of the decision: act in supportive windows and preserve optionality when the balance turns against you."
+        strategy = "Treat timing as part of the decision. Move when support is real. Keep the hard-to-reverse part open when it is not."
     paragraphs.append(strategy)
 
     return {

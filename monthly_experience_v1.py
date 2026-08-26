@@ -38,18 +38,18 @@ ZODIAC_SIGNS = (
 )
 
 PUBLIC_LIFE_AREAS = {
-    1: "identity, energy and personal direction",
-    2: "income, possessions, pricing and personal security",
-    3: "communication, decisions, learning and everyday movement",
-    4: "home, family and private foundations",
-    5: "romance, creativity, children and pleasure",
-    6: "workload, wellbeing, routines and practical systems",
-    7: "relationships, clients, agreements and significant partnerships",
-    8: "shared money, trust, debt and joint responsibilities",
-    9: "travel, education, publishing, law and the wider world",
-    10: "career, reputation, authority and visible results",
-    11: "friends, networks, audiences and future plans",
-    12: "rest, closure, private matters and unfinished business",
+    1: "how you show up and what you are willing to carry",
+    2: "the price, payment or purchase in front of you",
+    3: "the message, document or conversation that needs an answer",
+    4: "home and the arrangement you live with every day",
+    5: "the person, pleasure or creative project pulling your attention",
+    6: "the workload and routine your ordinary week has to sustain",
+    7: "the person across the table and the promises between you",
+    8: "money, trust and responsibility you share with someone else",
+    9: "the trip, course, application or outside opportunity in front of you",
+    10: "the job, role or public responsibility with your name on it",
+    11: "the friends, groups and plans shaping what you build next",
+    12: "what needs privacy, rest or a clean ending",
 }
 
 SIGN_RULERS = {

@@ -626,13 +626,13 @@ def build_major_games(stories: Sequence, max_games: int = 3) -> tuple[MajorGame,
         targets = _targets_sentence(planet_stories)
         if len(planet_stories) == 1:
             summary = (
-                f"{planet} concentrates one of the year's strongest questions around {targets}. "
-                f"{frame['gift']} {frame['shadow']}"
+                f"Use the pressure around {targets}. {frame['gift']} "
+                "Make the next move concrete."
             )
         else:
             summary = (
-                f"{planet} keeps returning through {targets}. These are not separate versions of the same sentence; "
-                f"they are one longer argument moving through different parts of life. {frame['gift']}"
+                f"Keep one standard while {targets} change around you. {frame['gift']} "
+                "Carry the lesson forward. Do not restart the decision at every date."
             )
 
         other_groups = [item for item in ranked if item[0] != planet]
@@ -641,7 +641,7 @@ def build_major_games(stories: Sequence, max_games: int = 3) -> tuple[MajorGame,
             other_planet = other_groups[0][0]
             counter = COUNTERCURRENT.get(
                 (planet, other_planet),
-                f"At the same time, {other_planet} is active elsewhere in the map, so one answer will not solve every part of the year.",
+                f"Keep {other_planet} in view as well. One clean answer does not remove every other obligation.",
             )
 
         players = tuple(

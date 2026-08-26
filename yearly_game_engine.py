@@ -53,8 +53,8 @@ class GameDefinition:
 GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     GameDefinition(
         "expansion_capacity",
-        "Expansion versus capacity",
-        "Can the opportunity grow without outrunning time, money or structure?",
+        "Make room before you scale",
+        "Check the calendar, budget and workload before you scale.",
         frozenset({"Jupiter", "Saturn"}),
         frozenset({2, 6, 8, 9, 10, 11}),
         "Scale what has support, proof and repeatable structure.",
@@ -64,8 +64,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "attraction_evidence",
-        "Attraction versus evidence",
-        "Does the connection continue after chemistry meets timing and responsibility?",
+        "Let behaviour prove the chemistry",
+        "Watch what happens after chemistry meets timing and responsibility.",
         frozenset({"Venus", "Neptune", "Jupiter", "Saturn"}),
         frozenset({5, 7, 8, 11}),
         "Enjoy attention while letting behaviour reveal motive and capacity.",
@@ -75,8 +75,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "information_ambiguity",
-        "Information versus ambiguity",
-        "Who has the facts, what remains hidden and what needs verification?",
+        "Get the missing fact",
+        "Get the facts in writing before the stakes rise.",
         frozenset({"Mercury", "Neptune", "Pluto", "Saturn"}),
         frozenset({3, 8, 9, 10, 12}),
         "Ask direct questions, document terms and control the information flow.",
@@ -86,8 +86,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "independence_partnership",
-        "Independence versus partnership",
-        "How much freedom can the relationship or agreement contain?",
+        "Keep freedom inside clear terms",
+        "State the boundary before resentment states it for you.",
         frozenset({"Uranus", "Venus", "Mars", "Saturn"}),
         frozenset({1, 7, 11}),
         "Negotiate mutual terms without shrinking either person's agency.",
@@ -97,8 +97,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "value_obligation",
-        "Personal value versus shared obligation",
-        "Who pays, who owns, who owes and who carries the risk?",
+        "Put a number beside every promise",
+        "Write down who pays, owns, owes and carries the risk.",
         frozenset({"Venus", "Mars", "Jupiter", "Saturn", "Pluto"}),
         frozenset({2, 8}),
         "Make ownership, cost and responsibility visible before committing.",
@@ -108,8 +108,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "public_private",
-        "Public ambition versus private security",
-        "Can the visible result coexist with home, family and emotional wellbeing?",
+        "Make the win fit your actual life",
+        "Make the visible result fit the life that has to carry it.",
         frozenset({"Sun", "Moon", "Mercury", "Saturn", "Uranus"}),
         frozenset({4, 10}),
         "Build success around a private life you still recognise.",
@@ -119,8 +119,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "cooperation_control",
-        "Cooperation versus control",
-        "Is this a mutually useful alliance or a struggle over leverage?",
+        "Keep the terms mutual",
+        "Check whether value, information and responsibility move both ways.",
         frozenset({"Venus", "Jupiter", "Mars", "Pluto"}),
         frozenset({7, 8, 10, 11}),
         "Choose alliances where value, information and responsibility move both ways.",
@@ -130,8 +130,8 @@ GAME_DEFINITIONS: tuple[GameDefinition, ...] = (
     ),
     GameDefinition(
         "optionality_commitment",
-        "Optionality versus commitment",
-        "Does keeping every option open prevent the strongest one from developing?",
+        "Choose before possibility becomes clutter",
+        "Stop keeping every option alive once one starts proving itself.",
         frozenset({"Uranus", "Jupiter", "Saturn"}),
         frozenset({1, 5, 7, 9, 11}),
         "Preserve flexibility until the evidence supports a deliberate choice.",
@@ -581,7 +581,7 @@ def _narrator_paragraphs(
         f"Start {year} with {first.title}. {first.advantage} Use that rule before you add another commitment.",
         f"Then {second.title.lower()} takes over. {second.question} Watch what people do once information, resources and consequences become visible.",
         f"A major rule change begins around {human_date(change_act.start_date)}. {change_act.summary} Adjust early. Do not wait for the old arrangement to fail loudly.",
-        f"{strongest_round.month} carries the greatest leverage. {strongest_round.central_storyline} Use the month to improve later options, not merely to feel busy.",
+        f"{strongest_round.month} carries the strongest turning point. {strongest_round.central_storyline} Use the month to improve later options, not merely to feel busy.",
         luna_dry_truth(
             "relationship" if first.key in {"attraction_evidence", "independence_partnership"} else
             "money" if first.key == "value_obligation" else
@@ -602,7 +602,7 @@ def _narrator_paragraphs(
         )
     paragraphs.append(
         f"By {final_round.month}, stop collecting options. {final_round.central_storyline} "
-        "Choose the position that improves both your leverage and your daily life."
+        "Choose the position that improves both your options and your daily life."
     )
     return tuple(paragraphs)
 
@@ -624,8 +624,8 @@ def build_yearly_game_map(
     top_game = games[0]
     first_change = acts[1].start_date if len(acts) > 1 else f"{year}-07-01"
     central = (
-        f"Your main game is {top_game.title.lower()}. The rules shift around "
-        f"{human_date(first_change)}. Use the monthly rounds to see where your leverage grows, weakens or changes hands."
+        f"The year keeps returning to {top_game.title.lower()}. The rules shift around "
+        f"{human_date(first_change)}. Watch what becomes easier, more expensive or impossible to ignore."
     )
     return YearlyGameMap(
         sign=sign,
@@ -637,10 +637,10 @@ def build_yearly_game_map(
         games=games,
         acts=acts,
         rounds=rounds,
-        relationship_arc=_arc_by_scenarios(rounds, {"relationship_opening"}, "The relationship game"),
-        career_arc=_arc_by_scenarios(rounds, {"career_interview", "publishing_media", "contracts_agreements"}, "The career game"),
-        money_arc=_arc_by_scenarios(rounds, {"financial_shock", "external_money", "funding_application", "paperwork_verification"}, "The money game"),
-        home_arc=_arc_by_scenarios(rounds, {"property_home"}, "The home game"),
+        relationship_arc=_arc_by_scenarios(rounds, {"relationship_opening"}, "Relationships"),
+        career_arc=_arc_by_scenarios(rounds, {"career_interview", "publishing_media", "contracts_agreements"}, "Work and career"),
+        money_arc=_arc_by_scenarios(rounds, {"financial_shock", "external_money", "funding_application", "paperwork_verification"}, "Money"),
+        home_arc=_arc_by_scenarios(rounds, {"property_home"}, "Home"),
         do_line=top_game.do_line,
         dont_line=top_game.dont_line,
         equation=(

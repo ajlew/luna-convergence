@@ -40,18 +40,18 @@ DOMAIN_HOUSES = {
 }
 
 HOUSE_LABELS = {
-    1: "identity and direction",
-    2: "income and personal money",
-    3: "communication and decisions",
-    4: "home and private life",
-    5: "romance and creativity",
-    6: "work and wellbeing",
-    7: "relationships and agreements",
-    8: "shared resources and obligations",
-    9: "travel and wider horizons",
-    10: "career and visibility",
-    11: "friends, networks and future plans",
-    12: "rest, closure and private renewal",
+    1: "how you show up",
+    2: "money and price",
+    3: "the message and decision",
+    4: "home and private reality",
+    5: "the person or project you want",
+    6: "workload and routine",
+    7: "the other person and the promise",
+    8: "shared money, trust and responsibility",
+    9: "the trip, course or outside opportunity",
+    10: "the role and public responsibility",
+    11: "the people helping build what comes next",
+    12: "what needs rest or closure",
 }
 
 ROMANCE_NOT_COPY = {
@@ -360,14 +360,14 @@ def _posture_plan(posture: str) -> tuple[str, ...]:
             "Proceed only if the revised terms improve the risk/reward rather than merely reduce discomfort.",
         ),
         "HOLD": (
-            "Protect optionality while the pressure and information are still moving.",
+            "Protect room to move while the facts are still changing.",
             "Do what is essential, but do not expand exposure simply because a decision is being demanded.",
-            "Reassess when the pressure separates or new information changes the balance.",
+            "Reassess when the immediate pressure passes or new information changes the balance.",
         ),
         "PASS": (
             "Let the non-essential demand pass through to the keeper; not every ball needs a shot.",
             "Do not chase approval, explanation or commitment when the downside is larger than the likely gain.",
-            "Preserve time, money and freedom of movement for the cleaner opening that follows.",
+            "Protect your time, money and freedom for the cleaner opening that follows.",
         ),
     }
     return plans[posture]
@@ -383,7 +383,7 @@ def _posture_rationale(posture: str, components: Mapping[str, float], narrative_
         "ADVANCE": "Support outweighs friction cleanly enough for a committed move.",
         "QUESTION": "Missing or unstable information has enough weight to make verification more valuable than commitment.",
         "NEGOTIATE": "Both upside and friction are material, so changing the terms has better asymmetry than accepting them as offered.",
-        "HOLD": "Pressure and uncertainty are concentrated enough that preserving optionality has more value than forcing progress.",
+        "HOLD": "Pressure and uncertainty are high enough that keeping the decision reversible is more useful than forcing progress.",
         "PASS": "The downside concentration is materially larger than the clean upside, so declining the optional contest preserves the better position.",
     }
     return (

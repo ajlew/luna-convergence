@@ -461,7 +461,7 @@ def describe_slow_planet_horizon(
 ) -> str:
     """Short customer-facing horizon line for Daily readings."""
     if planet not in SLOW_PLANETS:
-        return "This trigger is short-lived; judge it by what remains after the immediate pressure separates."
+        return "This trigger is short-lived. Judge it by what remains after the immediate pressure passes."
     position = positions_for_date(reference, timezone_name)[planet]
     house = _native_house(sign, position.sign_index)
     area = HOUSE_NAMES[house]

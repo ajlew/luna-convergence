@@ -3,10 +3,17 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import re
 from typing import Literal
+from luna_life_scenes import (
+    domain_command as _domain_command,
+    domain_key as _domain_key,
+    human_focus as _human_focus,
+    life_scene_line as _life_scene_line,
+    scene_repository_size,
+)
 
 
 ProductType = Literal["daily", "weekly", "monthly", "yearly", "timing", "natal", "solar"]
-VOICE_VERSION = "Luna Narrator v3.0 — Global Narrative Contract"
+VOICE_VERSION = "Luna Narrator v4.0 — Human Scenes + Imperative Contract"
 
 
 @dataclass(frozen=True)
@@ -179,19 +186,28 @@ _EDITORIAL_SCAFFOLD_SENTENCES = (
     "How this fits the month",
     "How this fits the larger story",
     "Luna reads it as one changing board.",
+    "Luna keeps the recurrence calculation behind the scenes.",
 )
 
 _TECHNICAL_TO_HUMAN = {
-    "Natal Midheaven": "career and public direction",
-    "natal Midheaven": "career and public direction",
-    "Natal Ascendant": "identity and direction",
-    "natal Ascendant": "identity and direction",
-    "identity, energy and personal direction": "identity and direction",
-    "travel, publishing, law, education and foreign markets": "travel, study and the wider world",
-    "relationships, clients, contracts and competitors": "relationships and agreements",
-    "work routines, health, service and operations": "work and daily routines",
-    "shared money, debt, tax, inheritance and intimacy": "shared money and obligations",
-    "career, public direction, reputation and authority": "career and authority",
+    "Natal Midheaven": "the job, role or public responsibility with your name on it",
+    "natal Midheaven": "the job, role or public responsibility with your name on it",
+    "Natal Ascendant": "how you show up and what you are willing to carry",
+    "natal Ascendant": "how you show up and what you are willing to carry",
+    "identity, energy and personal direction": "how you show up and what you are willing to carry",
+    "identity and direction": "how you show up and what you are willing to carry",
+    "travel, publishing, law, education and foreign markets": "the trip, course, application or outside opportunity in front of you",
+    "travel, study and the wider world": "the trip, course, application or outside opportunity in front of you",
+    "relationships, clients, contracts and competitors": "the person across the table and the promises between you",
+    "relationships and agreements": "the person across the table and the promises between you",
+    "work routines, health, service and operations": "the workload and routine your ordinary week has to sustain",
+    "work and daily routines": "the workload and routine your ordinary week has to sustain",
+    "shared money, debt, tax, inheritance and intimacy": "money, trust and responsibility you share with someone else",
+    "shared money and obligations": "money, trust and responsibility you share with someone else",
+    "career, public direction, reputation and authority": "the job, role or public responsibility with your name on it",
+    "career and authority": "the job, role or public responsibility with your name on it",
+    "friends, communities and future plans": "the friends, groups and plans shaping what you build next",
+    "friends and future plans": "the friends, groups and plans shaping what you build next",
 }
 
 _YOU_GRAMMAR = {
@@ -300,7 +316,39 @@ def inline_story_title(value: str) -> str:
 
 def simplify_life_area(value: str) -> str:
     raw = re.sub(r"\s+", " ", str(value or "")).strip()
-    return _TECHNICAL_TO_HUMAN.get(raw, raw)
+    if raw in _TECHNICAL_TO_HUMAN:
+        return _TECHNICAL_TO_HUMAN[raw]
+    return _human_focus(raw)
+
+
+def life_domain(value: str) -> str:
+    """Return Luna's ordinary-life domain key without exposing house taxonomy."""
+    return _domain_key(value)
+
+
+def life_scene(value: str, seed_text: str = "", count: int = 2) -> str:
+    """Ground an abstract life area in conditional ordinary-life scenes."""
+    return _life_scene_line(value, seed_text=seed_text, count=count)
+
+
+def imperative_for(value: str, seed_text: str = "") -> str:
+    """Return one stable domain-specific command."""
+    return _domain_command(value, seed_text=seed_text)
+
+
+def convergent_bridge(
+    current_area: str,
+    *,
+    seed_text: str = "",
+    include_scene: bool = True,
+) -> str:
+    """One global bridge: command first, ordinary life second. No report narration."""
+    command = imperative_for(current_area, seed_text=seed_text)
+    if not include_scene:
+        return command
+    scene = life_scene(current_area, seed_text=seed_text, count=1)
+    return f"{command} {scene}".strip()
+
 
 
 def human_arc(values) -> tuple[str, ...]:
@@ -315,6 +363,28 @@ def human_arc(values) -> tuple[str, ...]:
         if not result or result[-1].lower() != human.lower():
             result.append(human)
     return tuple(result[:5])
+
+
+def human_arc_sentence(values) -> str:
+    """Turn engine-state arrows into short human commands."""
+    arc = human_arc(values)
+    commands = {
+        "Build": "Build what has support.",
+        "Set terms": "Set the terms.",
+        "Define": "Define the responsibility.",
+        "Choose": "Choose what deserves more time.",
+        "Open": "Use the opening.",
+        "Change": "Change what no longer fits.",
+        "Expand": "Expand only what your actual life can carry.",
+        "Test": "Test what survives ordinary life.",
+        "Check": "Check the facts.",
+        "Release": "Release what is finished.",
+        "Close": "Close the loop.",
+        "Integrate": "Make the change liveable.",
+        "Protect": "Protect what has to last.",
+        "Act": "Act while the opening is usable.",
+    }
+    return " ".join(commands.get(item, f"{item}.") for item in arc)
 
 
 def luna_dry_truth(topic: str = "general", seed_text: str = "") -> str:
@@ -352,6 +422,24 @@ def finalize_customer_prose(
     for technical, human in _TECHNICAL_TO_HUMAN.items():
         text = text.replace(technical, human)
 
+    ordinary_replacements = (
+        ("preserve optionality", "keep the hard-to-reverse part open"),
+        ("Preserve optionality", "Keep the hard-to-reverse part open"),
+        ("until this pressure separates", "until the immediate pressure passes"),
+        ("until the pressure separates", "until the immediate pressure passes"),
+        ("partnership energy", "the connection"),
+        ("Partnership energy", "The connection"),
+        ("future plans", "what you are building next"),
+        ("shared obligations", "what you share or owe"),
+        ("career and authority", "the job and responsibility"),
+        ("public direction", "public responsibility"),
+    )
+    for old, new in ordinary_replacements:
+        text = text.replace(old, new)
+
+    # Remove staging language that tells the reader how the paragraph was assembled.
+    text = re.sub(r"(^|(?<=[.!?])\s+)(?:This is where|This is when)\s+", r"\1", text, flags=re.I)
+
     # Keep the voice active and second-person where legacy templates leaked
     # third-person verb endings.
     lowered = text.lower()
@@ -366,7 +454,15 @@ def finalize_customer_prose(
     text = _titlecase_inline_caps(text)
 
     # Strip obvious meta-narration that survived old templates.
-    text = re.sub(r"\bLuna (?:reads|separates|therefore combines)\b[^.]*\.\s*", "", text, flags=re.I)
+    text = re.sub(r"\bLuna (?:reads|separates|therefore combines|keeps)\b[^.]*\.\s*", "", text, flags=re.I)
+    text = re.sub(r"\bthe reader-facing question is simpler:?\s*", "", text, flags=re.I)
+    text = re.sub(r"\bthe current report ranks the transit as\b", "Treat this as", text, flags=re.I)
+    text = re.sub(
+        r"You have already been dealing with\s+(.+?)\.\s+Now the pressure reaches\s+(.+?)\.",
+        r"Carry the standard forward. Act on \2.",
+        text,
+        flags=re.I,
+    )
     text = re.sub(r"\bthe reader\b", "you", text, flags=re.I)
     text = re.sub(r"\bthis person\b", "you", text, flags=re.I)
 

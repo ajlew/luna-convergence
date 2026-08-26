@@ -548,7 +548,7 @@ def _yearly_strategic_chapters(
         "title": "Opening growth phase",
         "meaning": (
             f"Jupiter begins the year in house {jupiter_house}: {HOUSE_NAMES[jupiter_house]}. "
-            f"This is where confidence, opportunity and excess initially concentrate."
+            f"Use the opening. Keep the excess visible before you commit more."
         ),
         "opportunity": HOUSE_STRATEGY[jupiter_house]["opportunity"],
         "risk": HOUSE_STRATEGY[jupiter_house]["risk"],
@@ -652,7 +652,7 @@ def _yearly_strategic_chapters(
         "title": "Pluto’s long-term transformation",
         "meaning": (
             f"Pluto occupies house {pluto_house}: {HOUSE_NAMES[pluto_house]}. "
-            f"This is where power, elimination and irreversible change operate beneath shorter cycles.{pluto_extra}"
+            f"Name what can no longer stay superficial. Change the condition that keeps the old power structure alive.{pluto_extra}"
         ),
         "opportunity": HOUSE_STRATEGY[pluto_house]["opportunity"],
         "risk": HOUSE_STRATEGY[pluto_house]["risk"],
