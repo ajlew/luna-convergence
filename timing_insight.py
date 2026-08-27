@@ -111,52 +111,52 @@ TARGET_SIGNS = {
 
 HOUSE_SCENARIOS = {
     1: (
-        "a personal reset, boundary or change in how you present yourself",
-        "a decision to lead with a different pace, image or priority",
+        "a haircut, profile, boundary or role changes how other people respond to you",
+        "you stop presenting the version of yourself that keeps earning the same old expectations",
     ),
     2: (
-        "income, pricing, possessions or a question about what your time is worth",
-        "a purchase, budget or self-worth issue that turns preference into a number",
+        "a pay rate, quote, purchase or recurring bill forces the real value question into numbers",
+        "you decide whether the thing you want is still worth it once the ongoing cost is visible",
     ),
     3: (
-        "a contract, sales conversation, course, commute or important message",
-        "paperwork or a conversation whose wording has practical consequences",
+        "an email, contract, application or short trip turns a vague possibility into a practical decision",
+        "a phone call or document exposes the sentence that still needs a clear yes or no",
     ),
     4: (
-        "a move, renovation, family responsibility or change in living arrangements",
-        "a private decision about home, care or what kind of base you need",
+        "a lease, repair, family responsibility or living arrangement makes the private cost visible",
+        "someone needs space, care or a key and the home arrangement has to become explicit",
     ),
     5: (
-        "a romance, creative project, hobby or entrepreneurial bet",
-        "a question about pleasure, visibility or whether a passion deserves more commitment",
+        "a date, child, hobby or creative project starts asking for real time instead of spare time",
+        "a promising connection has to survive an ordinary Tuesday before you call it durable",
     ),
     6: (
-        "a workload, roster, health routine or operational problem",
-        "the daily system that has to carry the ambition after the excitement fades",
+        "a roster, commute, appointment or recurring task shows whether the plan survives the ordinary week",
+        "your body or workload objects to a schedule that looked manageable on paper",
     ),
     7: (
-        "a partner, client, competitor or contract asking for clearer terms",
-        "a one-to-one relationship where reciprocity is easier to measure than before",
+        "a partner, client or collaborator asks for more access, time or scope and the terms have to become mutual",
+        "a date, contract or alliance becomes clearer when the other person has to carry an inconvenient part",
     ),
     8: (
-        "shared money, debt, tax, inheritance, trust or an obligation with another person",
-        "a dependency whose real cost becomes easier to calculate",
+        "a tax bill, loan, shared cost or joint account needs a number and an owner",
+        "trust becomes measurable when money, access or responsibility has to be shared",
     ),
     9: (
-        "travel, study, publishing, legal matters or a foreign connection",
-        "a larger worldview meeting a practical test, deadline or institution",
+        "a trip needs booking, leave approval and a budget",
+        "a course, visa, legal process or overseas opportunity needs paperwork before the romantic version can happen",
     ),
     10: (
-        "a job, promotion, manager, client or public result that changes expectations",
-        "reputation and responsibility moving together rather than separately",
+        "a manager adds responsibility before discussing title, pay or support",
+        "an interview, promotion or public role becomes real once the hours, reporting line and result belong to you",
     ),
     11: (
-        "a network, audience, friendship or long-term plan changing shape",
-        "an alliance whose future value becomes clearer through what each side contributes",
+        "a friend, group or audience turns enthusiasm into a date, task or next step",
+        "a wedding, group trip or shared plan reveals who actually reorganises life to make it happen",
     ),
     12: (
-        "an ending, private burden, recovery period or issue that has stayed out of view",
-        "the hidden cost of carrying something after its useful life has ended",
+        "an unfinished conversation, old obligation or private burden keeps taking up space after its useful life is over",
+        "you cancel one thing, turn off the phone or close an old loop and discover the world continues",
     ),
 }
 
@@ -527,7 +527,6 @@ def build_story_language(
 ) -> StoryLanguage:
     seed = _seed(transit_planet, target_planet, aspect, natal_house)
     frame = TRANSIT_FRAME[transit_planet]
-    opening = _pick(TRANSIT_OPENINGS[transit_planet], seed)
     target = TARGET_CORE.get(target_planet, target_planet.lower())
     pair = PAIR_INSIGHT.get((transit_planet, target_planet))
     if not pair:
@@ -547,7 +546,7 @@ def build_story_language(
             + " "
             + _pick(TRANSIT_SHADOW_LINES[transit_planet], seed + 3)
         )
-    summary = f"{opening}. {lead} {consequence}"
+    summary = f"{pair} {lead} {consequence}"
 
     target_signs = TARGET_SIGNS.get(target_planet, ())
     scenarios: list[str] = []

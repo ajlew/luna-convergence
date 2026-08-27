@@ -26,6 +26,7 @@ from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import finalize_customer_prose, narrator_cue
 from solar_cycle import solar_gate_label
 from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_png
+from major_event_registry import select_serialized_signals
 
 
 PRINT_PAPERS = ("A4", "A3")
@@ -733,6 +734,35 @@ def _story_driver_rows(result: dict) -> str:
     return "".join(rows)
 
 
+def _major_sky_events_html(result: dict) -> str:
+    signals = select_serialized_signals(
+        result.get("major_sky_events") or [],
+        "monthly",
+        limit=6,
+        opportunity_slots=2,
+    )
+    if not signals:
+        return ""
+    cards = []
+    for signal in signals:
+        badge = "OPPORTUNITY" if signal.opportunity else ("MAJOR SKY EVENT" if signal.must_surface_in("monthly") else signal.tier)
+        cards.append(
+            f'''<article class="luna-date-card">
+  <span>{_safe(human_date(signal.event_date.isoformat()))} · {_safe(badge)}</span>
+  <strong>{_safe(signal.display_label)}</strong>
+  <p>{_prose_safe(signal.line_one)}</p>
+  <small>{_prose_safe(signal.action)}</small>
+</article>'''
+        )
+    return f'''
+<section class="luna-monthly-section luna-major-sky-section">
+  <div class="luna-eyebrow">Major sky events</div>
+  <h2 class="luna-section-title">The dates that change the month</h2>
+  <div class="luna-date-grid">{''.join(cards)}</div>
+</section>
+    '''
+
+
 def _transition_rows(result: dict) -> str:
     rows = []
     for item in (result.get("major_transitions") or [])[:12]:
@@ -1318,6 +1348,7 @@ def build_monthly_experience_html(
 </section>
     """
     concentration_theme_section = _concentration_theme_html(result)
+    major_sky_section = _major_sky_events_html(result)
     monthly_sky_map_section = _monthly_sky_map_html(result)
     natal_overlay_section = _natal_overlay_html(result)
 
@@ -1325,6 +1356,8 @@ def build_monthly_experience_html(
     if not preview:
         body = f"""
 {summary_strip}
+
+{major_sky_section}
 
 {concentration_theme_section}
 

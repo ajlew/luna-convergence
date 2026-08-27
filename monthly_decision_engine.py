@@ -640,7 +640,7 @@ def evaluate_monthly_decision(
             late = "; ".join(str(item) for item in (countercurrent.get("late_pressure_evidence") or ()))
             relevance_reason = str(countercurrent.get("summary") or relevance_reason)
             luna_line = (
-                "Romance, creativity or pleasure offers real relief from the main pressure"
+                "A date, creative project or something you enjoy offers real relief from the main pressure"
                 + (f" — {evidence}" if evidence else "")
                 + ". Enjoy the lift without asking it to solve the main problem."
                 + (f" Late-month pressure changes the terms — {late}. Keep commitments reversible." if late else "")

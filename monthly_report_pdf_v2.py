@@ -25,6 +25,7 @@ from reportlab.platypus import (
 )
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
+from major_event_registry import select_serialized_signals
 
 
 BRAND = "Luna Convergence"
@@ -451,6 +452,26 @@ def _strategy(narrative, styles: dict):
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4 * mm),
     ]))
     story.extend([_p("THREE MOVES FOR THE MONTH", styles["kicker"]), action_box, Spacer(1, 5 * mm)])
+
+    major_signals = select_serialized_signals(
+        result.get("major_sky_events") or [],
+        "monthly",
+        limit=6,
+        opportunity_slots=2,
+    )
+    if major_signals:
+        story.append(_p("Major sky events", styles["hook"]))
+        for signal in major_signals:
+            badge = "OPPORTUNITY" if signal.opportunity else "MAJOR SKY EVENT"
+            story.append(
+                _small_card(
+                    f"{signal.event_date.strftime('%d %B %Y').lstrip('0')} / {badge} / {signal.display_label}",
+                    f"{signal.line_one} Your move: {signal.action}",
+                    styles,
+                )
+            )
+        story.append(Spacer(1, 4 * mm))
+
     story.append(_p("Key dates", styles["hook"]))
 
     featured_dates = list(narrative.key_dates[:6])

@@ -300,12 +300,18 @@ def scene_choices(value: str, seed_text: str = "", count: int = 2) -> tuple[str,
 
 
 def life_scene_line(value: str, seed_text: str = "", count: int = 2) -> str:
+    """Return lived examples directly. Never announce that an example is coming."""
     scenes = scene_choices(value, seed_text=seed_text, count=count)
     if not scenes:
         return ""
+
+    def sentence(value: str) -> str:
+        clean = re.sub(r"\s+", " ", str(value or "")).strip().rstrip(".")
+        return clean[:1].upper() + clean[1:] + "." if clean else ""
+
     if len(scenes) == 1:
-        return f"Look for the ordinary version: {scenes[0]}."
-    return f"Look for the ordinary version: {scenes[0]}; or {scenes[1]}."
+        return sentence(scenes[0])
+    return f"{sentence(scenes[0])} Or {sentence(scenes[1])[:1].lower() + sentence(scenes[1])[1:]}"
 
 
 def domain_command(value: str, seed_text: str = "") -> str:

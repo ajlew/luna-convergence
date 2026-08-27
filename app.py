@@ -82,6 +82,7 @@ from timing_map import (
     build_timing_map,
     month_intensity,
 )
+from major_event_registry import personalize_serialized_signals
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -851,6 +852,26 @@ a {
     text-transform:uppercase;
 }
 
+.lean-daily-major-event {
+    display:inline-block;
+    margin:-1.55rem 0 1.3rem;
+    padding:.4rem .5rem;
+    border:1px solid var(--black);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.68rem;
+    letter-spacing:.035em;
+    text-transform:uppercase;
+}
+
+.lean-daily-supporting-event {
+    margin:-.8rem 0 1.5rem;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.63rem;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
 .lean-daily h1 {
     max-width:720px;
     margin:0 0 2.35rem !important;
@@ -1474,6 +1495,8 @@ hr {
 .weekly-range,
 .weekly-card-meta,
 .weekly-evidence,
+.weekly-major-event,
+.weekly-supporting-event,
 .weekly-move-label {
     font-family:"IBM Plex Mono", "Courier New", monospace;
     text-transform:uppercase;
@@ -1542,6 +1565,22 @@ hr {
     color:var(--muted);
     font-size:.63rem;
     line-height:1.5;
+}
+
+.weekly-major-event {
+    margin:1.05rem 0 .35rem;
+    padding:.5rem .55rem;
+    border:1px solid var(--black);
+    font-size:.64rem;
+    line-height:1.45;
+    font-weight:500;
+}
+
+.weekly-supporting-event {
+    margin:-.25rem 0 .75rem;
+    color:var(--muted);
+    font-size:.61rem;
+    line-height:1.45;
 }
 
 .weekly-card h2 {
@@ -3555,6 +3594,14 @@ def _render_lean_daily(path: str) -> None:
         connected_daily_html = f'<div class="lean-daily-meaning">{clean_connected}</div>'
     question = narrative.reflection_questions[0] if narrative.reflection_questions else ""
     monthly_href = "/monthly"
+    major_daily_html = (
+        f'<div class="lean-daily-major-event">Major sky event · {escape(narrative.major_event_label)}</div>'
+        if getattr(narrative, "major_event_label", "") else ""
+    )
+    supporting_daily_html = (
+        f'<div class="lean-daily-supporting-event">Also active · {escape(" · ".join(narrative.supporting_events))}</div>'
+        if getattr(narrative, "supporting_events", ()) else ""
+    )
 
     st.markdown(
         f"""
@@ -3563,6 +3610,8 @@ def _render_lean_daily(path: str) -> None:
     <strong>{escape(sign)}</strong>
     <span>{escape(_daily_date_label(reading_date))}</span>
   </div>
+  {major_daily_html}
+  {supporting_daily_html}
   <h1>{escape(narrative.hook_headline)}</h1>
   <div class="lean-daily-story">{story_html}</div>
   {connected_daily_html}
@@ -3616,6 +3665,14 @@ def daily_page() -> None:
 def _weekly_cards_html(days) -> str:
     cards: list[str] = []
     for item in days:
+        major_html = (
+            f'<div class="weekly-major-event">{escape(item.major_event_label)}</div>'
+            if getattr(item, "major_event_label", "") else ""
+        )
+        supporting_html = (
+            f'<div class="weekly-supporting-event">Also active · {escape(" · ".join(item.supporting_events))}</div>'
+            if getattr(item, "supporting_events", ()) else ""
+        )
         cards.append(
             f"""
 <article class="weekly-card">
@@ -3623,7 +3680,9 @@ def _weekly_cards_html(days) -> str:
     <strong>{escape(item.weekday)}</strong>
     <span>{escape(item.date_label)}</span>
   </div>
+  {major_html}
   <div class="weekly-evidence">{escape(item.evidence)}</div>
+  {supporting_html}
   <h2>{escape(item.headline)}</h2>
   <p>{escape(finalize_customer_prose(item.line_one, product="weekly"))}</p>
   <p>{escape(finalize_customer_prose(item.line_two, product="weekly"))}</p>
@@ -6429,27 +6488,27 @@ _LUNA_VOICE_V2_BANK = {
 _LUNA_VOICE_V2_AREA_BANK = {
     "LOVE": [
         ("Chemistry opens the door. Follow-through decides what stays.",
-         "Romance, creativity or pleasure offers genuine relief from the month's main demands. Enjoy what opens, then notice what still holds when timing and responsibility return."),
+         "Enjoy the spark. A date, invitation or creative plan can be real without being durable. Watch what still works when calendars, money and ordinary responsibilities return."),
         ("The spark is welcome. Consistency decides whether it matters.",
-         "A lighter relationship or creative moment can be real without needing to carry the whole month. Let pleasure be pleasure, then watch for follow-through."),
+         "Let the connection be enjoyable. Then watch who makes room, follows through and carries the inconvenient part without being chased."),
         ("Enjoyment gets a vote; staying power gets the final say.",
-         "Connection, pleasure and creative attention are easier to access. The useful question is whether the warmth still has substance once ordinary obligations return."),
+         "Give pleasure a place in the month. Do not ask one good night, one warm message or one creative high to prove more than it has shown."),
     ],
     "WORK": [
         ("The path moves from possibility to decision.",
-         "A travel, study, publishing, legal or international opportunity becomes more concrete. Decide what support, time or authority must exist before you commit."),
+         "Make the outside option survive a calendar, a budget and a clear owner. Ask who approves it, who pays and what has to move before you say yes."),
         ("A larger option becomes real enough to negotiate.",
-         "Work may expand through study, publishing, travel, legal matters or an international opening. The opportunity matters more once you can name the terms required to carry it."),
+         "Put the opportunity into dates and responsibilities. Check the commute, deadline, support and authority before you add the work to your life."),
         ("The interesting option now needs workable terms.",
-         "Career movement is less about chasing more and more about deciding which external opportunity can actually be supported by time, authority and resources."),
+         "Stop admiring the possibility from a distance. Put the hours, decision-maker, resources and next deadline on paper."),
     ],
     "MONEY": [
-        ("Shared resources need clear ownership.",
-         "Shared, borrowed or externally controlled money needs clearer terms. Know who owns what, who owes what and what obligation follows before agreeing."),
+        ("Shared money needs a number, an owner and a boundary.",
+         "Put the shared cost on paper. Name who pays, who owns, who owes and what happens if the plan changes."),
         ("Money gets awkward when the obligation stays unnamed.",
-         "The important financial question is not simply how much is available, but who carries the responsibility attached to shared or borrowed resources."),
+         "Name the financial responsibility before goodwill becomes an unpaid invoice, open-ended loan or recurring cost."),
         ("What is shared needs a number, an owner and a boundary.",
-         "Clarify debt, shared costs, outside funding or other people's money before a practical commitment turns an assumption into an obligation."),
+         "Clarify the debt, shared cost or outside funding before somebody treats an assumption as permission."),
     ],
 }
 
@@ -7450,6 +7509,117 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
     _render_house_key()
 
 
+def _major_event_dict_selection(values, product: str, *, limit: int = 8, opportunity_slots: int = 2) -> list[dict]:
+    product = str(product or "").lower()
+    rows = [dict(item or {}) for item in (values or []) if dict(item or {}).get("display_label")]
+    rows.sort(key=lambda item: (-float(item.get("sky_score", 0.0) or 0.0), str(item.get("event_date") or "")))
+    mandatory = [item for item in rows if product in set(item.get("must_surface_products") or [])]
+    opportunities = [item for item in rows if bool(item.get("opportunity")) and item not in mandatory][:max(0, opportunity_slots)]
+    selected = []
+    for item in mandatory + opportunities + rows:
+        if item not in selected:
+            selected.append(item)
+        if len(selected) >= max(limit, len(mandatory) + len(opportunities)):
+            break
+    return sorted(selected, key=lambda item: (str(item.get("event_date") or ""), -float(item.get("sky_score", 0.0) or 0.0)))
+
+
+def _render_major_sky_events(values, product: str, *, heading: str = "Major sky events", limit: int = 8) -> None:
+    selected = _major_event_dict_selection(values, product, limit=limit, opportunity_slots=2)
+    if not selected:
+        return
+    st.markdown(f"## {heading}")
+    st.caption("These are the sky events most likely to change the pace, open a door or mark a turning point. The technical event name stays visible; Luna translates the consequence.")
+
+    tier_rank = {"S": 5, "A+": 4, "A": 3, "A-": 2, "B+": 1, "B": 0}
+    opportunities = sorted(
+        (item for item in selected if bool(item.get("opportunity"))),
+        key=lambda item: (-float(item.get("sky_score", 0.0) or 0.0), str(item.get("event_date") or "")),
+    )[:2]
+    structural = sorted(
+        (item for item in selected if item not in opportunities),
+        key=lambda item: (
+            -int(str(item.get("tier") or "") == "S"),
+            -int(product in set(item.get("must_surface_products") or [])),
+            -tier_rank.get(str(item.get("tier") or ""), 0),
+            -float(item.get("sky_score", 0.0) or 0.0),
+        ),
+    )
+    featured = []
+    for item in structural[:max(0, limit - len(opportunities))] + opportunities:
+        if item not in featured and len(featured) < limit:
+            featured.append(item)
+    if len(featured) < limit:
+        for item in structural:
+            if item not in featured:
+                featured.append(item)
+            if len(featured) >= limit:
+                break
+    featured_ids = {(str(item.get("event_date")), str(item.get("display_label"))) for item in featured}
+
+    for item in sorted(featured, key=lambda row: str(row.get("event_date") or "")):
+        badge = "OPPORTUNITY" if item.get("opportunity") else (
+            "MAJOR SKY EVENT" if product in set(item.get("must_surface_products") or []) else str(item.get("tier") or "")
+        )
+        event_date = str(item.get("event_date") or "")
+        try:
+            date_label = _timing_date_label(date.fromisoformat(event_date))
+        except Exception:
+            date_label = event_date
+        line_one = finalize_customer_prose(str(item.get("line_one") or ""), product=product)
+        action = finalize_customer_prose(str(item.get("action") or ""), product=product)
+        st.markdown(
+            f'''<article class="timing-story major-sky-story">
+<div class="timing-meta">{escape(date_label.upper())} · {escape(badge)}</div>
+<h3>{escape(str(item.get("display_label") or item.get("technical_label") or ""))}</h3>
+<p>{escape(line_one)}</p>
+<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(action)}</p></div>
+</article>''',
+            unsafe_allow_html=True,
+        )
+
+    remaining = [
+        item for item in selected
+        if (str(item.get("event_date")), str(item.get("display_label"))) not in featured_ids
+    ]
+    if remaining:
+        st.markdown("### Also on the major-event calendar")
+        rows = "".join(
+            f'<div class="compact-evidence-row"><div class="compact-evidence-label">{escape(str(item.get("event_date") or ""))}</div>'
+            f'<div class="compact-evidence-value">{escape(str(item.get("display_label") or ""))}</div></div>'
+            for item in sorted(remaining, key=lambda row: str(row.get("event_date") or ""))
+        )
+        st.markdown(f'<div class="compact-evidence-list">{rows}</div>', unsafe_allow_html=True)
+
+
+def _render_personal_major_events(values, snapshot, timezone_name: str, product: str, *, limit: int = 6) -> None:
+    if snapshot is None:
+        return
+    activations = personalize_serialized_signals(
+        values or [],
+        snapshot,
+        timezone_name,
+        limit=limit,
+    )
+    if not activations:
+        return
+
+    st.markdown("### Where the major sky hits your chart")
+    st.caption("These shared-sky events also make a close contact to your natal chart, so the timing is more personal than the general sky alone.")
+    for item in activations[:limit]:
+        badge = "PERSONAL OPPORTUNITY" if item.opportunity else "PERSONAL HIT"
+        st.markdown(
+            f'''<article class="timing-story personal-major-story">
+<div class="timing-meta">{escape(_timing_date_label(item.event_date).upper())} · {escape(badge)}</div>
+<h3>{escape(item.display_label)}</h3>
+<p>{escape(finalize_customer_prose(item.interpretation, product=product))}</p>
+<div class="timing-evidence-note">{escape(item.transit_planet)} {escape(item.aspect)} natal {escape(item.natal_target)} · {item.orb:.2f}° orb</div>
+<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(item.action, product=product))}</p></div>
+</article>''',
+            unsafe_allow_html=True,
+        )
+
+
 def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None, snapshot=None) -> None:
     st.markdown(
         """
@@ -7493,6 +7663,20 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
                 visible_context.append(cleaned)
         for paragraph in visible_context[:1]:
             st.markdown(paragraph)
+
+    _render_major_sky_events(
+        result.get("major_sky_events") or [],
+        "monthly",
+        heading="Major sky events this month",
+        limit=6,
+    )
+    _render_personal_major_events(
+        result.get("major_sky_events") or [],
+        snapshot,
+        timezone_name,
+        "monthly",
+        limit=4,
+    )
 
     events = _monthly_canonical_events(narrative, result)
     context_for_voice = " ".join(visible_context[:1]) if 'visible_context' in locals() else ""
@@ -8489,7 +8673,7 @@ def _timing_pick_story_anchors(ordered: list, limit: int = 6) -> list:
 
 
 def _timing_year_story(report) -> dict:
-    """Tell the annual human argument before the transit catalogue."""
+    """Tell the annual human argument before the transit catalogue. Avoid repeated stock lines."""
     if not report.stories:
         return {}
 
@@ -8502,15 +8686,35 @@ def _timing_year_story(report) -> dict:
         return {}
 
     areas = [simplify_life_area(_timing_story_life_area(story)) for story in anchors]
+    used_commands: set[str] = set()
+    used_scenes: set[str] = set()
+
+    def command(area: str, seed: str) -> str:
+        candidate = ""
+        for index in range(8):
+            candidate = imperative_for(area, f"{seed}-{index}")
+            if candidate not in used_commands:
+                used_commands.add(candidate)
+                return candidate
+        return candidate
+
+    def scene(area: str, seed: str) -> str:
+        candidate = ""
+        for index in range(8):
+            candidate = life_scene(area, f"{seed}-{index}", count=1)
+            if candidate not in used_scenes:
+                used_scenes.add(candidate)
+                return candidate
+        return candidate
 
     paragraphs = []
     first = areas[0]
     second = areas[1] if len(areas) > 1 else first
     paragraphs.append(
         "Set the terms first. "
-        f"{imperative_for(first, 'year-start-a')} "
-        f"{imperative_for(second, 'year-start-b')} "
-        f"{life_scene(second, 'year-start', count=1)} "
+        f"{command(first, 'year-start-a')} "
+        f"{command(second, 'year-start-b')} "
+        f"{scene(second, 'year-start')} "
         "Do not prove that you can handle more. Decide whether more deserves you."
     )
 
@@ -8518,16 +8722,17 @@ def _timing_year_story(report) -> dict:
         third, fourth = areas[2], areas[3]
         paragraphs.append(
             "Widen the field without widening the mess. "
-            f"{imperative_for(third, 'year-middle-a')} "
-            f"{life_scene(third, 'year-middle', count=1)} "
-            f"{imperative_for(fourth, 'year-middle-b')} "
+            f"{command(third, 'year-middle-a')} "
+            f"{scene(third, 'year-middle')} "
+            f"{command(fourth, 'year-middle-b')} "
             + luna_dry_truth("general", third + fourth)
         )
     elif len(areas) >= 3:
         third = areas[2]
         paragraphs.append(
             "Widen the field. "
-            f"{convergent_bridge(third, seed_text='year-middle', include_scene=True)}"
+            f"{command(third, 'year-middle')} "
+            f"{scene(third, 'year-middle')}"
         )
 
     if len(areas) >= 5:
@@ -8536,9 +8741,9 @@ def _timing_year_story(report) -> dict:
         topic = life_domain(final)
         paragraphs.append(
             "Test what survives ordinary life. "
-            f"{imperative_for(later, 'year-late-a')} "
-            f"{life_scene(later, 'year-late', count=1)} "
-            f"{imperative_for(final, 'year-late-b')} "
+            f"{command(later, 'year-late-a')} "
+            f"{scene(later, 'year-late')} "
+            f"{command(final, 'year-late-b')} "
             "Stop compensating for an old arrangement once the choice is clear. "
             + luna_dry_truth(topic, later + final)
         )
@@ -8547,11 +8752,12 @@ def _timing_year_story(report) -> dict:
 
     chart_bridge = (
         "Use the chart to test the trade-off. "
-        f"{imperative_for(first, 'chart-a')} "
-        f"{imperative_for(second, 'chart-b')} "
+        f"{command(first, 'chart-a')} "
+        f"{command(second, 'chart-b')} "
         "Finish the decision in real life, not on the diagram."
     )
     return {"paragraphs": paragraphs, "arc": arc, "chart_bridge": chart_bridge}
+
 
 def _timing_reader_move(story) -> str:
     """
@@ -9101,6 +9307,18 @@ def _timing_relationship_timing(report) -> dict:
     return result
 
 
+def _timing_story_phase_label(story, limit: int = 3) -> str:
+    periods = list(getattr(story, "periods", None) or [])
+    if not periods:
+        return "—"
+    labels = []
+    for period in periods[:limit]:
+        labels.append(
+            f"{_timing_date_label(period.start_date)} → {_timing_date_label(period.end_date)}"
+        )
+    return " · ".join(labels)
+
+
 def _render_timing_person_relationship_summary(report, snapshot, birth_date_value: date | None) -> None:
     st.markdown("## The person behind the transits")
     for paragraph in _timing_natal_person_summary(snapshot, report):
@@ -9128,9 +9346,8 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
             start = _timing_story_start(opening)
             end = _timing_story_end(opening)
             _render_luna_prose(
-                f"Best opening window · {_timing_date_label(start) if start else '—'} → "
-                f"{_timing_date_label(end) if end else '—'}. "
-                f"{_luna_inline_story_title(opening.headline)}. Strongest around {_timing_story_peak_label(opening)}. "
+                f"Opening phases · {_timing_story_phase_label(opening)}. "
+                f"Strongest around {_timing_story_peak_label(opening)}. "
                 "Meet people. Widen the field. Let an existing connection grow only if the effort stays mutual."
             )
 
@@ -9139,9 +9356,8 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
             start = _timing_story_start(test)
             end = _timing_story_end(test)
             _render_luna_prose(
-                f"Seriousness window · {_timing_date_label(start) if start else '—'} → "
-                f"{_timing_date_label(end) if end else '—'}. "
-                f"{_luna_inline_story_title(test.headline)}. Strongest around {_timing_story_peak_label(test)}. "
+                f"Seriousness phases · {_timing_story_phase_label(test)}. "
+                f"Strongest around {_timing_story_peak_label(test)}. "
                 "Watch what happens when life becomes ordinary. Keep what is mutual. Renegotiate what is not."
             )
 
@@ -9183,7 +9399,7 @@ def _monthly_story_of_month(events: list[dict], sign: str) -> dict:
 
     paragraphs = [
         f"Around {_brief_story_date(first['date_label'])}, {first_sentence}. "
-        "Take it seriously. Do not commit before the details hold."
+        "Do not commit before the details hold."
     ]
 
     if len(chosen) >= 2:
@@ -9430,94 +9646,35 @@ def _render_timing_result_actions() -> None:
 
 
 def _timing_target_human_meaning(story) -> str:
-    """Translate a natal target into the ordinary decision it affects."""
+    """Translate the natal target into the ordinary decision it affects."""
     target = str(getattr(story, "natal_target", "") or "").strip()
     mapping = {
-        "Ascendant": "how you show up, what you say yes to and how much of yourself you put on the line",
+        "Ascendant": "your appearance, boundaries and the version of you other people are meeting now",
         "Midheaven": "the job, title, manager or public responsibility attached to your name",
-        "Sun": "the choice that affects your confidence, identity and direction",
-        "Moon": "home, family, habit and what your nervous system has to live with",
+        "Sun": "the role, identity or direction that still deserves your energy",
+        "Moon": "home, family, care and the routine your nervous system has to live with",
         "Mercury": "the message, document, conversation or decision that needs a clear answer",
         "Venus": "the person you want, the value you place on the bond and whether effort is mutual",
         "Mars": "the workload, conflict or desire that makes you stop accommodating and act",
         "Jupiter": "the bigger option and whether your actual life has room for it",
         "Saturn": "the responsibility, deadline or limit that needs proper terms",
+        "Uranus": "the rule, routine or arrangement that no longer leaves enough room",
+        "Neptune": "the promise, fear or story that still needs evidence",
+        "Pluto": "the dependency, leverage or power arrangement that can no longer stay vague",
+        "True Node": "the unfamiliar route that becomes possible when the old one stops fitting",
     }
     return mapping.get(target, simplify_life_area(_timing_story_life_area(story)))
 
 def _timing_story_connection(report, story_index: int) -> list[str]:
-    """Carry one decision standard through the year without narrating the report."""
-    stories = list(report.stories or [])
-    if not stories or story_index < 0 or story_index >= len(stories):
-        return []
-
-    story = stories[story_index]
-    following = stories[story_index + 1] if story_index + 1 < len(stories) else None
-    area = _timing_story_life_area(story)
-    seed = f"{story_index}-{getattr(story, 'headline', '')}"
-    out = []
-
-    if story_index == 0:
-        out.append(
-            "Set the standard now. "
-            + convergent_bridge(area, seed_text=seed, include_scene=True)
-        )
-    else:
-        out.append(
-            "Carry the standard forward. "
-            + convergent_bridge(area, seed_text=seed, include_scene=True)
-        )
-
-    if following is not None:
-        next_area = _timing_story_life_area(following)
-        out.append(
-            "Finish this before the next demand arrives. "
-            + life_scene(next_area, seed_text=f"next-{seed}", count=1)
-        )
-    else:
-        out.append(
-            "Close the loop. Change the routine, term or boundary that keeps rebuilding the same problem."
-        )
-    return out
+    """The Year Story carries the convergence. Do not expose connector machinery between chapters."""
+    return []
 
 def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
-    if not events or index < 0 or index >= len(events):
-        return []
-
-    event = events[index]
-    following = events[index + 1] if index + 1 < len(events) else None
-
-    houses = list(event.get("houses") or [])
-    if houses:
-        current_area = HOUSE_NAMES.get(int(sorted(houses)[0]), "the decision in front of you")
-    else:
-        current_area = str(event.get("title") or "the decision in front of you")
-
-    seed = f"monthly-{index}-{event.get('title', '')}"
-    out = [
-        ("Set the standard here. " if index == 0 else "Carry the standard forward. ")
-        + convergent_bridge(current_area, seed_text=seed, include_scene=True)
-    ]
-
-    if following is not None:
-        next_houses = list(following.get("houses") or [])
-        next_area = (
-            HOUSE_NAMES.get(int(sorted(next_houses)[0]), str(following.get("title") or "the next decision"))
-            if next_houses
-            else str(following.get("title") or "the next decision")
-        )
-        out.append(
-            "Leave the next decision room to breathe. "
-            + life_scene(next_area, seed_text=f"next-{seed}", count=1)
-        )
-    else:
-        out.append(
-            "Keep what still works after the excitement fades. "
-            + imperative_for(current_area, seed_text=f"close-{seed}")
-        )
-    return out
+    """The Month Story carries the convergence. Do not repeat a connection template after every event."""
+    return []
 
 def _weekly_connected_interpretation(summary: dict) -> list[str]:
+    """The headline gives the main command. The body adds lived evidence, not a duplicate."""
     raw_areas = list(summary.get("raw_areas") or summary.get("areas") or [])
     move = str(summary.get("move") or "keep the facts visible before committing").strip().rstrip(".")
     first = raw_areas[0] if raw_areas else "general"
@@ -9525,10 +9682,10 @@ def _weekly_connected_interpretation(summary: dict) -> list[str]:
     seed = f"{summary.get('sign', '')}-weekly"
 
     return [
-        f"{imperative_for(first, seed)} {life_scene(first, seed, count=1)} "
-        f"{imperative_for(second, seed + '-2')}",
+        f"{life_scene(first, seed, count=1)} {imperative_for(second, seed + '-2')}",
         f"{move.capitalize()}. Keep that rule all week. The mood can change. The standard does not have to.",
     ]
+
 
 def _daily_connected_meaning(narrative) -> str:
     """Daily already has a Your Move block. Do not repeat it in the story."""
@@ -9616,18 +9773,18 @@ def timing_map_page() -> None:
     st.markdown(
         f'''<div class="timing-summary-grid">
   <div><span>Main themes</span><strong>{report.major_games}</strong></div>
-  <div><span>Turning points</span><strong>{report.turning_points}</strong></div>
-  <div><span>Rule changes</span><strong>{report.rule_changes}</strong></div>
+  <div><span>Exact turning points</span><strong>{report.turning_points}</strong></div>
+  <div><span>Major shifts</span><strong>{report.rule_changes}</strong></div>
 </div>''',
         unsafe_allow_html=True,
     )
-    st.markdown("**Transit intensity**")
+    st.markdown("### Transit intensity")
     st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
     st.caption(
-        "Intensity answers only one question: **how much significant transit activity is clustering here?** "
+        "Intensity answers one question: how much significant transit activity is clustering here? "
         "It does not mean trouble. A high month can be an opening, a decision, a change, support, friction or a mixed period."
     )
-    st.markdown("**What kind of period is it?**")
+    st.markdown("### What kind of period is it?")
     st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
 
     year_story = _timing_year_story(report)
@@ -9645,6 +9802,35 @@ def timing_map_page() -> None:
             _render_luna_prose(human_arc_sentence(arc), product="timing")
 
         _render_luna_prose(year_story.get("chart_bridge", ""), product="timing")
+
+    _render_major_sky_events(
+        getattr(report, "major_sky_events", ()) or (),
+        "timing",
+        heading="Shared-sky milestones inside your year",
+        limit=8,
+    )
+
+    personal_events = list(getattr(report, "personal_major_events", ()) or ())
+    if personal_events:
+        st.markdown("### Major events that directly hit your natal chart")
+        st.caption("These shared-sky events also make a close contact to your natal chart. Read them beside the slower personal-transit chapters below.")
+        for item in personal_events[:8]:
+            event_date = str(item.get("event_date") or "")
+            try:
+                date_label = _timing_date_label(date.fromisoformat(event_date))
+            except Exception:
+                date_label = event_date
+            badge = "PERSONAL OPPORTUNITY" if item.get("opportunity") else "PERSONAL HIT"
+            st.markdown(
+                f'''<article class="timing-story personal-major-story">
+<div class="timing-meta">{escape(date_label.upper())} · {escape(badge)}</div>
+<h3>{escape(str(item.get("display_label") or ""))}</h3>
+<p>{escape(finalize_customer_prose(str(item.get("interpretation") or ""), product="timing"))}</p>
+<div class="timing-evidence-note">{escape(str(item.get("transit_planet") or ""))} {escape(str(item.get("aspect") or ""))} natal {escape(str(item.get("natal_target") or ""))} · {float(item.get("orb", 0.0) or 0.0):.2f}° orb</div>
+<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(str(item.get("action") or ""), product="timing"))}</p></div>
+</article>''',
+                unsafe_allow_html=True,
+            )
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
     if timing_snapshot is not None:

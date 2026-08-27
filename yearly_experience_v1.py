@@ -20,6 +20,7 @@ from luna_editorial_system import (
 from monthly_experience_v1 import PRINT_ORIENTATIONS, PRINT_PAPERS
 from monthly_narrative_v1 import HOUSE_DISPLAY, HOUSE_NATURAL
 from luna_voice import finalize_customer_prose, narrator_cue
+from major_event_registry import featured_signals, select_serialized_signals
 
 
 YEARLY_HOOKS = {
@@ -239,6 +240,58 @@ def _timing_cards(result: dict) -> str:
     )
 
 
+def _major_sky_events_html(result: dict) -> str:
+    signals = select_serialized_signals(
+        result.get("major_sky_events") or [],
+        "yearly",
+        limit=10,
+        opportunity_slots=2,
+    )
+    if not signals:
+        return ""
+
+    featured = list(
+        featured_signals(
+            signals,
+            "yearly",
+            limit=10,
+            opportunity_slots=2,
+        )
+    )
+    featured_keys = {(item.event_date, item.display_label) for item in featured}
+    cards = []
+    for signal in sorted(featured, key=lambda item: item.event_date):
+        badge = "OPPORTUNITY" if signal.opportunity else ("MAJOR SKY EVENT" if signal.must_surface_in("yearly") else signal.tier)
+        cards.append(
+            f'''<article class="luna-date-card">
+  <span>{_safe(human_date(signal.event_date.isoformat()))} · {_safe(badge)}</span>
+  <strong>{_safe(signal.display_label)}</strong>
+  <p>{_prose_safe(signal.line_one)}</p>
+</article>'''
+        )
+
+    remaining = [item for item in signals if (item.event_date, item.display_label) not in featured_keys]
+    calendar = ""
+    if remaining:
+        rows = "".join(
+            f'<tr><td>{_safe(human_date(item.event_date.isoformat()))}</td><td>{_safe(item.display_label)}</td><td>{_safe("Opportunity" if item.opportunity else item.tier)}</td></tr>'
+            for item in sorted(remaining, key=lambda item: item.event_date)
+        )
+        calendar = f'''
+<h3>Also on the major-event calendar</h3>
+<div class="luna-table-wrap"><table><thead><tr><th>Date</th><th>Event</th><th>Type</th></tr></thead><tbody>{rows}</tbody></table></div>
+'''
+
+    return f'''
+<section class="luna-section luna-major-sky-section">
+  <div class="luna-eyebrow">Major sky events</div>
+  <h2 class="luna-section-title">The dates that change the background</h2>
+  <div class="luna-date-grid">{''.join(cards)}</div>
+  {calendar}
+</section>
+    '''
+
+
 def _game_rows(result: dict) -> str:
     return "".join(
         "<tr>"
@@ -308,6 +361,7 @@ def build_yearly_experience_html(
     game_map = _game_map(result)
     active, quiet = _romance(result)
     moves = _moves(result)
+    major_sky_section = _major_sky_events_html(result)
     games = game_map.get("games") or []
     if games:
         do_line = str(games[0].get("do_line", "Back what proves itself."))
@@ -491,8 +545,10 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
     <div class="luna-game-grid">{_game_cards(result)}</div>
   </section>
 
+  {major_sky_section}
+
   <section class="luna-section">
-    <div class="luna-eyebrow">How the rules change</div>
+    <div class="luna-eyebrow">Where the year changes</div>
     <div class="luna-act-timeline">{_act_cards(result)}</div>
   </section>
 
@@ -529,18 +585,18 @@ th {{ font-family:"IBM Plex Mono",monospace; font-size:.63rem; text-transform:up
   <section class="luna-evidence">
     <details><summary>{_safe(WHY_LUNA_LABEL)} <span>+</span></summary><div class="luna-detail">
       <p>{_safe(game_map.get('central_storyline', 'The annual structure is built from repeated convergences.'))}</p>
-      <p><strong>Equation:</strong> {_safe(game_map.get('equation', 'Players + board + rounds = yearly game'))}</p>
+      <p><strong>Equation:</strong> {_safe(game_map.get('equation', 'Planetary pressure + timing + life areas = annual structure'))}</p>
       <div class="luna-game-grid">{_game_cards(result)}</div>
     </div></details>
-    <details><summary>Annual players and leverage <span>+</span></summary><div class="luna-detail"><div class="luna-player-grid">{_player_cards(result)}</div></div></details>
+    <details><summary>Planetary evidence <span>+</span></summary><div class="luna-detail"><div class="luna-player-grid">{_player_cards(result)}</div></div></details>
     <details><summary>{_safe(SOLAR_LABEL)} <span>+</span></summary><div class="luna-detail"><div class="luna-year-grid">{_chapter_cards(result)}</div></div></details>
     <details><summary>{_safe(TIMING_LABEL)} <span>+</span></summary><div class="luna-detail"><div class="luna-date-grid">{_timing_cards(result)}</div></div></details>
     <details><summary>{_safe(TECHNICAL_LABEL)} <span>+</span></summary><div class="luna-detail">
       <h3>Annual theme scores</h3>
-      <div class="luna-table-wrap"><table><thead><tr><th>Game</th><th>Score</th><th>Evidence months</th></tr></thead><tbody>{_game_rows(result)}</tbody></table></div>
+      <div class="luna-table-wrap"><table><thead><tr><th>Theme</th><th>Score</th><th>Evidence months</th></tr></thead><tbody>{_game_rows(result)}</tbody></table></div>
       <h3>Dominant houses</h3>
       <div class="luna-table-wrap"><table><thead><tr><th>House</th><th>Life area</th><th>Weight</th></tr></thead><tbody>{_technical_rows(result)}</tbody></table></div>
-      <p class="luna-method-note">Game scores rank symbolic concentration inside this report. They are not measured probabilities or guarantees.</p>
+      <p class="luna-method-note">Theme scores rank symbolic concentration inside this report. They are not measured probabilities or guarantees.</p>
     </div></details>
   </section>
 

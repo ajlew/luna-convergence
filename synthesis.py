@@ -27,6 +27,7 @@ from monthly_strategy_alignment import align_monthly_arc_with_decision
 from monthly_trajectory_engine import build_monthly_trajectory
 from luna_first_principles import methodology_metadata
 from yearly_game_engine import build_yearly_game_map
+from major_event_registry import classify_major_events, period_priority_signals
 
 
 HOUSE_LABELS = {
@@ -880,18 +881,56 @@ def period_report(
             annual_events=events,
         ).to_dict()
 
+    product_type = "monthly" if (end - start).days < 50 else "yearly"
+    major_registry = classify_major_events(events)
+    priority_signals = period_priority_signals(
+        major_registry,
+        product_type,
+        limit=8 if product_type == "monthly" else 18,
+        opportunity_slots=2,
+    )
+
+    # Major events and high-value opportunities are selected before the normal
+    # transition ranking. This prevents an eclipse, station, ingress, exact
+    # structural alignment or useful Jupiter opening from being crowded out by
+    # ordinary aspects.
+    mandatory_signals = [
+        signal for signal in major_registry if signal.must_surface_in(product_type)
+    ]
+    opportunity_signals = sorted(
+        (signal for signal in major_registry if signal.visible_in(product_type) and signal.opportunity),
+        key=lambda item: (-item.sky_score, item.event_date),
+    )[:2]
+    protected_signals = []
+    for signal in mandatory_signals + opportunity_signals:
+        if signal not in protected_signals:
+            protected_signals.append(signal)
+    protected_keys = [
+        (signal.event_date, signal.source_title)
+        for signal in protected_signals
+    ]
+    event_lookup = {(event.event_date, event.title): event for event in events}
+    selected_events = [event_lookup[key] for key in protected_keys if key in event_lookup]
+
     ranked_events = sorted(events, key=lambda event: (-_transition_priority(event), event.event_date))
-    selected_events = []
+    desired_count = max(int(transition_count), len(selected_events))
     for event in ranked_events:
-        if event.kind == "lunation" and sum(1 for item in selected_events if item.kind == "lunation") >= 2:
+        if event in selected_events:
             continue
+        if event.kind == "lunation":
+            if any(item.kind == "eclipse" and item.event_date == event.event_date for item in selected_events):
+                continue
+            if sum(1 for item in selected_events if item.kind == "lunation") >= 2:
+                continue
         if any(
-            abs((event.event_date - item.event_date).days) <= 1 and set(event.planets) == set(item.planets)
+            abs((event.event_date - item.event_date).days) <= 1
+            and set(event.planets) == set(item.planets)
+            and event.kind == item.kind
             for item in selected_events
         ):
             continue
         selected_events.append(event)
-        if len(selected_events) >= transition_count:
+        if len(selected_events) >= desired_count:
             break
     selected_events.sort(key=lambda event: event.event_date)
 
@@ -918,6 +957,14 @@ def period_report(
     for rank, (house, weight) in enumerate(houses, 1):
         house_rows.append(f"| {rank} | {house} | {HOUSE_NAMES[house]} |")
 
+    major_sky_lines = []
+    for signal in priority_signals:
+        label = "Opportunity" if signal.opportunity else ("Major sky event" if signal.must_surface_in(product_type) else signal.tier)
+        major_sky_lines.append(
+            f"- {signal.event_date.strftime('%d %B %Y').lstrip('0')} — **{signal.display_label}** — {label}. {signal.action}"
+        )
+    major_sky_section = "\n".join(major_sky_lines) or "No major sky event met the visibility threshold."
+
     markdown = f"""# {sign} — {period_name}
 
 {source_note or ""}
@@ -938,6 +985,10 @@ The selected sign becomes house 1 under the whole-sign method. The dominant and 
 ## Dominant house matrix
 
 {chr(10).join(house_rows)}
+
+# Major sky events
+
+{major_sky_section}
 
 {solar_year_section}
 
@@ -977,6 +1028,7 @@ The winning sequence is:
         "label": period_name,
         "markdown": markdown,
         "events": serialize(events),
+        "major_sky_events": [signal.to_dict() for signal in priority_signals],
         "strategic_chapters": serialize(strategic_chapters),
         "major_transitions": serialize(selected_events),
         "retrograde_cycles": serialize(cycles),

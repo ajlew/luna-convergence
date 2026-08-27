@@ -957,7 +957,7 @@ def _headline_and_axis(
     ordered_pair_copy = {
         (5, 12): (
             "The spark grows louder before the quieter truth decides what stays",
-            "Romance, creativity or pleasure opens the month; rest, closure or private reality decides what deserves a future.",
+            "A date, creative project or something you enjoy opens the month; the quiet part of life decides what still deserves a future.",
             "Romance & creativity x Rest & private renewal",
         ),
         (4, 11): (
@@ -972,7 +972,7 @@ def _headline_and_axis(
         ),
         (2, 9): (
             "The numbers clear the runway for a wider move",
-            "Money and value set the terms; travel, study, publishing or an international opening shows what those terms can support.",
+            "The number sets the terms; the trip, course, application or overseas plan shows whether those terms can support real movement.",
             "Money & value x Travel & wider horizons",
         ),
         (3, 10): (
@@ -1037,13 +1037,13 @@ def _headline_and_axis(
     if pair in {(1, 2), (1, 8)}:
         return (
             "The new direction gets real when the numbers do",
-            "A personal opening gathers force, then money, value or shared obligations reveal what can actually continue.",
+            "A personal opening gathers force, then the price, debt or shared responsibility reveals what can actually continue.",
             "Identity & direction x Money & resources",
         )
     if pair in {(9, 10), (10, 9)}:
         return (
             "The wider horizon matters most when it produces a visible result",
-            "Travel, study, publishing or an international opening becomes consequential when it changes the public direction.",
+            "A trip, course, application or overseas opening matters when it changes the job, role or public result.",
             "Travel & wider horizons x Career & visibility",
         )
     if pair in {(9, 4), (4, 9)}:
@@ -1380,12 +1380,12 @@ def _generic_story(
         2: "The month opens by putting a number on what matters",
         3: "A message, contract or assignment opens the plot",
         4: "Home, family or location sets the starting condition",
-        5: "Romance, creativity or pleasure supplies the opening spark",
+        5: "A date, creative project or something you enjoy supplies the opening spark",
         6: "Work, routine or wellbeing reveals the practical condition first",
         7: "A partner, client or agreement opens the story",
-        8: "Shared money, trust or obligation sets the first terms",
-        9: "A wider-world possibility gives the month its opening momentum",
-        10: "Career or public visibility moves to the front of the month",
+        8: "A shared cost, debt or responsibility sets the first terms",
+        9: "A trip, course, application or outside opportunity gives the month its opening momentum",
+        10: "A job, role or public result moves to the front of the month",
         11: "Friends, audiences or a future goal create the first opening",
         12: "The month begins quietly, through closure, preparation or private work",
     }
@@ -1394,12 +1394,12 @@ def _generic_story(
         2: "By late month, value and cash flow decide what survives",
         3: "By late month, the decisive fact arrives through a message, document or conversation",
         4: "By late month, home, family or location decides how the opening fits real life",
-        5: "By late month, desire, creativity or a child-related matter changes the stakes",
+        5: "By late month, a date, creative project or child-related matter changes the stakes",
         6: "By late month, workload, staffing, routine or wellbeing tests the plan",
         7: "By late month, another person or agreement requires a clear answer",
-        8: "By late month, shared money, ownership or responsibility exposes the real terms",
-        9: "By late month, travel, study, publishing or an official wider-world matter changes the route",
-        10: "By late month, career, reputation or a visible result makes the outcome public",
+        8: "By late month, a shared cost, ownership question or responsibility exposes the real terms",
+        9: "By late month, a booking, course, application, publication or official outside matter changes the route",
+        10: "By late month, the job, title or visible result makes the outcome public",
         11: "By late month, friends, networks or the future plan show which version can grow",
         12: "By late month, rest, closure or a private reality decides what should be released",
     }
@@ -1441,7 +1441,7 @@ def _generic_story(
     if _scenario_overlap(opening_basis, complication_results):
         complication_text = (
             f"Around {complication_window}, {HOUSE_PROGRESS_REFERENCE.get(primary_house, 'that opening')} becomes concrete. "
-            "Responsibilities, timing, ownership or practical terms now need to be defined. What first looked like movement has to become workable.",
+            "Put names beside the work. Who books it? Who pays? Who has to rearrange the week? Define that before the plan becomes permanent.",
         )
     else:
         complication_text = (
@@ -1460,7 +1460,7 @@ def _generic_story(
         6: "a workload, routine or wellbeing issue becomes easier to organise once the practical condition is visible",
         7: "a partner, client or agreement becomes easier to evaluate once both sides respond clearly",
         8: "a shared-money or responsibility question becomes easier to manage once ownership is named",
-        9: "a travel, study, publishing or legal path becomes easier to use once the official step is clear",
+        9: "a trip, course, application, publication or legal path becomes easier to use once the official step is clear",
         10: "a career or visibility decision becomes easier to make once the public response is measurable",
         11: "a network, audience or future plan becomes easier to trust once the useful people keep showing up",
         12: "a private or unfinished matter becomes easier to release once you know what no longer needs your energy",

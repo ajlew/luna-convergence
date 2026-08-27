@@ -12,6 +12,7 @@ import tempfile
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
 from monthly_report_pdf_v2 import build_monthly_editorial_pdf
+from major_event_registry import select_serialized_signals
 
 
 BRAND = "Luna Convergence"
@@ -363,6 +364,24 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
         f'<div class="action-row"><span>0{index}</span><strong>{_safe(action)}</strong></div>'
         for index, action in enumerate(narrative.action_plan, 1)
     )
+    major_signals = select_serialized_signals(
+        result.get("major_sky_events") or [],
+        "monthly",
+        limit=6,
+        opportunity_slots=2,
+    )
+    major_event_cards = "".join(
+        f"""
+<article class="date-card">
+  <div class="mono-label">{_safe(signal.event_date.strftime('%d %B %Y').lstrip('0'))} / {'OPPORTUNITY' if signal.opportunity else 'MAJOR SKY EVENT'}</div>
+  <h3>{_safe(signal.display_label)}</h3>
+  <p>{_safe(signal.line_one)}</p>
+  <div class="best-move"><span>Your move</span><strong>{_safe(signal.action)}</strong></div>
+</article>
+"""
+        for signal in major_signals
+    )
+
     date_cards = "".join(
         f"""
 <article class="date-card">
@@ -392,6 +411,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
   </aside>
 </div>
 <div class="action-strip">{actions}</div>
+{f'<h2 class="subsection-title">Major sky events</h2><div class="date-grid">{major_event_cards}</div>' if major_event_cards else ''}
 <h2 class="subsection-title">Key dates</h2>
 <div class="date-grid">{date_cards}</div>
 {extra_html}

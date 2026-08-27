@@ -8,6 +8,7 @@ from typing import Iterable
 from astrology_engine import HOUSE_NAMES, positions_for_date
 from natal_snapshot import NatalSnapshot, NatalPosition
 from timing_insight import build_story_language
+from major_event_registry import major_sky_events, period_priority_signals, personalize_major_signals
 
 
 TRANSIT_PLANETS = ("Jupiter", "Saturn", "Uranus", "Neptune", "Pluto")
@@ -220,6 +221,8 @@ class TimingMapReport:
     major_games: int
     turning_points: int
     rule_changes: int
+    major_sky_events: tuple[dict, ...] = ()
+    personal_major_events: tuple[dict, ...] = ()
 
 
 def _wrap180(value: float) -> float:
@@ -343,6 +346,18 @@ def _story_score(transit_planet: str, target: NatalPosition, aspect: str, hit_co
     return round(score, 3)
 
 
+def _milestone_headline(transit_planet: str, target_planet: str, aspect: str) -> str | None:
+    if transit_planet == target_planet and aspect == "conjunction":
+        return f"{transit_planet.upper()} RETURN"
+    if transit_planet == "Saturn" and target_planet == "Saturn" and aspect in {"square", "opposition"}:
+        return f"SATURN {aspect.upper()}"
+    if transit_planet == "Uranus" and target_planet == "Uranus" and aspect in {"square", "opposition"}:
+        return f"URANUS {aspect.upper()}"
+    if transit_planet == "Neptune" and target_planet == "Neptune" and aspect == "square":
+        return "NEPTUNE SQUARE"
+    return None
+
+
 def _scan_story(
     *,
     transit_planet: str,
@@ -412,7 +427,10 @@ def _scan_story(
         natal_house=target.house,
         score=score,
         polarity=_polarity(transit_planet, aspect),
-        headline=HEADLINE_OVERRIDES.get((transit_planet, target.planet), GENERIC_HEADLINES[transit_planet]),
+        headline=(
+            _milestone_headline(transit_planet, target.planet, aspect)
+            or HEADLINE_OVERRIDES.get((transit_planet, target.planet), GENERIC_HEADLINES[transit_planet])
+        ),
         summary=language.summary,
         scenarios=language.scenarios,
         insight=language.insight,
@@ -473,11 +491,61 @@ def build_timing_map(
                 if story is not None:
                     stories.append(story)
 
-    # Ranking is importance first; chronology breaks close ties. Then cap the
-    # report so Luna narrates the year rather than dumping every contact.
+    # Ranking is importance first, but reserve room for opportunity and named
+    # life-cycle milestones. A year should not become a catalogue of pressure
+    # simply because slow structural contacts score higher than Jupiter.
     stories.sort(key=lambda item: (-item.score, item.first_date, item.transit_planet, item.natal_target))
-    selected = stories[:max_stories]
+    selected = list(stories[:max_stories])
+
+    milestones = [
+        story for story in stories
+        if _milestone_headline(story.transit_planet, story.natal_target, story.aspect)
+    ]
+    opportunities = sorted(
+        (
+            story for story in stories
+            if story.polarity == "opportunity"
+            or (
+                story.transit_planet == "Jupiter"
+                and story.aspect in {"conjunction", "trine", "sextile"}
+            )
+        ),
+        key=lambda item: (-item.score, item.first_date),
+    )[:2]
+
+    protected = []
+    for story in milestones + opportunities:
+        if story not in protected:
+            protected.append(story)
+
+    for story in protected:
+        if story in selected:
+            continue
+        replaceable = sorted(
+            (item for item in selected if item not in protected),
+            key=lambda item: (item.score, -item.first_date.toordinal()),
+        )
+        if replaceable:
+            selected.remove(replaceable[0])
+            selected.append(story)
+        elif len(selected) < max_stories:
+            selected.append(story)
+
+    selected = list(dict.fromkeys(selected))
     selected.sort(key=lambda item: (item.first_date, -item.score))
+
+    shared_signals = period_priority_signals(
+        major_sky_events(start_date, end_date, "Aries", timezone_name),
+        "timing",
+        limit=10,
+        opportunity_slots=2,
+    )
+    personal_major = personalize_major_signals(
+        shared_signals,
+        snapshot,
+        timezone_name,
+        limit=10,
+    )
 
     turning_points = sum(len(story.hits) for story in selected)
     rule_changes = sum(
@@ -494,6 +562,8 @@ def build_timing_map(
         major_games=min(3, len({story.transit_planet for story in selected})),
         turning_points=turning_points,
         rule_changes=rule_changes,
+        major_sky_events=tuple(signal.to_dict() for signal in shared_signals),
+        personal_major_events=tuple(item.to_dict() for item in personal_major),
     )
 
 

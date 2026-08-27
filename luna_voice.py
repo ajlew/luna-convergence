@@ -13,7 +13,7 @@ from luna_life_scenes import (
 
 
 ProductType = Literal["daily", "weekly", "monthly", "yearly", "timing", "natal", "solar"]
-VOICE_VERSION = "Luna Narrator v4.0 — Human Scenes + Imperative Contract"
+VOICE_VERSION = "Luna Narrator v5.0 — Invisible Machinery"
 
 
 @dataclass(frozen=True)
@@ -187,6 +187,11 @@ _EDITORIAL_SCAFFOLD_SENTENCES = (
     "How this fits the larger story",
     "Luna reads it as one changing board.",
     "Luna keeps the recurrence calculation behind the scenes.",
+    "Look for the ordinary version:",
+    "Set the standard here.",
+    "Carry the standard forward.",
+    "Finish this before the next demand arrives.",
+    "Leave the next decision room to breathe.",
 )
 
 _TECHNICAL_TO_HUMAN = {
@@ -369,12 +374,12 @@ def human_arc_sentence(values) -> str:
     """Turn engine-state arrows into short human commands."""
     arc = human_arc(values)
     commands = {
-        "Build": "Build what has support.",
+        "Build": "Build only what has support.",
         "Set terms": "Set the terms.",
-        "Define": "Define the responsibility.",
-        "Choose": "Choose what deserves more time.",
-        "Open": "Use the opening.",
-        "Change": "Change what no longer fits.",
+        "Define": "Put the responsibility into words.",
+        "Choose": "Choose what deserves the calendar.",
+        "Open": "Use the opening while it is useful.",
+        "Change": "Change what no longer fits the ordinary week.",
         "Expand": "Expand only what your actual life can carry.",
         "Test": "Test what survives ordinary life.",
         "Check": "Check the facts.",

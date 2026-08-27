@@ -25,6 +25,7 @@ from luna_editorial_system import (
     luna_do_dont,
 )
 from luna_voice import finalize_customer_prose, imperative_for, life_scene, narrator_cue
+from major_event_registry import signals_for_day
 from solar_cycle import solar_gate_label
 from strategic_horizon import describe_slow_planet_horizon
 
@@ -218,7 +219,7 @@ STORY_BRIDGE_TEMPLATES = {
     "hard": (
         "Name the trade-off between {first} and {second}. Choose what gets protected first.",
         "Stop trying to satisfy {first} and {second} at the same time. Set the order.",
-        "Find the weak assumption connecting {first} and {second}. Fix that before you act.",
+        "Find the weak assumption. Put both facts beside each other. Fix the contradiction before you act.",
         "Put {first} beside {second}. Refuse the compromise that weakens both.",
     ),
     "flow": (
@@ -877,6 +878,9 @@ class DailyNarrative:
     sun_house: int
     moon_house: int
     evidence: EvidenceSnapshot
+    major_event_label: str = ""
+    major_event_tier: str = ""
+    supporting_events: tuple[str, ...] = ()
 
 
 def clean_customer_text(value: str) -> str:
@@ -1370,34 +1374,41 @@ def _sign_specific_questions(reading) -> tuple[str, ...]:
 
 
 def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[str]) -> tuple[str, ...]:
+    """Build Daily from lived situations, not house-category sentences."""
     del evidence
     trigger = _trigger_house(reading)
     other = _other_house(reading, trigger)
-    tone = reading.anchor_aspect.name if reading.anchor_aspect else "blend"
+    tone = reading.anchor_aspect.name if reading.anchor_aspect else "conjunction"
 
-    consequence = HOUSE_STORY[trigger]
-    bridge_tone = (
-        "flow"
-        if tone in {"trine", "sextile"}
-        else "hard"
-        if tone in {"square", "opposition"}
-        else "blend"
-    )
-    templates = STORY_BRIDGE_TEMPLATES[bridge_tone]
-    variant = (trigger - 1 + reading.reading_date.toordinal()) % len(templates)
-    bridge = templates[variant].format(
-        first=HOUSE_PROSE[trigger],
-        second=HOUSE_PROSE[other],
-    )
-    scene = life_scene(
+    first_scene = life_scene(
         HOUSE_PROSE[trigger],
-        seed_text=f"daily-{reading.sign}-{reading.reading_date.isoformat()}-{trigger}",
-        count=2,
+        seed_text=f"daily-first-{reading.sign}-{reading.reading_date.isoformat()}-{trigger}",
+        count=1,
     )
+    second_scene = life_scene(
+        HOUSE_PROSE[other],
+        seed_text=f"daily-second-{reading.sign}-{reading.reading_date.isoformat()}-{other}",
+        count=1,
+    )
+
+    if tone in {"square", "opposition"}:
+        bridge = (
+            f"Find the weak assumption. {first_scene} {second_scene} "
+            "Choose what gets protected first. Fix the contradiction before you act."
+        )
+    elif tone in {"trine", "sextile"}:
+        bridge = (
+            f"Use the opening. {first_scene} {second_scene} "
+            "Turn the easier condition into one concrete move."
+        )
+    else:
+        bridge = (
+            f"Put both facts beside each other. {first_scene} {second_scene} "
+            "Choose one rule that still works when both are true."
+        )
 
     paragraphs = [
-        f"{consequence} {bridge}",
-        scene,
+        f"{HOUSE_STORY[trigger]} {bridge}",
         _sign_specific_relationship(reading),
     ]
 
@@ -1406,9 +1417,9 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
         cleaned = finalize_customer_prose(paragraph, product="daily")
         if cleaned and _repetition_count(cleaned, previous_texts) < 3:
             result.append(cleaned)
-    if len(result) < 3:
+    if len(result) < 2:
         result = [finalize_customer_prose(item, product="daily") for item in paragraphs if item]
-    return tuple(result[:3])
+    return tuple(result[:2])
 
 
 
@@ -1550,15 +1561,70 @@ def build_daily_narrative(
     previous = previous_texts or []
     evidence = _evidence_snapshot(reading, sign, reading_date, timezone_name)
     interpretive_headline = _headline(reading, previous, evidence)
-    hook_headline, tone_family = _emotional_hook(
-        reading,
-        sign,
-        reading_date,
-    )
+    hook_headline, tone_family = _emotional_hook(reading, sign, reading_date)
     story = _story_paragraphs(reading, evidence, previous)
     trigger_house = _trigger_house(reading)
     secondary_house = _other_house(reading, trigger_house)
     do_line, dont_line = luna_do_dont(trigger_house, secondary_house)
+
+    primary_signal, supporting_signals = signals_for_day(
+        reading_date,
+        native_sign=sign,
+        timezone_name=timezone_name,
+        product="daily",
+    )
+    major_event_label = ""
+    major_event_tier = ""
+    supporting_labels = tuple(item.display_label for item in supporting_signals)
+
+    use_major = bool(
+        primary_signal
+        and (
+            primary_signal.must_surface_in("daily")
+            or primary_signal.opportunity
+            or primary_signal.sky_score >= 80.0
+        )
+    )
+    if use_major and primary_signal is not None:
+        major_event_label = primary_signal.display_label
+        major_event_tier = primary_signal.tier
+        hook_headline = primary_signal.headline
+        interpretive_headline = primary_signal.display_label
+        event_house = primary_signal.houses[0] if primary_signal.houses else trigger_house
+        event_scene = life_scene(
+            HOUSE_PROSE.get(int(event_house), HOUSE_PROSE[trigger_house]),
+            seed_text=f"major-daily-{sign}-{reading_date.isoformat()}-{primary_signal.event_class}",
+            count=1,
+        )
+        story = tuple(
+            finalize_customer_prose(value, product="daily")
+            for value in (
+                primary_signal.line_one,
+                f"{primary_signal.line_two} {event_scene}".strip(),
+            )
+            if value
+        )
+        do_line = primary_signal.action
+        dont_line = primary_signal.watch
+    elif primary_signal is not None and primary_signal.sky_score >= 72.0:
+        if primary_signal.display_label not in supporting_labels:
+            supporting_labels = (primary_signal.display_label,) + supporting_labels
+
+    hidden_opportunity = _sign_specific_opportunity(reading)
+    opportunity_signal = None
+    if primary_signal is not None and primary_signal.opportunity:
+        opportunity_signal = primary_signal
+    else:
+        opportunity_signal = next((item for item in supporting_signals if item.opportunity), None)
+    if opportunity_signal is not None:
+        hidden_opportunity = f"{opportunity_signal.display_label}. {opportunity_signal.action}"
+
+    why_today = list(_why_today_points(reading, evidence))
+    if major_event_label:
+        why_today[0] = f"Major sky event: {major_event_label}."
+    elif supporting_labels:
+        why_today[0] = f"Also active: {supporting_labels[0]}."
+
     sky_rows = tuple(
         (
             planet,
@@ -1577,10 +1643,10 @@ def build_daily_narrative(
         tone_family=tone_family,
         today_story=story,
         convergence_axis=_convergence_axis(reading),
-        why_today_points=_why_today_points(reading, evidence),
+        why_today_points=tuple(why_today),
         long_term_current=_long_term_current(reading, sign, reading_date, timezone_name),
         emotional_weather=_emotional_weather(reading),
-        hidden_opportunity=_sign_specific_opportunity(reading),
+        hidden_opportunity=hidden_opportunity,
         watch_out=dont_line,
         action_today=do_line,
         reflection_questions=_sign_specific_questions(reading),
@@ -1596,8 +1662,10 @@ def build_daily_narrative(
         sun_house=reading.sun_house,
         moon_house=reading.moon_house,
         evidence=evidence,
+        major_event_label=major_event_label,
+        major_event_tier=major_event_tier,
+        supporting_events=tuple(dict.fromkeys(supporting_labels)),
     )
-
 
 def _paragraph_html(paragraphs: Iterable[str]) -> str:
     return "".join(
@@ -1687,6 +1755,35 @@ def _render_css() -> None:
     font-size:.92rem;
     font-weight:400;
     line-height:1.35;
+}
+
+.daily-major-event {
+    position:relative;
+    z-index:2;
+    margin-top:1rem;
+    padding-top:.8rem;
+    border-top:1px solid rgba(255,255,255,.55);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+}
+.daily-major-event span,
+.daily-supporting-event {
+    display:block;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.66rem;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+.daily-major-event strong {
+    display:block;
+    margin-top:.25rem;
+    font-size:.82rem;
+    font-weight:500;
+}
+.daily-supporting-event {
+    position:relative;
+    z-index:2;
+    margin-top:.55rem;
+    opacity:.78;
 }
 .sparse-story {
     max-width:760px;
@@ -1986,6 +2083,8 @@ def render_daily_narrative_v3(
       <strong>{escape(narrative.hook_subline)}</strong>
     </div>
     <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
+    {f'<div class="daily-major-event"><span>Major sky event</span><strong>{escape(narrative.major_event_label)}</strong></div>' if narrative.major_event_label else ''}
+    {f'<div class="daily-supporting-event">Also active · {escape(" · ".join(narrative.supporting_events))}</div>' if narrative.supporting_events else ''}
   </div>
 
   <div class="sparse-story">

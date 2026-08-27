@@ -4,25 +4,26 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from astrology_engine import ASPECTS, PLANET_WEIGHTS, Aspect, detect_aspects, positions_for_date
+from astrology_engine import ASPECTS, PLANET_WEIGHTS, Aspect, detect_aspects, period_events, positions_for_date
 from luna_voice import finalize_customer_prose
+from major_event_registry import classify_major_events, day_signal_bundle
 
 
 FAST_PLANETS = {"Sun", "Moon", "Mercury", "Venus", "Mars"}
 STRUCTURAL_PLANETS = {"Jupiter", "Saturn"}
 
 PLANET_THEMES = {
-    "Sun": "visibility",
-    "Moon": "instinct",
+    "Sun": "what people can see",
+    "Moon": "your gut",
     "Mercury": "the message",
-    "Venus": "value and desire",
-    "Mars": "action",
-    "Jupiter": "expansion",
+    "Venus": "what you want",
+    "Mars": "the move",
+    "Jupiter": "the bigger option",
     "Saturn": "the limit",
-    "Uranus": "disruption",
-    "Neptune": "imagination",
-    "Pluto": "power",
-    "True Node": "direction",
+    "Uranus": "the sudden change",
+    "Neptune": "the imagined version",
+    "Pluto": "who holds power",
+    "True Node": "where this is heading",
 }
 
 ASPECT_VERBS = {
@@ -64,17 +65,17 @@ ASPECT_HEADLINES = {
 GENERIC_COPY_VARIANTS = {
     "conjunction": (
         (
-            "{First} and {second} are sharing one microphone.",
+            "Choose what gets louder. {First} and {second} are arriving together.",
             "The signal grows louder. So does the distortion.",
             "Choose what deserves amplification.",
         ),
         (
-            "{First} has moved into the same room as {second}.",
+            "Put both facts in the same room. {First} and {second} now have to work together.",
             "What agrees becomes powerful. What conflicts becomes impossible to hide.",
             "Decide what you are willing to make louder.",
         ),
         (
-            "Stop trying to run both signals at full volume. {First} and {second} are fused into one demand.",
+            "Stop running both signals at full volume. Put {first} beside {second}.",
             "Choose the setting before the noise chooses it for you.",
             "Give the combined force one precise job.",
         ),
@@ -86,7 +87,7 @@ GENERIC_COPY_VARIANTS = {
             "Fix the structure before forcing the result.",
         ),
         (
-            "Find the weak assumption. {First} and {second} are colliding around it.",
+            "Find the weak assumption. Put {first} beside {second}; the contradiction is the evidence.",
             "Use the irritation as evidence, not permission to overreact.",
             "Remove the false assumption, then make the move.",
         ),
@@ -103,12 +104,12 @@ GENERIC_COPY_VARIANTS = {
             "Name the trade-off. Then choose consciously.",
         ),
         (
-            "Name both sides. {First} wants one outcome; {Second} wants another.",
+            "Name both sides. {First} points one way; {Second} points another.",
             "The stalemate survives only while nobody names the cost.",
             "State both prices. Choose the cost you can carry.",
         ),
         (
-            "Choose the direction first. {First} can say yes while {Second} asks what it will cost.",
+            "Choose the priority first. {First} can say yes while {Second} exposes the cost.",
             "Compromise without a clear priority becomes slow surrender.",
             "Choose the priority. Negotiate everything else.",
         ),
@@ -246,6 +247,9 @@ class WeeklyDay:
     aspect_name: str
     orb: float
     phase: str
+    major_event_label: str = ""
+    event_tier: str = ""
+    supporting_events: tuple[str, ...] = ()
 
     @property
     def weekday(self) -> str:
@@ -256,10 +260,17 @@ class WeeklyDay:
         return self.reading_date.strftime("%d %B %Y").lstrip("0")
 
     def video_copy(self) -> str:
+        major = f"{self.major_event_label.upper()}\n\n" if self.major_event_label else ""
+        supporting = (
+            "ALSO ACTIVE · " + " · ".join(self.supporting_events).upper() + "\n\n"
+            if self.supporting_events else ""
+        )
         return (
             f"{self.weekday.upper()} · {self.date_label.upper()}\n\n"
+            f"{major}"
             f"{self.headline}\n\n"
             f"{self.evidence.upper()}\n\n"
+            f"{supporting}"
             f"{finalize_customer_prose(self.line_one, product='weekly')}\n\n"
             f"{finalize_customer_prose(self.line_two, product='weekly')}\n\n"
             "YOUR MOVE\n"
@@ -476,10 +487,44 @@ def _day_from_aspect(
     )
 
 
+def _day_from_major_signal(reading_date: date, signal, supporting) -> WeeklyDay:
+    planets = tuple(signal.planets[:2])
+    if len(planets) == 0:
+        planets = ("Sun", "Moon")
+    elif len(planets) == 1:
+        planets = (planets[0], planets[0])
+    evidence = f"{signal.display_label} · major sky event"
+    return WeeklyDay(
+        reading_date=reading_date,
+        headline=signal.headline,
+        evidence=evidence,
+        line_one=signal.line_one,
+        line_two=signal.line_two,
+        action=signal.action,
+        planets=(str(planets[0]), str(planets[1])),
+        aspect_name=signal.event_class,
+        orb=0.0,
+        phase="major event",
+        major_event_label=signal.display_label,
+        event_tier=signal.tier,
+        supporting_events=tuple(item.display_label for item in supporting),
+    )
+
+
 def build_weekly_view(monday: date, timezone_name: str) -> tuple[WeeklyDay, ...]:
-    """Build seven copy-ready shared-sky cards, always Monday through Sunday."""
+    """Build seven shared-sky cards with mandatory-event and opportunity protection."""
     if monday.weekday() != 0:
         raise ValueError("Weekly View must begin on a Monday.")
+
+    sunday = monday + timedelta(days=6)
+    # Weekly is shared sky, so use Aries only as a neutral house frame. Event
+    # identity and ranking do not depend on that sign.
+    week_events = period_events(monday, sunday, "Aries", timezone_name)
+    registry = classify_major_events(week_events)
+    signals_by_day = {
+        day: tuple(item for item in registry if item.event_date == day)
+        for day in (monday + timedelta(days=offset) for offset in range(7))
+    }
 
     pair_counts: Counter[frozenset[str]] = Counter()
     planet_counts: Counter[str] = Counter()
@@ -490,21 +535,48 @@ def build_weekly_view(monday: date, timezone_name: str) -> tuple[WeeklyDay, ...]
 
     for offset in range(7):
         reading_date = monday + timedelta(days=offset)
-        aspect = _select_aspect(
-            reading_date,
-            timezone_name,
-            pair_counts,
-            planet_counts,
-            previous_pair,
+        primary_signal, supporting = day_signal_bundle(
+            signals_by_day.get(reading_date, ()),
+            "weekly",
         )
-        pair = frozenset({aspect.planet1, aspect.planet2})
-        day = _day_from_aspect(
-            reading_date,
-            timezone_name,
-            aspect,
-            used_headlines,
-            used_copy_signatures,
-        )
+
+        # Mandatory events always win. A high-value opportunity also gets the
+        # day when no mandatory event outranks it. Ordinary aspects fill quiet days.
+        if primary_signal is not None and (
+            primary_signal.must_surface_in("weekly")
+            or primary_signal.opportunity
+            or primary_signal.sky_score >= 80.0
+        ):
+            day = _day_from_major_signal(reading_date, primary_signal, supporting)
+            pair = frozenset(day.planets)
+        else:
+            aspect = _select_aspect(
+                reading_date,
+                timezone_name,
+                pair_counts,
+                planet_counts,
+                previous_pair,
+            )
+            pair = frozenset({aspect.planet1, aspect.planet2})
+            day = _day_from_aspect(
+                reading_date,
+                timezone_name,
+                aspect,
+                used_headlines,
+                used_copy_signatures,
+            )
+            # Do not discard a meaningful event simply because an ordinary
+            # aspect won the card. High-value opportunities are always retained;
+            # lesser major events stay visible when they add information.
+            if (
+                primary_signal is not None
+                and (primary_signal.opportunity or primary_signal.sky_score >= 72.0)
+                and primary_signal.technical_label.lower() not in day.evidence.lower()
+            ):
+                day = WeeklyDay(
+                    **{**day.__dict__, "supporting_events": (primary_signal.display_label,)}
+                )
+
         result.append(day)
         used_headlines.add(day.headline)
         used_copy_signatures.add((day.line_one, day.line_two, day.action))

@@ -1453,12 +1453,12 @@ _TRAJECTORY_MIDDLE_BODY = {
     2: "The money or value question is no longer background detail. Price, cost, worth or security now needs a number or boundary you can act on.",
     3: "The same message, decision or conversation keeps returning because it now needs a clear answer, not another round of interpretation.",
     4: "The home or private-life issue can no longer be managed around the edges. A boundary, responsibility or living arrangement needs a more lasting form.",
-    5: "What began as attraction, pleasure or creative possibility now asks for a response that can survive beyond the initial spark.",
-    6: "Whatever has been developing around work, health, service or daily obligations now asks for a more lasting arrangement. Change the system, not merely today's schedule.",
+    5: "A date, creative project or something you enjoy now needs a response that can survive beyond the initial spark.",
+    6: "The workload, roster or routine now needs a more lasting arrangement. Change the system, not merely today's schedule.",
     7: "The relationship or agreement stops being defined by tone and starts being defined by terms, reciprocity and what each person is actually willing to carry.",
-    8: "Shared money, trust or obligation stops being background detail. The important discovery is not only what is owed, but what continuing the arrangement will require.",
-    9: "Travel, study, publishing, law or an international opening moves from possibility toward commitment. The road exists; now the practical condition for taking it matters.",
-    10: "Career, authority or public visibility becomes harder to keep hypothetical. A result, role or responsibility now needs to be owned in concrete terms.",
+    8: "A shared cost, debt or responsibility stops being background detail. Name what is owed and what continuing the arrangement will require.",
+    9: "A trip, course, application, publication or overseas plan moves from possibility toward commitment. Check the booking, deadline, paperwork and real cost.",
+    10: "A job, title or public responsibility becomes harder to keep hypothetical. Put the result, authority and workload into concrete terms.",
     11: "The future plan becomes more selective. A group, friendship, audience or alliance now has to prove that it supports the direction rather than merely applauding it.",
     12: "Rest, closure or a private emotional process becomes harder to postpone. What needs to end, heal or be released is asking for actual space.",
 }
@@ -1752,7 +1752,7 @@ def _countercurrent_love_story(result: dict, trajectory: dict) -> tuple[str, ...
         return None
     support = "; ".join(str(item) for item in (counter.get("support_evidence") or [])[:3])
     late = "; ".join(str(item) for item in (counter.get("late_pressure_evidence") or [])[:3])
-    first = "Romance, creativity or pleasure is not the cause of the main problem; it is relief that can give you somewhere else to breathe."
+    first = "Use the lighter window for a date, creative project or something you actually enjoy. Let it give you room to breathe without asking it to solve the main problem."
     second = (f"The relief has real sky support: {support}." if support else "The relief is supported by direct relationship or creative evidence in the sky.")
     third = (f"Late-month pressure changes the terms — {late}. Enjoy the lift, but keep commitments reversible." if late else "Use the relief without asking it to make the month's larger decision for you.")
     return (first, second, third)

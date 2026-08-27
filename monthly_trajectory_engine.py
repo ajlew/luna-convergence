@@ -53,6 +53,51 @@ SHORT_AREAS = {
     12: "rest and closure",
 }
 
+HEADLINE_ACTIONS = {
+    1: "Choose how you want to show up",
+    2: "Put a number on what matters",
+    3: "Get the message or decision clear",
+    4: "Make home part of the answer",
+    5: "Make the person or project survive ordinary life",
+    6: "Protect the ordinary week",
+    7: "Make the terms mutual",
+    8: "Put shared money and responsibility on paper",
+    9: "Make the outside opportunity survive logistics",
+    10: "Price the role before you accept it",
+    11: "Choose who belongs in the next plan",
+    12: "Close what is finished before you add more",
+}
+
+ESSENTIAL_ACTIONS = {
+    1: "Make the identity decision before other people start deciding around it.",
+    2: "Put the essential number on paper before late-month demands intensify.",
+    3: "Send the essential message or make the decision before late-month noise builds.",
+    4: "Fix the essential home or family arrangement before late-month demands intensify.",
+    5: "Give the person or project that matters a real place in the calendar before late-month demands intensify.",
+    6: "Finish the essential work and protect the ordinary week before late-month demands intensify.",
+    7: "Set the essential relationship or contract terms before late-month demands intensify.",
+    8: "Put the essential shared-money or responsibility terms in writing before late-month demands intensify.",
+    9: "Book, apply, submit or confirm the essential outside plan before late-month demands intensify.",
+    10: "Define the essential role, deadline or authority before late-month demands intensify.",
+    11: "Lock in the people and plans that matter before late-month demands intensify.",
+    12: "Close the essential unfinished matter before late-month demands intensify.",
+}
+
+OPTIONAL_ACTIONS = {
+    1: "Let optional image or identity changes wait if the decision still feels performative.",
+    2: "Let optional spending pass when the real number is already uncomfortable.",
+    3: "Let optional messages and meetings wait when the answer is already clear.",
+    4: "Let optional commitments pass when home or family is already carrying enough.",
+    5: "Let optional invitations pass when pleasure starts competing with what matters more.",
+    6: "Let optional commitments pass when the ordinary week is already full.",
+    7: "Let optional agreements pass when reciprocity is still unclear.",
+    8: "Let optional shared costs pass while ownership or responsibility is still vague.",
+    9: "Let optional travel or study plans pass when the logistics do not hold.",
+    10: "Let optional visibility pass when the role still lacks authority, time or support.",
+    11: "Let optional group plans pass when the people involved are not carrying their share.",
+    12: "Let optional demands pass when rest or closure is already overdue.",
+}
+
 COUNTERCURRENT_DOMAINS = {
     "romance": {5, 7},
 }
@@ -397,7 +442,7 @@ def _countercurrent(
         phase = "relief_then_test" if late_reversal else "sustained_relief"
         return {
             "domain": domain,
-            "label": "romance, creativity and pleasure",
+            "label": "dating, pleasure or a creative project",
             "role": "COUNTERCURRENT",
             "public_role": "RELIEF",
             "phase": phase,
@@ -408,9 +453,9 @@ def _countercurrent(
             "late_pressure_evidence": late_pressure_events,
             "recommended_posture": posture,
             "summary": (
-                "Romance, creativity or pleasure offers genuine relief from the main pressure, but the late-month evidence becomes less stable; use the relief without making it carry the whole decision."
+                "Use the lighter window for a date, creative plan or something you actually enjoy. Do not ask it to carry the whole month; the late-month evidence is less stable."
                 if late_reversal
-                else "Romance, creativity or pleasure provides genuine relief from the main monthly pressure."
+                else "Use the lighter window for a date, creative plan or something you actually enjoy. Let the relief be real without asking it to solve the whole month."
             ),
         }
     return None
@@ -539,34 +584,38 @@ def build_monthly_trajectory(
             f"Use the cleaner early or middle window for essential {primary_short} decisions, then reduce exposure before late pressure spreads into {secondary_area}."
         )
         trajectory_portfolio_plan = (
-            f"Complete essential {primary_short} moves before the pressure peak where possible.",
+            ESSENTIAL_ACTIONS.get(primary_house, f"Finish the essential move around {primary_short} before late-month demands intensify."),
             "Renegotiate the commitment you cannot remove. Put the new term in writing.",
-            f"Let optional exposure pass when late pressure spreads into {secondary_area}.",
+            OPTIONAL_ACTIONS.get(secondary_house, "Let optional commitments pass when the ordinary week is already full."),
         )
 
+    headline_action = HEADLINE_ACTIONS.get(primary_house, f"Decide what matters around {primary_short}")
     if trajectory == "late_storm" and countercurrent:
-        headline = f"{primary_short.capitalize()} pressure tightens late; romance and creativity offer somewhere to breathe"
+        headline = f"{headline_action}; keep one source of relief outside the late-month pressure"
     elif trajectory in {"late_storm", "pressure_builds"}:
-        headline = f"Pressure builds around {primary_short}; protect room to move before the peak"
+        headline = f"{headline_action} before the late-month pressure builds"
     elif trajectory in {"support_builds", "support_strengthens"}:
-        headline = f"Support gathers around {primary_short}; use the cleanest opening first"
+        headline = f"{headline_action}; use the cleanest opening first"
     elif trajectory == "recovery":
-        headline = f"A difficult opening around {primary_short} begins to loosen; the second half gives you more room to move"
+        headline = f"{headline_action}; the second half gives you more room"
     elif trajectory == "easing":
-        headline = f"The pressure around {primary_short} begins to ease as the month develops"
+        headline = f"{headline_action}; use the room that opens as the month develops"
     elif trajectory == "reversal":
-        headline = f"The balance around {primary_short} reverses; timing matters more than the monthly average"
+        headline = f"{headline_action}; let the changing facts change the answer"
     else:
-        headline = f"The month changes gear around {primary_short}; timing matters more than momentum"
+        headline = f"{headline_action}; let timing decide when to move"
 
     if trajectory == "late_storm" and countercurrent:
         central_storyline = (
-            f"{primary_short.capitalize()} pressure is the main weather. Romance, creativity and pleasure offer real relief earlier, "
-            f"but late-month pressure spreads the consequences into {secondary_area}."
+            f"{HEADLINE_ACTIONS.get(primary_house, 'Make the main decision')}. "
+            "Use the lighter opening without asking it to solve the whole month. "
+            f"{OPTIONAL_ACTIONS.get(secondary_house, 'Protect what the ordinary week still has to carry.')}"
         )
     elif trajectory in {"late_storm", "pressure_builds"}:
         central_storyline = (
-            f"{primary_short.capitalize()} carry the main pressure, and the consequences become harder to contain as the month moves toward {secondary_area}."
+            f"{HEADLINE_ACTIONS.get(primary_house, 'Make the main decision')}. "
+            f"{ESSENTIAL_ACTIONS.get(primary_house, 'Finish the essential move first')} "
+            f"{OPTIONAL_ACTIONS.get(secondary_house, 'Let the non-essential demand pass when capacity is already full.')}"
         )
     elif trajectory in {"support_builds", "support_strengthens"}:
         if bridge:

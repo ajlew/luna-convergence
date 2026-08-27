@@ -406,7 +406,7 @@ HOUSE_SOLAR_GUIDANCE = {
     },
     9: {
         "prepare": "turn the wider possibility into an itinerary, application or decision",
-        "arrive": "give travel, study, publishing, legal or international plans a usable route forward",
+        "arrive": "give the trip, course, application, publication or overseas plan a usable route forward",
         "risk": "falling in love with the horizon before documents, timing or commitments are workable",
     },
     10: {
