@@ -236,18 +236,74 @@ DOMAIN_COMMANDS: dict[str, tuple[str, ...]] = {
 }
 
 
+YOUTH_SCENES: dict[str, tuple[str, ...]] = {
+    "identity": (
+        "a school, sport or family role starts expecting a more grown-up version of you",
+        "you change how you dress, speak or join in because the old version no longer fits",
+    ),
+    "money": (
+        "pocket money, a first casual job or a family budget makes the real cost visible",
+        "you learn that wanting something and being able to pay for it are different questions",
+    ),
+    "communication": (
+        "a teacher, parent or friend asks for a clear answer instead of another explanation",
+        "a school form, application, message or deadline needs a direct response",
+    ),
+    "home": (
+        "a family rule, move, care responsibility or change at home asks more maturity from you",
+        "home feels different because somebody's needs or responsibilities have changed",
+    ),
+    "romance": (
+        "a crush, friendship, hobby or creative project starts asking for real time and courage",
+        "attention feels exciting, then ordinary behaviour shows whether it means anything",
+    ),
+    "routine": (
+        "school, training, homework or family duties show whether the schedule is sustainable",
+        "you keep carrying a task because adults or teammates know you are reliable",
+    ),
+    "relationship": (
+        "a friendship reveals who makes the plan, apologises, shares the work or keeps the promise",
+        "another person wants closeness while the practical effort still falls mostly on you",
+    ),
+    "shared": (
+        "a family responsibility, borrowed item or shared expense makes ownership and trust visible",
+        "you learn that sharing something also means deciding who is responsible for it",
+    ),
+    "travel": (
+        "a school trip, family journey, course or application needs permission, dates and paperwork",
+        "an outside opportunity sounds exciting until transport, permission and timing enter the plan",
+    ),
+    "career": (
+        "a teacher, parent, coach or school responsibility starts expecting more maturity from you",
+        "you are trusted with a visible role before you feel completely ready for it",
+    ),
+    "friends": (
+        "a friendship group shows who includes you, makes the plan and follows through",
+        "a team, class or group project reveals who actually carries the next step",
+    ),
+    "rest": (
+        "you need private time away from school, family or friends to work out what you actually feel",
+        "an old worry or unfinished disagreement keeps following you into quiet moments",
+    ),
+    "general": (
+        "an adult expectation suddenly becomes your responsibility too",
+        "a school, family or friendship decision becomes harder to postpone",
+    ),
+}
+
+
 _HUMAN_FOCUS = {
     "identity": "how you show up and what you are willing to carry",
     "money": "the price, payment or purchase in front of you",
     "communication": "the message, document or conversation that needs an answer",
     "home": "home and the arrangement you live with every day",
-    "romance": "the person, pleasure or creative project pulling your attention",
-    "routine": "the workload and routine your ordinary week has to sustain",
-    "relationship": "the person across the table and the promises between you",
-    "shared": "money, trust and responsibility you share with someone else",
+    "romance": "the date, attraction or creative project pulling your attention",
+    "routine": "the roster, workload and ordinary week you actually have to live",
+    "relationship": "the person across the table and what each of you is actually promising",
+    "shared": "the money, trust and responsibility you share with someone else",
     "travel": "the trip, course, application or outside opportunity that could widen your world",
     "career": "the job, role or public responsibility with your name on it",
-    "friends": "the friends, groups and plans shaping what you build next",
+    "friends": "the people and plan you are trying to build with",
     "rest": "what needs privacy, rest or a clean ending",
     "general": "the decision already in front of you",
 }
@@ -261,7 +317,7 @@ def domain_key(value: str) -> str:
         ("shared", ("shared money", "shared finances", "shared resources", "debt", "tax", "inheritance", "intimacy", "trust and shared", "responsibility you share", "money, trust")),
         ("career", ("career", "midheaven", "public direction", "reputation", "authority", "professional", "manager", "job")),
         ("travel", ("travel", "trip", "course", "application", "outside opportunity", "publishing", "law", "legal", "education", "study", "learning", "foreign", "international", "wider world", "higher learning")),
-        ("friends", ("friends", "community", "communities", "network", "future plan", "future aims", "audience", "group")),
+        ("friends", ("friends", "community", "communities", "network", "future plan", "future aims", "audience", "group", "people and plan", "build with")),
         ("routine", ("work routines", "daily routines", "daily systems", "health", "wellbeing", "service", "operations", "workload", "schedule")),
         ("home", ("home", "family", "foundations", "private life", "domestic")),
         ("romance", ("romance", "creative", "creativity", "pleasure", "children", "dating", "attraction")),
@@ -285,10 +341,19 @@ def _stable_index(seed_text: str, length: int) -> int:
     return seed % max(length, 1)
 
 
-def scene_choices(value: str, seed_text: str = "", count: int = 2) -> tuple[str, ...]:
+def scene_choices(
+    value: str,
+    seed_text: str = "",
+    count: int = 2,
+    *,
+    age: int | None = None,
+) -> tuple[str, ...]:
     key = domain_key(value)
-    bank = LIFE_SCENES.get(key, LIFE_SCENES["general"])
-    start = _stable_index(f"{key}|{seed_text}", len(bank))
+    if age is not None and age < 18:
+        bank = YOUTH_SCENES.get(key, YOUTH_SCENES["general"])
+    else:
+        bank = LIFE_SCENES.get(key, LIFE_SCENES["general"])
+    start = _stable_index(f"{key}|{seed_text}|{age if age is not None else 'adult'}", len(bank))
     chosen = []
     for offset in range(len(bank)):
         item = bank[(start + offset) % len(bank)]
@@ -299,9 +364,9 @@ def scene_choices(value: str, seed_text: str = "", count: int = 2) -> tuple[str,
     return tuple(chosen)
 
 
-def life_scene_line(value: str, seed_text: str = "", count: int = 2) -> str:
+def life_scene_line(value: str, seed_text: str = "", count: int = 2, *, age: int | None = None) -> str:
     """Return lived examples directly. Never announce that an example is coming."""
-    scenes = scene_choices(value, seed_text=seed_text, count=count)
+    scenes = scene_choices(value, seed_text=seed_text, count=count, age=age)
     if not scenes:
         return ""
 

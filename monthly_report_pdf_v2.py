@@ -460,9 +460,9 @@ def _strategy(narrative, styles: dict):
         opportunity_slots=2,
     )
     if major_signals:
-        story.append(_p("Major sky events", styles["hook"]))
+        story.append(_p("Turning points and openings", styles["hook"]))
         for signal in major_signals:
-            badge = "OPPORTUNITY" if signal.opportunity else "MAJOR SKY EVENT"
+            badge = ("TURNING POINT" if signal.event_class == "eclipse" else "CLARITY POINT" if signal.event_class == "cazimi" else "OPENING" if signal.opportunity else "STRUCTURAL SHIFT" if signal.event_class in {"station", "ingress", "structural_alignment"} else "SKY EVENT")
             story.append(
                 _small_card(
                     f"{signal.event_date.strftime('%d %B %Y').lstrip('0')} / {badge} / {signal.display_label}",

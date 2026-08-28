@@ -260,6 +260,31 @@ PAIR_INSIGHT = {
     ("Pluto", "Mars"): "Force can meet force. The strategic question is whether winning the immediate contest improves your actual position.",
     ("Pluto", "Midheaven"): "Authority may be moving before the organisation admits it. Watch who can actually decide, withhold or redirect resources.",
     ("Pluto", "True Node"): "The route ahead becomes clearer when an old dependency or power arrangement stops choosing on your behalf.",
+    ("Saturn", "Ascendant"): "The version of you other people meet is being asked to become more exact. Availability, boundaries and personal responsibility need clearer terms.",
+    ("Uranus", "Ascendant"): "Other people can keep reacting to an old version of you after you have outgrown it. Change the signal before you change the whole life around it.",
+    ("Jupiter", "Ascendant"): "More people, movement or confidence can meet you at once. Use the extra room to become more visible without turning every invitation into an obligation.",
+    ("Jupiter", "Moon"): "Home and emotional capacity are getting larger at the same time. Expansion is useful only if the private life underneath it can carry the extra weight.",
+    ("Uranus", "Mars"): "The urge to act changes fastest where the old method has become too restrictive. Experiment with the method before making the break irreversible.",
+    ("Pluto", "Ascendant"): "The way you enter the room is changing because the old power arrangement no longer supports the same role. Stop performing the version that kept the old balance intact.",
+    ("Pluto", "Moon"): "Private security and power are tied together now. Protect what is genuinely vulnerable without preserving a home or family arrangement that no longer works.",
+    ("Pluto", "Saturn"): "Responsibility and leverage are moving together. Formal duty matters, but so does who can actually decide, withhold or change the terms.",
+    ("Jupiter", "Saturn"): "Growth has found a structure to test. Expand only what can carry its own weight once the enthusiasm leaves the room.",
+    ("Jupiter", "Uranus"): "A larger option appears because the old route is no longer the only route. Use the opening without multiplying choices faster than you can evaluate them.",
+    ("Jupiter", "Neptune"): "Hope gets more room. Keep the imagination, then make the larger possibility survive dates, numbers and observable behaviour.",
+    ("Jupiter", "Pluto"): "Scale and leverage are arriving together. Ask whether getting more also improves your actual position.",
+    ("Saturn", "Uranus"): "The rule and the need for freedom are colliding. Keep the structure that protects something real; change the part that only protects habit.",
+    ("Saturn", "Neptune"): "The dream needs a deadline, definition or factual test. Keep what survives reality and stop financing the part that depends on vagueness.",
+    ("Saturn", "Pluto"): "Duty and power are no longer separable. Put the responsibility beside the real decision-maker before agreeing to carry more.",
+    ("Uranus", "Saturn"): "A structure that once felt responsible may now feel restrictive. Test a freer arrangement without throwing away the support that still works.",
+    ("Uranus", "Pluto"): "Disruption is exposing where the power was already moving. Use the surprise to see the leverage clearly before making the irreversible move.",
+    ("Neptune", "Moon"): "The feeling is real even when the explanation is not. Protect the private life from decisions that depend on certainty you do not yet have.",
+    ("Neptune", "Ascendant"): "The old identity can blur before the new one is ready. Let the image stay unfinished while practical commitments remain tied to facts.",
+    ("Neptune", "Saturn"): "Uncertainty is testing the structure. Keep the boundary, deadline or responsibility that still works when the story gets quieter.",
+    ("Jupiter", "Jupiter"): "A twelve-year growth cycle is resetting. Choose the expansion that increases future choice instead of simply giving you more to carry.",
+    ("Saturn", "Saturn"): "The structure is auditing itself. Keep the responsibility that still has purpose; stop renewing the part that survives only through habit.",
+    ("Uranus", "Uranus"): "A long freedom cycle is echoing itself. Notice where the old version of independence no longer gives you enough room.",
+    ("Neptune", "Neptune"): "An old ideal is meeting a new layer of uncertainty. Keep the imagination, then test which part still survives reality.",
+    ("Pluto", "Pluto"): "A long power cycle is echoing itself. Name what has changed in leverage, dependency or control before you decide what still deserves continuity.",
 }
 
 MOVE_BY_TRANSIT = {
@@ -514,7 +539,7 @@ def _move(transit_planet: str, target_planet: str, aspect: str) -> str:
 def _watch(transit_planet: str, target_planet: str, aspect: str) -> str:
     base = WATCH_BY_TRANSIT[transit_planet].get(target_planet, WATCH_BY_TRANSIT[transit_planet]["default"])
     if aspect in {"trine", "sextile"}:
-        return base + " Easy conditions can hide weak selection."
+        return base + " Easy conditions can make a weak choice look strong."
     return base
 
 
@@ -531,8 +556,8 @@ def build_story_language(
     pair = PAIR_INSIGHT.get((transit_planet, target_planet))
     if not pair:
         pair = (
-            f"{target.capitalize()} is under pressure. "
-            "Name what has become harder to ignore. Decide from the fact in front of you, not from the label on the transit."
+            f"A decision around {target} has become harder to postpone. "
+            "Name the practical condition that changed, then decide from what is actually happening now."
         )
 
     lead = _pick(ASPECT_LEADS[aspect], seed + 1)

@@ -54,13 +54,13 @@ HOUSE_INLINE = {
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
-    5: "the person, pleasure or creative project pulling your attention",
-    6: "the workload and routine your ordinary week has to sustain",
-    7: "the person across the table and the promises between you",
-    8: "money, trust and responsibility you share with someone else",
+    5: "the date, attraction or creative project pulling your attention",
+    6: "the roster, workload and ordinary week you actually have to live",
+    7: "the person across the table and what each of you is actually promising",
+    8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
-    11: "the friends, groups and plans shaping what you build next",
+    11: "the people and plan you are trying to build with",
     12: "what needs privacy, rest or a clean ending",
 }
 
@@ -69,13 +69,13 @@ HOUSE_PROSE = {
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
-    5: "the person, pleasure or creative project pulling your attention",
-    6: "the workload and routine your ordinary week has to sustain",
-    7: "the person across the table and the promises between you",
-    8: "money, trust and responsibility you share with someone else",
+    5: "the date, attraction or creative project pulling your attention",
+    6: "the roster, workload and ordinary week you actually have to live",
+    7: "the person across the table and what each of you is actually promising",
+    8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
-    11: "the friends, groups and plans shaping what you build next",
+    11: "the people and plan you are trying to build with",
     12: "what needs privacy, rest or a clean ending",
 }
 
@@ -348,7 +348,7 @@ HOUSE_QUESTIONS = {
         "What result would still matter after the chemistry settles?",
     ),
     11: (
-        "Do we genuinely want to build the same thing?",
+        "Do you genuinely want to build the same thing?",
         "Which connection supports the person I am becoming?",
         "What shared plan needs evidence rather than enthusiasm?",
     ),
@@ -1373,38 +1373,31 @@ def _sign_specific_questions(reading) -> tuple[str, ...]:
     return tuple(result)
 
 
+
 def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[str]) -> tuple[str, ...]:
-    """Build Daily from lived situations, not house-category sentences."""
+    """Build one coherent Daily situation. Do not splice unrelated scene alternatives."""
     del evidence
     trigger = _trigger_house(reading)
-    other = _other_house(reading, trigger)
     tone = reading.anchor_aspect.name if reading.anchor_aspect else "conjunction"
 
-    first_scene = life_scene(
+    scene = life_scene(
         HOUSE_PROSE[trigger],
-        seed_text=f"daily-first-{reading.sign}-{reading.reading_date.isoformat()}-{trigger}",
-        count=1,
-    )
-    second_scene = life_scene(
-        HOUSE_PROSE[other],
-        seed_text=f"daily-second-{reading.sign}-{reading.reading_date.isoformat()}-{other}",
+        seed_text=f"daily-{reading.sign}-{reading.reading_date.isoformat()}-{trigger}",
         count=1,
     )
 
     if tone in {"square", "opposition"}:
         bridge = (
-            f"Find the weak assumption. {first_scene} {second_scene} "
-            "Choose what gets protected first. Fix the contradiction before you act."
+            f"{scene} Find the weak assumption before the competing demand starts choosing for you. "
+            "Choose what gets protected first."
         )
     elif tone in {"trine", "sextile"}:
         bridge = (
-            f"Use the opening. {first_scene} {second_scene} "
-            "Turn the easier condition into one concrete move."
+            f"{scene} Use the opening, then let the result become evidence before you widen the commitment."
         )
     else:
         bridge = (
-            f"Put both facts beside each other. {first_scene} {second_scene} "
-            "Choose one rule that still works when both are true."
+            f"{scene} Put the fact beside the feeling. Choose one rule that still works when both are true."
         )
 
     paragraphs = [
@@ -1420,7 +1413,6 @@ def _story_paragraphs(reading, evidence: EvidenceSnapshot, previous_texts: list[
     if len(result) < 2:
         result = [finalize_customer_prose(item, product="daily") for item in paragraphs if item]
     return tuple(result[:2])
-
 
 
 def _why_today_points(reading, evidence: EvidenceSnapshot) -> tuple[str, str, str]:

@@ -534,17 +534,23 @@ def build_timing_map(
     selected = list(dict.fromkeys(selected))
     selected.sort(key=lambda item: (item.first_date, -item.score))
 
+    all_shared_signals = major_sky_events(
+        start_date, end_date, "Aries", timezone_name
+    )
     shared_signals = period_priority_signals(
-        major_sky_events(start_date, end_date, "Aries", timezone_name),
+        all_shared_signals,
         "timing",
         limit=10,
         opportunity_slots=2,
     )
+    # Personal activation is evaluated against the full registry, not only the
+    # public top-ten sky list. A personally exact event must not disappear
+    # merely because the collective year is crowded.
     personal_major = personalize_major_signals(
-        shared_signals,
+        all_shared_signals,
         snapshot,
         timezone_name,
-        limit=10,
+        limit=24,
     )
 
     turning_points = sum(len(story.hits) for story in selected)

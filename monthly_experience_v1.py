@@ -43,13 +43,13 @@ PUBLIC_LIFE_AREAS = {
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
-    5: "the person, pleasure or creative project pulling your attention",
-    6: "the workload and routine your ordinary week has to sustain",
-    7: "the person across the table and the promises between you",
-    8: "money, trust and responsibility you share with someone else",
+    5: "the date, attraction or creative project pulling your attention",
+    6: "the roster, workload and ordinary week you actually have to live",
+    7: "the person across the table and what each of you is actually promising",
+    8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
-    11: "the friends, groups and plans shaping what you build next",
+    11: "the people and plan you are trying to build with",
     12: "what needs privacy, rest or a clean ending",
 }
 
@@ -734,6 +734,7 @@ def _story_driver_rows(result: dict) -> str:
     return "".join(rows)
 
 
+
 def _major_sky_events_html(result: dict) -> str:
     signals = select_serialized_signals(
         result.get("major_sky_events") or [],
@@ -743,22 +744,42 @@ def _major_sky_events_html(result: dict) -> str:
     )
     if not signals:
         return ""
-    cards = []
-    for signal in signals:
-        badge = "OPPORTUNITY" if signal.opportunity else ("MAJOR SKY EVENT" if signal.must_surface_in("monthly") else signal.tier)
-        cards.append(
-            f'''<article class="luna-date-card">
-  <span>{_safe(human_date(signal.event_date.isoformat()))} · {_safe(badge)}</span>
+
+    turning = [s for s in signals if s.event_class in {"eclipse", "cazimi"}]
+    openings = [s for s in signals if s.opportunity]
+    other = [s for s in signals if s not in turning and s not in openings]
+
+    turning_cards = "".join(
+        f'''<article class="luna-date-card">
+  <span>{_safe(human_date(signal.event_date.isoformat()))} · {_safe("Turning point" if signal.event_class == "eclipse" else "Clarity point")}</span>
   <strong>{_safe(signal.display_label)}</strong>
   <p>{_prose_safe(signal.line_one)}</p>
   <small>{_prose_safe(signal.action)}</small>
 </article>'''
-        )
+        for signal in turning
+    )
+    opening_cards = "".join(
+        f'''<article class="luna-date-card">
+  <span>{_safe(human_date(signal.event_date.isoformat()))} · OPPORTUNITY</span>
+  <strong>{_safe(signal.display_label)}</strong>
+  <p>{_prose_safe(signal.line_one)}</p>
+  <small>{_prose_safe(signal.action)}</small>
+</article>'''
+        for signal in openings
+    )
+    other_rows = "".join(
+        f'<tr><td>{_safe(human_date(signal.event_date.isoformat()))}</td>'
+        f'<td>{_safe(signal.display_label)}</td></tr>'
+        for signal in other
+    )
+
     return f'''
 <section class="luna-monthly-section luna-major-sky-section">
-  <div class="luna-eyebrow">Major sky events</div>
+  <div class="luna-eyebrow">The sky behind the story</div>
   <h2 class="luna-section-title">The dates that change the month</h2>
-  <div class="luna-date-grid">{''.join(cards)}</div>
+  {f'<h3>Major turning points</h3><div class="luna-date-grid">{turning_cards}</div>' if turning_cards else ''}
+  {f'<h3>Openings worth using</h3><div class="luna-date-grid">{opening_cards}</div>' if opening_cards else ''}
+  {f'<h3>Other dates worth keeping</h3><div class="luna-table-wrap"><table><tbody>{other_rows}</tbody></table></div>' if other_rows else ''}
 </section>
     '''
 
@@ -1357,8 +1378,6 @@ def build_monthly_experience_html(
         body = f"""
 {summary_strip}
 
-{major_sky_section}
-
 {concentration_theme_section}
 
 {natal_overlay_section}
@@ -1372,6 +1391,8 @@ def build_monthly_experience_html(
   <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
   <div class="luna-story-timeline">{chapters}</div>
 </section>
+
+{major_sky_section}
 
 {relationship_test_section}
 

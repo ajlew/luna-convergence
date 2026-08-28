@@ -32,7 +32,7 @@ DO_HUMOUR_BY_HOUSE = {
     8: "Read the fine print. Chemistry has terrible bookkeeping.",
     9: "Go bigger—with a map and a receipt.",
     10: "Finish the result. Applause can wait outside.",
-    11: "Choose the circle. The group chat is not a board.",
+    11: "Choose the people who turn enthusiasm into a plan.",
     12: "Pause first. Fantasy has excellent marketing.",
 }
 

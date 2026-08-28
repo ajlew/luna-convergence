@@ -263,7 +263,7 @@ def _copy_for(
         if frozenset({"Venus", "Jupiter"}) <= pair:
             return (
                 "PLEASURE FOUND MORE ROOM.",
-                "Value, attraction or money has a supportive opening through Jupiter. The opportunity is real enough to test.",
+                "An invitation, purchase or attractive possibility can look unusually good now. The opening is real enough to test.",
                 "Use the ease without asking it to prove permanence before ordinary life returns.",
                 "Take the useful opening. Keep the appetite from writing the contract.",
                 "Do not turn a good signal into permission to overextend.",
@@ -271,14 +271,14 @@ def _copy_for(
         if "Jupiter" in pair:
             return (
                 "THE OPENING IS REAL ENOUGH TO TEST.",
-                "Jupiter is supporting movement. More room, reach or confidence is available than usual.",
+                "A conversation, application, booking or proposal can travel further than usual. More room is available if you use it.",
                 "Convert the favourable condition into one concrete option while the support is usable.",
                 "Make the call, application, proposal or booking that increases future choice.",
                 "Do not confuse a larger field with a requirement to choose everything in it.",
             )
         return (
             "THE WINDOW IS OPEN.",
-            "The aspect is supportive enough to make movement easier than usual.",
+            "Something tentative has enough support to test in real life.",
             "Use the advantage on something concrete before it becomes background weather.",
             "Make one useful move while the opening is available.",
             "Do not waste clean support on vague intention.",
@@ -351,6 +351,10 @@ def _signal_from_event(event: Event, same_day: tuple[Event, ...]) -> MajorEventS
             sky_score = 88.0 + float(event.importance)
             visible_products = PRODUCTS
             must_surface_products = frozenset()
+            # A supportive outer-planet alignment can open collective conditions,
+            # but it is not automatically a personal opportunity. Personal
+            # opportunity is earned only through natal activation downstream.
+            opportunity = False
         elif "Jupiter" in pair and event.aspect_name in FLOW_ASPECTS | {"conjunction"}:
             event_class = "opportunity"
             tier = "A"
@@ -827,7 +831,7 @@ def personalize_major_signals(
                 f"{signal.display_label} also makes a close {aspect} to your natal {natal_target}. "
                 f"This is not only shared sky; it lands on {focus}."
             )
-            action = f"Treat the {natal_target} contact as personal evidence. {signal.action}"
+            action = signal.action
             values.append(
                 PersonalEventActivation(
                     event_date=signal.event_date,
@@ -853,7 +857,7 @@ def personalize_major_signals(
     for item in values:
         key = (item.event_date, item.display_label)
         count = per_event.get(key, 0)
-        if count >= 2:
+        if count >= 4:
             continue
         selected.append(item)
         per_event[key] = count + 1
@@ -876,6 +880,81 @@ def personalize_serialized_signals(
         if signal is not None:
             signals.append(signal)
     return personalize_major_signals(signals, snapshot, timezone_name, limit=limit)
+
+
+def event_presentation_group(signal: MajorEventSignal, product: str = "") -> str:
+    """Customer hierarchy. Importance stays visible without making every event equal."""
+    event_class = str(getattr(signal, "event_class", "") or "")
+    if event_class == "eclipse":
+        return "TURNING POINT"
+    if event_class == "cazimi":
+        return "CLARITY POINT"
+    if event_class in {"station", "ingress", "structural_alignment"}:
+        return "STRUCTURAL SHIFT"
+    if bool(getattr(signal, "opportunity", False)):
+        return "OPENING"
+    if event_class == "lunation":
+        return "LUNATION"
+    return "SKY EVENT"
+
+
+def split_priority_signals(
+    signals: Iterable[MajorEventSignal],
+    product: str,
+    *,
+    limit: int = 10,
+    opportunity_slots: int = 2,
+) -> tuple[tuple[MajorEventSignal, ...], tuple[MajorEventSignal, ...], tuple[MajorEventSignal, ...]]:
+    """Return turning points, openings and supporting dates without dropping selected events."""
+    selected = period_priority_signals(
+        signals, product, limit=limit, opportunity_slots=opportunity_slots
+    )
+    turning = []
+    openings = []
+    other = []
+    for signal in selected:
+        group = event_presentation_group(signal, product)
+        if group in {"TURNING POINT", "CLARITY POINT"}:
+            turning.append(signal)
+        elif group == "OPENING":
+            openings.append(signal)
+        else:
+            other.append(signal)
+    return tuple(turning), tuple(openings), tuple(other)
+
+
+def group_personal_activations(
+    values: Iterable[PersonalEventActivation],
+) -> tuple[tuple[PersonalEventActivation, ...], ...]:
+    """One shared event, many natal contacts. Never make one eclipse look like several events."""
+    groups: dict[tuple[date, str], list[PersonalEventActivation]] = {}
+    for item in values or ():
+        groups.setdefault((item.event_date, item.display_label), []).append(item)
+    ordered = []
+    for key, items in groups.items():
+        items.sort(key=lambda item: (-item.combined_score, item.orb, item.natal_target))
+        ordered.append(tuple(items))
+    ordered.sort(key=lambda group: (group[0].event_date, -max(item.combined_score for item in group)))
+    return tuple(ordered)
+
+
+def group_serialized_personal_activations(values: Iterable[dict]) -> tuple[tuple[dict, ...], ...]:
+    """Serialized equivalent used by report objects and renderers."""
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for raw in values or ():
+        item = dict(raw or {})
+        key = (str(item.get("event_date") or ""), str(item.get("display_label") or ""))
+        groups.setdefault(key, []).append(item)
+    ordered = []
+    for key, items in groups.items():
+        items.sort(key=lambda item: (
+            -float(item.get("combined_score", item.get("personal_score", 0.0)) or 0.0),
+            float(item.get("orb", 99.0) or 99.0),
+            str(item.get("natal_target") or ""),
+        ))
+        ordered.append(tuple(items))
+    ordered.sort(key=lambda group: (str(group[0].get("event_date") or ""), -max(float(item.get("combined_score", item.get("personal_score", 0.0)) or 0.0) for item in group)))
+    return tuple(ordered)
 
 
 def parse_serialized_signal(value: dict) -> MajorEventSignal | None:

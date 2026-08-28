@@ -240,54 +240,45 @@ def _timing_cards(result: dict) -> str:
     )
 
 
+
 def _major_sky_events_html(result: dict) -> str:
     signals = select_serialized_signals(
         result.get("major_sky_events") or [],
         "yearly",
-        limit=10,
+        limit=12,
         opportunity_slots=2,
     )
     if not signals:
         return ""
 
-    featured = list(
-        featured_signals(
-            signals,
-            "yearly",
-            limit=10,
-            opportunity_slots=2,
+    rows = []
+    for signal in sorted(signals, key=lambda item: item.event_date):
+        if signal.event_class == "eclipse":
+            badge = "Turning point"
+        elif signal.event_class == "cazimi":
+            badge = "Clarity point"
+        elif signal.opportunity:
+            badge = "OPPORTUNITY"
+        elif signal.event_class in {"station", "ingress", "structural_alignment"}:
+            badge = "Structural shift"
+        else:
+            badge = "Sky event"
+        rows.append(
+            f'<tr><td>{_safe(human_date(signal.event_date.isoformat()))}</td>'
+            f'<td>{_safe(badge)}</td>'
+            f'<td><strong>{_safe(signal.display_label)}</strong><br>{_prose_safe(signal.action)}</td></tr>'
         )
-    )
-    featured_keys = {(item.event_date, item.display_label) for item in featured}
-    cards = []
-    for signal in sorted(featured, key=lambda item: item.event_date):
-        badge = "OPPORTUNITY" if signal.opportunity else ("MAJOR SKY EVENT" if signal.must_surface_in("yearly") else signal.tier)
-        cards.append(
-            f'''<article class="luna-date-card">
-  <span>{_safe(human_date(signal.event_date.isoformat()))} · {_safe(badge)}</span>
-  <strong>{_safe(signal.display_label)}</strong>
-  <p>{_prose_safe(signal.line_one)}</p>
-</article>'''
-        )
-
-    remaining = [item for item in signals if (item.event_date, item.display_label) not in featured_keys]
-    calendar = ""
-    if remaining:
-        rows = "".join(
-            f'<tr><td>{_safe(human_date(item.event_date.isoformat()))}</td><td>{_safe(item.display_label)}</td><td>{_safe("Opportunity" if item.opportunity else item.tier)}</td></tr>'
-            for item in sorted(remaining, key=lambda item: item.event_date)
-        )
-        calendar = f'''
-<h3>Also on the major-event calendar</h3>
-<div class="luna-table-wrap"><table><thead><tr><th>Date</th><th>Event</th><th>Type</th></tr></thead><tbody>{rows}</tbody></table></div>
-'''
 
     return f'''
 <section class="luna-section luna-major-sky-section">
-  <div class="luna-eyebrow">Major sky events</div>
-  <h2 class="luna-section-title">The dates that change the background</h2>
-  <div class="luna-date-grid">{''.join(cards)}</div>
-  {calendar}
+  <div class="luna-eyebrow">Shared-sky milestones</div>
+  <h2 class="luna-section-title">The background dates worth keeping</h2>
+  <div class="luna-table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Event</th></tr></thead>
+      <tbody>{''.join(rows)}</tbody>
+    </table>
+  </div>
 </section>
     '''
 

@@ -1285,7 +1285,7 @@ HOUSE_PROGRESS_REFERENCE = {
     8: "that shared-money or responsibility question",
     9: "that wider-world path",
     10: "that professional shift",
-    11: "that network or future-plan change",
+    11: "the people and plan you are trying to build with",
     12: "that private or unfinished matter",
 }
 

@@ -50,13 +50,13 @@ HOUSE_PROSE = {
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
-    5: "the person, pleasure or creative project pulling your attention",
-    6: "the workload and routine your ordinary week has to sustain",
-    7: "the person across the table and the promises between you",
-    8: "money, trust and responsibility you share with someone else",
+    5: "the date, attraction or creative project pulling your attention",
+    6: "the roster, workload and ordinary week you actually have to live",
+    7: "the person across the table and what each of you is actually promising",
+    8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
-    11: "the friends, groups and plans shaping what you build next",
+    11: "the people and plan you are trying to build with",
     12: "what needs privacy, rest or a clean ending",
 }
 
@@ -1546,7 +1546,7 @@ _TRAJECTORY_LATE_BODY = {
     8: "Money, trust or obligation has become a decision problem. What looked containable now changes what you can say yes to elsewhere.",
     9: "The wider opportunity now asks something of the life you already have. Expansion is only useful if the foundation can carry it.",
     10: "The visible result now has a private consequence. Achievement is useful only if the role, authority and cost still belong together.",
-    11: "The future plan now tests another priority. The right alliance should make the next stage more possible, not merely more crowded.",
+    11: "The future plan reaches ordinary life now. The right people make the next stage more possible; the wrong people only make it more crowded.",
     12: "The private process is now affecting ordinary life. Closure or recovery needs enough room that it stops becoming an invisible tax on everything else.",
 }
 
@@ -1605,7 +1605,7 @@ def _trajectory_house_action(house: int, stage: int, posture: str, secondary_hou
             8: f"Make the decision the financial or trust facts now require before they keep distorting {secondary}.",
             9: f"Protect the foundation the wider opportunity depends upon, especially {secondary}.",
             10: f"Keep the visible responsibility that is genuinely yours; do not let it consume {secondary}.",
-            11: f"Keep the future plan only where the people involved also support {secondary}.",
+            11: f"Keep the plan only if the people involved help carry {secondary}.",
             12: f"Give the private ending or recovery enough space that it stops leaking into {secondary}.",
         }.get(house, _trajectory_action(posture))
         base = late
@@ -1693,9 +1693,16 @@ def _trajectory_aligned_chapters(
                 _TRAJECTORY_LATE_HOOKS.get(primary_house, "The earlier story now has a wider consequence"),
             )
             secondary_short = _TRAJECTORY_SECONDARY_SHORT.get(secondary_house, secondary_area)
-            paragraphs = [
-                f"By late month, the earlier story around {primary_area} is no longer contained there. It is now affecting {secondary_short}."
-            ]
+            if primary_house == 11 and secondary_house == 6:
+                paragraphs = [
+                    "By late month, the future plan reaches the ordinary week. "
+                    "Who has to work more, travel further, reorganise home or carry the practical load?"
+                ]
+            else:
+                paragraphs = [
+                    f"By late month, the earlier decision reaches {secondary_short}. "
+                    "Judge the plan by the practical consequence it creates there."
+                ]
             if condition:
                 paragraphs.append(condition)
             if trajectory_kind in {"late_storm", "pressure_builds"}:

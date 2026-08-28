@@ -1029,6 +1029,7 @@ The winning sequence is:
         "markdown": markdown,
         "events": serialize(events),
         "major_sky_events": [signal.to_dict() for signal in priority_signals],
+        "major_sky_registry": [signal.to_dict() for signal in major_registry],
         "strategic_chapters": serialize(strategic_chapters),
         "major_transitions": serialize(selected_events),
         "retrograde_cycles": serialize(cycles),

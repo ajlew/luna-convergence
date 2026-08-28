@@ -62,7 +62,7 @@ HOUSE_STRATEGY = {
     1: {
         "opportunity": "redefine identity, improve energy and initiate a personal direction",
         "risk": "self-absorption or acting as though every situation is a referendum on you",
-        "action": "choose one identity-level commitment and make your behaviour match it",
+        "action": "choose one direction and make your calendar prove it",
     },
     2: {
         "opportunity": "improve income, pricing, ownership and practical self-reliance",

@@ -82,7 +82,7 @@ from timing_map import (
     build_timing_map,
     month_intensity,
 )
-from major_event_registry import personalize_serialized_signals
+from major_event_registry import group_personal_activations, group_serialized_personal_activations, personalize_serialized_signals
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
     QUESTION_MAX_CHARS,
@@ -3662,13 +3662,27 @@ def daily_page() -> None:
     _render_lean_daily("/daily-horoscope")
 
 
+
 def _weekly_cards_html(days) -> str:
     cards: list[str] = []
     for item in days:
+        major_label = str(getattr(item, "major_event_label", "") or "").strip()
+        evidence = str(getattr(item, "evidence", "") or "").strip()
         major_html = (
-            f'<div class="weekly-major-event">{escape(item.major_event_label)}</div>'
-            if getattr(item, "major_event_label", "") else ""
+            f'<div class="weekly-major-event">{escape(major_label)}</div>'
+            if major_label else ""
         )
+        evidence_html = ""
+        if evidence:
+            same_event = bool(
+                major_label
+                and (
+                    evidence.lower() == major_label.lower()
+                    or evidence.lower().startswith(major_label.lower() + " ·")
+                )
+            )
+            if not same_event:
+                evidence_html = f'<div class="weekly-evidence">{escape(evidence)}</div>'
         supporting_html = (
             f'<div class="weekly-supporting-event">Also active · {escape(" · ".join(item.supporting_events))}</div>'
             if getattr(item, "supporting_events", ()) else ""
@@ -3681,7 +3695,7 @@ def _weekly_cards_html(days) -> str:
     <span>{escape(item.date_label)}</span>
   </div>
   {major_html}
-  <div class="weekly-evidence">{escape(item.evidence)}</div>
+  {evidence_html}
   {supporting_html}
   <h2>{escape(item.headline)}</h2>
   <p>{escape(finalize_customer_prose(item.line_one, product="weekly"))}</p>
@@ -3694,7 +3708,6 @@ def _weekly_cards_html(days) -> str:
             """
         )
     return "".join(cards)
-
 
 def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
     studio_class = " weekly-studio" if studio else ""
@@ -3721,16 +3734,12 @@ def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
     )
 
 
+
 def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
     """Translate the shared sky into one sign-specific human rule."""
     sunday = monday + timedelta(days=6)
     data = period_report(
-        sign,
-        monday,
-        sunday,
-        timezone_name,
-        week_label(monday),
-        transition_count=7,
+        sign, monday, sunday, timezone_name, week_label(monday), transition_count=7,
     )
     dominant = data.get("dominant_houses", [])[:3]
     house_numbers = [int(item.get("house", 1)) for item in dominant if item.get("house")]
@@ -3740,11 +3749,23 @@ def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
     raw_areas = [HOUSE_NAMES.get(h, f"House {h}") for h in house_numbers[:2]]
     areas = [simplify_life_area(area) for area in raw_areas]
     primary = raw_areas[0]
-    strategy = HOUSE_STRATEGY.get(house_numbers[0], {})
-    action = strategy.get("action", "keep the facts visible before committing").rstrip(".")
-    risk = strategy.get("risk", "moving before the pattern is clear")
+    risk = HOUSE_STRATEGY.get(house_numbers[0], {}).get(
+        "risk", "moving before the pattern is clear"
+    )
 
-    headline = imperative_for(primary, seed_text=f"weekly-headline-{sign}-{monday.isoformat()}")
+    headline = imperative_for(
+        primary, seed_text=f"weekly-headline-{sign}-{monday.isoformat()}"
+    )
+    move = headline
+    for index in range(1, 8):
+        candidate = imperative_for(
+            primary,
+            seed_text=f"weekly-move-{sign}-{monday.isoformat()}-{index}",
+        )
+        if candidate != headline:
+            move = candidate
+            break
+
     interpretation = (
         f"{life_scene(primary, f'weekly-{sign}-{monday.isoformat()}', count=1)} "
         f"Act on what is concrete. Do not let {risk} choose for you."
@@ -3756,7 +3777,7 @@ def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
         "areas": areas,
         "raw_areas": raw_areas,
         "interpretation": interpretation,
-        "move": action,
+        "move": move.rstrip("."),
     }
 
 def _weekly_social_area(summary: dict) -> str:
@@ -3899,6 +3920,7 @@ def weekly_page() -> None:
         if EDITOR_PREVIEW_ENABLED:
             st.exception(exc)
     st.markdown("## The shared sky · Seven days")
+    st.caption(f"Dates and exact-day labels use {timezone_name}.")
     _render_weekly_cards(days, monday, studio=True)
     complete_report_print_button(
         "Print / Save complete Week Ahead",
@@ -3937,98 +3959,66 @@ def _weekly_publish_package(days, monday: date) -> dict:
     weekly_url = f"{PUBLIC_SITE_URL}/weekly-view"
     daily_url = f"{PUBLIC_SITE_URL}/"
 
-    # Editorial treatment for the current 24–30 August 2026 campaign.
-    # The astronomy named here is the already-established weekly source material.
-    if monday == date(2026, 8, 24):
-        title = f"Week Ahead Astrology: Feel It. Then Verify It. | {date_range}"
-        description = (
-            "Seven days. One changing sky.\n\n"
-            "This week tests the gap between feeling and fact. Mars–Neptune opens with fog: "
-            "instinct is loud, but the evidence needs checking. Venus then tests value, appetite and restraint. "
-            "The Sun exposes the difference between how something looks and where it is actually heading. "
-            "By the weekend, the Moon asks the cleanest question of all: does the story still match the evidence?\n\n"
-            "Seven pressure points. Seven practical moves. Monday to Sunday.\n\n"
-            f"See the complete Week Ahead:\n{weekly_url}\n\n"
-            f"Read your Daily Horoscope:\n{daily_url}\n\n"
-            "Feel it. Then verify it. Then make your move.\n\n"
-            "#astrology #weeklyhoroscope #zodiac"
-        )
-        instagram = (
-            "FEEL IT. THEN VERIFY IT.\n\n"
-            "This week tests the gap between instinct and evidence. Mars–Neptune opens with fog. "
-            "Venus tests value and restraint. The Sun exposes where appearance and direction diverge. "
-            "By the weekend, the Moon asks whether the story still matches the facts.\n\n"
-            "Seven days. Seven pressure points. Seven practical moves.\n\n"
-            f"Full Week Ahead: {weekly_url}\n\n"
-            "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
-        )
-        opening_script = (
-            "Feel it. Then verify it. This week opens with more instinct than evidence. "
-            "Mars and Neptune blur the first read; Venus tests what is actually worth your time; "
-            "the Sun exposes the gap between appearance and direction. "
-            "By the weekend, ask one question: does the story still match the facts?"
-        )
-    else:
-        evidence = _weekly_publish_distinct(
-            [getattr(item, "evidence", "") for item in days],
-            limit=4,
-        )
-        headlines = _weekly_publish_distinct(
-            [getattr(item, "headline", "") for item in days],
-            limit=3,
-        )
 
-        title = f"Week Ahead Astrology | {date_range}"
-        evidence_sentence = ""
-        if evidence:
-            if len(evidence) == 1:
-                evidence_sentence = f"The week is anchored by {evidence[0]}."
-            else:
-                evidence_sentence = (
-                    "The week's main pressure points include "
-                    + ", ".join(evidence[:-1])
-                    + f", and {evidence[-1]}."
-                )
-        headline_sentence = ""
-        if headlines:
-            headline_sentence = (
-                "The practical sequence: "
-                + " → ".join(headlines)
-                + "."
-            )
-
-        description = (
-            "Seven days. One changing sky.\n\n"
-            + (evidence_sentence + " " if evidence_sentence else "")
-            + (headline_sentence if headline_sentence else "Luna follows the week's strongest calculated shifts from Monday to Sunday.")
-            + "\n\nSeven pressure points. Seven practical moves. Monday to Sunday.\n\n"
-            + f"See the complete Week Ahead:\n{weekly_url}\n\n"
-            + f"Read your Daily Horoscope:\n{daily_url}\n\n"
-            + "Read the signal. Check the evidence. Make your move.\n\n"
-            + "#astrology #weeklyhoroscope #zodiac"
-        )
-        instagram = (
-            f"THE WEEK AHEAD · {date_range.upper()}\n\n"
-            + (evidence_sentence + "\n\n" if evidence_sentence else "")
-            + "One changing sky. Seven practical moves.\n\n"
-            + f"Full Week Ahead: {weekly_url}\n\n"
-            + "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
-        )
-        opening_script = (
-            "Seven days. One changing sky. "
-            + (evidence_sentence + " " if evidence_sentence else "")
-            + "Luna follows the strongest shifts, then turns each one into a practical move."
-        )
-
-    youtube_tags = (
-        "weekly horoscope, weekly astrology, astrology forecast, zodiac forecast, "
-        "week ahead astrology, horoscope this week, astrology this week, "
-        "Aries horoscope, Taurus horoscope, Gemini horoscope, Cancer horoscope, "
-        "Leo horoscope, Virgo horoscope, Libra horoscope, Scorpio horoscope, "
-        "Sagittarius horoscope, Capricorn horoscope, Aquarius horoscope, Pisces horoscope, "
-        "Luna Convergence"
+    evidence = _weekly_publish_distinct(
+        [getattr(item, "evidence", "") for item in days],
+        limit=4,
+    )
+    headlines = _weekly_publish_distinct(
+        [getattr(item, "headline", "") for item in days],
+        limit=3,
     )
 
+    title = f"Week Ahead Astrology | {date_range}"
+    evidence_sentence = ""
+    if evidence:
+        if len(evidence) == 1:
+            evidence_sentence = f"The week is anchored by {evidence[0]}."
+        else:
+            evidence_sentence = (
+                "The week's main pressure points include "
+                + ", ".join(evidence[:-1])
+                + f", and {evidence[-1]}."
+            )
+    headline_sentence = ""
+    if headlines:
+        headline_sentence = (
+            "The practical sequence: "
+            + " → ".join(headlines)
+            + "."
+        )
+
+    description = (
+        "Seven days. One changing sky.\n\n"
+        + (evidence_sentence + " " if evidence_sentence else "")
+        + (headline_sentence if headline_sentence else "Luna follows the week's strongest calculated shifts from Monday to Sunday.")
+        + "\n\nSeven pressure points. Seven practical moves. Monday to Sunday.\n\n"
+        + f"See the complete Week Ahead:\n{weekly_url}\n\n"
+        + f"Read your Daily Horoscope:\n{daily_url}\n\n"
+        + "Read the signal. Check the evidence. Make your move.\n\n"
+        + "#astrology #weeklyhoroscope #zodiac"
+    )
+    instagram = (
+        f"THE WEEK AHEAD · {date_range.upper()}\n\n"
+        + (evidence_sentence + "\n\n" if evidence_sentence else "")
+        + "One changing sky. Seven practical moves.\n\n"
+        + f"Full Week Ahead: {weekly_url}\n\n"
+        + "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
+    )
+    opening_script = (
+        "Seven days. One changing sky. "
+        + (evidence_sentence + " " if evidence_sentence else "")
+        + "Luna follows the strongest shifts, then turns each one into a practical move."
+    )
+
+    youtube_tags = (
+    "weekly horoscope, weekly astrology, astrology forecast, zodiac forecast, "
+    "week ahead astrology, horoscope this week, astrology this week, "
+    "Aries horoscope, Taurus horoscope, Gemini horoscope, Cancer horoscope, "
+    "Leo horoscope, Virgo horoscope, Libra horoscope, Scorpio horoscope, "
+    "Sagittarius horoscope, Capricorn horoscope, Aquarius horoscope, Pisces horoscope, "
+    "Luna Convergence"
+    )
     return {
         "title": title,
         "youtube_description": description,
@@ -7524,101 +7514,231 @@ def _major_event_dict_selection(values, product: str, *, limit: int = 8, opportu
     return sorted(selected, key=lambda item: (str(item.get("event_date") or ""), -float(item.get("sky_score", 0.0) or 0.0)))
 
 
-def _render_major_sky_events(values, product: str, *, heading: str = "Major sky events", limit: int = 8) -> None:
-    selected = _major_event_dict_selection(values, product, limit=limit, opportunity_slots=2)
+
+def _major_event_badge(item: dict, product: str) -> str:
+    event_class = str(item.get("event_class") or "")
+    if event_class == "eclipse":
+        return "TURNING POINT"
+    if event_class == "cazimi":
+        return "CLARITY POINT"
+    if event_class in {"station", "ingress", "structural_alignment"}:
+        return "STRUCTURAL SHIFT"
+    if bool(item.get("opportunity")):
+        return "OPENING"
+    if event_class == "lunation":
+        return "LUNATION"
+    return "SKY EVENT"
+
+
+def _major_event_date_label(item: dict) -> str:
+    raw = str(item.get("event_date") or "")
+    try:
+        return _timing_date_label(date.fromisoformat(raw))
+    except Exception:
+        return raw
+
+
+def _render_major_sky_events(
+    values,
+    product: str,
+    *,
+    heading: str = "Major sky events",
+    limit: int = 8,
+    compact: bool = False,
+) -> None:
+    selected = _major_event_dict_selection(
+        values, product, limit=limit, opportunity_slots=2
+    )
     if not selected:
         return
+
     st.markdown(f"## {heading}")
-    st.caption("These are the sky events most likely to change the pace, open a door or mark a turning point. The technical event name stays visible; Luna translates the consequence.")
-
-    tier_rank = {"S": 5, "A+": 4, "A": 3, "A-": 2, "B+": 1, "B": 0}
-    opportunities = sorted(
-        (item for item in selected if bool(item.get("opportunity"))),
-        key=lambda item: (-float(item.get("sky_score", 0.0) or 0.0), str(item.get("event_date") or "")),
-    )[:2]
-    structural = sorted(
-        (item for item in selected if item not in opportunities),
-        key=lambda item: (
-            -int(str(item.get("tier") or "") == "S"),
-            -int(product in set(item.get("must_surface_products") or [])),
-            -tier_rank.get(str(item.get("tier") or ""), 0),
-            -float(item.get("sky_score", 0.0) or 0.0),
-        ),
+    st.caption(
+        "The technical event name stays visible. Luna separates turning points, "
+        "structural shifts and usable openings so importance does not become inventory."
     )
-    featured = []
-    for item in structural[:max(0, limit - len(opportunities))] + opportunities:
-        if item not in featured and len(featured) < limit:
-            featured.append(item)
-    if len(featured) < limit:
-        for item in structural:
-            if item not in featured:
-                featured.append(item)
-            if len(featured) >= limit:
-                break
-    featured_ids = {(str(item.get("event_date")), str(item.get("display_label"))) for item in featured}
 
-    for item in sorted(featured, key=lambda row: str(row.get("event_date") or "")):
-        badge = "OPPORTUNITY" if item.get("opportunity") else (
-            "MAJOR SKY EVENT" if product in set(item.get("must_surface_products") or []) else str(item.get("tier") or "")
-        )
-        event_date = str(item.get("event_date") or "")
-        try:
-            date_label = _timing_date_label(date.fromisoformat(event_date))
-        except Exception:
-            date_label = event_date
-        line_one = finalize_customer_prose(str(item.get("line_one") or ""), product=product)
-        action = finalize_customer_prose(str(item.get("action") or ""), product=product)
+    turning = [
+        item for item in selected
+        if _major_event_badge(item, product) in {"TURNING POINT", "CLARITY POINT"}
+    ]
+    openings = [
+        item for item in selected
+        if _major_event_badge(item, product) == "OPENING"
+    ]
+    supporting = [
+        item for item in selected
+        if item not in turning and item not in openings
+    ]
+
+    if compact:
+        rows = []
+        for item in sorted(
+            selected, key=lambda row: str(row.get("event_date") or "")
+        ):
+            rows.append(
+                f'<div class="compact-evidence-row">'
+                f'<div class="compact-evidence-label">'
+                f'{escape(_major_event_date_label(item))} · '
+                f'{escape(_major_event_badge(item, product))}</div>'
+                f'<div class="compact-evidence-value">'
+                f'<strong>{escape(str(item.get("display_label") or ""))}</strong><br>'
+                f'{escape(finalize_customer_prose(str(item.get("action") or ""), product=product))}'
+                f'</div></div>'
+            )
         st.markdown(
-            f'''<article class="timing-story major-sky-story">
-<div class="timing-meta">{escape(date_label.upper())} · {escape(badge)}</div>
+            f'<div class="compact-evidence-list">{"".join(rows)}</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    if turning:
+        st.markdown("### Major turning points")
+        for item in sorted(
+            turning, key=lambda row: str(row.get("event_date") or "")
+        ):
+            line_one = finalize_customer_prose(
+                str(item.get("line_one") or ""), product=product
+            )
+            action = finalize_customer_prose(
+                str(item.get("action") or ""), product=product
+            )
+            st.markdown(
+                f"""<article class="timing-story major-sky-story">
+<div class="timing-meta">{escape(_major_event_date_label(item).upper())} · {escape(_major_event_badge(item, product))}</div>
 <h3>{escape(str(item.get("display_label") or item.get("technical_label") or ""))}</h3>
 <p>{escape(line_one)}</p>
 <div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(action)}</p></div>
-</article>''',
+</article>""",
+                unsafe_allow_html=True,
+            )
+
+    if openings:
+        st.markdown("### Openings worth using")
+        for item in sorted(
+            openings, key=lambda row: str(row.get("event_date") or "")
+        ):
+            st.markdown(
+                f"""<article class="timing-story major-sky-story compact-major-sky-story">
+<div class="timing-meta">{escape(_major_event_date_label(item).upper())} · OPENING</div>
+<h3>{escape(str(item.get("display_label") or ""))}</h3>
+<p>{escape(finalize_customer_prose(str(item.get("line_one") or ""), product=product))}</p>
+<div class="timing-move"><div class="timing-move-label">Use it</div><p>{escape(finalize_customer_prose(str(item.get("action") or ""), product=product))}</p></div>
+</article>""",
+                unsafe_allow_html=True,
+            )
+
+    if supporting:
+        st.markdown("### Other dates worth keeping")
+        rows = "".join(
+            f'<div class="compact-evidence-row">'
+            f'<div class="compact-evidence-label">'
+            f'{escape(_major_event_date_label(item))} · '
+            f'{escape(_major_event_badge(item, product))}</div>'
+            f'<div class="compact-evidence-value">'
+            f'{escape(str(item.get("display_label") or ""))}</div></div>'
+            for item in sorted(
+                supporting, key=lambda row: str(row.get("event_date") or "")
+            )
+        )
+        st.markdown(
+            f'<div class="compact-evidence-list">{rows}</div>',
             unsafe_allow_html=True,
         )
 
-    remaining = [
-        item for item in selected
-        if (str(item.get("event_date")), str(item.get("display_label"))) not in featured_ids
-    ]
-    if remaining:
-        st.markdown("### Also on the major-event calendar")
-        rows = "".join(
-            f'<div class="compact-evidence-row"><div class="compact-evidence-label">{escape(str(item.get("event_date") or ""))}</div>'
-            f'<div class="compact-evidence-value">{escape(str(item.get("display_label") or ""))}</div></div>'
-            for item in sorted(remaining, key=lambda row: str(row.get("event_date") or ""))
+
+def _personal_event_group_copy(group) -> tuple[str, str]:
+    items = list(group or [])
+    if not items:
+        return "", ""
+
+    targets = [str(getattr(item, "natal_target", "") or "") for item in items]
+    focuses = []
+    for item in items:
+        focus = str(getattr(item, "focus", "") or "").strip()
+        if focus and focus not in focuses:
+            focuses.append(focus)
+
+    target_set = set(targets)
+    if {"Moon", "Venus"} <= target_set:
+        interpretation = (
+            "Private security and what you want from relationships are active together. "
+            "An opening only works if home, habit and emotional capacity can carry it."
         )
-        st.markdown(f'<div class="compact-evidence-list">{rows}</div>', unsafe_allow_html=True)
+    elif {"Moon", "Mercury"} <= target_set:
+        interpretation = (
+            "What you feel and what you need to say are active together. "
+            "Make the sentence honest enough to survive the feeling and practical enough to be used."
+        )
+    elif {"Sun", "Saturn"} <= target_set:
+        interpretation = (
+            "Identity and responsibility are active together. "
+            "What you commit to now has to fit the person you are trying to become."
+        )
+    elif len(focuses) >= 2:
+        interpretation = (
+            f"This event activates {focuses[0]} and {focuses[1]} at the same time. "
+            "Make one decision that can survive both."
+        )
+    else:
+        interpretation = str(getattr(items[0], "interpretation", "") or "")
+
+    action = str(getattr(items[0], "action", "") or "")
+    if len(items) >= 2:
+        action = f"{action} Keep one standard across both contacts."
+    return interpretation, action
 
 
-def _render_personal_major_events(values, snapshot, timezone_name: str, product: str, *, limit: int = 6) -> None:
+def _render_personal_major_events(
+    values,
+    snapshot,
+    timezone_name: str,
+    product: str,
+    *,
+    limit: int = 6,
+) -> None:
     if snapshot is None:
         return
+
     activations = personalize_serialized_signals(
         values or [],
         snapshot,
         timezone_name,
-        limit=limit,
+        limit=max(limit * 3, 12),
     )
-    if not activations:
+    groups = group_personal_activations(activations)[:limit]
+    if not groups:
         return
 
     st.markdown("### Where the major sky hits your chart")
-    st.caption("These shared-sky events also make a close contact to your natal chart, so the timing is more personal than the general sky alone.")
-    for item in activations[:limit]:
-        badge = "PERSONAL OPPORTUNITY" if item.opportunity else "PERSONAL HIT"
+    st.caption(
+        "One sky event appears once. If it touches several natal points, "
+        "Luna shows the contacts together and interprets the combined pressure."
+    )
+
+    for group in groups:
+        first = group[0]
+        badge = (
+            "PERSONAL OPENING"
+            if any(item.opportunity for item in group)
+            else "PERSONAL HIT"
+        )
+        interpretation, action = _personal_event_group_copy(group)
+        contacts = "".join(
+            f'<li>{escape(item.transit_planet)} {escape(item.aspect)} '
+            f'natal {escape(item.natal_target)} · {item.orb:.2f}° orb</li>'
+            for item in group
+        )
         st.markdown(
-            f'''<article class="timing-story personal-major-story">
-<div class="timing-meta">{escape(_timing_date_label(item.event_date).upper())} · {escape(badge)}</div>
-<h3>{escape(item.display_label)}</h3>
-<p>{escape(finalize_customer_prose(item.interpretation, product=product))}</p>
-<div class="timing-evidence-note">{escape(item.transit_planet)} {escape(item.aspect)} natal {escape(item.natal_target)} · {item.orb:.2f}° orb</div>
-<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(item.action, product=product))}</p></div>
-</article>''',
+            f"""<article class="timing-story personal-major-story">
+<div class="timing-meta">{escape(_timing_date_label(first.event_date).upper())} · {escape(badge)}</div>
+<h3>{escape(first.display_label)}</h3>
+<p>{escape(finalize_customer_prose(interpretation, product=product))}</p>
+<ul class="timing-scenarios">{contacts}</ul>
+<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(action, product=product))}</p></div>
+</article>""",
             unsafe_allow_html=True,
         )
-
 
 def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None, snapshot=None) -> None:
     st.markdown(
@@ -7664,20 +7784,6 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         for paragraph in visible_context[:1]:
             st.markdown(paragraph)
 
-    _render_major_sky_events(
-        result.get("major_sky_events") or [],
-        "monthly",
-        heading="Major sky events this month",
-        limit=6,
-    )
-    _render_personal_major_events(
-        result.get("major_sky_events") or [],
-        snapshot,
-        timezone_name,
-        "monthly",
-        limit=4,
-    )
-
     events = _monthly_canonical_events(narrative, result)
     context_for_voice = " ".join(visible_context[:1]) if 'visible_context' in locals() else ""
     events = _luna_voice_v2_events(
@@ -7699,6 +7805,20 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
                 unsafe_allow_html=True,
             )
             _render_luna_prose(human_arc_sentence(month_arc), product="monthly")
+
+    _render_major_sky_events(
+        result.get("major_sky_events") or [],
+        "monthly",
+        heading="The sky behind the story",
+        limit=6,
+    )
+    _render_personal_major_events(
+        result.get("major_sky_registry") or result.get("major_sky_events") or [],
+        snapshot,
+        timezone_name,
+        "monthly",
+        limit=4,
+    )
 
     _monthly_chart_in_motion(snapshot, result, events, sign)
 
@@ -7992,12 +8112,12 @@ def monthly_sign_page() -> None:
 
     st.markdown("## Something specific on your mind?")
     st.markdown(
-        "Daily, Weekly and Monthly are free. Luna's paid layer is for a **specific question or personal timing across time**."
+        "Daily, Weekly and Monthly are free. Ask Luna when you want one focused answer; Your Year Ahead maps personal timing across the next 12 months."
     )
     c1, c2 = st.columns(2, gap="medium")
     with c1:
         st.markdown(
-            "**Ask Luna · planned launch price A$1.95**<br>"
+            "**Ask Luna · A$1.95**<br>"
             "One focused question about work, relationships, money or timing.",
             unsafe_allow_html=True,
         )
@@ -8861,19 +8981,12 @@ def _timing_active_stories(report, mode: str) -> list:
     return sorted(stories, key=nearest_hit)
 
 
+
 def _timing_motion_summary(report, mode: str, stories: list) -> str:
     if not stories:
         if mode == "Now":
             return "The chart is comparatively quiet at the selected starting point. Luna does not force a major story when no strong transit is active."
         return f"The selected {mode.lower()} window is comparatively quiet. No major transit story passes Luna's current threshold in this period."
-
-    areas = []
-    for story in stories:
-        area = _timing_story_life_area(story)
-        if area not in areas:
-            areas.append(area)
-        if len(areas) >= 2:
-            break
 
     period_text = {
         "Now": "At the selected starting point",
@@ -8882,19 +8995,19 @@ def _timing_motion_summary(report, mode: str, stories: list) -> str:
         "12 Months": "Across the next 12 months",
     }[mode]
 
-    area_text = " and ".join(areas) if areas else "your natal chart"
-    lead = str(getattr(stories[0], "headline", "") or "").strip().rstrip(".")
+    first = stories[0]
+    first_area = _timing_target_human_meaning(first)
+    first_headline = str(getattr(first, "headline", "") or "").strip().title()
     if len(stories) > 1:
-        second = str(getattr(stories[1], "headline", "") or "").strip().rstrip(".")
+        second = stories[1]
+        second_area = _timing_target_human_meaning(second)
+        second_headline = str(getattr(second, "headline", "") or "").strip().title()
         return (
-            f"{period_text}, the strongest activation concentrates around {area_text}. "
-            f"The leading story is {lead.lower()}; the next major shift develops through {second.lower()}."
+            f"{period_text}, {first_area} leads. "
+            f"{second_area.capitalize()} becomes the next test. "
+            f"The sequence is {first_headline}, then {second_headline}."
         )
-    return (
-        f"{period_text}, the strongest activation concentrates around {area_text}. "
-        f"The leading story is {lead.lower()}."
-    )
-
+    return f"{period_text}, {first_area} leads. The central story is {first_headline}."
 
 def _timing_activation_wheel_svg(report, mode: str, size: int = 620) -> str:
     """
@@ -9121,8 +9234,9 @@ def _timing_repeated_transit_themes(report) -> list[str]:
     return [planet for planet, _ in sorted(counts.items(), key=lambda item: (-item[1], item[0]))]
 
 
+
 def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
-    """Write the portrait natively to you. Never convert third-person grammar."""
+    """Natal baseline only. Current transits belong in the year-pattern section."""
     refs = dict(_chart_natal_reference_items(snapshot))
     sun = refs.get("Sun sign", "Not calculated")
     moon = refs.get("Moon", "Not calculated")
@@ -9140,7 +9254,8 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
         )
     elif sun in _SIGN_IDENTITY:
         paragraphs.append(
-            f"Start with the baseline. You are {_SIGN_IDENTITY[sun]}. Do not turn that tendency into a fixed identity."
+            f"Start with the baseline. You are {_SIGN_IDENTITY[sun]}. "
+            "Do not turn that tendency into a fixed identity."
         )
 
     if rising in _SIGN_RISING and mercury in _SIGN_MERCURY:
@@ -9163,14 +9278,24 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
             "Stop compensating before the imbalance becomes invisible."
         )
 
-    themes = _timing_repeated_transit_themes(report) if report is not None else []
+    return paragraphs
+
+
+def _timing_year_pattern_summary(report) -> list[str]:
+    """Current slow-transit pattern, separated from the natal baseline."""
+    paragraphs = []
+    themes = _timing_repeated_transit_themes(report)
+
     if "Saturn" in themes and "Uranus" in themes:
         paragraphs.append(
-            "Count the load. Saturn asks you to define responsibility. Uranus asks where the structure has become too restrictive. "
-            "You can keep a bad arrangement alive because you are capable. Capability is not proof that the arrangement deserves you."
+            "Count the load. Saturn asks you to define responsibility. "
+            "Uranus asks where the structure has become too restrictive. "
+            "You can keep a bad arrangement alive because you are capable. "
+            "Capability is not proof that the arrangement deserves you."
         )
         paragraphs.append(
-            "Break the cycle earlier. Notice the problem. Fix it. Carry more. Keep going. Get tired. Want out immediately. "
+            "Break the cycle earlier. Notice the problem. Fix it. Carry more. "
+            "Keep going. Get tired. Want out immediately. "
             "Stop before freedom requires destruction."
         )
     elif "Saturn" in themes:
@@ -9180,14 +9305,13 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
         )
 
     relationship_relevant = False
-    if report is not None:
-        for story in report.stories:
-            target = str(getattr(story, "natal_target", "") or "").lower()
-            area = _timing_story_life_area(story).lower()
-            house = str(getattr(story, "natal_house", "") or "")
-            if target == "venus" or house == "7" or "relationship" in area or "agreement" in area:
-                relationship_relevant = True
-                break
+    for story in report.stories:
+        target = str(getattr(story, "natal_target", "") or "").lower()
+        area = _timing_story_life_area(story).lower()
+        house = str(getattr(story, "natal_house", "") or "")
+        if target == "venus" or house == "7" or "relationship" in area or "agreement" in area:
+            relationship_relevant = True
+            break
 
     if relationship_relevant:
         paragraphs.append(
@@ -9196,8 +9320,8 @@ def _timing_natal_person_summary(snapshot, report=None) -> list[str]:
             "When The Agreement Gets Tested arrives, ask who is carrying the relationship. "
             "Stop compensating. Keep what remains mutual."
         )
-
     return paragraphs
+
 
 def _timing_recurrence_question(story) -> str:
     """Human memory question derived from the transit planet + natal target."""
@@ -9261,7 +9385,7 @@ def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[
         rows.append(
             f"{_timing_date_label(earlier)} · about age {age}. "
             f"Think back. {_timing_recurrence_question(story)} "
-            f"{life_scene(area, f'history-{earlier.year}', count=1)} "
+            f"{life_scene(area, f'history-{earlier.year}', count=1, age=age)} "
             "The event can differ. The pressure can rhyme. Name what you learned to carry then."
         )
         if len(rows) >= 3:
@@ -9319,10 +9443,32 @@ def _timing_story_phase_label(story, limit: int = 3) -> str:
     return " · ".join(labels)
 
 
+
+def _timing_relationship_overlaps(opening, test) -> list[tuple[date, date]]:
+    if opening is None or test is None:
+        return []
+
+    overlaps = []
+    for left in list(getattr(opening, "periods", None) or []):
+        for right in list(getattr(test, "periods", None) or []):
+            start = max(left.start_date, right.start_date)
+            end = min(left.end_date, right.end_date)
+            if start <= end:
+                overlaps.append((start, end))
+    overlaps.sort()
+    return overlaps
+
+
 def _render_timing_person_relationship_summary(report, snapshot, birth_date_value: date | None) -> None:
     st.markdown("## The person behind the transits")
     for paragraph in _timing_natal_person_summary(snapshot, report):
         _render_luna_prose(paragraph)
+
+    year_pattern = _timing_year_pattern_summary(report)
+    if year_pattern:
+        st.markdown("### The pattern this year activates")
+        for paragraph in year_pattern:
+            _render_luna_prose(paragraph)
 
     past = _timing_past_pattern_summary(report, birth_date_value)
     if past:
@@ -9353,12 +9499,21 @@ def _render_timing_person_relationship_summary(report, snapshot, birth_date_valu
 
         test = relationship.get("test")
         if test:
-            start = _timing_story_start(test)
-            end = _timing_story_end(test)
             _render_luna_prose(
                 f"Seriousness phases · {_timing_story_phase_label(test)}. "
                 f"Strongest around {_timing_story_peak_label(test)}. "
                 "Watch what happens when life becomes ordinary. Keep what is mutual. Renegotiate what is not."
+            )
+
+        overlaps = _timing_relationship_overlaps(opening, test)
+        if overlaps:
+            overlap_label = " · ".join(
+                f"{_timing_date_label(start)} → {_timing_date_label(end)}"
+                for start, end in overlaps[:2]
+            )
+            _render_luna_prose(
+                f"Key overlap · {overlap_label}. Opportunity and reality testing are active together. "
+                "A connection can open and immediately show whether it can carry equal terms."
             )
 
 def _timing_chart_story(report, snapshot, mode: str, stories: list) -> list[str]:
@@ -9673,19 +9828,21 @@ def _monthly_event_connection(events: list[dict], index: int) -> list[str]:
     """The Month Story carries the convergence. Do not repeat a connection template after every event."""
     return []
 
+
 def _weekly_connected_interpretation(summary: dict) -> list[str]:
-    """The headline gives the main command. The body adds lived evidence, not a duplicate."""
+    """One thesis, one lived scene, one weekly standard."""
     raw_areas = list(summary.get("raw_areas") or summary.get("areas") or [])
-    move = str(summary.get("move") or "keep the facts visible before committing").strip().rstrip(".")
+    move = str(
+        summary.get("move") or "keep the facts visible before committing"
+    ).strip().rstrip(".")
     first = raw_areas[0] if raw_areas else "general"
-    second = raw_areas[1] if len(raw_areas) > 1 else first
     seed = f"{summary.get('sign', '')}-weekly"
-
     return [
-        f"{life_scene(first, seed, count=1)} {imperative_for(second, seed + '-2')}",
-        f"{move.capitalize()}. Keep that rule all week. The mood can change. The standard does not have to.",
+        f"{life_scene(first, seed, count=1)} "
+        "Act on what becomes concrete, not on applause or momentum alone.",
+        f"{move.capitalize()}. Keep that rule all week. "
+        "The mood can change. The standard does not have to.",
     ]
-
 
 def _daily_connected_meaning(narrative) -> str:
     """Daily already has a Your Move block. Do not repeat it in the story."""
@@ -9793,42 +9950,82 @@ def timing_map_page() -> None:
         for paragraph in year_story.get("paragraphs", []):
             _render_luna_prose(paragraph, product="timing")
 
-        arc = list(year_story.get("arc", []) or [])
-        if arc:
-            st.markdown(
-                '<div class="timing-meta" style="margin-top:1.25rem;text-transform:none">The year in five moves</div>',
-                unsafe_allow_html=True,
-            )
-            _render_luna_prose(human_arc_sentence(arc), product="timing")
-
-        _render_luna_prose(year_story.get("chart_bridge", ""), product="timing")
+        # The story already carries the annual sequence. Keep the arc and chart
+        # bridge in report data for charts/print logic, but do not repeat them
+        # as extra customer paragraphs here.
 
     _render_major_sky_events(
         getattr(report, "major_sky_events", ()) or (),
         "timing",
         heading="Shared-sky milestones inside your year",
-        limit=8,
+        limit=10,
+        compact=True,
     )
 
     personal_events = list(getattr(report, "personal_major_events", ()) or ())
-    if personal_events:
+    personal_groups = group_serialized_personal_activations(personal_events)
+    if personal_groups:
         st.markdown("### Major events that directly hit your natal chart")
-        st.caption("These shared-sky events also make a close contact to your natal chart. Read them beside the slower personal-transit chapters below.")
-        for item in personal_events[:8]:
-            event_date = str(item.get("event_date") or "")
+        st.caption(
+            "Each sky event appears once. Multiple natal contacts are grouped so "
+            "Luna can show the convergence instead of repeating the event."
+        )
+        for group in personal_groups[:6]:
+            first = group[0]
+            event_date = str(first.get("event_date") or "")
             try:
                 date_label = _timing_date_label(date.fromisoformat(event_date))
             except Exception:
                 date_label = event_date
-            badge = "PERSONAL OPPORTUNITY" if item.get("opportunity") else "PERSONAL HIT"
+
+            targets = {str(item.get("natal_target") or "") for item in group}
+            focuses = []
+            for item in group:
+                focus = str(item.get("focus") or "").strip()
+                if focus and focus not in focuses:
+                    focuses.append(focus)
+
+            if {"Moon", "Venus"} <= targets:
+                interpretation = (
+                    "Private security and what you want from relationships are active together. "
+                    "An opening only works if home, habit and emotional capacity can carry it."
+                )
+            elif {"Sun", "Saturn"} <= targets:
+                interpretation = (
+                    "Identity and responsibility are active together. "
+                    "What you commit to now has to fit the person you are trying to become."
+                )
+            elif len(focuses) >= 2:
+                interpretation = (
+                    f"This event activates {focuses[0]} and {focuses[1]} at the same time. "
+                    "Make one decision that can survive both."
+                )
+            else:
+                interpretation = str(first.get("interpretation") or "")
+
+            contacts = "".join(
+                f'<li>{escape(str(item.get("transit_planet") or ""))} '
+                f'{escape(str(item.get("aspect") or ""))} natal '
+                f'{escape(str(item.get("natal_target") or ""))} · '
+                f'{float(item.get("orb", 0.0) or 0.0):.2f}° orb</li>'
+                for item in group
+            )
+            action = str(first.get("action") or "")
+            if len(group) >= 2:
+                action += " Keep one standard across both contacts."
+            badge = (
+                "PERSONAL OPENING"
+                if any(bool(item.get("opportunity")) for item in group)
+                else "PERSONAL HIT"
+            )
             st.markdown(
-                f'''<article class="timing-story personal-major-story">
+                f"""<article class="timing-story personal-major-story">
 <div class="timing-meta">{escape(date_label.upper())} · {escape(badge)}</div>
-<h3>{escape(str(item.get("display_label") or ""))}</h3>
-<p>{escape(finalize_customer_prose(str(item.get("interpretation") or ""), product="timing"))}</p>
-<div class="timing-evidence-note">{escape(str(item.get("transit_planet") or ""))} {escape(str(item.get("aspect") or ""))} natal {escape(str(item.get("natal_target") or ""))} · {float(item.get("orb", 0.0) or 0.0):.2f}° orb</div>
-<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(str(item.get("action") or ""), product="timing"))}</p></div>
-</article>''',
+<h3>{escape(str(first.get("display_label") or ""))}</h3>
+<p>{escape(finalize_customer_prose(interpretation, product="timing"))}</p>
+<ul class="timing-scenarios">{contacts}</ul>
+<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(action, product="timing"))}</p></div>
+</article>""",
                 unsafe_allow_html=True,
             )
 

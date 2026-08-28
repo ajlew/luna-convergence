@@ -232,6 +232,36 @@ SPECIAL_COPY = {
         "The emotion may be real. Its explanation is still under investigation.",
         "Feel it fully. Verify it separately.",
     ),
+    (frozenset({"Mercury", "True Node"}), "opposition"): (
+        "TWO TRUTHS ENTER. ONE CHOICE LEAVES.",
+        "A yes can still send you somewhere you do not want to go.",
+        "Compromise without a clear priority becomes slow surrender.",
+        "Price the direction, not just the offer.",
+    ),
+    (frozenset({"Sun", "Mercury"}), "conjunction"): (
+        "TWO SIGNALS. ONE MICROPHONE.",
+        "What you say and what everybody can now see are becoming the same story.",
+        "The signal grows louder. So does the distortion.",
+        "Choose what deserves amplification.",
+    ),
+    (frozenset({"Sun", "Uranus"}), "square"): (
+        "PRESSURE DOES NOT NEGOTIATE.",
+        "Put the public story beside what just changed. If they no longer match, that is the evidence.",
+        "Use the irritation as evidence, not permission to overreact.",
+        "Remove the false assumption, then make the move.",
+    ),
+    (frozenset({"Sun", "Moon"}), "opposition"): (
+        "THE OTHER SIDE HAS LEVERAGE.",
+        "The public answer wants one thing. Your private reaction wants another.",
+        "The stalemate survives only while nobody names the cost.",
+        "State both prices. Choose the cost you can carry.",
+    ),
+    (frozenset({"Moon", "Neptune"}), "conjunction"): (
+        "THE VOLUME JUST CHANGED.",
+        "Put your gut beside the imagined version. Do not run both at full volume.",
+        "Choose the setting before the noise chooses it for you.",
+        "Give the combined force one precise job.",
+    ),
 }
 
 

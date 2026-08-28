@@ -203,16 +203,16 @@ _TECHNICAL_TO_HUMAN = {
     "identity and direction": "how you show up and what you are willing to carry",
     "travel, publishing, law, education and foreign markets": "the trip, course, application or outside opportunity in front of you",
     "travel, study and the wider world": "the trip, course, application or outside opportunity in front of you",
-    "relationships, clients, contracts and competitors": "the person across the table and the promises between you",
-    "relationships and agreements": "the person across the table and the promises between you",
-    "work routines, health, service and operations": "the workload and routine your ordinary week has to sustain",
-    "work and daily routines": "the workload and routine your ordinary week has to sustain",
-    "shared money, debt, tax, inheritance and intimacy": "money, trust and responsibility you share with someone else",
-    "shared money and obligations": "money, trust and responsibility you share with someone else",
+    "relationships, clients, contracts and competitors": "the person across the table and what each of you is actually promising",
+    "relationships and agreements": "the person across the table and what each of you is actually promising",
+    "work routines, health, service and operations": "the roster, workload and ordinary week you actually have to live",
+    "work and daily routines": "the roster, workload and ordinary week you actually have to live",
+    "shared money, debt, tax, inheritance and intimacy": "the money, trust and responsibility you share with someone else",
+    "shared money and obligations": "the money, trust and responsibility you share with someone else",
     "career, public direction, reputation and authority": "the job, role or public responsibility with your name on it",
     "career and authority": "the job, role or public responsibility with your name on it",
-    "friends, communities and future plans": "the friends, groups and plans shaping what you build next",
-    "friends and future plans": "the friends, groups and plans shaping what you build next",
+    "friends, communities and future plans": "the people and plan you are trying to build with",
+    "friends and future plans": "the people and plan you are trying to build with",
 }
 
 _YOU_GRAMMAR = {
@@ -331,9 +331,9 @@ def life_domain(value: str) -> str:
     return _domain_key(value)
 
 
-def life_scene(value: str, seed_text: str = "", count: int = 2) -> str:
-    """Ground an abstract life area in conditional ordinary-life scenes."""
-    return _life_scene_line(value, seed_text=seed_text, count=count)
+def life_scene(value: str, seed_text: str = "", count: int = 2, *, age: int | None = None) -> str:
+    """Ground an abstract life area in conditional ordinary-life scenes, with life-stage context when known."""
+    return _life_scene_line(value, seed_text=seed_text, count=count, age=age)
 
 
 def imperative_for(value: str, seed_text: str = "") -> str:

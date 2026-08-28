@@ -28,13 +28,13 @@ LIFE_AREAS = {
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
-    5: "the person, pleasure or creative project pulling your attention",
-    6: "the workload and routine your ordinary week has to sustain",
-    7: "the person across the table and the promises between you",
-    8: "money, trust and responsibility you share with someone else",
+    5: "the date, attraction or creative project pulling your attention",
+    6: "the roster, workload and ordinary week you actually have to live",
+    7: "the person across the table and what each of you is actually promising",
+    8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
-    11: "the friends, groups and plans shaping what you build next",
+    11: "the people and plan you are trying to build with",
     12: "what needs privacy, rest or a clean ending",
 }
 
