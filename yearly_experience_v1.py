@@ -20,7 +20,7 @@ from luna_editorial_system import (
 from monthly_experience_v1 import PRINT_ORIENTATIONS, PRINT_PAPERS
 from monthly_narrative_v1 import HOUSE_DISPLAY, HOUSE_NATURAL
 from luna_voice import finalize_customer_prose, narrator_cue
-from major_event_registry import featured_signals, select_serialized_signals
+from major_event_registry import event_presentation_group, featured_signals, select_serialized_signals
 
 
 YEARLY_HOOKS = {
@@ -253,16 +253,8 @@ def _major_sky_events_html(result: dict) -> str:
 
     rows = []
     for signal in sorted(signals, key=lambda item: item.event_date):
-        if signal.event_class == "eclipse":
-            badge = "Turning point"
-        elif signal.event_class == "cazimi":
-            badge = "Clarity point"
-        elif signal.opportunity:
-            badge = "OPPORTUNITY"
-        elif signal.event_class in {"station", "ingress", "structural_alignment"}:
-            badge = "Structural shift"
-        else:
-            badge = "Sky event"
+        group = event_presentation_group(signal, "yearly")
+        badge = "OPPORTUNITY" if group == "OPENING" else group.title()
         rows.append(
             f'<tr><td>{_safe(human_date(signal.event_date.isoformat()))}</td>'
             f'<td>{_safe(badge)}</td>'

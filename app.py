@@ -7517,14 +7517,19 @@ def _major_event_dict_selection(values, product: str, *, limit: int = 8, opportu
 
 def _major_event_badge(item: dict, product: str) -> str:
     event_class = str(item.get("event_class") or "")
+    planets = set(item.get("planets") or ())
     if event_class == "eclipse":
         return "TURNING POINT"
     if event_class == "cazimi":
         return "CLARITY POINT"
-    if event_class in {"station", "ingress", "structural_alignment"}:
-        return "STRUCTURAL SHIFT"
     if bool(item.get("opportunity")):
         return "OPENING"
+    if event_class == "station":
+        return "PIVOT"
+    if event_class == "ingress" and planets & {"Mercury", "Venus", "Mars"}:
+        return "TRIGGER"
+    if event_class in {"ingress", "structural_alignment"}:
+        return "STRUCTURAL SHIFT"
     if event_class == "lunation":
         return "LUNATION"
     return "SKY EVENT"
@@ -7554,8 +7559,8 @@ def _render_major_sky_events(
 
     st.markdown(f"## {heading}")
     st.caption(
-        "The technical event name stays visible. Luna separates turning points, "
-        "structural shifts and usable openings so importance does not become inventory."
+        "Keep the turning points and usable openings in view. "
+        "Slower structural dates remain available below without competing for the same visual weight."
     )
 
     turning = [
@@ -7572,24 +7577,46 @@ def _render_major_sky_events(
     ]
 
     if compact:
-        rows = []
-        for item in sorted(
-            selected, key=lambda row: str(row.get("event_date") or "")
-        ):
-            rows.append(
-                f'<div class="compact-evidence-row">'
-                f'<div class="compact-evidence-label">'
-                f'{escape(_major_event_date_label(item))} · '
-                f'{escape(_major_event_badge(item, product))}</div>'
-                f'<div class="compact-evidence-value">'
-                f'<strong>{escape(str(item.get("display_label") or ""))}</strong><br>'
-                f'{escape(finalize_customer_prose(str(item.get("action") or ""), product=product))}'
-                f'</div></div>'
-            )
+        priority = sorted(
+            turning + openings,
+            key=lambda row: str(row.get("event_date") or ""),
+        )
+        supporting_sorted = sorted(
+            supporting,
+            key=lambda row: str(row.get("event_date") or ""),
+        )
+        fill = max(0, 7 - len(priority))
+        featured = priority + supporting_sorted[:fill]
+        remaining = [item for item in selected if item not in featured]
+
+        def compact_rows(items, include_action: bool = True) -> str:
+            rows = []
+            for item in sorted(items, key=lambda row: str(row.get("event_date") or "")):
+                detail = ""
+                if include_action:
+                    action = finalize_customer_prose(str(item.get("action") or ""), product=product)
+                    detail = f"<br>{escape(action)}" if action else ""
+                rows.append(
+                    f'<div class="compact-evidence-row">'
+                    f'<div class="compact-evidence-label">'
+                    f'{escape(_major_event_date_label(item))} · '
+                    f'{escape(_major_event_badge(item, product))}</div>'
+                    f'<div class="compact-evidence-value">'
+                    f'<strong>{escape(str(item.get("display_label") or ""))}</strong>'
+                    f'{detail}</div></div>'
+                )
+            return "".join(rows)
+
         st.markdown(
-            f'<div class="compact-evidence-list">{"".join(rows)}</div>',
+            f'<div class="compact-evidence-list">{compact_rows(featured)}</div>',
             unsafe_allow_html=True,
         )
+        if remaining:
+            with st.expander(f"Other structural dates · {len(remaining)}"):
+                st.markdown(
+                    f'<div class="compact-evidence-list">{compact_rows(remaining, include_action=True)}</div>',
+                    unsafe_allow_html=True,
+                )
         return
 
     if turning:
@@ -7647,46 +7674,126 @@ def _render_major_sky_events(
         )
 
 
+def _personal_item_value(item, key: str, default=""):
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return getattr(item, key, default)
+
+
+_PERSONAL_TARGET_PHRASE = {
+    "Ascendant": "how you show up and set boundaries",
+    "Midheaven": "work and public responsibility",
+    "Sun": "identity and direction",
+    "Moon": "home and emotional security",
+    "Mercury": "the conversation or decision",
+    "Venus": "what you value in love or money",
+    "Mars": "effort, conflict and the move you are making",
+    "Jupiter": "growth and the larger option",
+    "Saturn": "responsibility and limits",
+    "Uranus": "freedom and the rule that needs changing",
+    "Neptune": "the story that still needs evidence",
+    "Pluto": "power, dependency and leverage",
+    "True Node": "the route you are growing toward",
+}
+
+
 def _personal_event_group_copy(group) -> tuple[str, str]:
+    """One sky event, one interpretation, however many natal contacts it makes."""
     items = list(group or [])
     if not items:
         return "", ""
 
-    targets = [str(getattr(item, "natal_target", "") or "") for item in items]
-    focuses = []
-    for item in items:
-        focus = str(getattr(item, "focus", "") or "").strip()
-        if focus and focus not in focuses:
-            focuses.append(focus)
-
+    targets = [str(_personal_item_value(item, "natal_target", "") or "") for item in items]
     target_set = set(targets)
+    first = items[0]
+    event_class = str(_personal_item_value(first, "event_class", "") or "")
+    first_interpretation = str(_personal_item_value(first, "interpretation", "") or "")
+    action = str(_personal_item_value(first, "action", "") or "")
+
     if {"Moon", "Venus"} <= target_set:
         interpretation = (
-            "Private security and what you want from relationships are active together. "
+            "Private security and what you want from relationships are moving together. "
             "An opening only works if home, habit and emotional capacity can carry it."
         )
+        convergence_action = "Do not agree to anything your private life cannot actually support."
     elif {"Moon", "Mercury"} <= target_set:
         interpretation = (
-            "What you feel and what you need to say are active together. "
-            "Make the sentence honest enough to survive the feeling and practical enough to be used."
+            "Home and the decision now affect each other. "
+            "A conversation, document or answer can change what your private life has to carry."
         )
+        convergence_action = "Make the sentence work at home as well as on paper."
     elif {"Sun", "Saturn"} <= target_set:
         interpretation = (
-            "Identity and responsibility are active together. "
+            "Identity and responsibility are moving together. "
             "What you commit to now has to fit the person you are trying to become."
         )
-    elif len(focuses) >= 2:
+        convergence_action = "Choose the commitment that still fits the direction you want."
+    elif len(targets) >= 2:
+        phrases = []
+        for target in targets:
+            phrase = _PERSONAL_TARGET_PHRASE.get(target, target.lower())
+            if phrase and phrase not in phrases:
+                phrases.append(phrase)
+        if len(phrases) >= 3:
+            joined = ", ".join(phrases[:-1]) + f" and {phrases[-1]}"
+        elif len(phrases) == 2:
+            joined = f"{phrases[0]} and {phrases[1]}"
+        else:
+            joined = phrases[0] if phrases else "two parts of life"
         interpretation = (
-            f"This event activates {focuses[0]} and {focuses[1]} at the same time. "
-            "Make one decision that can survive both."
+            f"{joined[:1].upper() + joined[1:]} are tied to the same event. "
+            "Changing one changes the terms of the others."
         )
+        convergence_action = "Choose one standard that every contact can live with."
     else:
-        interpretation = str(getattr(items[0], "interpretation", "") or "")
+        interpretation = first_interpretation
+        convergence_action = ""
 
-    action = str(getattr(items[0], "action", "") or "")
-    if len(items) >= 2:
-        action = f"{action} Keep one standard across both contacts."
-    return interpretation, action
+    if event_class == "eclipse" and len(targets) >= 2 and convergence_action:
+        convergence_action = f"{convergence_action} Leave room for new facts before making the irreversible move."
+
+    final_action = action
+    if convergence_action and convergence_action not in final_action:
+        final_action = f"{final_action} {convergence_action}".strip()
+    return interpretation, final_action
+
+
+def _personal_major_badge(item, group) -> str:
+    event_class = str(_personal_item_value(item, "event_class", "") or "")
+    planet = str(_personal_item_value(item, "transit_planet", "") or "")
+    opportunity = any(bool(_personal_item_value(value, "opportunity", False)) for value in group)
+    if event_class == "eclipse":
+        return "PERSONAL TURNING POINT"
+    if event_class == "cazimi":
+        return "PERSONAL CLARITY POINT"
+    if opportunity:
+        return "PERSONAL OPENING"
+    if event_class == "station":
+        return "PERSONAL PIVOT"
+    if event_class == "ingress" and planet in {"Mercury", "Venus", "Mars"}:
+        return "PERSONAL TRIGGER"
+    return "PERSONAL HIT"
+
+
+def _personal_contact_label(item) -> str:
+    event_class = str(_personal_item_value(item, "event_class", "") or "")
+    planet = str(_personal_item_value(item, "transit_planet", "") or "")
+    aspect = str(_personal_item_value(item, "aspect", "") or "")
+    target = str(_personal_item_value(item, "natal_target", "") or "")
+    orb = float(_personal_item_value(item, "orb", 0.0) or 0.0)
+
+    if event_class == "eclipse":
+        subject = f"Eclipse {planet}"
+    elif event_class == "station":
+        subject = f"{planet} station"
+    elif event_class == "ingress":
+        subject = f"{planet} ingress"
+    elif event_class == "cazimi":
+        subject = f"Cazimi {planet}"
+    else:
+        subject = planet
+    return f"{subject} {aspect} natal {target} · {orb:.2f}° orb"
+
 
 
 def _render_personal_major_events(
@@ -7718,15 +7825,10 @@ def _render_personal_major_events(
 
     for group in groups:
         first = group[0]
-        badge = (
-            "PERSONAL OPENING"
-            if any(item.opportunity for item in group)
-            else "PERSONAL HIT"
-        )
+        badge = _personal_major_badge(first, group)
         interpretation, action = _personal_event_group_copy(group)
         contacts = "".join(
-            f'<li>{escape(item.transit_planet)} {escape(item.aspect)} '
-            f'natal {escape(item.natal_target)} · {item.orb:.2f}° orb</li>'
+            f'<li>{escape(_personal_contact_label(item))}</li>'
             for item in group
         )
         st.markdown(
@@ -8668,26 +8770,29 @@ def _timing_birth_snapshot():
 
 
 def _timing_signal_type(story) -> str:
-    """Translate a transit story into a neutral human signal type."""
+    """Translate a transit story into a human signal type."""
     planet = str(getattr(story, "transit_planet", ""))
     polarity = str(getattr(story, "polarity", "")).lower()
     aspect = str(getattr(story, "aspect", "")).lower()
+    supportive = aspect in {"trine", "sextile"}
+    hard = aspect in {"square", "opposition"}
 
-    if planet == "Uranus":
-        return "CHANGE"
-    if planet == "Pluto":
-        return "POWER SHIFT"
-    if planet == "Neptune":
-        return "CLARITY TEST"
     if planet == "Jupiter":
-        return "OPENING" if "opportun" in polarity else "EXPANSION"
+        return "OPENING" if supportive or aspect == "conjunction" or "opportun" in polarity else "CAPACITY TEST"
     if planet == "Saturn":
-        return "DECISION" if any(x in aspect for x in ("square", "opposition")) else "STRUCTURE"
+        return "TERMS TEST" if hard else "STRUCTURE"
+    if planet == "Uranus":
+        return "FREER OPTION" if supportive else "CHANGE"
+    if planet == "Neptune":
+        return "IMAGINATION + FACTS" if supportive else "CLARITY TEST"
+    if planet == "Pluto":
+        return "POWER OPENING" if supportive else "POWER SHIFT"
     if "opportun" in polarity:
         return "SUPPORT"
     if "pressure" in polarity:
         return "FRICTION"
     return "MIXED"
+
 
 
 def _timing_signal_strip(report) -> str:
@@ -8748,12 +8853,15 @@ def _timing_story_arc_verb(story) -> str:
     """Turn Luna's neutral signal taxonomy into a concise narrative verb."""
     signal = _timing_signal_type(story)
     return {
-        "DECISION": "DEFINE",
+        "TERMS TEST": "DEFINE",
         "STRUCTURE": "STABILISE",
         "OPENING": "OPEN",
-        "EXPANSION": "EXPAND",
+        "CAPACITY TEST": "TEST CAPACITY",
+        "FREER OPTION": "OPEN",
         "CHANGE": "CHANGE",
+        "POWER OPENING": "OPEN",
         "POWER SHIFT": "SEE POWER",
+        "IMAGINATION + FACTS": "VERIFY",
         "CLARITY TEST": "VERIFY",
         "SUPPORT": "USE SUPPORT",
         "FRICTION": "TEST",
@@ -8921,6 +9029,79 @@ def _timing_story_life_area(story) -> str:
         return simplify_life_area(f"Natal {target}")
     return "personal timing"
 
+
+def _timing_target_house_bridge(story) -> str:
+    """Explain why a natal target and its activated house can describe different but connected parts of life."""
+    target = str(getattr(story, "natal_target", "") or "").strip()
+    area = _timing_story_life_area(story)
+    domain = life_domain(area)
+
+    special = {
+        ("Moon", "shared"): (
+            "Home changes because the shared part changes with it: money, care or responsibility "
+            "has to be renegotiated before the extra room becomes sustainable."
+        ),
+        ("Sun", "relationship"): (
+            "The shift is personal, but another person or agreement is where you find out whether "
+            "the new version of you actually fits."
+        ),
+        ("Ascendant", "shared"): (
+            "The boundary starts with you, but shared money, trust or responsibility is where the new terms become measurable."
+        ),
+        ("Ascendant", "career"): (
+            "The change starts with how you show up, but work is where the new boundary acquires a title, workload and consequence."
+        ),
+        ("Venus", "relationship"): (
+            "What you value becomes measurable through the other person's effort, timing and willingness to carry the inconvenient part."
+        ),
+        ("Pluto", "travel"): (
+            "The power shift becomes concrete through the outside route: permission, money, paperwork or who can actually move the plan forward."
+        ),
+        ("Neptune", "travel"): (
+            "The uncertainty becomes concrete through the outside plan. Verify the booking, advice, paperwork or promise before you commit."
+        ),
+    }
+    if (target, domain) in special:
+        return special[(target, domain)]
+
+    target_phrase = {
+        "Ascendant": "how you show up and set boundaries",
+        "Midheaven": "work and public responsibility",
+        "Sun": "identity and direction",
+        "Moon": "home and emotional security",
+        "Mercury": "the conversation or decision",
+        "Venus": "what you value in love or money",
+        "Mars": "effort and the move you are making",
+        "Jupiter": "growth and the larger option",
+        "Saturn": "responsibility and limits",
+        "Uranus": "freedom and the rule that needs changing",
+        "Neptune": "the story that still needs evidence",
+        "Pluto": "power and leverage",
+        "True Node": "the route you are growing toward",
+    }.get(target, "")
+
+    house_phrase = {
+        "identity": "how you show up",
+        "home": "home and private life",
+        "relationship": "the other person and the agreement",
+        "shared": "shared money, trust or responsibility",
+        "career": "work and public responsibility",
+        "travel": "the trip, course, application or outside plan",
+        "routine": "the workload and ordinary week",
+        "money": "the real number",
+        "communication": "the message or decision",
+        "romance": "the person, pleasure or creative project",
+        "friends": "the people and next plan",
+        "rest": "what needs rest or closure",
+    }.get(domain, area)
+
+    if not target_phrase or target_phrase.lower() in house_phrase.lower() or house_phrase.lower() in target_phrase.lower():
+        return ""
+    return (
+        f"The first question is {target_phrase}; {house_phrase} is where you will see whether the answer actually works."
+    )
+
+
 def _timing_story_start(story) -> date | None:
     periods = list(getattr(story, "periods", None) or [])
     return min((item.start_date for item in periods), default=None)
@@ -8985,8 +9166,8 @@ def _timing_active_stories(report, mode: str) -> list:
 def _timing_motion_summary(report, mode: str, stories: list) -> str:
     if not stories:
         if mode == "Now":
-            return "The chart is comparatively quiet at the selected starting point. Luna does not force a major story when no strong transit is active."
-        return f"The selected {mode.lower()} window is comparatively quiet. No major transit story passes Luna's current threshold in this period."
+            return "The chart is comparatively quiet at the selected starting point. Finish what is already open rather than inventing a crisis."
+        return f"The selected {mode.lower()} window is comparatively quiet. Finish what is already open before you add another demand."
 
     period_text = {
         "Now": "At the selected starting point",
@@ -8996,18 +9177,54 @@ def _timing_motion_summary(report, mode: str, stories: list) -> str:
     }[mode]
 
     first = stories[0]
-    first_area = _timing_target_human_meaning(first)
-    first_headline = str(getattr(first, "headline", "") or "").strip().title()
+    first_area = _timing_story_life_area(first)
+    first_domain = life_domain(first_area)
+    first_commands = {
+        "identity": "start with how you show up, where you set boundaries and what version of you other people are meeting",
+        "home": "start with home, family and what the private life can actually carry",
+        "relationship": "start with the person across the table and the promises between you",
+        "shared": "start with shared money, trust and responsibility",
+        "career": "start with the job, role or public responsibility attached to your name",
+        "travel": "start with the trip, course, application or outside opportunity",
+        "routine": "start with the workload and ordinary week you actually have to live",
+        "money": "start with the number, price or financial commitment",
+        "communication": "start with the conversation, document or decision",
+        "romance": "start with the person, pleasure or creative project pulling your attention",
+        "friends": "start with the people and plan you are trying to build with",
+        "rest": "start with what needs privacy, rest or a clean ending",
+    }
+    first_sentence = first_commands.get(first_domain, f"start with {first_area}")
+
     if len(stories) > 1:
         second = stories[1]
-        second_area = _timing_target_human_meaning(second)
-        second_headline = str(getattr(second, "headline", "") or "").strip().title()
+        second_area = _timing_story_life_area(second)
+        second_domain = life_domain(second_area)
+        second_labels = {
+            "identity": "how you show up",
+            "home": "home and private life",
+            "relationship": "the other person and the agreement",
+            "shared": "shared money or responsibility",
+            "career": "work and public responsibility",
+            "travel": "the outside plan and its logistics",
+            "routine": "the workload and ordinary week",
+            "money": "the real number",
+            "communication": "the message or decision",
+            "romance": "the person or project you want",
+            "friends": "the people and next plan",
+            "rest": "what needs rest or closure",
+        }
+        second_label = second_labels.get(second_domain, second_area)
         return (
-            f"{period_text}, {first_area} leads. "
-            f"{second_area.capitalize()} becomes the next test. "
-            f"The sequence is {first_headline}, then {second_headline}."
+            f"{period_text}, {first_sentence}. "
+            f"Then test the first move against {second_label}. "
+            "The change is real only if it can survive both places."
         )
-    return f"{period_text}, {first_area} leads. The central story is {first_headline}."
+    return (
+        f"{period_text}, {first_sentence}. "
+        "Make the first move concrete enough that ordinary life can test it."
+    )
+
+
 
 def _timing_activation_wheel_svg(report, mode: str, size: int = 620) -> str:
     """
@@ -9317,22 +9534,28 @@ def _timing_year_pattern_summary(report) -> list[str]:
         paragraphs.append(
             "Test the bond. You do not necessarily struggle to form relationships. "
             "The harder risk is keeping them alive after the terms stop being equal. "
-            "When The Agreement Gets Tested arrives, ask who is carrying the relationship. "
+            "When the agreement is tested, ask who is carrying the relationship. "
             "Stop compensating. Keep what remains mutual."
         )
     return paragraphs
 
 
-def _timing_recurrence_question(story) -> str:
-    """Human memory question derived from the transit planet + natal target."""
+def _timing_recurrence_question(story, age: int | None = None) -> str:
+    """One human memory prompt derived from transit + target and adjusted for life stage."""
     planet = str(getattr(story, "transit_planet", "") or "")
     target = str(getattr(story, "natal_target", "") or "")
     area = _timing_story_life_area(story)
+    young = age is not None and age < 18
 
     if planet == "Saturn" and target == "Midheaven":
+        if young:
+            return (
+                "Were expectations becoming heavier? Did school, family, a teacher, coach or another authority "
+                "start asking you to become more responsible, visible or self-controlled than before?"
+            )
         return (
-            "Were expectations becoming heavier? Did school, family, work or another authority start asking you to become more responsible, "
-            "more visible or more self-controlled than before?"
+            "Were expectations becoming heavier? Did work, family or another authority start asking you to carry "
+            "more responsibility, visibility or self-control than before?"
         )
     if planet == "Saturn" and target == "Venus":
         return (
@@ -9341,24 +9564,36 @@ def _timing_recurrence_question(story) -> str:
         )
     if planet == "Jupiter" and target == "Ascendant":
         return (
-            "Did life suddenly feel larger — more people, confidence, movement, opportunity or permission to become a different version of yourself?"
+            "Did life suddenly feel larger — more people, confidence, movement or permission to become a different version of yourself?"
         )
     if planet == "Jupiter" and target == "Moon":
+        if young:
+            return (
+                "Did something at home or in the family expand or change enough that you had to become more adaptable or responsible?"
+            )
         return (
-            "Did home, family, emotional security or shared resources expand, become more visible, or ask you to carry a larger emotional or financial field?"
+            "Did home, family or money start requiring more from you than the original plan allowed?"
         )
     if planet == "Uranus":
         return (
-            f"Did something in **{area}** stop feeling inevitable? Were you experimenting with freedom, distance, a new direction or a break from an old rule?"
+            f"Did something in {area} stop feeling inevitable? "
+            "Were you testing a new rule, more distance or a different way of doing it?"
         )
     if planet == "Pluto":
         return (
-            f"Did something in **{area}** make the real power structure harder to ignore — who had leverage, what could no longer be controlled, "
-            "or what needed to be confronted more honestly?"
+            f"Did something in {area} make the real balance of power harder to ignore? "
+            "Who could decide, withhold, leave or change the terms?"
         )
-    return (
-        f"What was changing in **{area}** then? Was the issue more about responsibility, growth, freedom, power, relationship terms or a change in direction?"
-    )
+    if target == "Venus":
+        return "What was changing between you and another person? What were each of you actually promising?"
+    if target == "Moon":
+        return "What changed at home, in the family or in what you needed to feel secure?"
+    if target == "Mercury":
+        return "What conversation, document or decision became harder to postpone?"
+    if target == "Sun":
+        return "What role or direction stopped fitting as cleanly as it had before?"
+    return f"What changed in {area}, and what did you have to decide because of it?"
+
 
 
 def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[str]:
@@ -9384,7 +9619,7 @@ def _timing_past_pattern_summary(report, birth_date_value: date | None) -> list[
         area = _timing_story_life_area(story)
         rows.append(
             f"{_timing_date_label(earlier)} · about age {age}. "
-            f"Think back. {_timing_recurrence_question(story)} "
+            f"Think back. {_timing_recurrence_question(story, age=age)} "
             f"{life_scene(area, f'history-{earlier.year}', count=1, age=age)} "
             "The event can differ. The pressure can rhyme. Name what you learned to carry then."
         )
@@ -9867,7 +10102,7 @@ def timing_map_page() -> None:
     st.markdown('<div class="eyebrow">Personal timing</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Your Year Ahead</div><div class="timing-product-subtitle">Personal Transits &amp; Timing</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal geometry with Jupiter, Saturn, Uranus, Neptune and Pluto, shows when the strongest contacts start, peak and ease, and translates each transit into the life area and decision it activates.</div>',
+        '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal chart with Jupiter, Saturn, Uranus, Neptune and Pluto, then overlays eclipses, stations and major sky events inside your year. It shows when the strongest personal contacts start, peak and ease, where they become visible in ordinary life, and what decision they ask from you.</div>',
         unsafe_allow_html=True,
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
@@ -9929,8 +10164,8 @@ def timing_map_page() -> None:
     _render_timing_result_actions()
     st.markdown(
         f'''<div class="timing-summary-grid">
-  <div><span>Main themes</span><strong>{report.major_games}</strong></div>
-  <div><span>Exact turning points</span><strong>{report.turning_points}</strong></div>
+  <div><span>Recurring themes</span><strong>{report.major_games}</strong></div>
+  <div><span>Exact dates</span><strong>{report.turning_points}</strong></div>
   <div><span>Major shifts</span><strong>{report.rule_changes}</strong></div>
 </div>''',
         unsafe_allow_html=True,
@@ -9958,7 +10193,7 @@ def timing_map_page() -> None:
         getattr(report, "major_sky_events", ()) or (),
         "timing",
         heading="Shared-sky milestones inside your year",
-        limit=10,
+        limit=8,
         compact=True,
     )
 
@@ -9978,46 +10213,12 @@ def timing_map_page() -> None:
             except Exception:
                 date_label = event_date
 
-            targets = {str(item.get("natal_target") or "") for item in group}
-            focuses = []
-            for item in group:
-                focus = str(item.get("focus") or "").strip()
-                if focus and focus not in focuses:
-                    focuses.append(focus)
-
-            if {"Moon", "Venus"} <= targets:
-                interpretation = (
-                    "Private security and what you want from relationships are active together. "
-                    "An opening only works if home, habit and emotional capacity can carry it."
-                )
-            elif {"Sun", "Saturn"} <= targets:
-                interpretation = (
-                    "Identity and responsibility are active together. "
-                    "What you commit to now has to fit the person you are trying to become."
-                )
-            elif len(focuses) >= 2:
-                interpretation = (
-                    f"This event activates {focuses[0]} and {focuses[1]} at the same time. "
-                    "Make one decision that can survive both."
-                )
-            else:
-                interpretation = str(first.get("interpretation") or "")
-
+            interpretation, action = _personal_event_group_copy(group)
             contacts = "".join(
-                f'<li>{escape(str(item.get("transit_planet") or ""))} '
-                f'{escape(str(item.get("aspect") or ""))} natal '
-                f'{escape(str(item.get("natal_target") or ""))} · '
-                f'{float(item.get("orb", 0.0) or 0.0):.2f}° orb</li>'
+                f'<li>{escape(_personal_contact_label(item))}</li>'
                 for item in group
             )
-            action = str(first.get("action") or "")
-            if len(group) >= 2:
-                action += " Keep one standard across both contacts."
-            badge = (
-                "PERSONAL OPENING"
-                if any(bool(item.get("opportunity")) for item in group)
-                else "PERSONAL HIT"
-            )
+            badge = _personal_major_badge(first, group)
             st.markdown(
                 f"""<article class="timing-story personal-major-story">
 <div class="timing-meta">{escape(date_label.upper())} · {escape(badge)}</div>
@@ -10061,13 +10262,18 @@ def timing_map_page() -> None:
                 for line in story.scenarios
             )
 
+            summary_text = finalize_customer_prose(story.summary, product="timing")
+            bridge_text = finalize_customer_prose(_timing_target_house_bridge(story), product="timing")
+            if bridge_text and bridge_text.lower() not in summary_text.lower():
+                summary_text = f"{summary_text} {bridge_text}".strip()
+
             article_html = (
                 '<article class="timing-story">'
                 f'<div class="timing-meta">{number:02d} / {escape(_timing_signal_type(story))} · '
                 f'{escape(story.polarity)} · active {escape(periods_label)}</div>'
                 f'<h2>{escape(story.headline)}</h2>'
                 '<div class="timing-plain-grid">'
-                f'<div><span>What is happening</span><p>{escape(finalize_customer_prose(story.summary, product="timing"))}</p></div>'
+                f'<div><span>What is happening</span><p>{escape(summary_text)}</p></div>'
                 f'<div><span>Where it lands</span><p>{escape(simplify_life_area(where_label))}</p></div>'
                 '</div>'
                 '<div class="timing-phase-grid">'

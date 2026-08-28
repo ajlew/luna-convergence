@@ -14,7 +14,7 @@ Core rule:
     - the technical event name stays visible while Luna supplies the human meaning.
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date
 from functools import lru_cache
 import re
@@ -127,6 +127,144 @@ def _is_cazimi(event: Event) -> str | None:
     return None
 
 
+
+_STATION_COPY = {
+    ("Jupiter", True): (
+        "THE OPENING NEEDS A SECOND LOOK.",
+        "Jupiter has stationed retrograde. Growth does not vanish; it asks you to separate useful expansion from excess.",
+        "Revisit the person, price, plan or opportunity that looked larger at first glance. Keep what still increases future choice.",
+        "Do not abandon the opening. Recheck whether bigger is actually better and which part deserves more time.",
+        "Do not confuse slower growth with lost opportunity.",
+    ),
+    ("Jupiter", False): (
+        "THE OPENING CAN MOVE AGAIN.",
+        "Jupiter has stationed direct. An option that survived the second look can begin moving outward again.",
+        "Reopen the route that still makes sense. Use the part that gained value when you reviewed it.",
+        "Move on the opportunity that survived scrutiny. Leave the inflated version behind.",
+        "Do not mistake renewed momentum for permission to expand everything.",
+    ),
+    ("Saturn", True): (
+        "THE RULE NEEDS REVISION.",
+        "Saturn has stationed retrograde. Responsibility remains, but the terms, limit or structure need another inspection.",
+        "Check which duty still has purpose and which one survives only because nobody has renegotiated it.",
+        "Review the boundary, deadline or obligation before you renew it by habit.",
+        "Do not call endless endurance responsibility.",
+    ),
+    ("Saturn", False): (
+        "THE STANDARD CAN HOLD NOW.",
+        "Saturn has stationed direct. The review is ready to become a boundary, timetable or durable decision.",
+        "Use what the delay clarified. Put the responsibility into terms that can actually last.",
+        "Turn the lesson into a boundary, deadline or responsibility you can maintain.",
+        "Do not rebuild the same burden with cleaner paperwork.",
+    ),
+    ("Uranus", True): (
+        "FREEDOM NEEDS A BETTER DESIGN.",
+        "Uranus has stationed retrograde. The need for change remains, but the first escape route may not be the best one.",
+        "Notice where freedom has become more expensive than expected. Revise the arrangement before rebellion becomes the only exit.",
+        "Test a freer structure before you destroy the one that still protects something useful.",
+        "Do not mistake impatience for a complete plan.",
+    ),
+    ("Uranus", False): (
+        "THE CHANGE CAN LEAVE THE DRAWING BOARD.",
+        "Uranus has stationed direct. A change that survived review can start becoming practical rather than merely disruptive.",
+        "Use the route that creates more room without recreating the old restriction somewhere else.",
+        "Move on the experiment that proved useful. Keep the part of the old structure that still earns its place.",
+        "Do not make novelty the measure of freedom.",
+    ),
+    ("Neptune", True): (
+        "THE STORY NEEDS VERIFICATION.",
+        "Neptune has stationed retrograde. Imagination remains useful, but the story now needs a closer factual audit.",
+        "Recheck the promise, fear or ideal that has been carrying too much certainty.",
+        "Separate what you know from what you hope, fear or infer. Keep only the version that can survive evidence.",
+        "Do not turn uncertainty into proof.",
+    ),
+    ("Neptune", False): (
+        "KEEP THE DREAM THAT SURVIVED THE FACTS.",
+        "Neptune has stationed direct. What remained meaningful through the review can begin moving again without needing false certainty.",
+        "Keep the vision that survived contact with reality. Drop the version that required you not to look too closely.",
+        "Use imagination on what the facts can support.",
+        "Do not restore an illusion just because the fog feels familiar.",
+    ),
+    ("Pluto", True): (
+        "POWER MOVED. REVIEW THE TERMS.",
+        "Pluto has stationed retrograde. The deeper power question turns inward: who can decide, withhold, leave or change the terms?",
+        "Review the dependency or leverage that would be expensive to carry forward unchanged.",
+        "Name where the balance of power has already moved. Stop negotiating with the old map.",
+        "Do not tighten control simply because the old arrangement feels less secure.",
+    ),
+    ("Pluto", False): (
+        "THE POWER SHIFT IS NO LONGER THEORETICAL.",
+        "Pluto has stationed direct. A change in leverage that survived review can begin producing visible consequences.",
+        "Act on the power structure that exists now, not the one you wish still existed.",
+        "Change the term, boundary or dependency that no longer matches the real balance.",
+        "Do not restore the old order just because it is familiar.",
+    ),
+    ("Mercury", True): (
+        "THE MESSAGE NEEDS A SECOND PASS.",
+        "Mercury has stationed retrograde. Communication, logistics and decisions need review before speed becomes useful again.",
+        "Re-read the message, document, booking or assumption that looked settled.",
+        "Correct the detail before you repeat the decision.",
+        "Do not confuse repetition with confirmation.",
+    ),
+    ("Mercury", False): (
+        "THE ANSWER CAN MOVE AGAIN.",
+        "Mercury has stationed direct. A stalled message, decision or logistical problem can begin moving outward again.",
+        "Use what the review exposed. Confirm the detail that still matters.",
+        "Send the corrected version. Do not resend the old assumption.",
+        "Do not rush simply because movement returned.",
+    ),
+    ("Venus", True): (
+        "VALUE NEEDS A SECOND LOOK.",
+        "Venus has stationed retrograde. Relationships, money and desire need review without assuming the attraction or value has disappeared.",
+        "Recheck reciprocity, price and what you actually want once attention stops doing the deciding.",
+        "Keep what still feels valuable after the glamour is removed.",
+        "Do not confuse being wanted with being well matched.",
+    ),
+    ("Venus", False): (
+        "VALUE CAN MOVE FORWARD AGAIN.",
+        "Venus has stationed direct. A relationship, money or value question that survived review can begin moving again.",
+        "Use what the pause clarified about reciprocity, cost and desire.",
+        "Choose what still deserves your time, money or affection.",
+        "Do not restore the old terms merely because the feeling returned.",
+    ),
+    ("Mars", True): (
+        "FORCE NEEDS A DIFFERENT METHOD.",
+        "Mars has stationed retrograde. Drive and conflict turn inward enough to expose where effort is being wasted.",
+        "Recheck the objective before adding more force.",
+        "Change the method before you recommit the energy.",
+        "Do not use frustration as proof that the goal still deserves pursuit.",
+    ),
+    ("Mars", False): (
+        "THE ENGINE CAN MOVE AGAIN.",
+        "Mars has stationed direct. Effort that survived the review can begin moving outward with more precision.",
+        "Use the method that wasted less force during the slowdown.",
+        "Act on the objective that still deserves the energy.",
+        "Do not restart the old fight simply because momentum returned.",
+    ),
+}
+
+
+def _station_copy(planet: str, retrograde: bool) -> tuple[str, str, str, str, str]:
+    return _STATION_COPY.get(
+        (str(planet or ""), bool(retrograde)),
+        (
+            "THE MOTION CHANGED. REVIEW THE PLAN." if retrograde else "THE MOTION CHANGED. USE WHAT THE REVIEW TAUGHT YOU.",
+            (
+                f"{planet} has stationed retrograde. The issue remains active, but the next useful move is review."
+                if retrograde
+                else f"{planet} has stationed direct. A question that has been looping can begin moving outward again."
+            ),
+            "Recheck what the cycle actually taught you before you add another layer.",
+            (
+                "Revise the part that became expensive to carry unchanged."
+                if retrograde
+                else "Act on the revision that still makes sense after the review."
+            ),
+            "Do not treat a change of motion as a verdict by itself.",
+        ),
+    )
+
+
 def _copy_for(
     *,
     event: Event,
@@ -174,21 +312,7 @@ def _copy_for(
     if event_class == "station":
         retrograde = "retrograde" in lower
         planet = event.planets[0] if event.planets else "A planet"
-        if retrograde:
-            return (
-                "THE MOTION CHANGED. REVIEW THE PLAN.",
-                f"{planet} has stationed retrograde. The issue does not disappear; the direction of work changes from expansion to review.",
-                "Recheck what has already been set in motion before you add another layer.",
-                "Review the terms, timing and assumption that would be expensive to carry forward unchanged.",
-                "Do not interpret a review cycle as automatic failure.",
-            )
-        return (
-            "THE MOTION CHANGED. USE WHAT THE REVIEW TAUGHT YOU.",
-            f"{planet} has stationed direct. A question that has been looping can begin moving outward again.",
-            "Use the new motion carefully. The station is a pivot, not proof that every delay has vanished.",
-            "Act on the revision that survived the retrograde period.",
-            "Do not recreate the old problem simply because movement has returned.",
-        )
+        return _station_copy(planet, retrograde)
 
     if event_class == "ingress":
         planet = event.planets[0] if event.planets else "A planet"
@@ -227,8 +351,8 @@ def _copy_for(
     if event_class == "structural_alignment":
         return (
             "THE BACKGROUND BECAME AN EVENT.",
-            "Two slow-moving planets have reached an exact major aspect. The pressure belongs to a longer collective cycle, not just today's mood.",
-            "Treat faster events around this date as triggers inside the larger structural change.",
+            "Two slow-moving planets have reached an exact major aspect. This belongs to the longer background of the year, not just today's mood.",
+            "Watch what faster events expose around this date; they can make the slower change visible in ordinary life.",
             "Name what is becoming more possible, more expensive or impossible to keep unchanged.",
             "Do not let a short-term distraction hide the slower shift underneath it.",
         )
@@ -456,6 +580,68 @@ def _signal_from_event(event: Event, same_day: tuple[Event, ...]) -> MajorEventS
     )
 
 
+
+def _sequence_repeated_signals(signals: Iterable[MajorEventSignal]) -> tuple[MajorEventSignal, ...]:
+    """Give repeated exact passes a chronology instead of repeating identical copy."""
+    values = list(signals)
+    groups: dict[tuple[str, tuple[str, ...], str], list[MajorEventSignal]] = {}
+    for signal in values:
+        if signal.event_class not in {"opportunity", "structural_alignment"} and not signal.opportunity:
+            continue
+        key = (
+            signal.event_class,
+            tuple(sorted(signal.planets)),
+            re.sub(r"\s+", " ", signal.display_label.lower()).strip(),
+        )
+        groups.setdefault(key, []).append(signal)
+
+    replacements: dict[tuple[date, str], MajorEventSignal] = {}
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        ordered = sorted(group, key=lambda item: item.event_date)
+        for index, signal in enumerate(ordered):
+            if index == 0:
+                continue
+            if index == 1:
+                line_one = (
+                    "The same pattern has returned. This pass is less about discovering the option "
+                    "and more about proving which version actually works."
+                    if signal.opportunity
+                    else
+                    "The same structural pattern has returned. Compare what changed after the first pass before you call this repetition."
+                )
+                action = (
+                    "Return to the option that survived the first pass. Put dates, terms or a commitment behind it."
+                    if signal.opportunity
+                    else
+                    "Compare the first pass with this one. Change the term or structure that failed to improve."
+                )
+            else:
+                line_one = (
+                    "The pattern is exact again. What keeps working across several passes has earned more trust than the first burst of enthusiasm."
+                    if signal.opportunity
+                    else
+                    "The structural pattern is exact again. Repetition is now evidence about what has and has not changed."
+                )
+                action = (
+                    "Formalise the part that proved workable. Drop the version that only looked good at the beginning."
+                    if signal.opportunity
+                    else
+                    "Act on the repeated evidence. Stop carrying the version that each pass keeps disproving."
+                )
+            replacements[(signal.event_date, signal.source_title)] = replace(
+                signal,
+                line_one=line_one,
+                action=action,
+            )
+
+    return tuple(
+        replacements.get((signal.event_date, signal.source_title), signal)
+        for signal in values
+    )
+
+
 def classify_major_events(events: Iterable[Event]) -> tuple[MajorEventSignal, ...]:
     values = tuple(events)
     by_day: dict[date, tuple[Event, ...]] = {}
@@ -476,9 +662,10 @@ def classify_major_events(events: Iterable[Event]) -> tuple[MajorEventSignal, ..
         if key not in unique or signal.sky_score > unique[key].sky_score:
             unique[key] = signal
 
+    sequenced = _sequence_repeated_signals(unique.values())
     return tuple(
         sorted(
-            unique.values(),
+            sequenced,
             key=lambda item: (item.event_date, -item.sky_score, item.display_label),
         )
     )
@@ -615,19 +802,19 @@ _PERSONAL_TARGET_WEIGHT = {
 }
 
 _PERSONAL_FOCUS = {
-    "Ascendant": "your body, identity, boundaries and how other people meet you",
-    "Midheaven": "your job, title, authority and public direction",
-    "Sun": "your identity, confidence and the role you are choosing to inhabit",
-    "Moon": "home, family, habit and what your nervous system has to live with",
-    "Mercury": "the message, decision, document or conversation that needs an answer",
-    "Venus": "relationships, money, attraction and what you are willing to value",
-    "Mars": "effort, conflict, desire and what you are prepared to act on",
-    "Jupiter": "growth, confidence, learning and the size of the opportunity",
-    "Saturn": "responsibility, limits and what must become durable",
-    "Uranus": "freedom, disruption and the rule you no longer want to live inside",
-    "Neptune": "hope, projection, imagination and what still needs evidence",
-    "Pluto": "power, dependency, control and what can no longer stay superficial",
-    "True Node": "direction, repetition and the route that keeps asking for a decision",
+    "Ascendant": "how you show up, where you set boundaries and what version of you other people are meeting",
+    "Midheaven": "the job, title or public responsibility attached to your name",
+    "Sun": "the role, identity or direction that still deserves your energy",
+    "Moon": "home, family, habit and the routine your nervous system has to live with",
+    "Mercury": "the message, document, conversation or decision that needs a clear answer",
+    "Venus": "the person, price or relationship value you are choosing",
+    "Mars": "the workload, conflict or desire that makes you act",
+    "Jupiter": "the larger option and whether your actual life has room for it",
+    "Saturn": "the responsibility, deadline or limit that needs proper terms",
+    "Uranus": "the rule or arrangement that no longer leaves enough room",
+    "Neptune": "the promise, fear or story that still needs evidence",
+    "Pluto": "the dependency, leverage or power arrangement that can no longer stay vague",
+    "True Node": "the unfamiliar route that becomes possible when the old one stops fitting",
 }
 
 _ASPECT_TARGETS = {
@@ -755,6 +942,128 @@ def _closest_personal_contact(
     return name, abs(distance - target)
 
 
+
+_PERSONAL_TARGET_SHORT = {
+    "Ascendant": "how you show up and set boundaries",
+    "Midheaven": "work and public responsibility",
+    "Sun": "identity and direction",
+    "Moon": "home and emotional security",
+    "Mercury": "the conversation or decision",
+    "Venus": "what you value in love or money",
+    "Mars": "effort, conflict and the move you are making",
+    "Jupiter": "growth and the larger option",
+    "Saturn": "responsibility and limits",
+    "Uranus": "freedom and the rule that needs changing",
+    "Neptune": "the story that still needs evidence",
+    "Pluto": "power, dependency and leverage",
+    "True Node": "the route you are growing toward",
+}
+
+
+def _personal_activation_interpretation(
+    signal: MajorEventSignal,
+    natal_target: str,
+    aspect: str,
+    focus: str,
+) -> str:
+    planet = signal.planets[0] if signal.planets else ""
+    target_short = _PERSONAL_TARGET_SHORT.get(natal_target, focus)
+
+    if signal.event_class == "eclipse":
+        if natal_target == "Pluto":
+            return (
+                "An old power arrangement becomes harder to keep half-hidden. "
+                "Notice who controls access, money, information or the terms of staying."
+            )
+        if natal_target == "Moon":
+            return (
+                "Home and emotional security are directly involved. "
+                "Do not agree to a new beginning or ending that your private life cannot actually carry."
+            )
+        if natal_target == "Mercury":
+            return (
+                "The eclipse reaches the conversation, document or decision itself. "
+                "Say what has become unavoidable, then leave room for new facts before making the irreversible move."
+            )
+        if natal_target == "Venus":
+            return (
+                "Love, money or value is part of the turning point. "
+                "Watch whether attraction and reciprocity still point in the same direction once the consequences are visible."
+            )
+        return (
+            f"The eclipse makes {target_short} part of the turning point. "
+            "Name what has become impossible to keep half-decided."
+        )
+
+    if signal.event_class == "station":
+        retrograde = "retrograde" in signal.display_label.lower()
+        if planet == "Jupiter" and natal_target == "Venus":
+            return (
+                "An opening around relationships, money or value has paused for a second look. "
+                "The question is not whether more is available, but which option still looks valuable once the excitement settles."
+                if retrograde
+                else
+                "A relationship, money or value opening can move again after the second look. "
+                "Use the option that gained value under review rather than the one that merely looked abundant."
+            )
+        if planet == "Uranus" and natal_target == "Pluto":
+            return (
+                "Freedom and power have become the same argument. "
+                "Notice where control is already shifting before you make the break irreversible."
+                if retrograde
+                else
+                "A power shift that spent months under review can now produce visible change. "
+                "Move where greater freedom also improves the real balance of power."
+            )
+        if planet == "Pluto" and natal_target == "Pluto":
+            return (
+                "A long power cycle is turning inward. "
+                "Review the dependency or control pattern that no longer matches where the leverage actually sits."
+                if retrograde
+                else
+                "A long power cycle can begin moving outward again. "
+                "Act from the balance of power that survived the review."
+            )
+        return (
+            f"The station makes {target_short} unusually exact. "
+            + (
+                "Use the pause to revise the assumption before you recommit."
+                if retrograde
+                else
+                "Use the resumed motion on the version that survived the review."
+            )
+        )
+
+    if signal.event_class == "ingress":
+        return (
+            f"The sign change becomes personal through {target_short}. "
+            "Watch what changes in ordinary life as the new cycle begins asking for different terms."
+        )
+
+    if signal.event_class == "cazimi":
+        return (
+            f"The clarity point reaches {target_short}. "
+            "Use the cleaner signal to make the sentence, choice or value judgment more exact."
+        )
+
+    if signal.event_class == "structural_alignment":
+        return (
+            f"The longer collective shift becomes personal through {target_short}. "
+            "Do not react to the headline; notice what is becoming more possible, more expensive or harder to keep unchanged in your own life."
+        )
+
+    if signal.opportunity:
+        return (
+            f"The opening becomes personal through {target_short}. "
+            "Use the extra room on something that increases future choice rather than merely present activity."
+        )
+
+    return (
+        f"{target_short[:1].upper() + target_short[1:]} is directly involved. "
+        "Use the exact contact to make the practical consequence visible."
+    )
+
+
 def personalize_major_signals(
     signals: Iterable[MajorEventSignal],
     snapshot,
@@ -827,9 +1136,11 @@ def personalize_major_signals(
                 natal_target,
                 "the part of life already asking for a decision",
             )
-            interpretation = (
-                f"{signal.display_label} also makes a close {aspect} to your natal {natal_target}. "
-                f"This is not only shared sky; it lands on {focus}."
+            interpretation = _personal_activation_interpretation(
+                signal,
+                natal_target,
+                aspect,
+                focus,
             )
             action = signal.action
             values.append(
@@ -885,14 +1196,19 @@ def personalize_serialized_signals(
 def event_presentation_group(signal: MajorEventSignal, product: str = "") -> str:
     """Customer hierarchy. Importance stays visible without making every event equal."""
     event_class = str(getattr(signal, "event_class", "") or "")
+    planets = set(getattr(signal, "planets", ()) or ())
     if event_class == "eclipse":
         return "TURNING POINT"
     if event_class == "cazimi":
         return "CLARITY POINT"
-    if event_class in {"station", "ingress", "structural_alignment"}:
-        return "STRUCTURAL SHIFT"
     if bool(getattr(signal, "opportunity", False)):
         return "OPENING"
+    if event_class == "station":
+        return "PIVOT"
+    if event_class == "ingress" and planets & INNER_PLANETS:
+        return "TRIGGER"
+    if event_class in {"ingress", "structural_alignment"}:
+        return "STRUCTURAL SHIFT"
     if event_class == "lunation":
         return "LUNATION"
     return "SKY EVENT"

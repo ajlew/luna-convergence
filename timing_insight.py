@@ -69,7 +69,7 @@ TARGET_SIGNS = {
     ),
     "Jupiter": (
         "an opening can become valuable precisely because it enlarges the field of choice",
-        "more attention, travel, learning or responsibility can arrive together",
+        "more invitations, movement, learning or responsibility can arrive at the same time",
         "confidence can make a larger move possible, but it can also hide the cost of scale",
     ),
     "Saturn": (
@@ -99,7 +99,7 @@ TARGET_SIGNS = {
     ),
     "Midheaven": (
         "a role, promotion, client or public responsibility can become more serious than its title suggests",
-        "visibility can increase before the support system is ready for it",
+        "attention can increase before the people, time or resources behind the role are ready for it",
         "authority may arrive with conditions that matter more than status",
     ),
     "True Node": (
@@ -159,6 +159,304 @@ HOUSE_SCENARIOS = {
         "you cancel one thing, turn off the phone or close an old loop and discover the world continues",
     ),
 }
+
+
+
+_HOUSE_SCENE_FOCUS = {
+    1: "how you show up",
+    2: "the real number",
+    3: "the message or decision",
+    4: "home and family",
+    5: "the person or project you want",
+    6: "the workload and ordinary week",
+    7: "the agreement with another person",
+    8: "shared money, trust or responsibility",
+    9: "the outside plan and its logistics",
+    10: "the job or public responsibility",
+    11: "the people and next plan",
+    12: "what needs rest or closure",
+}
+
+_TARGET_HOUSE_SCENE = {
+    "Sun": "Use {area} to test whether the role or direction you want still fits.",
+    "Moon": "Use {area} to test whether the private life has enough capacity.",
+    "Mercury": "Make {area} survive a clear message, date or document.",
+    "Venus": "Use {area} to test whether the choice still holds once reciprocity and price become visible.",
+    "Mars": "Use {area} to test whether the objective deserves the effort.",
+    "Ascendant": "Use {area} to test whether the new version of you actually fits.",
+    "Midheaven": "Use {area} to test whether authority and public responsibility have enough support.",
+    "Jupiter": "Use {area} to test whether growth creates usable room rather than merely more activity.",
+    "Saturn": "Give {area} a clear responsibility, limit and end point.",
+    "Uranus": "Use {area} to test whether greater freedom can coexist with useful support.",
+    "Neptune": "Make {area} survive the missing-facts check.",
+    "Pluto": "Use {area} to test where the real leverage sits now.",
+    "True Node": "Use {area} to test whether the next route is actually buildable.",
+}
+
+
+def _target_house_scene(target_planet: str, natal_house: int | None) -> str:
+    if natal_house not in _HOUSE_SCENE_FOCUS:
+        return ""
+    area = _HOUSE_SCENE_FOCUS[natal_house]
+    template = _TARGET_HOUSE_SCENE.get(target_planet)
+    if not template:
+        return ""
+    return template.format(area=area)
+
+
+TRANSIT_HOUSE_SCENARIOS = {
+    "Jupiter": {
+        1: (
+            "a new role, audience or invitation gives you more room to show up differently",
+            "confidence grows because more people respond to the version of you you are becoming",
+        ),
+        2: (
+            "a pay rise, extra client, sale or useful purchase increases your options and your spending at the same time",
+            "more income or value is available, but the new level works only if the ongoing cost still fits",
+        ),
+        3: (
+            "an application, proposal or message travels further than expected and creates a larger next step",
+            "a course, meeting or short trip opens a route that did not exist in the original plan",
+        ),
+        4: (
+            "a move, family change or larger home plan gives you more room and more to maintain",
+            "home expands through another person, responsibility or opportunity and the private carrying cost becomes visible",
+        ),
+        5: (
+            "a date, creative project or child-related opportunity becomes large enough to deserve real calendar space",
+            "something enjoyable gets more attention and has to prove it can survive ordinary responsibilities",
+        ),
+        6: (
+            "a job, roster or workload expands and shows whether the ordinary week has room for the opportunity",
+            "more work or responsibility can be useful if it improves the system instead of simply filling every spare hour",
+        ),
+        7: (
+            "a relationship, client or collaboration offers more reach and immediately asks what each person is promising",
+            "another person opens a door, but the value depends on whether effort and responsibility remain mutual",
+        ),
+        8: (
+            "funding, shared money or another person's resources create more room and a larger obligation at the same time",
+            "a loan, payout or shared-cost decision expands the field only if ownership and repayment stay explicit",
+        ),
+        9: (
+            "a trip, course, application, publication or overseas opportunity becomes large enough to act on",
+            "the wider option is real once the booking, deadline, paperwork and budget can all carry it",
+        ),
+        10: (
+            "a promotion, larger client or public role opens while the workload and support still need pricing",
+            "more attention arrives around work and the opportunity improves only if authority grows with responsibility",
+        ),
+        11: (
+            "a friend, network or audience creates a larger route and reveals who can actually help build it",
+            "a group opportunity grows once enthusiasm becomes a date, task, introduction or shared responsibility",
+        ),
+        12: (
+            "more private time, recovery or behind-the-scenes support creates room to finish something properly",
+            "an opportunity develops quietly before it is ready for public commitment",
+        ),
+    },
+    "Saturn": {
+        1: (
+            "a role, boundary or personal responsibility stops working as an informal arrangement and needs explicit terms",
+            "other people keep expecting the old version of you until your behaviour makes the new limit unmistakable",
+        ),
+        2: (
+            "a budget, rate or recurring cost forces you to decide what is worth maintaining",
+            "money gets clearer when every obligation is given a number and an end point",
+        ),
+        3: (
+            "a document, deadline or conversation can no longer survive on goodwill and needs a precise answer",
+            "a repeated message problem ends only when somebody owns the date, number or decision",
+        ),
+        4: (
+            "a home, family or care responsibility needs a roster, boundary or longer-term structure",
+            "the private arrangement becomes too expensive to keep running on somebody quietly carrying more",
+        ),
+        5: (
+            "a relationship, child-related responsibility or creative project asks whether enjoyment can also carry commitment",
+            "something you love needs a real timetable before enthusiasm becomes another duty",
+        ),
+        6: (
+            "a workload, commute or recurring task exposes the limit of a schedule that looked acceptable on paper",
+            "the ordinary week forces a choice between a better system and simply working harder",
+        ),
+        7: (
+            "a partner, client or contract needs clearer responsibility, payment or exit terms",
+            "a relationship becomes easier to judge once the inconvenient work is divided explicitly",
+        ),
+        8: (
+            "a debt, tax, shared cost or responsibility needs a number, owner and boundary",
+            "trust gets tested where one person has been carrying financial or emotional risk without clear terms",
+        ),
+        9: (
+            "a visa, course, legal process or publication needs dates and documents before the larger plan can continue",
+            "travel or study becomes real when the administrative burden can no longer be postponed",
+        ),
+        10: (
+            "a title, manager or public responsibility asks for more work and finally needs matching authority or support",
+            "recognition matters less once the actual load, reporting line and consequence are visible",
+        ),
+        11: (
+            "a team, friendship or group plan needs fewer vague supporters and more people who own a task",
+            "the next plan survives only if somebody besides you carries an inconvenient part",
+        ),
+        12: (
+            "an old obligation, private worry or unfinished ending keeps consuming energy until it is closed properly",
+            "rest becomes a responsibility when exhaustion has been treated as proof of loyalty",
+        ),
+    },
+    "Uranus": {
+        1: (
+            "a new role, appearance or boundary changes how other people react before you feel fully settled in it",
+            "the old version of you still works socially, but the cost of performing it has become obvious",
+        ),
+        2: (
+            "income, spending or pricing changes unexpectedly and exposes how much flexibility the old budget really had",
+            "a purchase or earning opportunity creates freedom only if it does not build a new dependency",
+        ),
+        3: (
+            "a message, device, application or piece of information changes the route quickly",
+            "a conversation breaks an old assumption and makes the previous explanation impossible to keep intact",
+        ),
+        4: (
+            "a move, family change or home arrangement suddenly needs more freedom than the existing structure allows",
+            "security starts requiring a redesign because the old arrangement no longer leaves enough air",
+        ),
+        5: (
+            "a new attraction, creative direction or child-related change arrives faster than the old plan can absorb",
+            "something enjoyable becomes more alive when the rules loosen without disappearing completely",
+        ),
+        6: (
+            "a roster, commute or method changes abruptly and reveals which parts of the routine were needlessly rigid",
+            "work becomes more sustainable only after the method changes, not after another burst of effort",
+        ),
+        7: (
+            "a partner, client or collaborator wants different terms and the old agreement stops feeling inevitable",
+            "another person asks for more freedom and forces both sides to decide which rules still protect something real",
+        ),
+        8: (
+            "shared money, debt or access changes unexpectedly and exposes where freedom depended on somebody else's consent",
+            "a financial or trust arrangement needs a new structure because the old one gives one side too much control",
+        ),
+        9: (
+            "a trip, course, legal route or overseas opportunity appears from an unexpected direction",
+            "a different route becomes possible once the old booking, institution or assumption stops being the only option",
+        ),
+        10: (
+            "a career change, new technology or unexpected role alters what professional freedom could look like",
+            "the old job can still function while no longer buying the future you want",
+        ),
+        11: (
+            "a new group, audience or friend changes the network around the next plan",
+            "a team or community reorganises quickly and shows which relationships were built on habit rather than shared direction",
+        ),
+        12: (
+            "a private realisation breaks an old pattern before there is anything public to announce",
+            "quiet time exposes which obligation survives mainly because nobody has tried another way",
+        ),
+    },
+    "Neptune": {
+        1: (
+            "the image other people have of you becomes less reliable than what your actual commitments show",
+            "identity feels less fixed for a while and the safest decisions stay tied to observable facts",
+        ),
+        2: (
+            "a price, promise or financial estimate looks attractive before the full cost is known",
+            "money becomes clearer only after the wishful version and the actual number are put side by side",
+        ),
+        3: (
+            "a message, document or explanation sounds convincing but still needs independent verification",
+            "a conversation stays confusing until the missing fact is asked for directly",
+        ),
+        4: (
+            "a family story or home arrangement carries assumptions that nobody has checked recently",
+            "the emotional atmosphere at home is real, but the explanation for it still needs evidence",
+        ),
+        5: (
+            "a date, creative idea or enjoyable escape feels meaningful before follow-through proves what it can hold",
+            "chemistry or inspiration stays useful only when it survives the return of ordinary life",
+        ),
+        6: (
+            "fatigue, workload or a messy routine makes motive harder to read and small facts more valuable",
+            "a schedule problem can look emotional until sleep, timing and workload are measured honestly",
+        ),
+        7: (
+            "a partner, client or collaborator gives mixed signals and the agreement needs behaviour, not interpretation",
+            "a connection feels significant while reciprocity remains unproven",
+        ),
+        8: (
+            "a shared cost, debt or trust arrangement contains assumptions that need documents or numbers",
+            "money and intimacy become easier to understand once the vague part is made measurable",
+        ),
+        9: (
+            "an overseas offer, course or publication sounds attractive while important terms are still missing",
+            "visa, legal or study advice conflicts and needs a second source before the larger move is made",
+        ),
+        10: (
+            "a role looks attractive from the outside before the work, authority or reporting line is fully defined",
+            "professional image and professional reality need to be separated before you commit",
+        ),
+        11: (
+            "a group, audience or future plan sounds aligned while nobody has yet owned the unglamorous work",
+            "a friendship or network promise needs one concrete action before you call it support",
+        ),
+        12: (
+            "a private fear, hope or memory becomes louder and needs time before it is treated as a fact",
+            "rest and solitude reveal what constant input was making harder to distinguish",
+        ),
+    },
+    "Pluto": {
+        1: (
+            "a personal boundary changes and reveals which relationships depended on the old version of you",
+            "the way you show up alters the balance of power before anybody explicitly discusses it",
+        ),
+        2: (
+            "a pay rate, asset or recurring cost reveals who benefits from the current valuation",
+            "money becomes a power question when one side can decide the price and the other side keeps absorbing it",
+        ),
+        3: (
+            "a document, message or piece of information changes who can control the next decision",
+            "a conversation becomes powerful because somebody finally names what the room already knew",
+        ),
+        4: (
+            "a family role, living arrangement or property decision exposes who has been deciding for everybody else",
+            "home changes when an old dependency can no longer be treated as neutral",
+        ),
+        5: (
+            "a relationship, child-related issue or creative project reveals where desire and control have become tangled",
+            "something deeply wanted becomes easier to judge once you separate attachment from leverage",
+        ),
+        6: (
+            "a workload or routine reveals who benefits from you continuing to absorb the pressure",
+            "the ordinary week becomes political when one person keeps carrying work that nobody has formally assigned",
+        ),
+        7: (
+            "a partner, client or competitor reveals where the agreement gives one side more leverage than the other",
+            "a relationship changes once both people can see who can decide, withhold or leave",
+        ),
+        8: (
+            "a debt, shared asset or financial dependency makes the real balance of power visible",
+            "trust changes when access to money, information or responsibility is no longer distributed the same way",
+        ),
+        9: (
+            "a legal, academic, publishing or overseas decision reveals who can actually approve, delay or redirect the route",
+            "a trip or application becomes a power question when somebody else controls the permission, budget or timing",
+        ),
+        10: (
+            "authority shifts before the organisation formally acknowledges who can make the real decision",
+            "a role changes once status and actual control stop belonging to the same person",
+        ),
+        11: (
+            "a group or network reveals which relationships carry real influence and which carry only attention",
+            "a future plan changes when the person who can unlock resources, access or decisions moves position",
+        ),
+        12: (
+            "a hidden dependency or old obligation becomes visible enough to end deliberately",
+            "private work changes the power of a pattern before the outside world can see the result",
+        ),
+    },
+}
+
 
 TRANSIT_FRAME = {
     "Jupiter": {
@@ -246,7 +544,7 @@ PAIR_INSIGHT = {
     ("Uranus", "True Node"): "A future route can appear suddenly enough to feel disruptive. The point is not novelty itself, but whether the new route creates more authentic room to develop.",
     ("Jupiter", "Sun"): "Confidence is useful here, but the real opportunity is enlarging your field without making size the measure of success.",
     ("Jupiter", "Mercury"): "A message, idea or agreement can travel further than usual. The advantage belongs to the version that survives practical questions.",
-    ("Jupiter", "Venus"): "More affection, money, pleasure or social opportunity can arrive; the useful test is whether more also means better.",
+    ("Jupiter", "Venus"): "More can arrive through affection, money or social attention. The useful test is whether the extra option improves your life or merely multiplies choices.",
     ("Jupiter", "Mars"): "Momentum has backing. The risk is spending tomorrow's capacity because today's road feels unusually open.",
     ("Jupiter", "Midheaven"): "A larger public opening can be real without being free. Growth becomes valuable when the support underneath it can carry the visibility.",
     ("Neptune", "Sun"): "Identity can feel less fixed for a while. That can be creative, provided uncertainty is not mistaken for a command to abandon everything.",
@@ -284,7 +582,13 @@ PAIR_INSIGHT = {
     ("Saturn", "Saturn"): "The structure is auditing itself. Keep the responsibility that still has purpose; stop renewing the part that survives only through habit.",
     ("Uranus", "Uranus"): "A long freedom cycle is echoing itself. Notice where the old version of independence no longer gives you enough room.",
     ("Neptune", "Neptune"): "An old ideal is meeting a new layer of uncertainty. Keep the imagination, then test which part still survives reality.",
-    ("Pluto", "Pluto"): "A long power cycle is echoing itself. Name what has changed in leverage, dependency or control before you decide what still deserves continuity.",
+    ("Pluto", "Pluto"): "A long power cycle is echoing itself. Name what has changed in leverage, dependency or control before you decide what still deserves continuity.",("Neptune", "Pluto"): "A power arrangement is harder to read because motive and leverage are blurred. Slow the interpretation down; ask who can actually decide, withhold or walk away.",
+    ("Neptune", "Uranus"): "The desire for freedom is mixed with uncertainty. Test whether the new route creates real room or simply gives the ambiguity a more attractive shape.",
+    ("Neptune", "Jupiter"): "Possibility is expanding faster than certainty. Keep the vision, then make the larger option survive dates, numbers and observable behaviour.",
+    ("Pluto", "Jupiter"): "Scale changes the balance of power. Ask whether the larger option improves your position or merely increases what somebody else can ask from you.",
+    ("Saturn", "Jupiter"): "Growth has met a limit that can be useful. Keep the option that still works once cost, timing and responsibility are made explicit.",
+    ("Uranus", "Jupiter"): "A larger option appears because the old route is no longer the only route. Test the freedom before multiplying commitments.",
+
 }
 
 MOVE_BY_TRANSIT = {
@@ -385,31 +689,56 @@ WATCH_BY_TRANSIT = {
 
 ASPECT_LEADS = {
     "square": (
-        "The friction matters because postponement starts to cost more.",
-        "Two needs are rubbing against each other, and compromise without a decision is losing efficiency.",
-        "The obstacle is useful information: it shows exactly where the present arrangement has too little tolerance left.",
+        "The two demands cannot keep sharing the same priority. Choose which one the plan protects.",
+        "The friction is useful because the current arrangement now has a visible cost.",
+        "Something has to give. Name the part that cannot keep absorbing the compromise.",
     ),
     "opposition": (
         "The pressure is visible through another person, demand or competing priority, so balance can no longer stay theoretical.",
         "What you want and what the other side requires are easier to compare now because the difference is out in the open.",
-        "The issue tends to arrive through contrast: another person, deadline or competing need makes the hidden imbalance visible.",
+        "Another person, deadline or competing need makes the hidden imbalance visible.",
     ),
     "conjunction": (
-        "The two themes are concentrated enough that the old default becomes difficult to treat as neutral.",
-        "This is a reset point: two parts of the chart are speaking through the same door at once.",
-        "The concentration is strong enough that the issue stops behaving like background noise.",
+        "Two pressures are arriving through the same door. Treat them as one decision.",
+        "The themes are fused now; changing one changes the other.",
+        "The old neutral position no longer exists. Choose the terms.",
     ),
     "trine": (
-        "There is support here, but support becomes useful only when you convert it into a decision or result.",
-        "The road is smoother than usual, which makes selection more important than force.",
-        "This contact lowers resistance; the opportunity is real, but it can still be wasted through passivity.",
+        "The easier path is real. Use it on something worth keeping.",
+        "Support is available. Convert it into one result before it becomes background.",
+        "The door opens with less force than usual. Walk through it deliberately.",
     ),
     "sextile": (
-        "An opening is available, though it can pass quietly if you do nothing with it.",
-        "A useful option is within reach, provided you make the small move that brings it into play.",
-        "The support is conditional rather than automatic: it rewards initiative more than waiting.",
+        "An opening is available, but it needs a small move from you.",
+        "The option is within reach. Put a date, message or decision behind it.",
+        "Support is waiting for a response. Use it before it becomes merely pleasant.",
     ),
 }
+
+
+SUPPORTIVE_ASPECT_LEADS = {
+    "Jupiter": {
+        "trine": "The larger route needs less force than usual. Use the extra room on something that increases future choice.",
+        "sextile": "The opening is close enough to use, but it still needs a message, decision or commitment from you.",
+    },
+    "Saturn": {
+        "trine": "Structure is helping rather than blocking. Use the easier conditions to formalise what deserves to last.",
+        "sextile": "A useful boundary or agreement is available if you state it clearly.",
+    },
+    "Uranus": {
+        "trine": "Change has more room to move without breaking everything around it.",
+        "sextile": "A freer option is close enough to test without making the irreversible break.",
+    },
+    "Neptune": {
+        "trine": "The feeling and the facts are cooperating enough to test the idea gently.",
+        "sextile": "A creative or intuitive opening is useful only if one practical check survives.",
+    },
+    "Pluto": {
+        "trine": "The leverage is easier to see. Use the opening to improve the terms without overplaying your hand.",
+        "sextile": "A quiet power shift gives you room to change one term before the old balance hardens again.",
+    },
+}
+
 
 TRANSIT_GIFT_LINES = {
     "Jupiter": (
@@ -536,10 +865,20 @@ def _move(transit_planet: str, target_planet: str, aspect: str) -> str:
     return base + " Remove the part of the plan that depends on endless tolerance."
 
 
+_SUPPORTIVE_WATCH = {
+    "Jupiter": "More options can make a mediocre option look valuable.",
+    "Saturn": "Ease can make an old obligation look healthier than it is.",
+    "Uranus": "A smooth escape can still be an escape from the wrong problem.",
+    "Neptune": "A pleasant feeling can still blur the evidence.",
+    "Pluto": "A temporary advantage can tempt you to overplay your hand.",
+}
+
+
 def _watch(transit_planet: str, target_planet: str, aspect: str) -> str:
     base = WATCH_BY_TRANSIT[transit_planet].get(target_planet, WATCH_BY_TRANSIT[transit_planet]["default"])
     if aspect in {"trine", "sextile"}:
-        return base + " Easy conditions can make a weak choice look strong."
+        extra = _SUPPORTIVE_WATCH.get(transit_planet, "")
+        return f"{base} {extra}".strip()
     return base
 
 
@@ -560,12 +899,17 @@ def build_story_language(
             "Name the practical condition that changed, then decide from what is actually happening now."
         )
 
-    lead = _pick(ASPECT_LEADS[aspect], seed + 1)
     if aspect in {"trine", "sextile"}:
+        lead = SUPPORTIVE_ASPECT_LEADS.get(transit_planet, {}).get(
+            aspect,
+            _pick(ASPECT_LEADS[aspect], seed + 1),
+        )
         consequence = _pick(TRANSIT_GIFT_LINES[transit_planet], seed + 2)
     elif aspect in {"square", "opposition"}:
+        lead = _pick(ASPECT_LEADS[aspect], seed + 1)
         consequence = _pick(TRANSIT_SHADOW_LINES[transit_planet], seed + 2)
     else:
+        lead = _pick(ASPECT_LEADS[aspect], seed + 1)
         consequence = (
             _pick(TRANSIT_GIFT_LINES[transit_planet], seed + 2)
             + " "
@@ -577,14 +921,22 @@ def build_story_language(
     scenarios: list[str] = []
     if target_signs:
         scenarios.append(_pick(target_signs, seed))
-        if len(target_signs) > 1:
-            scenarios.append(_pick(target_signs, seed + 1))
-    if natal_house in HOUSE_SCENARIOS:
-        scenarios.append(_pick(HOUSE_SCENARIOS[natal_house], seed + 2))
-    elif len(target_signs) >= 3:
+
+    transit_house_bank = TRANSIT_HOUSE_SCENARIOS.get(transit_planet, {})
+    if natal_house in transit_house_bank:
+        scenarios.append(_pick(transit_house_bank[natal_house], seed + 1))
+    elif natal_house in HOUSE_SCENARIOS:
+        scenarios.append(_pick(HOUSE_SCENARIOS[natal_house], seed + 1))
+    elif len(target_signs) > 1:
+        scenarios.append(_pick(target_signs, seed + 1))
+
+    bridge_scene = _target_house_scene(target_planet, natal_house)
+    if bridge_scene:
+        scenarios.append(bridge_scene)
+    elif len(target_signs) > 2:
         scenarios.append(_pick(target_signs, seed + 2))
     else:
-        scenarios.append("watch the area of life already asking for the clearest decision; the transit usually becomes recognisable there before it becomes dramatic")
+        scenarios.append("Watch where the practical consequence is already measurable; that is where the transit becomes useful before it becomes dramatic.")
 
     # Keep exactly three lines and avoid accidental repeats from small banks.
     deduped: list[str] = []

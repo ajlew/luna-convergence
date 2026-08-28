@@ -56,7 +56,7 @@ HOUSE_INLINE = {
     4: "home and the arrangement you live with every day",
     5: "the date, attraction or creative project pulling your attention",
     6: "the roster, workload and ordinary week you actually have to live",
-    7: "the person across the table and what each of you is actually promising",
+    7: "the other person, the agreement and who carries the inconvenient part",
     8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
@@ -65,13 +65,13 @@ HOUSE_INLINE = {
 }
 
 HOUSE_PROSE = {
-    1: "how you show up and what you are willing to carry",
+    1: "your appearance, boundaries and the version of you other people are meeting",
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
     5: "the date, attraction or creative project pulling your attention",
     6: "the roster, workload and ordinary week you actually have to live",
-    7: "the person across the table and what each of you is actually promising",
+    7: "the other person, the agreement and who carries the inconvenient part",
     8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",

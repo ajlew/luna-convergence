@@ -109,7 +109,7 @@ LIFE_SCENES: dict[str, tuple[str, ...]] = {
         "a passport, visa or legal document needs attention before the romantic version of travel can happen",
         "a course application turns into an actual timetable",
         "an overseas opportunity becomes real once the flights have a price",
-        "a publishing or study deadline stops being abstract",
+        "the manuscript, application or course suddenly has a real deadline",
         "a friend invites you away and the dates collide with work",
         "an international client or contact asks for a meeting",
         "a legal or administrative process needs paperwork rather than optimism",
@@ -126,7 +126,7 @@ LIFE_SCENES: dict[str, tuple[str, ...]] = {
         "someone senior notices your work and asks for more of it",
         "you are asked to represent the team, present publicly or own the result",
         "a role sounds prestigious but the daily work tells a different story",
-        "you decide whether visibility is worth the responsibility attached to it",
+        "you decide whether the title, audience or attention is worth the responsibility attached to it",
     ),
     "friends": (
         "a friend appears with an invitation that changes the weekend",
@@ -293,13 +293,13 @@ YOUTH_SCENES: dict[str, tuple[str, ...]] = {
 
 
 _HUMAN_FOCUS = {
-    "identity": "how you show up and what you are willing to carry",
+    "identity": "your appearance, boundaries and the version of you other people are meeting",
     "money": "the price, payment or purchase in front of you",
     "communication": "the message, document or conversation that needs an answer",
     "home": "home and the arrangement you live with every day",
     "romance": "the date, attraction or creative project pulling your attention",
     "routine": "the roster, workload and ordinary week you actually have to live",
-    "relationship": "the person across the table and what each of you is actually promising",
+    "relationship": "the other person, the agreement and who carries the inconvenient part",
     "shared": "the money, trust and responsibility you share with someone else",
     "travel": "the trip, course, application or outside opportunity that could widen your world",
     "career": "the job, role or public responsibility with your name on it",

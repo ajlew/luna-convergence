@@ -26,7 +26,7 @@ from monthly_narrative_v1 import MonthlyNarrative
 from luna_voice import finalize_customer_prose, narrator_cue
 from solar_cycle import solar_gate_label
 from monthly_sky_map import build_monthly_sky_snapshot, monthly_sky_map_png
-from major_event_registry import select_serialized_signals
+from major_event_registry import event_presentation_group, select_serialized_signals
 
 
 PRINT_PAPERS = ("A4", "A3")
@@ -39,13 +39,13 @@ ZODIAC_SIGNS = (
 )
 
 PUBLIC_LIFE_AREAS = {
-    1: "how you show up and what you are willing to carry",
+    1: "your appearance, boundaries and the version of you other people are meeting",
     2: "the price, payment or purchase in front of you",
     3: "the message, document or conversation that needs an answer",
     4: "home and the arrangement you live with every day",
     5: "the date, attraction or creative project pulling your attention",
     6: "the roster, workload and ordinary week you actually have to live",
-    7: "the person across the table and what each of you is actually promising",
+    7: "the other person, the agreement and who carries the inconvenient part",
     8: "the money, trust and responsibility you share with someone else",
     9: "the trip, course, application or outside opportunity in front of you",
     10: "the job, role or public responsibility with your name on it",
@@ -745,8 +745,8 @@ def _major_sky_events_html(result: dict) -> str:
     if not signals:
         return ""
 
-    turning = [s for s in signals if s.event_class in {"eclipse", "cazimi"}]
-    openings = [s for s in signals if s.opportunity]
+    turning = [s for s in signals if event_presentation_group(s, "monthly") in {"TURNING POINT", "CLARITY POINT"}]
+    openings = [s for s in signals if event_presentation_group(s, "monthly") == "OPENING"]
     other = [s for s in signals if s not in turning and s not in openings]
 
     turning_cards = "".join(
@@ -769,6 +769,7 @@ def _major_sky_events_html(result: dict) -> str:
     )
     other_rows = "".join(
         f'<tr><td>{_safe(human_date(signal.event_date.isoformat()))}</td>'
+        f'<td>{_safe(event_presentation_group(signal, "monthly").title())}</td>'
         f'<td>{_safe(signal.display_label)}</td></tr>'
         for signal in other
     )

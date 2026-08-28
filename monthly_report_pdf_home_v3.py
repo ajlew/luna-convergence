@@ -12,7 +12,7 @@ import tempfile
 
 from monthly_narrative_v1 import build_monthly_narrative, normalise_personal_question
 from monthly_report_pdf_v2 import build_monthly_editorial_pdf
-from major_event_registry import select_serialized_signals
+from major_event_registry import event_presentation_group, select_serialized_signals
 
 
 BRAND = "Luna Convergence"
@@ -373,7 +373,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     major_event_cards = "".join(
         f"""
 <article class="date-card">
-  <div class="mono-label">{_safe(signal.event_date.strftime('%d %B %Y').lstrip('0'))} / {'TURNING POINT' if signal.event_class == 'eclipse' else 'CLARITY POINT' if signal.event_class == 'cazimi' else 'OPENING' if signal.opportunity else 'STRUCTURAL SHIFT' if signal.event_class in {'station','ingress','structural_alignment'} else 'SKY EVENT'}</div>
+  <div class="mono-label">{_safe(signal.event_date.strftime('%d %B %Y').lstrip('0'))} / {_safe(event_presentation_group(signal, 'monthly'))}</div>
   <h3>{_safe(signal.display_label)}</h3>
   <p>{_safe(signal.line_one)}</p>
   <div class="best-move"><span>Your move</span><strong>{_safe(signal.action)}</strong></div>

@@ -23,12 +23,44 @@ from synthesis import (
 )
 
 
+DAILY_HUMAN_FOCUS = {
+    1: "your appearance, boundaries and the version of you other people are meeting",
+    2: "the price, payment or purchase in front of you",
+    3: "the message, document or conversation that needs an answer",
+    4: "home and the arrangement you have to live with every day",
+    5: "the date, attraction, child-related matter or creative project pulling your attention",
+    6: "the roster, workload and ordinary week you actually have to live",
+    7: "the other person, the agreement and who carries the inconvenient part",
+    8: "the shared cost, debt, trust or responsibility that needs clear terms",
+    9: "the trip, course, application, publication or outside opportunity",
+    10: "the job, title, deadline or public responsibility attached to your name",
+    11: "the people and plan you are trying to build with",
+    12: "what needs privacy, rest or a clean ending",
+}
+
+DAILY_SHORT_AREA = {
+    1: "how you show up",
+    2: "the real number",
+    3: "the message or decision",
+    4: "home and family",
+    5: "the person or project you want",
+    6: "the workload and ordinary week",
+    7: "the agreement with another person",
+    8: "shared money or responsibility",
+    9: "the outside plan and its logistics",
+    10: "the job or public responsibility",
+    11: "the people and next plan",
+    12: "what needs rest or closure",
+}
+
+
+
 HOUSE_VOICE = {
     1: {
         "headline": "Choose yourself without closing the door",
         "opening": (
-            "Your attention is returning to your own direction, energy and sense of identity. "
-            "A personal choice may feel more urgent because you can no longer ignore what no longer fits."
+            "A role, boundary or personal direction is asking for a clearer choice. "
+            "Notice whether your calendar and behaviour still match the version of you other people are meeting."
         ),
         "sensitivity": (
             "Your emotional weather is close to the surface, so another person's reaction may feel "
@@ -45,8 +77,8 @@ HOUSE_VOICE = {
     2: {
         "headline": "Know what is truly worth your energy",
         "opening": (
-            "Money, value, ownership and self-worth are asking for a calmer look. "
-            "A practical decision becomes easier when you separate what is valuable from what is merely active or impressive."
+            "A price, payment, purchase or earning question needs a real number. "
+            "The decision gets easier when desire and cost are put on the same page."
         ),
         "sensitivity": (
             "Your emotional weather is tied to money, security and self-worth. "
@@ -153,8 +185,8 @@ HOUSE_VOICE = {
     8: {
         "headline": "Bring the hidden cost into the light",
         "opening": (
-            "Shared money, trust, obligation or emotional dependence may need more honesty. "
-            "What is uncomfortable to name is often the exact thing that restores choice."
+            "A shared cost, debt, trust arrangement or responsibility needs clearer terms. "
+            "Name who pays, owns, owes or carries what before discomfort turns into dependency."
         ),
         "sensitivity": (
             "You may be more aware of what is owed, shared or emotionally entangled. "
@@ -171,8 +203,8 @@ HOUSE_VOICE = {
     9: {
         "headline": "Go further, but take the facts with you",
         "opening": (
-            "A wider horizon is opening through learning, travel, publishing, legal matters "
-            "or people beyond your usual circle. A proven idea may be ready to travel further."
+            "A trip, course, application, publication or outside opportunity may be ready to move. "
+            "Check the booking, deadline, paperwork and budget before you let possibility outrun logistics."
         ),
         "sensitivity": (
             "You may feel restless for a larger answer, a new direction or a broader field. "
@@ -189,8 +221,8 @@ HOUSE_VOICE = {
     10: {
         "headline": "Let the work speak before you do",
         "opening": (
-            "Career, reputation or visible responsibility is asking for a clearer result. "
-            "The day favours substance that can be seen rather than a performance of being busy."
+            "A job, title, deadline or public responsibility needs a result people can actually evaluate. "
+            "Finish the useful work before you manage the appearance of being busy."
         ),
         "sensitivity": (
             "You may feel unusually aware of how your work or choices are being judged. "
@@ -207,7 +239,7 @@ HOUSE_VOICE = {
     11: {
         "headline": "Choose the people who share the future",
         "opening": (
-            "Friends, audiences, networks and long-term plans are becoming more important. "
+            "The people around the next plan are becoming more important. "
             "The right connection may not be the largest one, but the one that genuinely supports the future you are building."
         ),
         "sensitivity": (
@@ -956,42 +988,44 @@ def _headline_v3(
 def _daily_trigger_sentence(anchor: DailyAspect | None) -> str:
     if not anchor:
         return (
-            "The day's meaning comes mainly through the Moon's house and the way "
-            "your emotional response changes the larger monthly story."
+            "Start with the feeling, then check what it changes in ordinary life. "
+            "Do not manufacture a larger story when the day is comparatively quiet."
         )
 
-    first = HOUSE_NAMES[anchor.house1]
-    second = HOUSE_NAMES[anchor.house2]
+    first = DAILY_SHORT_AREA.get(anchor.house1, HOUSE_NAMES[anchor.house1])
+    second = DAILY_SHORT_AREA.get(anchor.house2, HOUSE_NAMES[anchor.house2])
+
     if anchor.house1 == anchor.house2:
         if anchor.name in {"square", "opposition"}:
             return (
-                f"Today's pressure concentrates in {first}. "
-                "The immediate answer is tempting, but the tension is revealing what this one life area still needs."
+                f"The pressure is concentrated around {first}. "
+                "Name the practical cost before you let the mood choose the answer."
             )
         if anchor.name in {"trine", "sextile"}:
             return (
-                f"A supportive current strengthens {first}. "
-                "The opening is real, although it still needs a choice that protects your standards."
+                f"Support is gathering around {first}. "
+                "Use the easier condition on one result that still matters tomorrow."
             )
         return (
-            f"Today concentrates both influences in {first}. "
-            "What looks like two separate concerns is one emotional decision."
+            f"Two signals are landing in the same place: {first}. "
+            "Treat them as one decision rather than two separate problems."
         )
+
     if anchor.name in {"square", "opposition"}:
         return (
-            f"Today's pressure links {first} with {second}. "
-            "The attraction of an immediate answer is strong, but the tension is revealing "
-            "what cannot be solved by force, performance or wishful thinking."
+            f"{first[:1].upper() + first[1:]} and {second} are pulling against each other. "
+            "Choose which one gets protected first. Let the cost of the other choice become visible."
         )
     if anchor.name in {"trine", "sextile"}:
         return (
-            f"A supportive current connects {first} with {second}. "
-            "The opening is real, although it still needs a choice that protects your standards."
+            f"{first[:1].upper() + first[1:]} can make {second} easier to move. "
+            "Use the support on one concrete next step."
         )
     return (
-        f"Today blends {first} with {second}. "
-        "What appears to be two separate concerns is really one emotional decision."
+        f"{first[:1].upper() + first[1:]} and {second} are part of the same decision. "
+        "Choose one rule that still works when both facts are true."
     )
+
 
 
 def _relationship_archetype(

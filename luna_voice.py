@@ -197,14 +197,14 @@ _EDITORIAL_SCAFFOLD_SENTENCES = (
 _TECHNICAL_TO_HUMAN = {
     "Natal Midheaven": "the job, role or public responsibility with your name on it",
     "natal Midheaven": "the job, role or public responsibility with your name on it",
-    "Natal Ascendant": "how you show up and what you are willing to carry",
-    "natal Ascendant": "how you show up and what you are willing to carry",
-    "identity, energy and personal direction": "how you show up and what you are willing to carry",
-    "identity and direction": "how you show up and what you are willing to carry",
+    "Natal Ascendant": "your appearance, boundaries and the version of you other people are meeting",
+    "natal Ascendant": "your appearance, boundaries and the version of you other people are meeting",
+    "identity, energy and personal direction": "your appearance, boundaries and the version of you other people are meeting",
+    "identity and direction": "your appearance, boundaries and the version of you other people are meeting",
     "travel, publishing, law, education and foreign markets": "the trip, course, application or outside opportunity in front of you",
     "travel, study and the wider world": "the trip, course, application or outside opportunity in front of you",
-    "relationships, clients, contracts and competitors": "the person across the table and what each of you is actually promising",
-    "relationships and agreements": "the person across the table and what each of you is actually promising",
+    "relationships, clients, contracts and competitors": "the other person, the agreement and who carries the inconvenient part",
+    "relationships and agreements": "the other person, the agreement and who carries the inconvenient part",
     "work routines, health, service and operations": "the roster, workload and ordinary week you actually have to live",
     "work and daily routines": "the roster, workload and ordinary week you actually have to live",
     "shared money, debt, tax, inheritance and intimacy": "the money, trust and responsibility you share with someone else",
@@ -257,6 +257,10 @@ _ARC_WORDS = {
     "integrate": "Integrate",
     "protect": "Protect",
     "act": "Act",
+    "test capacity": "Test",
+    "see power": "Check",
+    "use support": "Build",
+    "sort": "Choose",
 }
 
 _DRY_TRUTHS = {
