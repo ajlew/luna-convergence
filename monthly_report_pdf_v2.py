@@ -418,7 +418,7 @@ def _key_date_card(item, styles: dict):
     return card
 
 
-def _strategy(narrative, styles: dict):
+def _strategy(narrative, result: dict, styles: dict):
     story = _section_header("Practical direction", "Your monthly strategy", styles)
     top = Table(
         [[
@@ -760,7 +760,7 @@ def build_monthly_editorial_pdf(
     story.extend(_problem_horizon(narrative, styles))
     story.extend(_chapters(narrative, styles))
     story.extend(_life_areas(narrative, styles))
-    story.extend(_strategy(narrative, styles))
+    story.extend(_strategy(narrative, result, styles))
     story.extend(_solar(narrative, styles))
     story.extend(_snapshot(narrative, styles))
     story.extend(_technical(result, narrative, order_reference, styles))
