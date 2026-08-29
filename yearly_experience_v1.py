@@ -251,8 +251,20 @@ def _major_sky_events_html(result: dict) -> str:
     if not signals:
         return ""
 
+    anchors = [
+        signal for signal in signals
+        if event_presentation_group(signal, "yearly") == "SOLAR ANCHOR"
+    ]
+    other_signals = [signal for signal in signals if signal not in anchors]
+
+    anchor_rows = "".join(
+        f'<tr><td>{_safe(human_date(signal.event_date.isoformat()))}</td>'
+        f'<td><strong>{_safe(signal.display_label)}</strong><br>{_prose_safe(signal.action)}</td></tr>'
+        for signal in sorted(anchors, key=lambda item: item.event_date)
+    )
+
     rows = []
-    for signal in sorted(signals, key=lambda item: item.event_date):
+    for signal in sorted(other_signals, key=lambda item: item.event_date):
         group = event_presentation_group(signal, "yearly")
         badge = "OPPORTUNITY" if group == "OPENING" else group.title()
         rows.append(
@@ -261,10 +273,13 @@ def _major_sky_events_html(result: dict) -> str:
             f'<td><strong>{_safe(signal.display_label)}</strong><br>{_prose_safe(signal.action)}</td></tr>'
         )
 
-    return f'''
+    return f"""
 <section class="luna-section luna-major-sky-section">
-  <div class="luna-eyebrow">Shared-sky milestones</div>
-  <h2 class="luna-section-title">The background dates worth keeping</h2>
+  <div class="luna-eyebrow">The Sun provides the calendar</div>
+  <h2 class="luna-section-title">The four solar anchors</h2>
+  {f'<div class="luna-table-wrap"><table><thead><tr><th>Date</th><th>Solar anchor</th></tr></thead><tbody>{anchor_rows}</tbody></table></div>' if anchor_rows else ''}
+  <div class="luna-eyebrow" style="margin-top:2rem">Shared-sky milestones inside the solar year</div>
+  <h3>The background dates worth keeping</h3>
   <div class="luna-table-wrap">
     <table>
       <thead><tr><th>Date</th><th>Type</th><th>Event</th></tr></thead>
@@ -272,8 +287,7 @@ def _major_sky_events_html(result: dict) -> str:
     </table>
   </div>
 </section>
-    '''
-
+    """
 
 def _game_rows(result: dict) -> str:
     return "".join(

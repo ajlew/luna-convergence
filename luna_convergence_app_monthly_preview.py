@@ -1399,8 +1399,8 @@ def report_cta(
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Choose and personalise your report")
     st.markdown(
-        "Select the star sign, report period, timezone and personal focus **before payment**. "
-        "Use your Sun sign unless you know and prefer your rising sign."
+        "Start with your Sun sign — your star sign. Luna treats that sign as whole-sign House 1, "
+        "then maps the report period, timezone and personal focus from that reference before payment."
     )
     st.markdown(
         '<div class="delivery-notice"><strong>Launch delivery</strong><br>'
@@ -1466,17 +1466,17 @@ def report_cta(
             st.markdown("### Choose your monthly report")
             m1, m2 = st.columns(2)
             with m1:
+                sign = st.selectbox(
+                    "What is your Sun sign (star sign)?",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-monthly-sign",
+                    help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
+                )
                 delivery_email = st.text_input(
                     "Delivery email",
                     key=f"{key_context}-monthly-email",
                     placeholder="name@example.com",
-                )
-                sign = st.selectbox(
-                    "Your star sign",
-                    SIGNS,
-                    index=SIGNS.index(chosen_default_sign),
-                    key=f"{key_context}-monthly-sign",
-                    help="Use your Sun sign unless you know and prefer your rising sign.",
                 )
             with m2:
                 month_label = st.selectbox(
@@ -1635,17 +1635,17 @@ def report_cta(
             st.markdown("### Choose your year-ahead report")
             y1, y2 = st.columns(2)
             with y1:
+                sign = st.selectbox(
+                    "What is your Sun sign (star sign)?",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-yearly-sign",
+                    help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
+                )
                 delivery_email = st.text_input(
                     "Delivery email",
                     key=f"{key_context}-yearly-email",
                     placeholder="name@example.com",
-                )
-                sign = st.selectbox(
-                    "Your star sign",
-                    SIGNS,
-                    index=SIGNS.index(chosen_default_sign),
-                    key=f"{key_context}-yearly-sign",
-                    help="Use your Sun sign unless you know and prefer your rising sign.",
                 )
             with y2:
                 selected_year = st.selectbox(
@@ -2102,7 +2102,7 @@ def render_monthly_preview_workspace() -> None:
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
-                "Star sign",
+                "What is your Sun sign (star sign)?",
                 SIGNS,
                 index=SIGNS.index(DEFAULT_SIGN),
                 key="monthly-preview-sign",
@@ -2249,7 +2249,7 @@ def render_report_generator_workspace() -> None:
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
-                "Star sign",
+                "What is your Sun sign (star sign)?",
                 SIGNS,
                 index=SIGNS.index(DEFAULT_SIGN),
                 key="report-generator-sign",
@@ -2618,7 +2618,7 @@ def reports_page() -> None:
                 customer_name = st.text_input("Name")
                 customer_email = st.text_input("Email")
                 sign = st.selectbox(
-                    "Star sign",
+                    "What is your Sun sign (star sign)?",
                     SIGNS,
                     index=SIGNS.index(DEFAULT_SIGN),
                 )
@@ -3062,7 +3062,7 @@ def solar_year_page() -> None:
     c1, c2, c3 = st.columns(3)
     with c1:
         sign = st.selectbox(
-            "Star sign",
+            "What is your Sun sign (star sign)?",
             SIGNS,
             index=SIGNS.index(DEFAULT_SIGN),
             key="solar-year-sign",

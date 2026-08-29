@@ -27,7 +27,7 @@ from monthly_strategy_alignment import align_monthly_arc_with_decision
 from monthly_trajectory_engine import build_monthly_trajectory
 from luna_first_principles import methodology_metadata
 from yearly_game_engine import build_yearly_game_map
-from major_event_registry import classify_major_events, period_priority_signals
+from major_event_registry import major_sky_events, period_priority_signals
 
 
 HOUSE_LABELS = {
@@ -882,7 +882,10 @@ def period_report(
         ).to_dict()
 
     product_type = "monthly" if (end - start).days < 50 else "yearly"
-    major_registry = classify_major_events(events)
+    # The Sun supplies Luna's foundational calendar.  Build the shared-sky
+    # registry through the global layer so equinoxes/solstices cannot disappear
+    # merely because the lower-level event list treats them as ordinary ingresses.
+    major_registry = major_sky_events(start, end, sign, timezone_name)
     priority_signals = period_priority_signals(
         major_registry,
         product_type,

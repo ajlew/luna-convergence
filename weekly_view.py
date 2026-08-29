@@ -4,9 +4,9 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from astrology_engine import ASPECTS, PLANET_WEIGHTS, Aspect, detect_aspects, period_events, positions_for_date
+from astrology_engine import ASPECTS, PLANET_WEIGHTS, Aspect, detect_aspects, positions_for_date
 from luna_voice import finalize_customer_prose
-from major_event_registry import classify_major_events, day_signal_bundle
+from major_event_registry import day_signal_bundle, major_sky_events
 
 
 FAST_PLANETS = {"Sun", "Moon", "Mercury", "Venus", "Mars"}
@@ -547,10 +547,10 @@ def build_weekly_view(monday: date, timezone_name: str) -> tuple[WeeklyDay, ...]
         raise ValueError("Weekly View must begin on a Monday.")
 
     sunday = monday + timedelta(days=6)
-    # Weekly is shared sky, so use Aries only as a neutral house frame. Event
-    # identity and ranking do not depend on that sign.
-    week_events = period_events(monday, sunday, "Aries", timezone_name)
-    registry = classify_major_events(week_events)
+    # Weekly is shared sky.  The global registry also injects Luna's four
+    # foundational solar anchors, so an equinox or solstice cannot be ranked
+    # away by an ordinary daily aspect.
+    registry = major_sky_events(monday, sunday, "Aries", timezone_name)
     signals_by_day = {
         day: tuple(item for item in registry if item.event_date == day)
         for day in (monday + timedelta(days=offset) for offset in range(7))

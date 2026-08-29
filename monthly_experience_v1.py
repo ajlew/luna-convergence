@@ -745,10 +745,20 @@ def _major_sky_events_html(result: dict) -> str:
     if not signals:
         return ""
 
+    anchors = [s for s in signals if event_presentation_group(s, "monthly") == "SOLAR ANCHOR"]
     turning = [s for s in signals if event_presentation_group(s, "monthly") in {"TURNING POINT", "CLARITY POINT"}]
     openings = [s for s in signals if event_presentation_group(s, "monthly") == "OPENING"]
-    other = [s for s in signals if s not in turning and s not in openings]
+    other = [s for s in signals if s not in anchors and s not in turning and s not in openings]
 
+    anchor_cards = "".join(
+        f"""<article class="luna-date-card solar-anchor-card">
+  <span>{_safe(human_date(signal.event_date.isoformat()))} · SOLAR ANCHOR</span>
+  <strong>{_safe(signal.display_label)}</strong>
+  <p>{_prose_safe(signal.line_one)}</p>
+  <small>{_prose_safe(signal.action)}</small>
+</article>"""
+        for signal in anchors
+    )
     turning_cards = "".join(
         f'''<article class="luna-date-card">
   <span>{_safe(human_date(signal.event_date.isoformat()))} · {_safe("Turning point" if signal.event_class == "eclipse" else "Clarity point")}</span>
@@ -778,6 +788,7 @@ def _major_sky_events_html(result: dict) -> str:
 <section class="luna-monthly-section luna-major-sky-section">
   <div class="luna-eyebrow">The sky behind the story</div>
   <h2 class="luna-section-title">The dates that change the month</h2>
+  {f'<h3>Solar anchor</h3><div class="luna-date-grid">{anchor_cards}</div>' if anchor_cards else ''}
   {f'<h3>Major turning points</h3><div class="luna-date-grid">{turning_cards}</div>' if turning_cards else ''}
   {f'<h3>Openings worth using</h3><div class="luna-date-grid">{opening_cards}</div>' if opening_cards else ''}
   {f'<h3>Other dates worth keeping</h3><div class="luna-table-wrap"><table><tbody>{other_rows}</tbody></table></div>' if other_rows else ''}
@@ -1254,9 +1265,9 @@ def build_monthly_experience_html(
 <section class="luna-solar-clock">
   <div class="luna-eyebrow">First principle · The Sun is Luna's primary natural clock</div>
   <div class="luna-solar-clock-grid">
-    <div><span>Your Sun</span><strong>{_safe(narrative.sign)}</strong></div>
+    <div><span>Your Sun / House 1</span><strong>{_safe(narrative.sign)}</strong></div>
     <div><span>Current Sun</span><strong>{_safe(current_sun)}</strong></div>
-    <div><span>Solar gate</span><strong>{_safe(gate_label)} · {_safe(gate_date)}</strong></div>
+    <div><span>Next solar anchor</span><strong>{_safe(gate_label)} · {_safe(gate_date)}</strong></div>
     <div><span>Local light</span><strong>{_safe(str(solar.get('light_direction', 'Unavailable')))} · {_safe(str(solar.get('city', 'timezone estimate')))}</strong></div>
   </div>
   <p>Local geography changes the light you experience, not the universal Aries-to-Pisces solar sequence.</p>
@@ -1377,6 +1388,8 @@ def build_monthly_experience_html(
     body = ""
     if not preview:
         body = f"""
+{solar_clock_strip}
+
 {summary_strip}
 
 {concentration_theme_section}
@@ -1419,6 +1432,7 @@ def build_monthly_experience_html(
         """
     else:
         body = f"""
+{solar_clock_strip}
 {summary_strip}
 {concentration_theme_section}
 {monthly_sky_map_section}
@@ -1427,6 +1441,7 @@ def build_monthly_experience_html(
   <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
   <div class="luna-story-timeline">{chapters}</div>
 </section>
+{major_sky_section}
         """
 
     controls = (
@@ -1452,6 +1467,8 @@ def build_monthly_experience_html(
   --soft:#f5f5f2;
   --line:#d8d8d3;
   --muted:#696963;
+  --rail:clamp(1rem,4vw,3.2rem);
+  --reading:760px;
   width:100%;
   max-width:900px;
   margin:0 auto;
@@ -1521,8 +1538,8 @@ def build_monthly_experience_html(
 }}
 
 .luna-solar-clock {{
-  margin:0 0 1.2rem;
-  padding:1rem 1.15rem;
+  margin:0 var(--rail) 1.2rem;
+  padding:1rem 0;
   border-top:1px solid var(--line);
   border-bottom:1px solid var(--line);
   background:#fff;
@@ -1619,7 +1636,7 @@ def build_monthly_experience_html(
    campaign panel. Keep the paid/full report hierarchy unchanged. */
 .luna-monthly-preview .luna-monthly-hero {{
   gap:.55rem;
-  padding:clamp(.8rem,1.8vw,1.15rem);
+  padding:clamp(.8rem,1.8vw,1.15rem) var(--rail);
 }}
 .luna-monthly-preview .luna-monthly-meta {{
   padding-bottom:.45rem;
@@ -1638,7 +1655,7 @@ def build_monthly_experience_html(
   font-size:.86rem;
 }}
 .luna-monthly-section {{
-  padding:clamp(2.25rem,5vw,4.3rem) clamp(1rem,4vw,3.2rem);
+  padding:clamp(2.25rem,5vw,4.3rem) var(--rail);
   border-bottom:1px solid var(--black);
 }}
 .luna-monthly-brief {{
@@ -1647,7 +1664,7 @@ def build_monthly_experience_html(
   border-bottom:1px solid var(--black);
 }}
 .luna-monthly-brief > div {{
-  padding:1rem clamp(1rem,4vw,3.2rem);
+  padding:1rem var(--rail);
 }}
 .luna-monthly-brief > div + div {{
   border-left:1px solid var(--black);
@@ -1915,7 +1932,7 @@ def build_monthly_experience_html(
 }}
 .luna-chapter-move strong {{ color:var(--black); }}
 .luna-concentration-theme {{
-  padding:clamp(1.8rem,4vw,3rem) 0;
+  padding:clamp(1.8rem,4vw,3rem) var(--rail);
   border-top:1px solid var(--black);
   border-bottom:1px solid var(--line);
 }}

@@ -20,7 +20,8 @@ from functools import lru_cache
 import re
 from typing import Iterable
 
-from astrology_engine import Event, angular_distance, period_events, positions_for_date
+from astrology_engine import Event, SIGNS, angular_distance, period_events, positions_for_date, whole_sign_house
+from solar_cycle import solar_anchor_dates
 
 
 STRUCTURAL_PLANETS = {"Saturn", "Uranus", "Neptune", "Pluto"}
@@ -262,6 +263,76 @@ def _station_copy(planet: str, retrograde: bool) -> tuple[str, str, str, str, st
             ),
             "Do not treat a change of motion as a verdict by itself.",
         ),
+    )
+
+
+_SOLAR_ANCHOR_COPY = {
+    "March Equinox": (
+        "THE SOLAR YEAR OPENS.",
+        "The March Equinox opens Luna's tropical solar year as the Sun enters Aries. This is the first fixed reference point of the annual solar cycle.",
+        "The next quarter is about initiation: decide what deserves a beginning before momentum chooses for you.",
+        "Name what starts now. Give the new direction one concrete first move.",
+        "Do not drag last cycle's unfinished business forward by default.",
+    ),
+    "June Solstice": (
+        "THE SOLAR YEAR REACHES ITS FIRST TURN.",
+        "The June Solstice marks a foundational solar turning point as the Sun enters Cancer. What began after the March Equinox now has to be protected, sustained or given a real base.",
+        "The next quarter tests whether growth has enough support underneath it to keep developing.",
+        "Protect what is worth carrying. Strengthen the part that has to hold the next stage.",
+        "Do not confuse expansion with support; growth still needs somewhere to land.",
+    ),
+    "September Equinox": (
+        "THE SOLAR YEAR REBALANCES.",
+        "The September Equinox marks a foundational solar turning point as the Sun enters Libra. What has developed since June now meets reciprocity, consequence and the terms created with other people.",
+        "The next quarter asks what must be corrected, shared, negotiated or brought back into balance.",
+        "Put the terms beside the promise. Keep what can carry reciprocity and correct what cannot.",
+        "Do not keep an arrangement merely because it survived the previous quarter.",
+    ),
+    "December Solstice": (
+        "THE SOLAR YEAR TURNS TOWARD STRUCTURE.",
+        "The December Solstice marks a foundational solar turning point as the Sun enters Capricorn. The year now asks what is durable enough to structure, complete or carry into the next cycle.",
+        "The next quarter favours consolidation, redesign and release before the March Equinox opens the solar year again.",
+        "Keep what can survive the next cycle. Give it structure; release what cannot justify the load.",
+        "Do not preserve something simply because time has already been spent on it.",
+    ),
+}
+
+
+def _solar_anchor_signal(
+    gate_day: date,
+    gate_name: str,
+    ingress_sign: str,
+    strategic_question: str,
+    native_sign: str,
+) -> MajorEventSignal:
+    headline, line_one, line_two, action, watch = _SOLAR_ANCHOR_COPY[gate_name]
+    try:
+        house = whole_sign_house(SIGNS.index(ingress_sign), SIGNS.index(native_sign))
+        houses = (int(house),)
+    except Exception:
+        houses = ()
+    display_label = f"{gate_name} · Sun enters {ingress_sign}"
+    return MajorEventSignal(
+        event_date=gate_day,
+        source_kind="solar_anchor",
+        event_class="solar_anchor",
+        tier="FOUNDATION",
+        sky_score=120.0,
+        technical_label=f"Sun enters {ingress_sign}",
+        display_label=display_label,
+        source_title=display_label,
+        planets=("Sun",),
+        houses=houses,
+        polarity="foundation",
+        importance=10.0,
+        opportunity=False,
+        visible_products=PRODUCTS,
+        must_surface_products=PRODUCTS,
+        headline=headline,
+        line_one=line_one,
+        line_two=f"{line_two} {strategic_question}".strip(),
+        action=action,
+        watch=watch,
     )
 
 
@@ -678,7 +749,25 @@ def major_sky_events(
     native_sign: str = "Aries",
     timezone_name: str = "Australia/Sydney",
 ) -> tuple[MajorEventSignal, ...]:
-    return classify_major_events(period_events(start, end, native_sign, timezone_name))
+    """Return the complete shared-sky registry, anchored first by the Sun.
+
+    Equinoxes and solstices are Luna's foundational solar clock. They are
+    injected here so Daily, Weekly, Monthly, Yearly and Personal Timing cannot
+    rank them away even though the lower-level astrology event engine treats
+    them as ordinary Sun ingresses.
+    """
+    signals = list(classify_major_events(period_events(start, end, native_sign, timezone_name)))
+    for gate_day, gate_name, ingress_sign, question in solar_anchor_dates(start, end, timezone_name):
+        signals.append(
+            _solar_anchor_signal(gate_day, gate_name, ingress_sign, question, native_sign)
+        )
+
+    unique: dict[tuple[date, str], MajorEventSignal] = {}
+    for signal in signals:
+        key = (signal.event_date, signal.source_title)
+        if key not in unique or signal.sky_score > unique[key].sky_score:
+            unique[key] = signal
+    return tuple(sorted(unique.values(), key=lambda item: (item.event_date, -item.sky_score, item.display_label)))
 
 
 def visible_signals(signals: Iterable[MajorEventSignal], product: str) -> tuple[MajorEventSignal, ...]:
@@ -783,7 +872,7 @@ def serialized_priority_signals(
 
 
 
-_TIER_RANK = {"S": 6, "A+": 5, "A": 4, "A-": 3, "B+": 2, "B": 1}
+_TIER_RANK = {"FOUNDATION": 7, "S": 6, "A+": 5, "A": 4, "A-": 3, "B+": 2, "B": 1}
 
 _PERSONAL_TARGET_WEIGHT = {
     "Ascendant": 1.25,
@@ -903,6 +992,8 @@ def featured_signals(
 
 
 def _personal_orb_limit(signal: MajorEventSignal, natal_target: str) -> float:
+    if signal.event_class == "solar_anchor":
+        return 3.0 if natal_target in {"Ascendant", "Midheaven", "Sun", "Moon"} else 2.2
     if signal.event_class == "eclipse":
         return 4.0 if natal_target in {"Ascendant", "Midheaven", "Sun", "Moon"} else 3.0
     if signal.event_class == "lunation":
@@ -968,6 +1059,13 @@ def _personal_activation_interpretation(
 ) -> str:
     planet = signal.planets[0] if signal.planets else ""
     target_short = _PERSONAL_TARGET_SHORT.get(natal_target, focus)
+
+    if signal.event_class == "solar_anchor":
+        gate_name = signal.display_label.split(" · ", 1)[0]
+        return (
+            f"{gate_name} makes {target_short} part of the new solar quarter. "
+            "Use the contact as a three-month reference point rather than a one-day prediction."
+        )
 
     if signal.event_class == "eclipse":
         if natal_target == "Pluto":
@@ -1197,6 +1295,8 @@ def event_presentation_group(signal: MajorEventSignal, product: str = "") -> str
     """Customer hierarchy. Importance stays visible without making every event equal."""
     event_class = str(getattr(signal, "event_class", "") or "")
     planets = set(getattr(signal, "planets", ()) or ())
+    if event_class == "solar_anchor":
+        return "SOLAR ANCHOR"
     if event_class == "eclipse":
         return "TURNING POINT"
     if event_class == "cazimi":
@@ -1230,7 +1330,7 @@ def split_priority_signals(
     other = []
     for signal in selected:
         group = event_presentation_group(signal, product)
-        if group in {"TURNING POINT", "CLARITY POINT"}:
+        if group in {"SOLAR ANCHOR", "TURNING POINT", "CLARITY POINT"}:
             turning.append(signal)
         elif group == "OPENING":
             openings.append(signal)

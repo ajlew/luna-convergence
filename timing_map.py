@@ -534,8 +534,15 @@ def build_timing_map(
     selected = list(dict.fromkeys(selected))
     selected.sort(key=lambda item: (item.first_date, -item.score))
 
+    # Keep Luna's first reference frame solar: the reader's Sun sign is whole-sign
+    # House 1 for shared-sky context.  Natal geometry below adds personal precision
+    # without replacing that solar frame.
+    sun_sign = next(
+        (str(getattr(item, "sign", "") or "") for item in snapshot.positions if str(getattr(item, "planet", "")) == "Sun"),
+        "Aries",
+    )
     all_shared_signals = major_sky_events(
-        start_date, end_date, "Aries", timezone_name
+        start_date, end_date, sun_sign or "Aries", timezone_name
     )
     shared_signals = period_priority_signals(
         all_shared_signals,

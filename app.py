@@ -19,6 +19,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from astrology_engine import SIGNS, HOUSE_NAMES
+from date_display import human_date
 from customer_experience import (
     HOUSE_VOICE,
     free_daily_reading,
@@ -3049,17 +3050,17 @@ def report_cta(
             st.markdown("### Choose your monthly report")
             m1, m2 = st.columns(2)
             with m1:
+                sign = st.selectbox(
+                    "What is your Sun sign (star sign)?",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-monthly-sign",
+                    help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
+                )
                 delivery_email = st.text_input(
                     "Delivery email",
                     key=f"{key_context}-monthly-email",
                     placeholder="name@example.com",
-                )
-                sign = st.selectbox(
-                    "Your star sign",
-                    SIGNS,
-                    index=SIGNS.index(chosen_default_sign),
-                    key=f"{key_context}-monthly-sign",
-                    help="Use your Sun sign unless you know and prefer your rising sign.",
                 )
             with m2:
                 month_label = st.selectbox(
@@ -3217,17 +3218,17 @@ def report_cta(
             st.markdown("### Choose your year-ahead report")
             y1, y2 = st.columns(2)
             with y1:
+                sign = st.selectbox(
+                    "What is your Sun sign (star sign)?",
+                    SIGNS,
+                    index=SIGNS.index(chosen_default_sign),
+                    key=f"{key_context}-yearly-sign",
+                    help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
+                )
                 delivery_email = st.text_input(
                     "Delivery email",
                     key=f"{key_context}-yearly-email",
                     placeholder="name@example.com",
-                )
-                sign = st.selectbox(
-                    "Your star sign",
-                    SIGNS,
-                    index=SIGNS.index(chosen_default_sign),
-                    key=f"{key_context}-yearly-sign",
-                    help="Use your Sun sign unless you know and prefer your rising sign.",
                 )
             with y2:
                 selected_year = st.selectbox(
@@ -3361,7 +3362,7 @@ def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
     first_row = st.columns(2, gap="medium")
     with first_row[0]:
         sign = st.selectbox(
-            "Your zodiac sign",
+            "What is your Sun sign (star sign)?",
             SIGNS,
             index=SIGNS.index(DEFAULT_SIGN),
             key=f"{prefix}-sign",
@@ -3545,11 +3546,11 @@ def _render_lean_daily(path: str) -> None:
     saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()
     saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
     st.markdown(
-        '<div class="daily-sign-picker-label">Choose your star sign</div>',
+        '<div class="daily-sign-picker-label">What is your Sun sign (star sign)?</div>',
         unsafe_allow_html=True,
     )
     sign = st.selectbox(
-        "Your zodiac sign",
+        "What is your Sun sign (star sign)?",
         SIGNS,
         index=saved_index,
         placeholder="Select a sign",
@@ -3563,7 +3564,7 @@ def _render_lean_daily(path: str) -> None:
     # engagement signal instead of firing analytics automatically on page load.
     if sign is None:
         st.markdown(
-            '<div class="lean-daily-empty">Choose your star sign to open today\'s horoscope.</div>',
+            '<div class="lean-daily-empty">Choose your Sun sign (star sign) to open today\'s horoscope.</div>',
             unsafe_allow_html=True,
         )
         return
@@ -3890,6 +3891,12 @@ def weekly_page() -> None:
         "/weekly-view",
     )
     today = browser_local_date()
+    sign = st.selectbox(
+        "What is your Sun sign (star sign)?",
+        SIGNS,
+        key="weekly-sign-v331",
+        help="Luna starts with your Sun sign as whole-sign House 1, then shows how the shared sky lands from that reference.",
+    )
     current_monday = default_week_start(today)
     week_options = _weekly_choice_options(today)
     monday = st.selectbox(
@@ -3911,8 +3918,7 @@ def weekly_page() -> None:
     st.markdown('<div class="weekly-kicker">Week ahead · Monday to Sunday</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="weekly-range">{escape(week_label(monday))}</div>', unsafe_allow_html=True)
     st.markdown("# One changing sky.")
-    st.markdown("**Choose your sign. See where the week lands. Keep one rule while the mood changes.**")
-    sign = st.selectbox("Where does it land for you?", SIGNS, key="weekly-sign-v331")
+    st.markdown("**Your Sun sign is the first reference. See where the week lands. Keep one rule while the mood changes.**")
     try:
         _render_weekly_sign_layer(sign, monday, timezone_name)
     except Exception as exc:
@@ -4449,7 +4455,7 @@ def render_monthly_preview_workspace() -> None:
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
-                "Star sign",
+                "What is your Sun sign (star sign)?",
                 SIGNS,
                 index=SIGNS.index(DEFAULT_SIGN),
                 key="monthly-preview-sign",
@@ -4602,7 +4608,7 @@ def render_report_generator_workspace() -> None:
         first_row = st.columns(3, gap="medium")
         with first_row[0]:
             sign = st.selectbox(
-                "Star sign",
+                "What is your Sun sign (star sign)?",
                 SIGNS,
                 index=SIGNS.index(DEFAULT_SIGN),
                 key="report-generator-sign",
@@ -4950,7 +4956,7 @@ def reports_page() -> None:
     st.markdown('<div class="eyebrow">Paid reports</div>', unsafe_allow_html=True)
     st.markdown("# Choose the depth you need")
     st.markdown(
-        "Choose your star sign and report period before entering Stripe. "
+        "Choose your Sun sign (star sign) and report period before entering Stripe. "
         "After payment, Luna verifies the Stripe session and generates the complete report immediately."
     )
     if EDITOR_PREVIEW_ENABLED:
@@ -5007,7 +5013,7 @@ def reports_page() -> None:
                 customer_name = st.text_input("Name")
                 customer_email = st.text_input("Email")
                 sign = st.selectbox(
-                    "Star sign",
+                    "What is your Sun sign (star sign)?",
                     SIGNS,
                     index=SIGNS.index(DEFAULT_SIGN),
                 )
@@ -5294,8 +5300,9 @@ def focus_paragraph(data: dict, target_houses: set[int], label: str) -> str:
 def monthly_index_page() -> None:
     """Single public Monthly hub at /monthly.
 
-    The reader supplies birth details first. Luna calculates the Sun sign from
-    that natal reference and uses it consistently throughout the Monthly.
+    Luna starts with the reader's Sun sign (star sign) as whole-sign House 1.
+    Birth details then add age/history and natal precision without replacing
+    that first solar reference frame.
     """
     monthly_sign_page()
 
@@ -5385,11 +5392,22 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
     )
     st.markdown('<div class="eyebrow">FREE · PERSONAL MONTH</div>', unsafe_allow_html=True)
     st.markdown(
-        "Add the birth details you know. Luna uses them to determine your Sun sign, anchor the sky map, "
-        "show your age at earlier echoes, and add natal geometry only where the data supports it."
+        "Start with your Sun sign — your star sign. Luna treats that sign as whole-sign House 1, "
+        "then maps the rest of the sky from there. Birth details add age/history and natal precision downstream."
     )
 
     with st.container(border=True):
+        selected_sun_sign = st.selectbox(
+            "What is your Sun sign (star sign)?",
+            SIGNS,
+            index=SIGNS.index(str(st.session_state.get("free-monthly-sun-sign") or DEFAULT_SIGN))
+            if str(st.session_state.get("free-monthly-sun-sign") or DEFAULT_SIGN) in SIGNS
+            else SIGNS.index(DEFAULT_SIGN),
+            key="free-monthly-sun-sign-input",
+            help="This is Luna's first reference point. Your Sun sign becomes whole-sign House 1 for the forecast.",
+        )
+        st.session_state["free-monthly-sun-sign"] = selected_sun_sign
+
         birth_date_value = st.date_input(
             "Birth date",
             value=st.session_state.get("free-monthly-birth-date"),
@@ -5460,7 +5478,7 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
 
     if submitted:
         if birth_date_value is None:
-            st.error("Add your birth date so Luna can calculate which Sun-sign Monthly to build.")
+            st.error("Add your birth date so Luna can verify the Sun sign and add the personal layers without inventing precision.")
             st.session_state["free-monthly-ready"] = False
             return None, None, current_timezone, current_city, False
 
@@ -5505,8 +5523,17 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
         st.warning(f"Luna could not calculate the natal reference: {exc}")
 
     if snapshot is None:
-        st.error("Luna needs a valid birth date to determine your Sun sign before building the Monthly.")
+        st.error("Luna needs a valid birth date before building the personal layers of the Monthly.")
         return None, birth_date_value, current_timezone, current_city, False
+
+    calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
+    selected_sign = str(st.session_state.get("free-monthly-sun-sign") or "")
+    if calculated_sign and selected_sign in SIGNS and calculated_sign != selected_sign:
+        st.error(
+            f"Your birth date calculates as {calculated_sign}, while you selected {selected_sign}. "
+            "Check the star sign or birth date before continuing so Luna does not build two different reference frames."
+        )
+        return snapshot, birth_date_value, current_timezone, current_city, False
 
     return snapshot, birth_date_value, current_timezone, current_city, True
 
@@ -7518,6 +7545,8 @@ def _major_event_dict_selection(values, product: str, *, limit: int = 8, opportu
 def _major_event_badge(item: dict, product: str) -> str:
     event_class = str(item.get("event_class") or "")
     planets = set(item.get("planets") or ())
+    if event_class == "solar_anchor":
+        return "SOLAR ANCHOR"
     if event_class == "eclipse":
         return "TURNING POINT"
     if event_class == "cazimi":
@@ -7559,10 +7588,14 @@ def _render_major_sky_events(
 
     st.markdown(f"## {heading}")
     st.caption(
-        "Keep the turning points and usable openings in view. "
+        "Keep the solar anchors, turning points and usable openings in view. "
         "Slower structural dates remain available below without competing for the same visual weight."
     )
 
+    anchors = [
+        item for item in selected
+        if _major_event_badge(item, product) == "SOLAR ANCHOR"
+    ]
     turning = [
         item for item in selected
         if _major_event_badge(item, product) in {"TURNING POINT", "CLARITY POINT"}
@@ -7573,12 +7606,12 @@ def _render_major_sky_events(
     ]
     supporting = [
         item for item in selected
-        if item not in turning and item not in openings
+        if item not in anchors and item not in turning and item not in openings
     ]
 
     if compact:
         priority = sorted(
-            turning + openings,
+            anchors + turning + openings,
             key=lambda row: str(row.get("event_date") or ""),
         )
         supporting_sorted = sorted(
@@ -7618,6 +7651,21 @@ def _render_major_sky_events(
                     unsafe_allow_html=True,
                 )
         return
+
+    if anchors:
+        st.markdown("### Solar anchors")
+        for item in sorted(
+            anchors, key=lambda row: str(row.get("event_date") or "")
+        ):
+            st.markdown(
+                f"""<article class="timing-story major-sky-story solar-anchor-story">
+<div class="timing-meta">{escape(_major_event_date_label(item).upper())} · SOLAR ANCHOR</div>
+<h3>{escape(str(item.get("display_label") or ""))}</h3>
+<p>{escape(finalize_customer_prose(str(item.get("line_one") or ""), product=product))}</p>
+<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(str(item.get("action") or ""), product=product))}</p></div>
+</article>""",
+                unsafe_allow_html=True,
+            )
 
     if turning:
         st.markdown("### Major turning points")
@@ -7762,6 +7810,8 @@ def _personal_major_badge(item, group) -> str:
     event_class = str(_personal_item_value(item, "event_class", "") or "")
     planet = str(_personal_item_value(item, "transit_planet", "") or "")
     opportunity = any(bool(_personal_item_value(value, "opportunity", False)) for value in group)
+    if event_class == "solar_anchor":
+        return "PERSONAL SOLAR ANCHOR"
     if event_class == "eclipse":
         return "PERSONAL TURNING POINT"
     if event_class == "cazimi":
@@ -7782,7 +7832,9 @@ def _personal_contact_label(item) -> str:
     target = str(_personal_item_value(item, "natal_target", "") or "")
     orb = float(_personal_item_value(item, "orb", 0.0) or 0.0)
 
-    if event_class == "eclipse":
+    if event_class == "solar_anchor":
+        subject = f"Solar anchor {planet}"
+    elif event_class == "eclipse":
         subject = f"Eclipse {planet}"
     elif event_class == "station":
         subject = f"{planet} station"
@@ -7857,6 +7909,11 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             line-height:1.45;
             margin:.2rem 0 .8rem;
         }
+        @media (max-width:700px){
+            .solar-orientation-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+            .solar-orientation-grid > div:nth-child(2){border-right:0 !important;}
+            .solar-orientation-grid > div:nth-child(-n+2){border-bottom:1px solid #111;}
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -7870,6 +7927,23 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         f'<div class="editorial-title">{escape(_monthly_main_headline(narrative, sign))}</div>',
         unsafe_allow_html=True,
     )
+
+    solar = dict(result.get("solar_convergence") or {})
+    if solar:
+        start_sun = str(solar.get("start_solar_sign") or solar.get("solar_sign") or "—")
+        end_sun = str(solar.get("end_solar_sign") or solar.get("solar_sign") or "—")
+        current_sun = start_sun if start_sun == end_sun else f"{start_sun} → {end_sun}"
+        next_gate = solar_gate_label(str(solar.get("next_solar_gate") or "Solar gate"))
+        next_gate_date = human_date(solar.get("next_gate_date")) if solar.get("next_gate_date") else "—"
+        solar_html = (
+            '<div class="solar-orientation-grid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-top:1px solid #111;border-bottom:1px solid #111;margin:1.35rem 0 1.5rem">'
+            f'<div style="padding:.8rem;border-right:1px solid #111"><span class="timing-meta">YOUR SUN / HOUSE 1</span><br><strong>{escape(sign)}</strong></div>'
+            f'<div style="padding:.8rem;border-right:1px solid #111"><span class="timing-meta">MOVING SUN</span><br><strong>{escape(current_sun)}</strong></div>'
+            f'<div style="padding:.8rem;border-right:1px solid #111"><span class="timing-meta">NEXT SOLAR ANCHOR</span><br><strong>{escape(next_gate)}</strong></div>'
+            f'<div style="padding:.8rem"><span class="timing-meta">ANCHOR DATE</span><br><strong>{escape(next_gate_date)}</strong></div>'
+            '</div>'
+        )
+        st.markdown(solar_html, unsafe_allow_html=True)
 
     context_title, context_body = _monthly_context_section(narrative, result)
     if context_title or context_body:
@@ -8152,7 +8226,7 @@ def _render_monthly_result_actions(sign: str) -> None:
 
 
 def monthly_sign_page() -> None:
-    """Unified free Monthly: birth details first, calculated Sun sign, one report."""
+    """Unified free Monthly: Sun sign first, then optional natal precision."""
     set_page_metadata(
         "Monthly Astrology | Luna Convergence",
         "Free personalised Monthly astrology with key dates, love/work/money context, historical echoes and natal timing.",
@@ -8163,13 +8237,21 @@ def monthly_sign_page() -> None:
     if not ready:
         return
 
-    sign = _monthly_sun_sign_from_snapshot(snapshot)
+    calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
+    selected_sign = str(st.session_state.get("free-monthly-sun-sign") or "")
+    sign = selected_sign if selected_sign in SIGNS else calculated_sign
     if not sign:
-        st.error("Luna could not determine your Sun sign from the supplied birth details.")
+        st.error("Luna could not establish your Sun sign reference frame.")
+        return
+    if calculated_sign and sign != calculated_sign:
+        st.error(
+            f"Your birth date calculates as {calculated_sign}, while the selected star sign is {sign}. "
+            "Correct one of them before Luna builds the Monthly."
+        )
         return
 
-    # Keep the calculated Sun sign available to other Luna surfaces without
-    # asking the reader to select the same information twice.
+    # Keep the verified Sun sign available to the rest of Luna.  This is the
+    # primary whole-sign House 1 reference; natal geometry adds precision later.
     st.session_state["monthly-calculated-sun-sign"] = sign
     st.session_state["landing-daily-sign-v3195"] = sign
 
@@ -8254,6 +8336,17 @@ def natal_snapshot_page() -> None:
     )
 
     with st.container(border=True):
+        natal_sun_sign = st.selectbox(
+            "What is your Sun sign (star sign)?",
+            SIGNS,
+            index=SIGNS.index(str(st.session_state.get("natal-sun-sign-v9") or DEFAULT_SIGN))
+            if str(st.session_state.get("natal-sun-sign-v9") or DEFAULT_SIGN) in SIGNS
+            else SIGNS.index(DEFAULT_SIGN),
+            key="natal-sun-sign-select-v9",
+            help="Luna starts with your Sun sign as whole-sign House 1. Birth details then add Moon, planets, angles and natal precision.",
+        )
+        st.session_state["natal-sun-sign-v9"] = natal_sun_sign
+
         birth_date = st.date_input(
             "Birth date",
             value=None,
@@ -8411,6 +8504,14 @@ def natal_snapshot_page() -> None:
         latitude=latitude,
         longitude=longitude,
     )
+    calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
+    if calculated_sign and natal_sun_sign != calculated_sign:
+        st.error(
+            f"Your birth date calculates as {calculated_sign}, while you selected {natal_sun_sign}. "
+            "Check the star sign or birth date before Luna builds the snapshot."
+        )
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
 
     # Reuse the same birth inputs if this customer later opens the paid Monthly
     # checkout during the same app session. These details stay in Streamlit
@@ -10107,6 +10208,17 @@ def timing_map_page() -> None:
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
 
+    timing_sun_sign = st.selectbox(
+        "What is your Sun sign (star sign)?",
+        SIGNS,
+        index=SIGNS.index(str(st.session_state.get("timing-sun-sign-v9") or DEFAULT_SIGN))
+        if str(st.session_state.get("timing-sun-sign-v9") or DEFAULT_SIGN) in SIGNS
+        else SIGNS.index(DEFAULT_SIGN),
+        key="timing-sun-sign-select-v9",
+        help="Luna starts here. Your Sun sign is the primary whole-sign House 1 reference; birth details add natal timing underneath it.",
+    )
+    st.session_state["timing-sun-sign-v9"] = timing_sun_sign
+
     start_date = st.date_input(
         "Start the 12 months on",
         value=browser_local_date(),
@@ -10126,27 +10238,35 @@ def timing_map_page() -> None:
         if snapshot is None:
             st.error(validation_message or "Complete the birth details first.")
         else:
-            st.session_state["luna_natal_checkout_prefill"] = prefill_out or {}
-            with st.spinner("Luna is ranking the strongest 12-month contacts…"):
-                report = build_timing_map(
-                    snapshot,
-                    start_date=start_date,
-                    timezone_name=browser_timezone_name(),
-                    max_stories=10,
+            calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
+            if calculated_sign and timing_sun_sign != calculated_sign:
+                st.error(
+                    f"Your birth date calculates as {calculated_sign}, while you selected {timing_sun_sign}. "
+                    "Check the star sign or birth date before building the Year Ahead."
                 )
-            st.session_state["timing-map-report-v330"] = report
-            st.session_state["timing-map-snapshot-v401"] = snapshot
-            st.session_state["timing-map-summary-v330"] = natal_profile_summary(snapshot)
-            st.session_state["timing-map-time-known-v330"] = bool(snapshot.birth_time_known)
-            st.session_state["timing-map-birth-date-v334"] = getattr(snapshot, "birth_date", None) or (prefill_out or {}).get("birth_date")
-            track_event(
-                "timing_map_generated",
-                {
-                    "birth_time_known": bool(snapshot.birth_time_known),
-                    "stories": len(report.stories),
-                    "turning_points": report.turning_points,
-                },
-            )
+            else:
+                st.session_state["luna_natal_checkout_prefill"] = prefill_out or {}
+                st.session_state["timing-sun-sign-v9"] = timing_sun_sign
+                with st.spinner("Luna is ranking the strongest 12-month contacts…"):
+                    report = build_timing_map(
+                        snapshot,
+                        start_date=start_date,
+                        timezone_name=browser_timezone_name(),
+                        max_stories=10,
+                    )
+                st.session_state["timing-map-report-v330"] = report
+                st.session_state["timing-map-snapshot-v401"] = snapshot
+                st.session_state["timing-map-summary-v330"] = natal_profile_summary(snapshot)
+                st.session_state["timing-map-time-known-v330"] = bool(snapshot.birth_time_known)
+                st.session_state["timing-map-birth-date-v334"] = getattr(snapshot, "birth_date", None) or (prefill_out or {}).get("birth_date")
+                track_event(
+                    "timing_map_generated",
+                    {
+                        "birth_time_known": bool(snapshot.birth_time_known),
+                        "stories": len(report.stories),
+                        "turning_points": report.turning_points,
+                    },
+                )
 
     report = st.session_state.get("timing-map-report-v330")
     if report is None:
@@ -10389,7 +10509,7 @@ def solar_year_page() -> None:
     c1, c2, c3 = st.columns(3)
     with c1:
         sign = st.selectbox(
-            "Star sign",
+            "What is your Sun sign (star sign)?",
             SIGNS,
             index=SIGNS.index(DEFAULT_SIGN),
             key="solar-year-sign",

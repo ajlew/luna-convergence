@@ -709,6 +709,24 @@ def _gate_date(year: int, gate_index: int, timezone_name: str) -> date:
     return rough
 
 
+def solar_anchor_dates(start: date, end: date, timezone_name: str) -> tuple[tuple[date, str, str, str], ...]:
+    """Return Luna's four foundational solar anchors inside a date range.
+
+    Each row is ``(date, gate_name, ingress_sign, strategic_question)``.
+    The date is resolved from the actual tropical Sun-sign ingress in the
+    requested timezone rather than from a hard-coded calendar date.
+    """
+    if end < start:
+        start, end = end, start
+    rows = []
+    for year in range(start.year, end.year + 1):
+        for gate_index, (gate_name, _longitude, ingress_sign, question) in enumerate(GATES):
+            gate_day = _gate_date(year, gate_index, timezone_name)
+            if start <= gate_day <= end:
+                rows.append((gate_day, gate_name, ingress_sign, question))
+    return tuple(sorted(rows, key=lambda item: item[0]))
+
+
 def _gate_context(d: date, solar_longitude: float, timezone_name: str):
     quarter_index = int((solar_longitude % 360.0) // 90.0)
     current_gate = GATES[quarter_index]
