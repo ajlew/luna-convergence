@@ -454,6 +454,18 @@ def _copy_for(
             "Do not mistake familiarity for direction.",
         )
 
+    if (
+        pair == frozenset({"Jupiter", "Saturn"})
+        and event.aspect_name == "trine"
+    ):
+        return (
+            "BUILD THE OPENING TO LAST.",
+            "Jupiter creates room to grow while Saturn supplies the limit, sequence and structure that can make the growth sustainable.",
+            "The opportunity is usable because expansion and discipline are cooperating. It still needs a real container.",
+            "Choose one expansion. Give it a boundary, budget and next step.",
+            "Do not waste durable support on vague ambition or forced speed.",
+        )
+
     if opportunity:
         if frozenset({"Venus", "Jupiter"}) <= pair:
             return (

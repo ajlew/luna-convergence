@@ -74,9 +74,12 @@ from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
 from weekly_view import (
     all_video_copy,
+    build_weekly_sign_translation,
+    build_weekly_synthesis,
     build_weekly_view,
     default_week_start,
     monday_for,
+    weekly_social_card_copy,
     week_label,
 )
 from timing_map import (
@@ -1545,9 +1548,53 @@ hr {
     font-size:.68rem;
 }
 
-.weekly-view > h1 {
+.weekly-page-title {
     max-width:900px;
-    margin-bottom:1.1rem !important;
+    margin:0 0 1.1rem;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:clamp(2.7rem,7vw,5.8rem);
+    line-height:.95;
+    letter-spacing:-.055em;
+    font-weight:600;
+}
+
+.weekly-section-heading,
+.weekly-sign-heading {
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-weight:600;
+    letter-spacing:-.035em;
+}
+
+.weekly-section-heading {
+    margin:2.3rem 0 1rem;
+    font-size:clamp(1.65rem,3.2vw,2.6rem);
+    line-height:1.05;
+}
+
+.weekly-sign-heading {
+    margin:.25rem 0 1rem;
+    font-size:clamp(1.25rem,2.4vw,1.9rem);
+    line-height:1.1;
+}
+
+.weekly-synthesis {
+    max-width:900px;
+    margin:1.5rem 0 2.5rem;
+    padding:1.25rem 1.35rem;
+    border:1px solid var(--black);
+    background:var(--soft);
+}
+
+.weekly-synthesis p {
+    max-width:780px;
+    margin:.55rem 0;
+}
+
+.weekly-synthesis-rule {
+    margin-top:1rem !important;
+    padding-top:.85rem;
+    border-top:1px solid var(--black);
+    font-weight:600;
 }
 
 .weekly-intro {
@@ -1611,13 +1658,14 @@ hr {
     line-height:1.45;
 }
 
-.weekly-card h2 {
+.weekly-card-title {
     min-height:2.3em;
-    margin:.2rem 0 1rem !important;
-    font-family:"IBM Plex Mono", "Courier New", monospace !important;
-    font-size:clamp(1.35rem,2.3vw,2.15rem) !important;
-    line-height:1.08 !important;
-    letter-spacing:-.035em !important;
+    margin:.2rem 0 1rem;
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:clamp(1.35rem,2.3vw,2.15rem);
+    line-height:1.08;
+    letter-spacing:-.035em;
+    font-weight:600;
 }
 
 .weekly-card p {
@@ -1882,8 +1930,8 @@ hr {
     .weekly-view {
         padding-top:.2rem;
     }
-    .weekly-view > h1 {
-        font-size:clamp(3rem,14vw,4.4rem) !important;
+    .weekly-page-title {
+        font-size:clamp(3rem,14vw,4.4rem);
     }
     .weekly-intro {
         margin-bottom:2rem;
@@ -1891,9 +1939,9 @@ hr {
     .weekly-grid {
         grid-template-columns:1fr;
     }
-    .weekly-card h2 {
+    .weekly-card-title {
         min-height:0;
-        font-size:1.75rem !important;
+        font-size:1.75rem;
     }
 }
 
@@ -3730,7 +3778,7 @@ def _weekly_cards_html(days) -> str:
   {major_html}
   {evidence_html}
   {supporting_html}
-  <h2>{escape(item.headline)}</h2>
+  <div class="weekly-card-title" role="heading" aria-level="2">{escape(item.headline)}</div>
   <p>{escape(finalize_customer_prose(item.line_one, product="weekly"))}</p>
   <p>{escape(finalize_customer_prose(item.line_two, product="weekly"))}</p>
   <div class="weekly-move">
@@ -3753,7 +3801,7 @@ def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
         heading = (
             '<div class="weekly-kicker">Week ahead · Monday to Sunday</div>'
             f'<div class="weekly-range">{escape(week_label(monday))}</div>'
-            '<h1>Seven days. One changing sky.</h1>'
+            '<div class="weekly-page-title" role="heading" aria-level="1">Seven days. One changing sky.</div>'
             '<p class="weekly-intro">The shared planetary weather before it moves through your star sign. Each day gives you the evidence, the human pressure point and one clean move.</p>'
         )
     st.markdown(
@@ -3767,117 +3815,62 @@ def _render_weekly_cards(days, monday: date, *, studio: bool = False) -> None:
     )
 
 
-
-def _weekly_sign_summary(sign: str, monday: date, timezone_name: str) -> dict:
-    """Translate the shared sky into one sign-specific human rule."""
-    sunday = monday + timedelta(days=6)
-    data = period_report(
-        sign, monday, sunday, timezone_name, week_label(monday), transition_count=7,
-    )
-    dominant = data.get("dominant_houses", [])[:3]
-    house_numbers = [int(item.get("house", 1)) for item in dominant if item.get("house")]
-    if not house_numbers:
-        house_numbers = [1]
-
-    raw_areas = [HOUSE_NAMES.get(h, f"House {h}") for h in house_numbers[:2]]
-    areas = [simplify_life_area(area) for area in raw_areas]
-    primary = raw_areas[0]
-    risk = HOUSE_STRATEGY.get(house_numbers[0], {}).get(
-        "risk", "moving before the pattern is clear"
-    )
-
-    headline = imperative_for(
-        primary, seed_text=f"weekly-headline-{sign}-{monday.isoformat()}"
-    )
-    move = headline
-    for index in range(1, 8):
-        candidate = imperative_for(
-            primary,
-            seed_text=f"weekly-move-{sign}-{monday.isoformat()}-{index}",
-        )
-        if candidate != headline:
-            move = candidate
-            break
-
-    interpretation = (
-        f"{life_scene(primary, f'weekly-{sign}-{monday.isoformat()}', count=1)} "
-        f"Act on what is concrete. Do not let {risk} choose for you."
-    )
-
-    return {
-        "sign": sign,
-        "headline": headline,
-        "areas": areas,
-        "raw_areas": raw_areas,
-        "interpretation": interpretation,
-        "move": move.rstrip("."),
-    }
-
-def _weekly_social_area(summary: dict) -> str:
-    """Compress weekly focus into ordinary human language for social cards."""
-    raw_areas = list(summary.get("raw_areas") or summary.get("areas") or [])
-    if not raw_areas:
-        return "YOUR NEXT MOVE"
-
-    domain = life_domain(raw_areas[0])
-    labels = {
-        "identity": "YOU · DIRECTION",
-        "money": "MONEY · PRICE",
-        "communication": "MESSAGE · DECISION",
-        "home": "HOME · FAMILY",
-        "romance": "ATTRACTION · CREATIVE WORK",
-        "routine": "WORKLOAD · ROUTINE",
-        "relationship": "PEOPLE · PROMISES",
-        "shared": "SHARED MONEY · TRUST",
-        "travel": "TRIP · COURSE · OUTSIDE PLAN",
-        "career": "ROLE · RESPONSIBILITY",
-        "friends": "FRIENDS · NEXT PLAN",
-        "rest": "REST · CLOSURE",
-        "general": "YOUR NEXT MOVE",
-    }
-    return labels.get(domain, "YOUR NEXT MOVE")
-
-def _weekly_social_move(summary: dict) -> str:
-    """Compress the calculated strongest move without changing its meaning."""
-    move = str(summary.get("move") or "Keep the facts visible before committing").strip().rstrip(".")
-    low = move.lower()
-    rules = (
-        ("measure cash, margin and recurring cost separately", "MEASURE THE REAL COST"),
-        ("keep the facts visible before committing", "VERIFY BEFORE COMMITTING"),
-        ("remove the false assumption", "REMOVE THE FALSE ASSUMPTION"),
-        ("change the method before adding effort", "CHANGE THE METHOD FIRST"),
-        ("choose what deserves amplification", "AMPLIFY WHAT MATTERS"),
-        ("state both prices", "NAME THE REAL COST"),
-        ("do the necessary thing", "DO WHAT IS NECESSARY"),
-    )
-    for needle, short in rules:
-        if needle in low:
-            return short
-    words = move.upper().split()
-    return " ".join(words if len(words) <= 6 else words[:6]).rstrip(",;:")
-
-
-def _weekly_social_card_copy(summary: dict, monday: date) -> str:
-    """Canva-ready 1080x1920 copy for a four-second sign card."""
-    sunday = monday + timedelta(days=6)
-    date_line = f"{monday.strftime('%d %b').lstrip('0')}–{sunday.strftime('%d %b').lstrip('0')}".upper()
-    return (
-        f"THE WEEK AHEAD · {date_line}\n\n"
-        f"{str(summary.get('sign', '')).upper()}\n\n"
-        "WHERE IT LANDS\n"
-        f"{_weekly_social_area(summary)}\n\n"
-        "YOUR MOVE\n"
-        f"{_weekly_social_move(summary)}.\n\n"
-        "LUNA CONVERGENCE"
+def _render_weekly_heading(text: str, *, level: int = 2, sign: bool = False) -> None:
+    css_class = "weekly-sign-heading" if sign else "weekly-section-heading"
+    st.markdown(
+        f'<div class="{css_class}" role="heading" aria-level="{int(level)}">{escape(text)}</div>',
+        unsafe_allow_html=True,
     )
 
 
-def _render_weekly_sign_layer(sign: str, monday: date, timezone_name: str) -> None:
-    summary = _weekly_sign_summary(sign, monday, timezone_name)
-    st.markdown(f"## {escape(sign)} · The Week Ahead")
-    st.markdown(f"### {escape(summary['headline'])}")
-    for paragraph in _weekly_connected_interpretation(summary):
+def _render_weekly_synthesis(days) -> None:
+    synthesis = build_weekly_synthesis(tuple(days))
+    paragraphs = "".join(
+        f"<p>{escape(paragraph)}</p>" for paragraph in synthesis["paragraphs"]
+    )
+    st.markdown(
+        f"""
+<section class="weekly-synthesis" aria-label="The week in one story">
+  <div class="weekly-kicker">The week in one story</div>
+  <div class="weekly-sign-heading" role="heading" aria-level="2">{escape(synthesis['headline'])}</div>
+  {paragraphs}
+  <p class="weekly-synthesis-rule">{escape(synthesis['rule'])}</p>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+
+def _weekly_sign_summary(
+    sign: str,
+    monday: date,
+    timezone_name: str,
+    days=None,
+) -> dict:
+    return build_weekly_sign_translation(
+        sign,
+        monday,
+        timezone_name,
+        tuple(days) if days is not None else None,
+    )
+
+
+def _render_weekly_sign_layer(
+    sign: str,
+    monday: date,
+    timezone_name: str,
+    days=None,
+) -> None:
+    summary = _weekly_sign_summary(sign, monday, timezone_name, days)
+    _render_weekly_heading(f"{sign} · The Week Ahead", level=2)
+    _render_weekly_heading(summary["headline"], level=3, sign=True)
+    st.markdown("**WHERE IT LANDS**  ")
+    st.markdown(" · ".join(summary["areas"]))
+    for paragraph in summary["paragraphs"]:
         _render_luna_prose(paragraph, product="weekly")
+    st.markdown("**YOUR MOVE**  ")
+    st.markdown(f"**{summary['move'].capitalize()}.**")
 
 
 
@@ -3949,15 +3942,19 @@ def weekly_page() -> None:
 
     st.markdown('<div class="weekly-kicker">Week ahead · Monday to Sunday</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="weekly-range">{escape(week_label(monday))}</div>', unsafe_allow_html=True)
-    st.markdown("# One changing sky.")
+    st.markdown(
+        '<div class="weekly-page-title" role="heading" aria-level="1">One changing sky.</div>',
+        unsafe_allow_html=True,
+    )
     st.markdown("**Your Sun sign is the first reference. See where the week lands. Keep one rule while the mood changes.**")
+    _render_weekly_synthesis(days)
     try:
-        _render_weekly_sign_layer(sign, monday, timezone_name)
+        _render_weekly_sign_layer(sign, monday, timezone_name, days)
     except Exception as exc:
         st.warning("Luna could not build the sign-specific weekly layer, so the shared seven-day sky is shown below.")
         if EDITOR_PREVIEW_ENABLED:
             st.exception(exc)
-    st.markdown("## The shared sky · Seven days")
+    _render_weekly_heading("The shared sky · Seven days", level=2)
     st.caption(f"Dates and exact-day labels use {timezone_name}.")
     _render_weekly_cards(days, monday, studio=True)
     complete_report_print_button(
@@ -3996,8 +3993,8 @@ def _weekly_publish_package(days, monday: date) -> dict:
     date_range = _weekly_publish_date_range(monday)
     weekly_url = f"{PUBLIC_SITE_URL}/weekly-view"
     daily_url = f"{PUBLIC_SITE_URL}/"
-
-
+    synthesis = build_weekly_synthesis(tuple(days))
+    synthesis_text = " ".join(synthesis["paragraphs"])
     evidence = _weekly_publish_distinct(
         [getattr(item, "evidence", "") for item in days],
         limit=4,
@@ -4028,8 +4025,9 @@ def _weekly_publish_package(days, monday: date) -> dict:
 
     description = (
         "Seven days. One changing sky.\n\n"
-        + (evidence_sentence + " " if evidence_sentence else "")
-        + (headline_sentence if headline_sentence else "Luna follows the week's strongest calculated shifts from Monday to Sunday.")
+        + synthesis_text
+        + "\n\n"
+        + synthesis["rule"]
         + "\n\nSeven pressure points. Seven practical moves. Monday to Sunday.\n\n"
         + f"See the complete Week Ahead:\n{weekly_url}\n\n"
         + f"Read your Daily Horoscope:\n{daily_url}\n\n"
@@ -4038,15 +4036,20 @@ def _weekly_publish_package(days, monday: date) -> dict:
     )
     instagram = (
         f"THE WEEK AHEAD · {date_range.upper()}\n\n"
-        + (evidence_sentence + "\n\n" if evidence_sentence else "")
-        + "One changing sky. Seven practical moves.\n\n"
+        + synthesis["headline"]
+        + "\n\n"
+        + synthesis_text
+        + "\n\n"
+        + synthesis["rule"]
+        + "\n\n"
         + f"Full Week Ahead: {weekly_url}\n\n"
         + "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
     )
     opening_script = (
         "Seven days. One changing sky. "
-        + (evidence_sentence + " " if evidence_sentence else "")
-        + "Luna follows the strongest shifts, then turns each one into a practical move."
+        + synthesis_text
+        + " "
+        + synthesis["rule"]
     )
 
     youtube_tags = (
@@ -4069,7 +4072,7 @@ def _weekly_publish_package(days, monday: date) -> dict:
 def _render_weekly_publish_package(days, monday: date) -> None:
     package = _weekly_publish_package(days, monday)
 
-    st.markdown("## Week Ahead publishing copy")
+    _render_weekly_heading("Week Ahead publishing copy", level=2)
     st.caption(
         "Generated from the selected production week. Copy these directly into YouTube Shorts and Instagram Reels, "
         "then make any final editorial adjustment before publishing."
@@ -4120,14 +4123,17 @@ def weekly_studio_page() -> None:
         "/weekly-studio",
     )
     st.markdown('<div class="eyebrow">Owner production workspace</div>', unsafe_allow_html=True)
-    st.markdown("# Weekly video studio")
+    st.markdown(
+        '<div class="weekly-page-title" role="heading" aria-level="1">Weekly video studio</div>',
+        unsafe_allow_html=True,
+    )
 
     with st.expander("How to use this studio", expanded=True):
         st.markdown("""
 1. **Choose any date** in the week you want. Luna automatically snaps it back to Monday.
 2. Confirm the **timezone**. This controls the calculated weekly sky.
 3. Use **One Changing Sky** as the opening frame of the weekly video.
-4. Use the **1080 × 1920 SOCIAL CARD COPY** inside each sign. Luna automatically compresses the calculated *Where it lands* and *Your move* into four-second, phone-readable wording.
+4. Use the **1080 × 1920 SOCIAL CARD COPY** inside each sign. Luna selects a complete, prewritten short command; it never cuts a sentence to fit.
 5. Keep the longer interpretation on the website; do not squeeze it onto the social card.
 6. Use the existing **Monday-Sunday cards** for the seven separate Daily clips and as the evidence behind the weekly synthesis.
 7. Use **Week Ahead publishing copy** for the ready-to-paste YouTube title/description, Instagram Reel caption and opening voiceover.
@@ -4156,35 +4162,39 @@ def weekly_studio_page() -> None:
     days = build_weekly_view(monday, timezone_name)
     st.caption(f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · {timezone_name}")
 
+    _render_weekly_synthesis(days)
     _render_weekly_publish_package(days, monday)
 
-    st.markdown("## 12 sign translations")
+    _render_weekly_heading("12 sign translations", level=2)
     sign_summaries = []
     for sign in SIGNS:
         try:
-            sign_summaries.append(_weekly_sign_summary(sign, monday, timezone_name))
+            sign_summaries.append(
+                _weekly_sign_summary(sign, monday, timezone_name, days)
+            )
         except Exception as exc:
             if EDITOR_PREVIEW_ENABLED:
                 st.warning(f"{sign}: sign translation unavailable: {exc}")
 
     for item in sign_summaries:
         with st.expander(item["sign"], expanded=False):
-            st.markdown(f"### {item['headline']}")
+            _render_weekly_heading(item["headline"], level=3, sign=True)
             st.markdown("**WHERE IT LANDS**  ")
             st.markdown(" · ".join(item["areas"]))
-            st.markdown(item["interpretation"])
+            for paragraph in item["paragraphs"]:
+                st.markdown(paragraph)
             st.markdown("**YOUR MOVE**  ")
             st.markdown(f"**{item['move'].capitalize()}.**")
             st.markdown("**1080 × 1920 SOCIAL CARD COPY**")
-            social_copy = _weekly_social_card_copy(item, monday)
+            social_copy = weekly_social_card_copy(item, monday)
             st.code(social_copy, language=None, wrap_lines=True)
 
     all_sign_copy = "\n\n---\n\n".join(
-        _weekly_social_card_copy(i, monday) for i in sign_summaries
+        weekly_social_card_copy(i, monday) for i in sign_summaries
     )
     st.download_button("Download all 12 sign cards copy", data=all_sign_copy, file_name=f"luna_week_{monday.isoformat()}_12_signs.txt", mime="text/plain", use_container_width=True)
 
-    st.markdown("## Monday-Sunday source cards")
+    _render_weekly_heading("Monday-Sunday source cards", level=2)
     _render_weekly_cards(days, monday, studio=True)
     combined_copy = all_video_copy(days)
     st.download_button("Download all seven daily scripts", data=combined_copy, file_name=f"luna_week_{monday.isoformat()}_daily_canva_copy.txt", mime="text/plain", use_container_width=True)

@@ -316,13 +316,16 @@ def domain_key(value: str) -> str:
         ("relationship", ("relationship", "partner", "client", "contract", "competitor", "agreement", "other people", "person across the table", "promises between")),
         ("shared", ("shared money", "shared finances", "shared resources", "debt", "tax", "inheritance", "intimacy", "trust and shared", "responsibility you share", "money, trust")),
         ("career", ("career", "midheaven", "public direction", "reputation", "authority", "professional", "manager", "job")),
+        # Communication must be tested before travel because House 3 contains
+        # "learning" while House 9 also contains education.  The explicit
+        # communication/local-movement signal is the deciding evidence.
+        ("communication", ("communication", "message", "document", "local movement", "everyday decisions")),
         ("travel", ("travel", "trip", "course", "application", "outside opportunity", "publishing", "law", "legal", "education", "study", "learning", "foreign", "international", "wider world", "higher learning")),
         ("friends", ("friends", "community", "communities", "network", "future plan", "future aims", "audience", "group", "people and plan", "build with")),
         ("routine", ("work routines", "daily routines", "daily systems", "health", "wellbeing", "service", "operations", "workload", "schedule")),
         ("home", ("home", "family", "foundations", "private life", "domestic")),
         ("romance", ("romance", "creative", "creativity", "pleasure", "children", "dating", "attraction")),
         ("money", ("money", "income", "possessions", "self-worth", "price", "payment", "purchase", "value and security")),
-        ("communication", ("communication", "message", "document", "local movement", "everyday decisions")),
         ("rest", ("rest", "closure", "private reflection", "inner life", "hidden matters")),
         ("identity", ("identity", "ascendant", "self-direction", "personal direction", "body", "confidence", "how you show up", "willing to carry")),
     )

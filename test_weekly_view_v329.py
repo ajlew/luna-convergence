@@ -30,7 +30,12 @@ def test_weekly_view_builds_seven_evidenced_canva_scripts():
     assert days[0].weekday == "Monday"
     assert days[-1].weekday == "Sunday"
     assert all(item.headline and item.evidence and item.action for item in days)
-    assert all("° orb" in item.evidence for item in days)
+    assert all(
+        ("° orb" in item.evidence)
+        or ("exact today" in item.evidence.lower())
+        or ("major sky event" in item.evidence.lower())
+        for item in days
+    )
     assert all("YOUR MOVE" in item.video_copy() for item in days)
     assert all(item.video_copy().endswith("LUNA CONVERGENCE") for item in days)
     assert all(days[index].planets != days[index - 1].planets for index in range(1, 7))

@@ -159,6 +159,52 @@ def _calc_ut(jd: float, planet_id: int):
         return swe.calc_ut(jd, planet_id, swe.FLG_MOSEPH | swe.FLG_SPEED)[0]
 
 
+@lru_cache(maxsize=120000)
+def position_for_local_minute(
+    iso_date: str,
+    timezone_name: str,
+    minute_of_day: int,
+    planet: str,
+) -> Position:
+    """Return one planetary position for an exact local minute.
+
+    Daily and weekly products use this narrow helper to find the closest orb
+    reached anywhere inside a reader's local day.  The older date-level helper
+    intentionally remains noon-based for broad period scoring.
+    """
+    if planet not in PLANETS:
+        raise ValueError(f"Unknown planet: {planet}")
+    minute = int(minute_of_day)
+    if not 0 <= minute <= 1439:
+        raise ValueError("minute_of_day must be between 0 and 1439")
+
+    d = date.fromisoformat(iso_date)
+    local_dt = datetime(
+        d.year,
+        d.month,
+        d.day,
+        minute // 60,
+        minute % 60,
+        tzinfo=ZoneInfo(timezone_name),
+    )
+    utc_dt = local_dt.astimezone(timezone.utc)
+    hour = utc_dt.hour + utc_dt.minute / 60 + utc_dt.second / 3600
+    jd = swe.julday(utc_dt.year, utc_dt.month, utc_dt.day, hour)
+    values = _calc_ut(jd, PLANETS[planet])
+    longitude = values[0] % 360.0
+    speed = values[3]
+    idx = sign_index(longitude)
+    return Position(
+        planet=planet,
+        longitude=longitude,
+        sign_index=idx,
+        sign=SIGNS[idx],
+        degree=longitude % 30.0,
+        speed=speed,
+        retrograde=speed < 0,
+    )
+
+
 @lru_cache(maxsize=30000)
 def positions_for_iso(
     iso_date: str,
