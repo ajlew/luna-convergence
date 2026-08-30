@@ -22,7 +22,7 @@ def _coerce_date(value: object) -> date:
 
 
 def human_date(value: object) -> str:
-    """Format a customer date as '1 July 2026'."""
+    """Format a customer date as a day, full month name and selected year."""
     parsed = _coerce_date(value)
     return f"{parsed.day} {parsed.strftime('%B')} {parsed.year}"
 

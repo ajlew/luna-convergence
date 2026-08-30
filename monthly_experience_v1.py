@@ -595,8 +595,7 @@ def _generated_report_details(narrative: MonthlyNarrative, result: dict) -> dict
 
     # Preserve Luna's original, sortable monthly PDF naming convention.
     # Browser print-to-PDF uses the document title as the proposed filename,
-    # so a Virgo report for August 2026 should prefill as:
-    # 2026-08_Virgo_Monthly.pdf
+    # so the browser proposes a sortable year-month/sign filename.
     try:
         parsed_month = datetime.strptime(month_label, "%B %Y")
         period_key = parsed_month.strftime("%Y-%m")
@@ -1062,6 +1061,330 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     return "".join(acts)
 
 
+
+def _reader_event_badge(event: dict) -> str:
+    """Return one short customer-facing badge for an exact monthly event."""
+    kind = str((event or {}).get("kind") or "").lower()
+    polarity = str((event or {}).get("polarity") or "").lower()
+    title = str((event or {}).get("title") or "").lower()
+    if "eclipse" in title:
+        return "TURNING POINT"
+    if kind == "lunation" or "new moon" in title or "full moon" in title:
+        return "LUNATION"
+    if "opportun" in polarity or polarity in {"support", "supportive"}:
+        return "OPENING"
+    if "pressure" in polarity:
+        return "TEST"
+    return "SKY EVENT"
+
+
+def _clean_calendar_move(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    text = re.sub(r"^Use this evidence to\s+", "", text, flags=re.I)
+    if text:
+        text = text[0].upper() + text[1:]
+    return text
+
+
+def _calendar_headline(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if text and text == text.upper():
+        text = text.lower()
+        text = text[0].upper() + text[1:]
+    return text
+
+
+def _relationship_calendar_headline(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    text = re.sub(
+        r"^Around\s+\d{1,2}[-–]\d{1,2}\s+[A-Za-z]+\s+\d{4},\s*",
+        "",
+        text,
+        flags=re.I,
+    )
+    if text:
+        text = text[0].upper() + text[1:]
+    return text
+
+
+def _calendar_date_label(value: str) -> str:
+    try:
+        parsed = datetime.fromisoformat(str(value)).date()
+        return parsed.strftime("%d %b").upper()
+    except Exception:
+        return str(value or "").upper()
+
+
+def _calendar_sort_key(value: str) -> tuple:
+    try:
+        parsed = datetime.fromisoformat(str(value)).date()
+        return (parsed.year, parsed.month, parsed.day)
+    except Exception:
+        return (9999, 12, 31)
+
+
+def build_monthly_reader_chronology(narrative: MonthlyNarrative, result: dict) -> list[dict]:
+    """Build Luna's single reader-facing monthly calendar.
+
+    The engine may calculate many overlapping events. The customer sees one
+    chronological sequence, one appearance of each exact date, and secondary
+    same-day signals nested under the primary story. All remaining events stay
+    available in the technical evidence layer.
+    """
+    by_date: dict[str, dict] = {}
+
+    def slot(date_iso: str) -> dict:
+        date_iso = str(date_iso or "")
+        return by_date.setdefault(date_iso, {
+            "date": date_iso,
+            "story": None,
+            "relationship": None,
+            "signals": [],
+        })
+
+    # 1) Preserve the independently calculated narrative arc. Each chapter is
+    # anchored to its exact astronomical event whenever one exists.
+    total = len(narrative.chapters)
+    for index, chapter in enumerate(narrative.chapters):
+        context = _chapter_context(result, index, total)
+        event = _direct_story_event(result, context)
+        if not event.get("event_date"):
+            start_date = str(context.get("start_date") or "")
+            end_date = str(context.get("end_date") or start_date)
+            title_matches = [
+                dict(candidate)
+                for candidate in (result.get("events") or [])
+                if str(candidate.get("title") or "") == str(chapter.title or "")
+                and start_date <= str(candidate.get("event_date") or "") <= end_date
+            ]
+            if title_matches:
+                event = max(title_matches, key=lambda candidate: float(candidate.get("importance", 0.0) or 0.0))
+        date_iso = str(event.get("event_date") or context.get("start_date") or "")
+        if not date_iso:
+            continue
+        story = {
+            "badge": _reader_event_badge(event),
+            "headline": str(chapter.hook or chapter.title),
+            "technical": _event_short(event) if event.get("title") else str(chapter.title),
+            "body": _chapter_customer_paragraphs(list(chapter.paragraphs), maximum=2),
+            "move": _clean_calendar_move(chapter.action),
+            "influence": str(chapter.date_range or ""),
+            "source_title": str(event.get("title") or chapter.title),
+        }
+        existing = slot(date_iso).get("story")
+        if existing:
+            existing["body"] = list(dict.fromkeys(list(existing.get("body") or []) + list(story["body"])))[:2]
+            if story["move"] and story["move"] != existing.get("move"):
+                first = str(existing.get("move") or "").rstrip(".")
+                second = story["move"]
+                if first:
+                    second = second[:1].lower() + second[1:]
+                    existing["move"] = f"{first}. Then {second}"
+                else:
+                    existing["move"] = second
+        else:
+            slot(date_iso)["story"] = story
+
+    # 2) Map the relationship/creative feature to its exact peak date rather
+    # than presenting a floating multi-day block.
+    if narrative.relationship_test:
+        rel = _relationship_test_evidence(result)
+        rel_date = str(rel.get("event_date") or "")
+        if rel_date:
+            slot(rel_date)["relationship"] = {
+                "badge": "RELATIONSHIP TEST",
+                "headline": _relationship_calendar_headline(narrative.relationship_test[0] or rel.get("title") or "Relationship test"),
+                "technical": str(rel.get("title") or rel.get("signal") or ""),
+                "body": [str(value) for value in narrative.relationship_test[1:3] if str(value).strip()],
+                "move": _clean_calendar_move(rel.get("response") or ""),
+                "influence": str(rel.get("date_range") or ""),
+                "source_title": str(rel.get("title") or ""),
+            }
+
+    # 3) Keep the small set of sky events that must remain visible. This list is
+    # deliberately constrained; the full registry remains in evidence.
+    selected = select_serialized_signals(
+        result.get("major_sky_events") or [],
+        "monthly",
+        limit=6,
+        opportunity_slots=2,
+    )
+    for signal in selected:
+        slot(signal.event_date.isoformat())["signals"].append(signal)
+
+    # If a selected narrative date contains another genuinely major signal,
+    # retain it as "Also active" instead of creating another date block.
+    all_signals = select_serialized_signals(
+        result.get("major_sky_events") or [],
+        "monthly",
+        limit=40,
+        opportunity_slots=8,
+    )
+    for signal in all_signals:
+        date_iso = signal.event_date.isoformat()
+        if date_iso not in by_date:
+            continue
+        if float(signal.sky_score or 0.0) < 75:
+            continue
+        existing_labels = {item.display_label for item in by_date[date_iso]["signals"]}
+        if signal.display_label not in existing_labels:
+            by_date[date_iso]["signals"].append(signal)
+
+    def signal_priority(signal) -> int:
+        group = event_presentation_group(signal, "monthly")
+        return {
+            "SOLAR ANCHOR": 100,
+            "TURNING POINT": 90,
+            "CLARITY POINT": 85,
+            "OPENING": 70,
+            "PIVOT": 60,
+            "LUNATION": 55,
+            "STRUCTURAL SHIFT": 45,
+            "TRIGGER": 35,
+        }.get(group, 30)
+
+    rows: list[dict] = []
+    for date_iso in sorted(by_date, key=_calendar_sort_key):
+        group = by_date[date_iso]
+        signals = sorted(group["signals"], key=lambda item: (-signal_priority(item), -float(item.sky_score or 0.0)))
+        story = group.get("story")
+        relationship = group.get("relationship")
+
+        dominant = signals[0] if signals else None
+        dominant_group = event_presentation_group(dominant, "monthly") if dominant else ""
+        story_matches_dominant = bool(
+            story and dominant and (
+                str(story.get("source_title") or "").lower() in str(dominant.display_label).lower()
+                or str(dominant.source_title or "").lower() in str(story.get("source_title") or "").lower()
+            )
+        )
+        force_signal_primary = bool(
+            dominant
+            and dominant_group in {"SOLAR ANCHOR", "TURNING POINT"}
+            and not story_matches_dominant
+        )
+
+        if force_signal_primary:
+            primary = {
+                "badge": dominant_group,
+                "headline": _calendar_headline(dominant.headline or dominant.display_label),
+                "technical": str(dominant.display_label),
+                "body": [str(dominant.line_one or "")],
+                "move": _clean_calendar_move(dominant.action),
+                "influence": "",
+                "source_title": str(dominant.display_label),
+            }
+        elif story:
+            primary = dict(story)
+            if dominant and story_matches_dominant:
+                primary["badge"] = dominant_group
+                primary["technical"] = str(dominant.display_label)
+        elif relationship:
+            primary = dict(relationship)
+        elif dominant:
+            primary = {
+                "badge": dominant_group,
+                "headline": _calendar_headline(dominant.headline or dominant.display_label),
+                "technical": str(dominant.display_label),
+                "body": [str(dominant.line_one or "")],
+                "move": _clean_calendar_move(dominant.action),
+                "influence": "",
+                "source_title": str(dominant.display_label),
+            }
+        else:
+            continue
+
+        extra_context = []
+        if relationship and primary.get("headline") != relationship.get("headline"):
+            extra_context.append(str(relationship.get("headline") or ""))
+
+        primary_norm = str(primary.get("source_title") or primary.get("technical") or "").lower()
+        also = []
+        also_labels = set()
+        for signal in signals:
+            label = str(signal.display_label or "")
+            source = str(signal.source_title or "")
+            if not label:
+                continue
+            if label.lower() in primary_norm or source.lower() in primary_norm or primary_norm in label.lower():
+                continue
+            if label.lower() in also_labels:
+                continue
+            also_labels.add(label.lower())
+            item = f"{label} · {event_presentation_group(signal, 'monthly').title()}"
+            also.append(item)
+
+        if force_signal_primary and story and story.get("technical"):
+            story_label = str(story.get("technical") or "")
+            if story_label.lower() not in also_labels:
+                also_labels.add(story_label.lower())
+                item = f"{story_label} · {story.get('badge', 'Sky event').title()}"
+                also.append(item)
+
+        rows.append({
+            "date": date_iso,
+            "date_label": _calendar_date_label(date_iso),
+            "badge": str(primary.get("badge") or "SKY EVENT"),
+            "headline": str(primary.get("headline") or primary.get("technical") or ""),
+            "technical": str(primary.get("technical") or ""),
+            "body": [str(value) for value in (primary.get("body") or []) if str(value).strip()][:2],
+            "move": str(primary.get("move") or ""),
+            "influence": str(primary.get("influence") or ""),
+            "also": also[:2],
+            "extra_context": extra_context[:1],
+        })
+
+    return rows
+
+
+def _monthly_reader_chronology_html(narrative: MonthlyNarrative, result: dict) -> str:
+    rows = build_monthly_reader_chronology(narrative, result)
+    if not rows:
+        return ""
+    month_label = str(narrative.label).split()[0]
+    cards = []
+    for item in rows:
+        body = _paragraphs(item.get("body") or [], maximum=2)
+        influence = ""
+        raw_influence = str(item.get("influence") or "")
+        if raw_influence:
+            influence = f'<div class="luna-calendar-window">Influence · {_safe(raw_influence)}</div>'
+        also = ""
+        if item.get("also"):
+            also = (
+                '<div class="luna-calendar-also"><span>Also active</span>'
+                + '<ul>' + ''.join(f'<li>{_safe(value)}</li>' for value in item["also"]) + '</ul></div>'
+            )
+        extra = ""
+        if item.get("extra_context"):
+            extra = ''.join(f'<p class="luna-calendar-context">{_safe(value)}</p>' for value in item["extra_context"])
+        move = (
+            f'<p class="luna-chapter-move"><strong>Your move:</strong> {_safe(item["move"])}</p>'
+            if item.get("move") else ""
+        )
+        cards.append(f'''
+<article class="luna-calendar-entry">
+  <div class="luna-calendar-date"><span>{_safe(item["date_label"])}</span><small>{_safe(item["badge"])}</small></div>
+  <div class="luna-calendar-copy">
+    <h3>{_safe(item["headline"])}</h3>
+    <div class="luna-calendar-technical">{_safe(item["technical"])}</div>
+    {influence}
+    {body}
+    {extra}
+    {also}
+    {move}
+  </div>
+</article>
+''')
+    return f'''
+<section class="luna-monthly-section luna-reader-calendar">
+  <div class="luna-eyebrow">{_safe(month_label.upper())} · IN ORDER</div>
+  <h2 class="luna-section-title">How {_safe(month_label)} unfolds</h2>
+  <p class="luna-calendar-intro">Read the month in order. When more than one signal lands on the same day, Luna keeps them together.</p>
+  <div class="luna-calendar-list">{''.join(cards)}</div>
+</section>
+'''
+
 def _compact_domain_copy(copy: str) -> str:
     """Trim scenario exhaust and internal decision jargon from Love/Work/Money."""
     text = re.sub(r"\s+", " ", str(copy or "")).strip()
@@ -1208,8 +1531,10 @@ def _relationship_test_evidence(result: dict) -> dict:
         evidence += f" Connected areas include {connected}."
     return {
         "title": title,
+        "event_date": str(event.get("event_date") or start_date),
         "date_range": human_date_range(start_date, end_date),
         "signal": aspect,
+        "response": str(beat.get("response") or ""),
         "evidence": evidence,
     }
 
@@ -1382,6 +1707,7 @@ def build_monthly_experience_html(
     """
     concentration_theme_section = _concentration_theme_html(result)
     major_sky_section = _major_sky_events_html(result)
+    reader_chronology_section = _monthly_reader_chronology_html(narrative, result)
     monthly_sky_map_section = _monthly_sky_map_html(result)
     natal_overlay_section = _natal_overlay_html(result)
 
@@ -1400,15 +1726,7 @@ def build_monthly_experience_html(
 
 {focus_section}
 
-<section class="luna-monthly-section luna-story-section">
-  <div class="luna-eyebrow">Monthly briefing</div>
-  <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
-  <div class="luna-story-timeline">{chapters}</div>
-</section>
-
-{major_sky_section}
-
-{relationship_test_section}
+{reader_chronology_section}
 
 {romance_section}
 
@@ -1436,12 +1754,7 @@ def build_monthly_experience_html(
 {summary_strip}
 {concentration_theme_section}
 {monthly_sky_map_section}
-<section class="luna-monthly-section luna-story-section">
-  <div class="luna-eyebrow">Monthly briefing</div>
-  <h2 class="luna-section-title">How {_safe(narrative.label.split()[0])} unfolds</h2>
-  <div class="luna-story-timeline">{chapters}</div>
-</section>
-{major_sky_section}
+{reader_chronology_section}
         """
 
     controls = (
@@ -1841,6 +2154,92 @@ def build_monthly_experience_html(
 }}
 .luna-story-timeline {{
   border-top:1px solid var(--black);
+}}
+
+.luna-reader-calendar {{
+  padding-left:var(--rail);
+  padding-right:var(--rail);
+}}
+.luna-calendar-intro {{
+  max-width:var(--reading);
+  margin:.35rem 0 1.1rem;
+  color:var(--muted);
+  font-size:.92rem;
+  line-height:1.5;
+}}
+.luna-calendar-list {{
+  border-top:1px solid var(--black);
+}}
+.luna-calendar-entry {{
+  display:grid;
+  grid-template-columns:minmax(7rem,.3fr) minmax(0,1fr);
+  gap:clamp(1rem,4vw,3rem);
+  padding:clamp(1.35rem,3vw,2.3rem) 0;
+  border-bottom:1px solid var(--black);
+}}
+.luna-calendar-date {{
+  display:flex;
+  flex-direction:column;
+  gap:.45rem;
+}}
+.luna-calendar-date > span {{
+  font-family:"Bodoni Moda",Georgia,serif;
+  font-size:clamp(1.8rem,3vw,2.55rem);
+  font-weight:500;
+  letter-spacing:-.025em;
+  line-height:.95;
+}}
+.luna-calendar-date small,
+.luna-calendar-technical,
+.luna-calendar-window,
+.luna-calendar-also > span {{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:.68rem;
+  line-height:1.35;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+}}
+.luna-calendar-date small {{ color:var(--muted); }}
+.luna-calendar-copy {{ max-width:700px; }}
+.luna-calendar-copy h3 {{
+  margin:0 0 .45rem;
+  font-size:clamp(1.7rem,3vw,2.55rem);
+  line-height:1.02;
+}}
+.luna-calendar-technical {{
+  margin:0 0 .75rem;
+  color:var(--muted);
+}}
+.luna-calendar-window {{
+  margin:0 0 .75rem;
+  color:var(--muted);
+  text-transform:none;
+  letter-spacing:0;
+}}
+.luna-calendar-copy > p {{
+  margin:.35rem 0 .8rem;
+  line-height:1.62;
+}}
+.luna-calendar-context {{
+  margin:.8rem 0 !important;
+  padding:.75rem .9rem;
+  border-left:3px solid var(--black);
+  background:var(--soft);
+}}
+.luna-calendar-also {{
+  margin:.9rem 0;
+  padding:.75rem .9rem;
+  border-left:3px solid var(--line);
+  background:#fafaf7;
+}}
+.luna-calendar-also ul {{
+  margin:.45rem 0 0;
+  padding-left:1.1rem;
+}}
+.luna-calendar-also li {{
+  margin:.25rem 0;
+  font-size:.9rem;
+  line-height:1.4;
 }}
 .luna-solar-convergence-note {{
   margin:.75rem 0 1rem;
@@ -2348,7 +2747,8 @@ def build_monthly_experience_html(
   .luna-evidence-grid,
   .luna-date-grid,
   .luna-story-date-grid,
-  .luna-story-act {{
+  .luna-story-act,
+  .luna-calendar-entry {{
     grid-template-columns:1fr;
     flex-direction:column;
   }}
@@ -2363,8 +2763,15 @@ def build_monthly_experience_html(
     border-top:1px solid var(--black);
     padding-left:0;
   }}
-  .luna-story-act {{
+  .luna-story-act,
+  .luna-calendar-entry {{
     gap:.8rem;
+  }}
+  .luna-calendar-date {{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:.7rem;
+    align-items:baseline;
   }}
   .luna-evidence-anchor {{
     grid-template-columns:1fr;

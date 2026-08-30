@@ -7,7 +7,7 @@ or re-implement the upload contract.
 """
 
 from calendar import month_name
-from datetime import datetime
+from datetime import date, datetime
 import hmac
 
 import streamlit as st
@@ -270,13 +270,13 @@ def render_ephemeris_admin(
         return
 
     st.markdown(
-        "This uses the **exact same full monthly production pipeline** as the normal 2026 Monthly Preview. "
+        "This uses the **exact same full monthly production pipeline** as the selected Monthly Preview. "
         "The only extra rule is that a historical year must first pass the ephemeris registry gate. "
         "That makes the result a true like-for-like comparison: same calculation, same convergence logic, "
         "same narrator, same Love / Work / Money sections, same evidence appendix and same print renderer."
     )
 
-    default_year_index = years.index(2017) if 2017 in years else len(years) - 1
+    default_year_index = len(years) - 1
     cols = st.columns(4, gap="medium")
     with cols[0]:
         year = st.selectbox("Registered year", years, index=default_year_index)
@@ -287,7 +287,7 @@ def render_ephemeris_admin(
         month = st.selectbox(
             "Month",
             list(range(1, 13)),
-            index=8 if year == 2017 else 0,
+            index=date.today().month - 1,
             format_func=lambda value: month_name[value],
         )
     with cols[3]:

@@ -328,7 +328,7 @@ def _parse_date(value: str) -> date:
 
 
 def _date_label(value: str) -> str:
-    """Return a Windows-safe customer date such as '1 August 2026'."""
+    """Return a Windows-safe customer date using the selected calendar period."""
     return human_date(value)
 
 

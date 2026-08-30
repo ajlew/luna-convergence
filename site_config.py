@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.30 — 12-Month Timing Map Pilot"
+BUILD_LABEL = "Luna v3.31 — Global Dynamic Forecast Context"
 EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
@@ -12,7 +12,10 @@ SUBTITLE = (
 MONTHLY_PRICE = "A$3.30"
 YEARLY_PRICE = "A$14.95"
 
-DEFAULT_SIGN = "Sagittarius"
+# Public sign selectors start neutral.  A sign must come from the visitor,
+# a verified birth date, or an explicit route/query value; the app must never
+# silently build a reading for an arbitrary zodiac sign.
+DEFAULT_SIGN = None
 DEFAULT_TIMEZONE = "Australia/Sydney"
 
 TIMEZONES = [

@@ -7,7 +7,7 @@ import hashlib
 import math
 import re
 import secrets
-from calendar import month_name
+from calendar import month_name, monthrange
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from html import escape
@@ -33,7 +33,7 @@ from daily_narrative_v3 import (
     render_daily_narrative_v3,
 )
 from monthly_narrative_v1 import build_monthly_narrative
-from monthly_experience_v1 import render_monthly_experience
+from monthly_experience_v1 import render_monthly_experience, build_monthly_reader_chronology
 from monthly_report_pipeline import (
     build_production_monthly_report,
     render_production_monthly_report,
@@ -204,6 +204,33 @@ def timezone_select_index() -> int:
     if timezone_name in TIMEZONES:
         return TIMEZONES.index(timezone_name)
     return TIMEZONES.index(DEFAULT_TIMEZONE)
+
+
+def sign_select_index(value: str | None = None) -> int | None:
+    """Return a saved/prefilled sign index, otherwise keep the selector neutral."""
+    return SIGNS.index(value) if value in SIGNS else None
+
+
+def month_end(year: int, month: int) -> date:
+    """Return the actual last day of any selected calendar month."""
+    return date(int(year), int(month), monthrange(int(year), int(month))[1])
+
+
+def monthly_period_from_result(result: dict, narrative=None) -> tuple[int, int, str]:
+    """Resolve the selected report period from calculated data, never a fixed campaign date."""
+    try:
+        selected = date.fromisoformat(str(result.get("start") or result.get("start_date")))
+        return selected.year, selected.month, f"{month_name[selected.month]} {selected.year}"
+    except Exception:
+        pass
+
+    label = str(getattr(narrative, "label", "") or result.get("label") or "").strip()
+    try:
+        selected = datetime.strptime(label, "%B %Y")
+        return selected.year, selected.month, label
+    except Exception:
+        today = browser_local_date()
+        return today.year, today.month, f"{month_name[today.month]} {today.year}"
 
 
 def browser_time_caption() -> str:
@@ -996,7 +1023,7 @@ a {
     color:var(--muted);
 }
 
-.lean-august-window {
+.lean-monthly-window {
     display:flex;
     align-items:baseline;
     gap:.75rem;
@@ -1007,11 +1034,11 @@ a {
     text-transform:uppercase;
 }
 
-.lean-august-window span {
+.lean-monthly-window span {
     color:var(--muted);
 }
 
-.lean-august-window strong {
+.lean-monthly-window strong {
     font-weight:600;
 }
 
@@ -2230,7 +2257,7 @@ def brand_header() -> None:
 def top_navigation(current_path: str) -> None:
     path = current_path or ""
     # Monthly now has one stable public destination: /monthly.
-    # Legacy August/sign-specific routes remain only as redirects.
+    # Legacy campaign/sign-specific routes remain only as redirects.
     if path in {"", "daily-horoscope"}:
         nav_path = ""
     elif path == "monthly" or path == "august-2026-horoscopes" or path.startswith("august-2026-"):
@@ -3042,9 +3069,7 @@ def report_cta(
             if prefill_month in month_labels
             else default_month_label()
         )
-        chosen_default_sign = (
-            prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
-        )
+        chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
 
         with st.container(border=True):
             st.markdown("### Choose your monthly report")
@@ -3053,7 +3078,8 @@ def report_cta(
                 sign = st.selectbox(
                     "What is your Sun sign (star sign)?",
                     SIGNS,
-                    index=SIGNS.index(chosen_default_sign),
+                    index=sign_select_index(chosen_default_sign),
+                    placeholder="Select your star sign",
                     key=f"{key_context}-monthly-sign",
                     help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
                 )
@@ -3109,7 +3135,10 @@ def report_cta(
 
         state_key = f"prepared-order::{key_context}::monthly"
         if submitted:
-            if not valid_email(delivery_email):
+            if sign not in SIGNS:
+                st.error("Select your star sign before continuing to payment.")
+                st.session_state.pop(state_key, None)
+            elif not valid_email(delivery_email):
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
@@ -3210,9 +3239,7 @@ def report_cta(
         chosen_default_year = (
             prefill_year if prefill_year in years else default_year()
         )
-        chosen_default_sign = (
-            prefill_sign if prefill_sign in SIGNS else DEFAULT_SIGN
-        )
+        chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
 
         with st.form(f"{key_context}-yearly-checkout"):
             st.markdown("### Choose your year-ahead report")
@@ -3221,7 +3248,8 @@ def report_cta(
                 sign = st.selectbox(
                     "What is your Sun sign (star sign)?",
                     SIGNS,
-                    index=SIGNS.index(chosen_default_sign),
+                    index=sign_select_index(chosen_default_sign),
+                    placeholder="Select your star sign",
                     key=f"{key_context}-yearly-sign",
                     help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
                 )
@@ -3274,7 +3302,10 @@ def report_cta(
 
         state_key = f"prepared-order::{key_context}::yearly"
         if submitted:
-            if not valid_email(delivery_email):
+            if sign not in SIGNS:
+                st.error("Select your star sign before continuing to payment.")
+                st.session_state.pop(state_key, None)
+            elif not valid_email(delivery_email):
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
@@ -3358,13 +3389,14 @@ def report_cta(
             )
 
 
-def daily_controls(prefix: str = "daily") -> tuple[str, date, str, str]:
+def daily_controls(prefix: str = "daily") -> tuple[str | None, date, str, str]:
     first_row = st.columns(2, gap="medium")
     with first_row[0]:
         sign = st.selectbox(
             "What is your Sun sign (star sign)?",
             SIGNS,
-            index=SIGNS.index(DEFAULT_SIGN),
+            index=None,
+            placeholder="Select your star sign",
             key=f"{prefix}-sign",
         )
     with first_row[1]:
@@ -3553,18 +3585,18 @@ def _render_lean_daily(path: str) -> None:
         "What is your Sun sign (star sign)?",
         SIGNS,
         index=saved_index,
-        placeholder="Select a sign",
+        placeholder="Choose your star sign",
         key="landing-daily-sign-v3195",
         label_visibility="collapsed",
         persist_state="session",
     )
 
-    # A neutral first state is deliberate: Luna must never imply that a new
-    # visitor is Sagittarius.  It also turns the first sign choice into a real
+    # A neutral first state is deliberate: Luna must never imply any sign for a
+    # new visitor. It also turns the first sign choice into a real
     # engagement signal instead of firing analytics automatically on page load.
     if sign is None:
         st.markdown(
-            '<div class="lean-daily-empty">Choose your Sun sign (star sign) to open today\'s horoscope.</div>',
+            '<div class="lean-daily-empty">Choose your star sign to open today\'s horoscope.</div>',
             unsafe_allow_html=True,
         )
         return
@@ -3622,7 +3654,7 @@ def _render_lean_daily(path: str) -> None:
   </div>
   {f'<div class="lean-daily-question">{escape(question)}</div>' if question else ''}
   <div class="lean-daily-reset">Focus Reset</div>
-  <a class="lean-monthly-link" href="{monthly_href}">See your August forecast →</a>
+  <a class="lean-monthly-link" href="{monthly_href}">See your {escape(month_name[reading_date.month])} forecast →</a>
   <div class="lean-bookmark-note">Bookmark this page in your browser and Luna will reopen on {escape(sign)}.</div>
 </section>
         """,
@@ -4302,7 +4334,7 @@ def _render_monthly_history(
         "The point is not to say that the same event repeats. It is to give the present month a reference point."
     )
 
-    for index, item in enumerate(matches, start=1):
+    for index, item in enumerate(matches[:2], start=1):
         past_year = int(item["year"])
         past_label = f"{month_name[int(month)]} {past_year}"
         shared = item.get("shared_houses") or []
@@ -4360,6 +4392,15 @@ def _render_monthly_history(
             "Memory prompt: what was changing around love, work, money, home or direction? "
             "You supply the memory; Luna supplies the astronomical reference."
         )
+
+    if len(matches) > 2:
+        with st.expander(f"Show {len(matches) - 2} more earlier echoes"):
+            for item in matches[2:]:
+                past_year = int(item["year"])
+                past_label = f"{month_name[int(month)]} {past_year}"
+                shared = item.get("shared_houses") or []
+                shared_text = " and ".join(_house_short(h) for h in shared[:2]) if shared else "a similar sky structure"
+                st.markdown(f"**{past_label}** · {shared_text}")
 
     with st.expander("How Luna chose these dates"):
         st.markdown(
@@ -4457,7 +4498,8 @@ def render_monthly_preview_workspace() -> None:
             sign = st.selectbox(
                 "What is your Sun sign (star sign)?",
                 SIGNS,
-                index=SIGNS.index(DEFAULT_SIGN),
+                index=None,
+                placeholder="Select your star sign",
                 key="monthly-preview-sign",
             )
         with first_row[1]:
@@ -4507,6 +4549,9 @@ def render_monthly_preview_workspace() -> None:
         )
 
     if submitted:
+        if sign not in SIGNS:
+            st.error("Select your star sign before generating the preview.")
+            return
         year = int(forecast_year)
         month = int(selected_month)
 
@@ -4566,7 +4611,7 @@ def render_monthly_preview_workspace() -> None:
     history_context = st.session_state.get("monthly-preview-history-context") or {}
     if history_context:
         _render_monthly_history(
-            history_context.get("sign", result.get("sign", DEFAULT_SIGN)),
+            history_context.get("sign") or result.get("sign"),
             int(history_context.get("year", local_today.year)),
             int(history_context.get("month", local_today.month)),
             str(history_context.get("timezone_name") or browser_timezone_name()),
@@ -4597,6 +4642,7 @@ def monthly_preview_page() -> None:
 
 
 def render_report_generator_workspace() -> None:
+    local_today = browser_local_date()
     report_type = st.radio(
         "Report type",
         ["Monthly", "Year ahead"],
@@ -4610,7 +4656,8 @@ def render_report_generator_workspace() -> None:
             sign = st.selectbox(
                 "What is your Sun sign (star sign)?",
                 SIGNS,
-                index=SIGNS.index(DEFAULT_SIGN),
+                index=None,
+                placeholder="Select your star sign",
                 key="report-generator-sign",
             )
         with first_row[1]:
@@ -4618,7 +4665,11 @@ def render_report_generator_workspace() -> None:
                 "Year",
                 min_value=1950,
                 max_value=2100,
-                value=2026 if report_type == "Monthly" else 2027,
+                value=(
+                    local_today.year
+                    if report_type == "Monthly"
+                    else default_year(local_today)
+                ),
                 step=1,
                 key=f"report-generator-year-{report_type}",
             )
@@ -4626,7 +4677,7 @@ def render_report_generator_workspace() -> None:
             selected_month = st.selectbox(
                 "Month",
                 list(range(1, 13)),
-                index=7,
+                index=local_today.month - 1,
                 format_func=lambda value: month_name[value],
                 disabled=report_type != "Monthly",
                 key="report-generator-month",
@@ -4666,6 +4717,9 @@ def render_report_generator_workspace() -> None:
         )
 
     if submitted:
+        if sign not in SIGNS:
+            st.error("Select your star sign before generating the report.")
+            return
         year = int(forecast_year)
         if report_type == "Monthly":
             start_date = date(year, selected_month, 1)
@@ -4792,7 +4846,7 @@ def forecast_library_page() -> None:
         signs = st.multiselect(
             "Signs",
             SIGNS,
-            default=[DEFAULT_SIGN],
+            default=[],
             help="Choose one sign for editorial refinement or several for batch production.",
         )
         status = st.selectbox(
@@ -5015,12 +5069,16 @@ def reports_page() -> None:
                 sign = st.selectbox(
                     "What is your Sun sign (star sign)?",
                     SIGNS,
-                    index=SIGNS.index(DEFAULT_SIGN),
+                    index=None,
+                    placeholder="Select your star sign",
                 )
             with c2:
                 requested_period = st.text_input(
                     "Requested month or calendar year",
-                    placeholder="Example: August 2026 or 2027",
+                    placeholder=(
+                        f"Example: {month_name[browser_local_date().month]} "
+                        f"{browser_local_date().year} or {default_year(browser_local_date())}"
+                    ),
                 )
                 timezone_name = st.selectbox(
                     "Timezone",
@@ -5056,7 +5114,9 @@ def reports_page() -> None:
             )
 
         if submitted:
-            if not customer_name or not valid_email(customer_email) or not requested_period:
+            if sign not in SIGNS:
+                st.error("Select your star sign.")
+            elif not customer_name or not valid_email(customer_email) or not requested_period:
                 st.error("Enter your name, a valid email and the requested month or year.")
             elif CONTACT_EMAIL == "your-email@example.com":
                 st.warning(
@@ -5103,10 +5163,14 @@ def houses_page() -> None:
     sign = st.selectbox(
         "Show the whole-sign house map for",
         SIGNS,
-        index=SIGNS.index(DEFAULT_SIGN),
+        index=None,
+        placeholder="Select your star sign",
         key="house-guide-sign",
     )
-    st.markdown(house_reference_matrix(sign))
+    if sign in SIGNS:
+        st.markdown(house_reference_matrix(sign))
+    else:
+        st.info("Select your star sign to display its whole-sign house map.")
 
     st.markdown("## Build, protect, review and consolidate")
     st.markdown(
@@ -5124,80 +5188,22 @@ def houses_page() -> None:
         "a month selector. The purchase panel below asks for a month or calendar year "
         "because that determines which planetary movements are analysed."
     )
-    report_cta(
-        context="house-guide",
-        prefill_sign=sign,
-    )
+    report_cta(context="house-guide", prefill_sign=sign if sign in SIGNS else None)
 
 
 def sample_page() -> None:
     set_page_metadata(
-        "Sagittarius 2026 Astrology Report Sample | Luna Convergence",
-        "Read a sample Luna Convergence year-ahead astrology report showing houses, transitions, convergence points and practical conclusions.",
+        "Live Astrology Report Sample | Luna Convergence",
+        "Choose a star sign and period to see a live Luna Convergence report sample generated from the selected sky.",
         "/sample-report",
     )
-    st.markdown('<div class="eyebrow">Example report</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Live example</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">Choose the sky.<br>Then read the sample.</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="editorial-title">Sagittarius 2026 —<br>sample</div>',
-        unsafe_allow_html=True,
+        "Luna no longer uses a frozen sign or year as its example. Choose the star sign, "
+        "month or year, timezone and focus below; the report controls and calculations use those selections."
     )
-    st.markdown(
-        "This excerpt shows the depth and structure of a year-ahead report without publishing every paid section."
-    )
-
-    st.markdown(
-        """
-<div class="card">
-  <div class="eyebrow">Core theme</div>
-  <h3>Expansion becomes useful only when the foundations can carry it</h3>
-  <p>The year connects creative enterprise, partnerships, communication and international reach.
-  The main question is not whether opportunity exists, but whether money, contracts and operations
-  can support the scale of the opening.</p>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("## Example major transition")
-    st.markdown(
-        """
-### Jupiter enters the ninth house
-
-The ninth house governs **travel, publishing, higher education, law and foreign markets**.  
-The opportunity is to take one proven idea into a larger territory. The risk is expanding before
-shipping, pricing, content or legal systems are ready.
-
-**Strategic response:** prove the offer in one market, document the process, then increase reach.
-        """
-    )
-
-    st.markdown("## Example convergence point")
-    st.markdown(
-        """
-### Expansion versus control
-
-Several events connect houses 3, 5, 7 and 9: communication, creativity, contracts and foreign reach.
-The interaction matters more than any single aspect. A partnership or media opportunity can accelerate
-growth, but unclear ownership, payment or messaging can turn the same opening into a power struggle.
-
-**Sequence:** clarify the agreement, test the channel, measure the result and only then scale.
-        """
-    )
-
-    st.markdown("## Example two-sentence conclusion")
-    st.info(
-        "House 9 governs travel, publishing, higher education, law and foreign markets, "
-        "so the best strategy for Sagittarius is to take one proven idea into a larger territory. "
-        "House 2 governs personal income, pricing, possessions and self-worth, so short-term pressure "
-        "in this area—especially confusing turnover, credit or possessions with financial strength—"
-        "should not derail the larger transition."
-    )
-
-    report_cta(
-        context="sample",
-        prefill_sign=DEFAULT_SIGN,
-        prefill_year=2026,
-    )
+    render_report_generator_workspace()
 
 
 def method_page() -> None:
@@ -5247,19 +5253,17 @@ as causal prediction and should not replace financial, medical, legal or other p
     )
 
 
-SEO_YEAR = 2026
-SEO_MONTH = 8
-SEO_MONTH_NAME = "August"
-
-
-@lru_cache(maxsize=32)
-def monthly_seo_data(sign: str) -> dict:
+@lru_cache(maxsize=384)
+def monthly_seo_data(sign: str, year: int, month: int) -> dict:
+    """Build cached metadata data for the exact sign and period requested."""
+    year = int(year)
+    month = int(month)
     result = period_report(
         sign,
-        date(SEO_YEAR, SEO_MONTH, 1),
-        date(SEO_YEAR, SEO_MONTH, 31),
+        date(year, month, 1),
+        month_end(year, month),
         DEFAULT_TIMEZONE,
-        f"{SEO_MONTH_NAME} {SEO_YEAR}",
+        f"{month_name[month]} {year}",
         transition_count=7,
     )
     result["concentration_theme"] = build_monthly_concentration_theme(result)
@@ -5333,39 +5337,10 @@ def legacy_monthly_index_page() -> None:
     _legacy_monthly_redirect()
 
 
-AUGUST_2026_PREVIEW_HOOKS = {
-    "Aries": "Make room for pleasure without promising more than August can hold",
-    "Taurus": "Home sets the terms for the future you are building",
-    "Gemini": "The right conversation can change the direction of your work",
-    "Cancer": "Money gets clearer when the bigger plan has a real price",
-    "Leo": "Choose the version of yourself that can carry the next commitment",
-    "Virgo": "Protect the quiet; relationships reveal what should stay",
-    "Libra": "Your future circle is changing; keep the plans that support real life",
-    "Scorpio": "Visibility rises; make sure the work can carry the attention",
-    "Sagittarius": "The wider road is opening, but home still sets the terms",
-    "Capricorn": "Shared money needs cleaner terms before the next decision",
-    "Aquarius": "Relationships get clearer when values and expectations are named",
-    "Pisces": "Your routines decide how much of the new direction you can sustain",
-}
-
-
-def _august_preview_narrative(narrative):
-    """Give each public August sign page its own concise editorial lead.
-
-    The paid narrative and its evidence remain untouched.  This replacement is
-    only for the free August 2026 sign preview, where repeating the same
-    'pressure builds' sentence across signs makes the product feel templated.
-    """
-    from dataclasses import replace
-
-    hook = AUGUST_2026_PREVIEW_HOOKS.get(narrative.sign)
-    if not hook:
-        return narrative
-    return replace(narrative, hook_headline=hook)
-
-
-
-def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]:
+def _free_monthly_profile() -> tuple[object | None, date | None, str, str, int, int, bool]:
+    local_today = browser_local_date()
+    saved_year = int(st.session_state.get("free-monthly-forecast-year") or local_today.year)
+    saved_month = int(st.session_state.get("free-monthly-forecast-month") or local_today.month)
     st.markdown(
         """
         <style id="monthly-profile-uniform-css">
@@ -5397,16 +5372,33 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
     )
 
     with st.container(border=True):
-        selected_sun_sign = st.selectbox(
-            "What is your Sun sign (star sign)?",
-            SIGNS,
-            index=SIGNS.index(str(st.session_state.get("free-monthly-sun-sign") or DEFAULT_SIGN))
-            if str(st.session_state.get("free-monthly-sun-sign") or DEFAULT_SIGN) in SIGNS
-            else SIGNS.index(DEFAULT_SIGN),
-            key="free-monthly-sun-sign-input",
-            help="This is Luna's first reference point. Your Sun sign becomes whole-sign House 1 for the forecast.",
-        )
-        st.session_state["free-monthly-sun-sign"] = selected_sun_sign
+        forecast_cols = st.columns(3, gap="medium")
+        with forecast_cols[0]:
+            selected_sun_sign = st.selectbox(
+                "What is your Sun sign (star sign)?",
+                SIGNS,
+                index=sign_select_index(st.session_state.get("free-monthly-sun-sign")),
+                placeholder="Select your star sign",
+                key="free-monthly-sun-sign-input",
+                help="This is Luna's first reference point. Your Sun sign becomes whole-sign House 1 for the forecast.",
+            )
+        with forecast_cols[1]:
+            forecast_month = int(st.selectbox(
+                "Forecast month",
+                list(range(1, 13)),
+                index=max(0, min(11, saved_month - 1)),
+                format_func=lambda value: month_name[value],
+                key="free-monthly-forecast-month-input",
+            ))
+        with forecast_cols[2]:
+            forecast_year = int(st.number_input(
+                "Forecast year",
+                min_value=1950,
+                max_value=2100,
+                value=max(1950, min(2100, saved_year)),
+                step=1,
+                key="free-monthly-forecast-year-input",
+            ))
 
         birth_date_value = st.date_input(
             "Birth date",
@@ -5477,20 +5469,35 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
         )
 
     if submitted:
+        if selected_sun_sign not in SIGNS:
+            st.error("Select your star sign before Luna builds the month.")
+            st.session_state["free-monthly-ready"] = False
+            return None, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, False
         if birth_date_value is None:
             st.error("Add your birth date so Luna can verify the Sun sign and add the personal layers without inventing precision.")
             st.session_state["free-monthly-ready"] = False
-            return None, None, current_timezone, current_city, False
+            return None, None, current_timezone, current_city, forecast_year, forecast_month, False
 
         st.session_state["free-monthly-ready"] = True
+        st.session_state["free-monthly-sun-sign"] = selected_sun_sign
+        st.session_state["free-monthly-forecast-year"] = forecast_year
+        st.session_state["free-monthly-forecast-month"] = forecast_month
         st.session_state["free-monthly-birth-date"] = birth_date_value
         st.session_state["free-monthly-time-known"] = time_known
 
     if not st.session_state.get("free-monthly-ready"):
-        return None, None, browser_timezone_name(), representative_city_name(browser_timezone_name()), False
+        return (
+            None,
+            None,
+            browser_timezone_name(),
+            representative_city_name(browser_timezone_name()),
+            forecast_year,
+            forecast_month,
+            False,
+        )
 
     if birth_date_value is None:
-        return None, None, current_timezone, current_city, False
+        return None, None, current_timezone, current_city, forecast_year, forecast_month, False
 
     snapshot = None
     try:
@@ -5524,7 +5531,7 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
 
     if snapshot is None:
         st.error("Luna needs a valid birth date before building the personal layers of the Monthly.")
-        return None, birth_date_value, current_timezone, current_city, False
+        return None, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, False
 
     calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
     selected_sign = str(st.session_state.get("free-monthly-sun-sign") or "")
@@ -5533,9 +5540,9 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, bool]
             f"Your birth date calculates as {calculated_sign}, while you selected {selected_sign}. "
             "Check the star sign or birth date before continuing so Luna does not build two different reference frames."
         )
-        return snapshot, birth_date_value, current_timezone, current_city, False
+        return snapshot, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, False
 
-    return snapshot, birth_date_value, current_timezone, current_city, True
+    return snapshot, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, True
 
 
 def _monthly_sun_sign_from_snapshot(snapshot) -> str | None:
@@ -5717,8 +5724,7 @@ def _monthly_parse_day(value, fallback=99) -> int:
     for pattern in (
         r"\b(\d{1,2})\s*[-–]\s*\d{1,2}\s+[A-Za-z]+",
         r"\b(\d{1,2})\s+[A-Za-z]{3,9}\b",
-        r"\b(\d{1,2})\s*AUG\b",
-        r"\b2026[-/]\d{1,2}[-/](\d{1,2})\b",
+        r"\b\d{4}[-/]\d{1,2}[-/](\d{1,2})\b",
     ):
         match = re.search(pattern, text, re.I)
         if match:
@@ -5737,7 +5743,12 @@ def _monthly_event_from_dict(item: dict) -> dict | None:
     influence = _monthly_first(item, ("influence", "influence_window", "active", "active_window", "range"))
 
     joined = " ".join(_monthly_text(v) for v in (date_value, transit, title, body, move, influence))
-    dateish = bool(re.search(r"\b(?:\d{1,2}\s*(?:[-–]\s*\d{1,2})?\s+aug|august\s+\d{1,2}|2026[-/]08)\b", joined, re.I))
+    dateish = bool(re.search(
+        r"\b(?:\d{1,2}\s*(?:[-–]\s*\d{1,2})?\s+[A-Za-z]{3,9}|"
+        r"[A-Za-z]{3,9}\s+\d{1,2}|\d{4}[-/]\d{1,2}[-/]\d{1,2})\b",
+        joined,
+        re.I,
+    ))
     eventish = bool(re.search(r"\b(?:eclipse|trine|sextile|square|opposition|conjunct|retrograde|station|ingress)\b", joined, re.I))
     if not (dateish or eventish):
         return None
@@ -5783,9 +5794,8 @@ def _monthly_collect_structured_events(narrative, result) -> list[dict]:
             path_text = " ".join(path).lower()
             joined = " ".join(_monthly_text(v) for v in value.values())
             supporting = any(w in path_text for w in ("signal", "relationship", "read", "window"))
-            midmonth = bool(re.search(r"\b18\s*[-–]\s*21\s+aug", joined, re.I))
             sig = (event["day"], event["title"].lower())
-            if (supporting or midmonth) and sig not in existing:
+            if supporting and sig not in existing:
                 events.append(event)
                 existing.add(sig)
 
@@ -5811,7 +5821,8 @@ def _monthly_main_headline(narrative, sign: str) -> str:
         value = getattr(narrative, key, None)
         if value:
             return str(value).strip()
-    return AUGUST_2026_PREVIEW_HOOKS.get(sign, f"{sign} · {SEO_MONTH_NAME} {SEO_YEAR}")
+    label = str(getattr(narrative, "label", "") or "This month").strip()
+    return f"{sign} · {label}"
 
 
 def _monthly_intro_copy(narrative, result) -> list[str]:
@@ -5875,6 +5886,7 @@ def _monthly_history_for_event(sign: str, year: int, month: int, timezone_name: 
 
 
 def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None) -> None:
+    forecast_year, forecast_month, forecast_label = monthly_period_from_result(result, narrative)
     st.markdown('<div class="eyebrow">MONTHLY · PERSONAL CONTEXT</div>', unsafe_allow_html=True)
     st.markdown(f"# {_monthly_main_headline(narrative, sign)}")
 
@@ -5883,11 +5895,12 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
 
     events = _monthly_collect_structured_events(narrative, result)
     if events:
-        st.markdown("## How August unfolds")
+        st.markdown(f"## How {month_name[forecast_month]} unfolds")
         for index, event in enumerate(events):
             date_label = event["date"]
             if not date_label or len(date_label) > 40:
-                date_label = f"{event['day']:02d} AUG" if event["day"] < 99 else "AUGUST"
+                month_abbr = month_name[forecast_month][:3].upper()
+                date_label = f"{event['day']:02d} {month_abbr}" if event["day"] < 99 else month_name[forecast_month].upper()
 
             st.markdown("---")
             meta_parts = [p for p in (event["transit"], f"Influence: {event['influence']}" if event["influence"] else "") if p]
@@ -5911,14 +5924,14 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
                 )
 
             if index < 3:
-                _monthly_history_for_event(sign, SEO_YEAR, SEO_MONTH, timezone_name, birth_date_value, index)
+                _monthly_history_for_event(sign, forecast_year, forecast_month, timezone_name, birth_date_value, index)
     else:
         st.info("Luna found the month, but this pipeline version did not expose the dated briefing structure.")
 
     _render_monthly_past_echo_strip(
         sign,
-        SEO_YEAR,
-        SEO_MONTH,
+        forecast_year,
+        forecast_month,
         timezone_name,
         birth_date_value,
     )
@@ -5952,7 +5965,7 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
 
     with st.expander("Why Luna sees this"):
         st.markdown(
-            "Luna combines the calculated August sky, whole-sign house emphasis, major transitions "
+            f"Luna combines the calculated {month_name[forecast_month]} sky, whole-sign house emphasis, major transitions "
             "and the closest earlier monthly precedents. Historical echoes sit beside the current event they help explain."
         )
 
@@ -6047,10 +6060,11 @@ def _render_monthly_full_meat_unified(
 
     # Historical context remains available immediately after the complete reading
     # until it can be attached to individual dated events inside the pipeline itself.
+    forecast_year, forecast_month, _ = monthly_period_from_result(result, narrative)
     _render_monthly_history(
         sign,
-        SEO_YEAR,
-        SEO_MONTH,
+        forecast_year,
+        forecast_month,
         timezone_name,
         birth_date_value=birth_date_value,
     )
@@ -6083,10 +6097,9 @@ def _monthly_container_strings(value, max_depth=5):
 def _monthly_date_info(text: str):
     text = re.sub(r"\s+", " ", str(text or "")).strip()
     patterns = (
-        (r"\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s+(August|Aug)\s+(\d{4})\b", "range"),
-        (r"\b(\d{1,2})\s+(August|Aug)\s+(\d{4})\b", "single"),
-        (r"\b(\d{1,2})\s*AUG\b", "short"),
-        (r"\b2026[-/]08[-/](\d{1,2})\b", "iso"),
+        (r"\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([A-Za-z]{3,9})(?:\s+\d{4})?\b", "range"),
+        (r"\b(\d{1,2})\s+([A-Za-z]{3,9})(?:\s+\d{4})?\b", "single"),
+        (r"\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b", "iso"),
     )
     for pattern, kind in patterns:
         m = re.search(pattern, text, re.I)
@@ -6094,10 +6107,15 @@ def _monthly_date_info(text: str):
             continue
         if kind == "range":
             day = int(m.group(1))
-            label = f"{int(m.group(1)):02d}–{int(m.group(2)):02d} AUG"
-        elif kind in {"single", "short", "iso"}:
+            month_token = m.group(3)[:3].upper()
+            label = f"{int(m.group(1)):02d}–{int(m.group(2)):02d} {month_token}"
+        elif kind == "single":
             day = int(m.group(1))
-            label = f"{day:02d} AUG"
+            label = f"{day:02d} {m.group(2)[:3].upper()}"
+        else:
+            day = int(m.group(3))
+            month_token = month_name[int(m.group(2))][:3].upper()
+            label = f"{day:02d} {month_token}"
         return day, label
     return 99, ""
 
@@ -6618,7 +6636,12 @@ def _luna_voice_choose(candidates: list[dict], memory: dict, salt: str, *, regis
     return chosen
 
 
-def _luna_voice_second_pass(events: list[dict], anchor_texts: list[str], sign: str) -> list[dict]:
+def _luna_voice_second_pass(
+    events: list[dict],
+    anchor_texts: list[str],
+    sign: str,
+    period_key: str,
+) -> list[dict]:
     """Second audit: replace later echoing fields with another reviewed candidate."""
     memory = _luna_voice_memory(anchor_texts)
     audited = []
@@ -6633,7 +6656,7 @@ def _luna_voice_second_pass(events: list[dict], anchor_texts: list[str], sign: s
                 chosen = _luna_voice_choose(
                     alternatives or bank[bank_field],
                     memory,
-                    f"audit:{sign}:{SEO_YEAR}:{SEO_MONTH}:{event.get('key')}:{field}",
+                    f"audit:{sign}:{period_key}:{event.get('key')}:{field}",
                     register=False,
                 )
                 if chosen.get("text"):
@@ -6648,7 +6671,14 @@ def _luna_voice_second_pass(events: list[dict], anchor_texts: list[str], sign: s
     return audited
 
 
-def _luna_voice_v2_events(events: list[dict], *, sign: str, hero: str = "", context: str = "") -> list[dict]:
+def _luna_voice_v2_events(
+    events: list[dict],
+    *,
+    sign: str,
+    period_key: str,
+    hero: str = "",
+    context: str = "",
+) -> list[dict]:
     """
     First pass selects vivid, reviewed alternatives using metaphor/verb/shape memory.
     Second pass compares the finished event fields against one another and swaps any
@@ -6669,16 +6699,20 @@ def _luna_voice_v2_events(events: list[dict], *, sign: str, hero: str = "", cont
             chosen = _luna_voice_choose(
                 candidates,
                 memory,
-                f"voice:{sign}:{SEO_YEAR}:{SEO_MONTH}:{event.get('key')}:{field}",
+                f"voice:{sign}:{period_key}:{event.get('key')}:{field}",
             )
             if chosen.get("text"):
                 current[field] = chosen["text"]
         voiced.append(current)
 
-    return _luna_voice_second_pass(voiced, anchors, sign)
+    return _luna_voice_second_pass(voiced, anchors, sign, period_key)
 
 
-def _luna_voice_v2_areas(sign: str, used_texts: list[str]) -> dict[str, tuple[str, str]]:
+def _luna_voice_v2_areas(
+    sign: str,
+    used_texts: list[str],
+    period_key: str,
+) -> dict[str, tuple[str, str]]:
     memory = _luna_voice_memory(used_texts)
     output = {}
     for category in ("LOVE", "WORK", "MONEY"):
@@ -6687,182 +6721,76 @@ def _luna_voice_v2_areas(sign: str, used_texts: list[str]) -> dict[str, tuple[st
         for title, body in pairs:
             combined = f"{title} {body}"
             candidates.append({"text": combined, "title": title, "body": body, "metaphor": category.lower(), "shape": "area", "verbs": []})
-        chosen = _luna_voice_choose(candidates, memory, f"area:{sign}:{SEO_YEAR}:{SEO_MONTH}:{category}")
+        chosen = _luna_voice_choose(candidates, memory, f"area:{sign}:{period_key}:{category}")
         output[category] = (chosen.get("title") or pairs[0][0], chosen.get("body") or pairs[0][1])
     return output
 
 
-_MONTHLY_CANONICAL_EVENTS = (
-    {
-        "key":"sun_saturn",
-        "match":r"\bsun\s+trine\s+saturn\b",
-        "day":7,
-        "date_label":"07 AUG 2026",
-        "transit":"Sun trine Saturn",
-        "signal":"SUPPORT",
-        "default_influence":"1–10 August 2026",
-        "reader_title":"The first opening becomes practical",
-        "reader_move":"",
-        "reader_watch":"Early support is useful evidence, not permission to overextend.",
-    },
-    {
-        "key":"solar_eclipse",
-        "match":r"\b(?:total\s+)?solar\s+eclipse\b|\beclipse\s+in\s+leo\b",
-        "day":13,
-        "date_label":"13 AUG 2026",
-        "transit":"Total Solar Eclipse in Leo",
-        "signal":"DECISION",
-        "default_influence":"11–20 August 2026",
-        "reader_title":"The opportunity now asks for commitment",
-        "reader_move":"",
-        "reader_watch":"A promising route still needs practical terms before it deserves a yes.",
-    },
-    {
-        "key":"venus_jupiter",
-        "match":r"\bvenus\s+sextile\s+jupiter\b",
-        "day":18,
-        "date_label":"18–21 AUG 2026",
-        "transit":"Venus sextile Jupiter",
-        "signal":"OPENING",
-        "default_influence":"18–21 August 2026",
-        "reader_title":"Chemistry gets a chance to prove itself",
-        "reader_move":"Enjoy what opens. Judge it by what remains when timing and responsibility return.",
-        "reader_watch":"Attraction and ease are encouraging; durability still has to be demonstrated.",
-    },
-    {
-        "key":"lunar_eclipse",
-        "match":r"\bpartial\s+lunar\s+eclipse\b|\blunar\s+eclipse\b|\beclipse\s+in\s+pisces\b",
-        "day":28,
-        "date_label":"28 AUG 2026",
-        "transit":"Partial Lunar Eclipse in Pisces",
-        "signal":"CHANGE",
-        "default_influence":"21–31 August 2026",
-        "reader_title":"The decision reaches home",
-        "reader_move":"",
-        "reader_watch":"Do not protect the opportunity by quietly overloading home or private life.",
-    },
-)
-
-
-def _monthly_event_family(candidate: dict):
-    haystack = " ".join([
-        candidate.get("transit",""),
-        candidate.get("title",""),
-        " ".join(candidate.get("body",[])),
-        candidate.get("combined",""),
-    ])
-    for spec in _MONTHLY_CANONICAL_EVENTS:
-        if re.search(spec["match"], haystack, re.I):
-            return spec
-    return None
-
-
-def _monthly_best_piece(candidates, field, scorer):
-    pieces = []
-    for candidate in candidates:
-        if field == "body":
-            for paragraph in candidate.get("body", []):
-                pieces.append((paragraph, candidate.get("path","")))
-        else:
-            value = candidate.get(field,"")
-            if value:
-                pieces.append((value, candidate.get("path","")))
-
-    if field == "body":
-        ranked = sorted(pieces, key=lambda p: scorer(p[0], p[1]), reverse=True)
-        result, seen = [], set()
-        for value, path_text in ranked:
-            if scorer(value, path_text) < 0:
-                continue
-            key = value.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            result.append(value)
-            if len(result) >= 2:
-                break
-        return result
-
-    if not pieces:
-        return ""
-    return max(pieces, key=lambda p: scorer(p[0], p[1]))[0]
-
-
 def _monthly_canonical_events(narrative, result) -> list[dict]:
-    roots = [("narrative", _monthly_plain(narrative)), ("result", _monthly_plain(result))]
-    candidates = []
+    """Translate the engine's selected-period chronology into the page event model.
 
-    def visit(value, path=(), depth=0):
-        if depth > 8:
-            return
-        if isinstance(value, dict):
-            candidate = _monthly_candidate_from_container(value, path)
-            if candidate:
-                candidates.append(candidate)
-            for key, child in value.items():
-                visit(child, path + (str(key),), depth + 1)
-        elif isinstance(value, list):
-            for index, child in enumerate(value):
-                visit(child, path + (str(index),), depth + 1)
+    The former implementation admitted four campaign-specific events only. This one
+    consumes the same generic chronology used by the production report, so every
+    selected month/year and all twelve signs follow identical calculation logic.
+    """
+    rows = build_monthly_reader_chronology(narrative, result)
+    source_events = [dict(item) for item in (result.get("events") or []) if isinstance(item, dict)]
+    output: list[dict] = []
 
-    for root_name, root in roots:
-        visit(root, (root_name,), 0)
+    for index, row in enumerate(rows):
+        date_iso = str(row.get("date") or "")
+        technical = str(row.get("technical") or "").strip()
+        same_day = [item for item in source_events if str(item.get("event_date") or "") == date_iso]
+        matched = [
+            item for item in same_day
+            if technical and (
+                technical.lower() in str(item.get("title") or "").lower()
+                or str(item.get("title") or "").lower() in technical.lower()
+            )
+        ] or same_day
 
-    events = []
-    for spec in _MONTHLY_CANONICAL_EVENTS:
-        family = [c for c in candidates if _monthly_event_family(c) == spec]
-        if not family:
-            continue
+        houses: set[int] = set()
+        planets: list[str] = []
+        for item in matched:
+            for value in item.get("houses") or []:
+                try:
+                    house = int(value)
+                except Exception:
+                    continue
+                if 1 <= house <= 12:
+                    houses.add(house)
+            for planet in item.get("planets") or []:
+                name = str(planet).upper()
+                if name and name not in planets:
+                    planets.append(name)
 
-        title = _monthly_best_piece(family, "title", _monthly_title_score)
-        body = _monthly_best_piece(family, "body", _monthly_body_score)
-        move = _monthly_best_piece(family, "move", _monthly_move_score)
+        try:
+            event_date = date.fromisoformat(date_iso)
+            day = event_date.day
+            date_label = event_date.strftime("%d %b %Y").upper()
+        except Exception:
+            day = index + 1
+            date_label = str(row.get("date_label") or "").upper()
 
-        if not title or _monthly_internal_text(title) or "_" in title or _monthly_is_technical(title):
-            # Fall back to the human transit label only when no editorial title survived.
-            title = spec["transit"]
-
-        influence = ""
-        for candidate in sorted(family, key=lambda c: c.get("score",0), reverse=True):
-            candidate_influence = str(candidate.get("influence") or "").strip()
-            if candidate_influence and len(candidate_influence) < 80 and not _monthly_internal_text(candidate_influence):
-                influence = candidate_influence
-                break
-        if not influence:
-            influence = spec["default_influence"]
-
-        houses = set()
-        for candidate in family:
-            houses |= set(candidate.get("houses") or set())
-
-        clean_body = []
-        seen_body = set()
-        for paragraph in body:
-            cleaned = _monthly_clean_reader_paragraph(spec["key"], paragraph)
-            if cleaned and cleaned.lower() not in seen_body:
-                seen_body.add(cleaned.lower())
-                clean_body.append(cleaned)
-
-        reader_title = spec.get("reader_title") or title
-        reader_move = spec.get("reader_move") or move
-        if reader_move:
-            reader_move = _monthly_clean_final_step(reader_move)
-
-        events.append({
-            "key":spec["key"],
-            "day":spec["day"],
-            "date_label":spec["date_label"],
-            "transit":spec["transit"],
-            "signal":spec["signal"],
-            "influence":influence,
-            "title":reader_title,
-            "body":clean_body,
-            "move":reader_move,
-            "watch":spec.get("reader_watch") or "",
-            "houses":houses,
+        key_text = re.sub(r"[^a-z0-9]+", "-", f"{date_iso}-{technical}".lower()).strip("-")
+        output.append({
+            "key": key_text or f"monthly-event-{index + 1}",
+            "day": day,
+            "date": date_iso,
+            "date_label": date_label,
+            "transit": technical,
+            "signal": str(row.get("badge") or "SKY EVENT").upper(),
+            "influence": str(row.get("influence") or ""),
+            "title": str(row.get("headline") or technical or "The month changes here"),
+            "body": [str(value) for value in (row.get("body") or []) if str(value).strip()][:2],
+            "move": _monthly_clean_final_step(str(row.get("move") or "")),
+            "watch": "",
+            "also": list(row.get("also") or []),
+            "houses": houses,
+            "planets": planets,
         })
 
-    return events
+    return output
 
 
 def _monthly_context_section(narrative, result):
@@ -7053,9 +6981,10 @@ def _monthly_history_match_for_event(matches, event, used_years):
     return chosen
 
 
-def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years):
+def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_years, result):
+    forecast_year, forecast_month, forecast_label = monthly_period_from_result(result)
     try:
-        matches = _monthly_history_matches(sign, SEO_YEAR, SEO_MONTH, timezone_name)
+        matches = _monthly_history_matches(sign, forecast_year, forecast_month, timezone_name)
     except Exception:
         return
     if not matches:
@@ -7080,14 +7009,14 @@ def _monthly_echo_for_event(sign, timezone_name, birth_date_value, event, used_y
 
     age_text = ""
     if birth_date_value:
-        ref = date(past_year, SEO_MONTH, 15)
+        ref = date(past_year, forecast_month, 15)
         if ref >= birth_date_value:
             age = ref.year - birth_date_value.year - (
                 (ref.month, ref.day) < (birth_date_value.month, birth_date_value.day)
             )
             age_text = f" You were about **{age}**."
 
-    st.markdown(f"Think back to **{SEO_MONTH_NAME} {past_year}**.{age_text}")
+    st.markdown(f"Think back to **{month_name[forecast_month]} {past_year}**.{age_text}")
 
     event_echo = {
         "sun_saturn": "Then, as now, an opening was asking to become practical rather than remain only possible.",
@@ -7172,12 +7101,15 @@ def _monthly_motion_overlay_nodes(result: dict, event: dict) -> list[dict]:
 
 
 def _monthly_motion_planets(event: dict) -> list[str]:
-    return {
-        "sun_saturn": ["SUN", "SATURN"],
-        "solar_eclipse": ["SUN", "MOON"],
-        "venus_jupiter": ["VENUS", "JUPITER"],
-        "lunar_eclipse": ["MOON"],
-    }.get(event.get("key"), [])
+    supplied = [str(value).upper() for value in (event.get("planets") or []) if str(value).strip()]
+    if supplied:
+        return list(dict.fromkeys(supplied))
+    transit = str(event.get("transit") or "")
+    return [
+        planet.upper()
+        for planet in ("Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto")
+        if re.search(rf"\b{planet}\b", transit, re.I)
+    ]
 
 
 def _monthly_motion_summary(events: list[dict], selected_key: str) -> str:
@@ -7260,7 +7192,7 @@ def _monthly_activation_wheel_svg(result: dict, events: list[dict], selected_key
     if selected_key != "whole":
         event = next((item for item in events if item.get("key") == selected_key), None)
         if event:
-            label = re.sub(r"\s+2026$", "", event.get("date_label", "")).upper()
+            label = re.sub(r"\s+\d{4}$", "", event.get("date_label", "")).upper()
 
     parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="Monthly natal activation layer">']
 
@@ -7473,16 +7405,19 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
     if snapshot is None or not events:
         return
 
+    forecast_year, forecast_month, forecast_label = monthly_period_from_result(result)
+
     st.markdown("## Your Month in Motion")
     st.caption(
-        "Colour shows activity, not good or bad. Choose the whole month or one of the four key August moments to see how the emphasis shifts against your natal reference."
+        f"Colour shows activity, not good or bad. Choose the whole month or one of the "
+        f"{len(events)} key {month_name[forecast_month]} moments to see how the emphasis shifts against your natal reference."
     )
 
     _render_chart_natal_reference(snapshot)
 
     option_pairs = [("Whole Month", "whole")]
     for event in events:
-        short_date = re.sub(r"\s+2026$", "", str(event.get("date_label") or "")).title()
+        short_date = re.sub(r"\s+\d{4}$", "", str(event.get("date_label") or "")).title()
         option_pairs.append((short_date, event.get("key")))
     labels = [item[0] for item in option_pairs]
     chosen_label = st.radio(
@@ -7490,7 +7425,7 @@ def _monthly_chart_in_motion(snapshot, result: dict, events: list[dict], sign: s
         labels,
         index=0,
         horizontal=True,
-        key=f"monthly-motion-{sign_slug(sign)}-{SEO_YEAR}-{SEO_MONTH}",
+        key=f"monthly-motion-{sign_slug(sign)}-{forecast_year}-{forecast_month}",
     )
     selected_key = dict(option_pairs).get(chosen_label, "whole")
 
@@ -7894,7 +7829,56 @@ def _render_personal_major_events(
             unsafe_allow_html=True,
         )
 
+def _render_monthly_reader_calendar_streamlit(narrative, result) -> None:
+    rows = build_monthly_reader_chronology(narrative, result)
+    if not rows:
+        return
+    month_label = str(narrative.label).split()[0]
+    st.markdown(f"## {month_label} — in order")
+    st.caption(
+        "Read the month in order. When more than one signal lands on the same day, Luna keeps them together."
+    )
+    for item in rows:
+        body_html = "".join(
+            f"<p>{escape(finalize_customer_prose(value, product='monthly'))}</p>"
+            for value in item.get("body", [])
+            if str(value).strip()
+        )
+        technical = escape(str(item.get("technical") or ""))
+        influence = escape(str(item.get("influence") or ""))
+        influence_html = (
+            f'<div class="timing-meta" style="margin:.3rem 0 .65rem;text-transform:none">Influence · {influence}</div>'
+            if influence else ""
+        )
+        also_html = ""
+        if item.get("also"):
+            also_html = (
+                '<div class="timing-move" style="margin-top:.8rem"><div class="timing-move-label">Also active</div>'
+                + ''.join(f'<p>{escape(value)}</p>' for value in item["also"])
+                + '</div>'
+            )
+        move_html = (
+            '<div class="timing-move"><div class="timing-move-label">Your move</div>'
+            f'<p>{escape(finalize_customer_prose(item["move"], product="monthly"))}</p></div>'
+            if item.get("move") else ""
+        )
+        st.markdown(
+            f'''<article class="timing-story monthly-calendar-story">
+<div class="timing-meta">{escape(item["date_label"])} · {escape(item["badge"])}</div>
+<h3>{escape(item["headline"])}</h3>
+<p class="timing-transit-line">{technical}</p>
+{influence_html}
+<div class="timing-story-copy">{body_html}</div>
+{also_html}
+{move_html}
+</article>''',
+            unsafe_allow_html=True,
+        )
+
+
 def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None, snapshot=None) -> None:
+    forecast_year, forecast_month, forecast_label = monthly_period_from_result(result, narrative)
+    period_key = f"{forecast_year:04d}-{forecast_month:02d}"
     st.markdown(
         """
         <style>
@@ -7920,7 +7904,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     )
 
     st.markdown(
-        f'<div class="eyebrow">MONTHLY · {escape(sign.upper())} · {SEO_MONTH_NAME.upper()} {SEO_YEAR}</div>',
+        f'<div class="eyebrow">MONTHLY · {escape(sign.upper())} · {escape(forecast_label.upper())}</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -7965,6 +7949,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
     events = _luna_voice_v2_events(
         events,
         sign=sign,
+        period_key=period_key,
         hero=_monthly_main_headline(narrative, sign),
         context=context_for_voice,
     )
@@ -7982,81 +7967,31 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             )
             _render_luna_prose(human_arc_sentence(month_arc), product="monthly")
 
-    _render_major_sky_events(
-        result.get("major_sky_events") or [],
-        "monthly",
-        heading="The sky behind the story",
-        limit=6,
-    )
-    _render_personal_major_events(
-        result.get("major_sky_registry") or result.get("major_sky_events") or [],
-        snapshot,
-        timezone_name,
-        "monthly",
-        limit=4,
-    )
+    _render_monthly_reader_calendar_streamlit(narrative, result)
+
+    if snapshot is not None:
+        with st.expander("Personal contacts on these dates"):
+            _render_personal_major_events(
+                result.get("major_sky_registry") or result.get("major_sky_events") or [],
+                snapshot,
+                timezone_name,
+                "monthly",
+                limit=4,
+            )
 
     _monthly_chart_in_motion(snapshot, result, events, sign)
 
-    st.markdown("## How August unfolds")
-
-    if not events:
-        st.warning("Luna could not recover the four canonical August stories from this build.")
-        return
-
-    used_years = set()
-
-    for number, event in enumerate(events, start=1):
-        date_kind = "Window" if "–" in event["date_label"] else "Exact"
-        date_box = (
-            f'<div class="timing-date-box"><span>{date_kind}</span>'
-            f'<strong>{escape(event["date_label"].title())}</strong></div>'
-        )
-        lead_html = (
-            f"<p class=\"luna-voice-lead\">{escape(finalize_customer_prose(event.get('voice_lead') or '', product='monthly'))}</p>"
-            if event.get("voice_lead") else ""
-        )
-        body_html = lead_html + "".join(
-            f"<p>{escape(finalize_customer_prose(paragraph, product='monthly'))}</p>"
-            for paragraph in event["body"]
-        )
-        move_html = (
-            f'<div class="timing-move"><div class="timing-move-label">Your move</div>'
-            f'<p>{escape(finalize_customer_prose(event["move"], product="monthly"))}</p></div>'
-            if event["move"] else ""
-        )
-        watch_html = (
-            f'<div class="timing-watch"><span class="timing-meta-inline">WATCH</span> '
-            f'{escape(finalize_customer_prose(event["watch"], product="monthly"))}</div>'
-            if event.get("watch") else ""
-        )
-
-        article_html = (
-            '<article class="timing-story">'
-            f'<div class="timing-meta">{number:02d} / {escape(event["signal"])} · active {escape(event["influence"])}</div>'
-            f'<h2>{escape(event["title"] or event["transit"])}</h2>'
-            f'<p class="timing-transit-line">{escape(event["transit"])}</p>'
-            f'<div class="timing-dates">{date_box}</div>'
-            f'<div class="timing-story-copy">{body_html}</div>'
-            f'{move_html}'
-            f'{watch_html}'
-            '</article>'
-        )
-        st.markdown(article_html, unsafe_allow_html=True)
-
-        for connection_paragraph in _monthly_event_connection(events, number - 1):
-            st.markdown(
-                f'<div class="luna-connection">{escape(_luna_plain_prose(connection_paragraph, product="monthly"))}</div>',
-                unsafe_allow_html=True,
-            )
-
-        with st.expander("Why Luna sees this"):
-            st.markdown(f"**{event['transit']}** · active {event['influence']}")
-            if event["houses"]:
-                labels = ", ".join(
-                    f"house {h} — {HOUSE_NAMES.get(h, '')}" for h in sorted(event["houses"])
-                )
-                st.markdown(labels)
+    # Preserve the full technical trace without making the reader re-read the
+    # month in a second chronology.
+    if events:
+        with st.expander("Why Luna sees these dates"):
+            for event in events:
+                st.markdown(f"**{event['transit']}** · active {event['influence']}")
+                if event["houses"]:
+                    labels = ", ".join(
+                        f"house {h} — {HOUSE_NAMES.get(h, '')}" for h in sorted(event["houses"])
+                    )
+                    st.markdown(labels)
 
     st.markdown("## Where it lands")
 
@@ -8068,7 +8003,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             str(event.get("move") or ""),
             str(event.get("watch") or ""),
         ])
-    area_copy = _luna_voice_v2_areas(sign, voice_used)
+    area_copy = _luna_voice_v2_areas(sign, voice_used, period_key)
 
     for category in ("LOVE", "WORK", "MONEY"):
         visible_title, visible_body = area_copy[category]
@@ -8091,12 +8026,12 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             _render_luna_prose(fallback, product="monthly")
 
 
-def _render_monthly_result_actions(sign: str) -> None:
+def _render_monthly_result_actions(sign: str, year: int, month: int) -> None:
     """
     Reader controls for printing/saving the personalised report and sharing the public page.
     The public URL deliberately contains no birth data or session state.
     """
-    title = f"{sign} {SEO_MONTH_NAME} {SEO_YEAR} · Luna Convergence"
+    title = f"{sign} {month_name[int(month)]} {int(year)} · Luna Convergence"
     safe_title = escape(title)
     monthly_share_url = "https://luna-convergence.streamlit.app/monthly"
 
@@ -8233,7 +8168,15 @@ def monthly_sign_page() -> None:
         "/monthly",
     )
 
-    snapshot, birth_date_value, timezone_name, nearest_city, ready = _free_monthly_profile()
+    (
+        snapshot,
+        birth_date_value,
+        timezone_name,
+        nearest_city,
+        forecast_year,
+        forecast_month,
+        ready,
+    ) = _free_monthly_profile()
     if not ready:
         return
 
@@ -8256,17 +8199,17 @@ def monthly_sign_page() -> None:
     st.session_state["landing-daily-sign-v3195"] = sign
 
     set_page_metadata(
-        f"{sign} August 2026 Horoscope | Luna Convergence",
-        f"Free {sign} August 2026 horoscope with key dates, love/work/money context, historical echoes and natal timing.",
+        f"{sign} {month_name[forecast_month]} {forecast_year} Horoscope | Luna Convergence",
+        f"Free {sign} {month_name[forecast_month]} {forecast_year} horoscope with key dates, love/work/money context, historical echoes and natal timing.",
         "/monthly",
     )
 
     try:
-        with st.spinner(f"Building your free {SEO_MONTH_NAME} {SEO_YEAR}…"):
+        with st.spinner(f"Building your free {month_name[forecast_month]} {forecast_year}…"):
             narrative, result = build_production_monthly_report(
                 sign=sign,
-                year=SEO_YEAR,
-                month=SEO_MONTH,
+                year=forecast_year,
+                month=forecast_month,
                 timezone_name=timezone_name,
                 nearest_city=nearest_city,
                 main_focus="General overview",
@@ -8292,7 +8235,7 @@ def monthly_sign_page() -> None:
         snapshot=snapshot,
     )
 
-    _render_monthly_result_actions(sign)
+    _render_monthly_result_actions(sign, forecast_year, forecast_month)
 
     st.markdown("## Something specific on your mind?")
     st.markdown(
@@ -8316,7 +8259,7 @@ def make_monthly_page(sign: str):
     def page() -> None:
         _legacy_monthly_redirect(sign)
 
-    page.__name__ = f"{sign_slug(sign).replace('-', '_')}_august_2026_redirect"
+    page.__name__ = f"{sign_slug(sign).replace('-', '_')}_legacy_monthly_redirect"
     return page
 
 
@@ -8339,9 +8282,8 @@ def natal_snapshot_page() -> None:
         natal_sun_sign = st.selectbox(
             "What is your Sun sign (star sign)?",
             SIGNS,
-            index=SIGNS.index(str(st.session_state.get("natal-sun-sign-v9") or DEFAULT_SIGN))
-            if str(st.session_state.get("natal-sun-sign-v9") or DEFAULT_SIGN) in SIGNS
-            else SIGNS.index(DEFAULT_SIGN),
+            index=sign_select_index(st.session_state.get("natal-sun-sign-v9")),
+            placeholder="Select your star sign",
             key="natal-sun-sign-select-v9",
             help="Luna starts with your Sun sign as whole-sign House 1. Birth details then add Moon, planets, angles and natal precision.",
         )
@@ -8453,6 +8395,11 @@ def natal_snapshot_page() -> None:
             '<div class="lean-bookmark-note">Birth details stay out of the page URL. This free snapshot is calculated in the current app session and is not sent to Stripe.</div>',
             unsafe_allow_html=True,
         )
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
+    if natal_sun_sign not in SIGNS:
+        st.error("Select your star sign before creating the snapshot.")
         st.markdown('</section>', unsafe_allow_html=True)
         return
 
@@ -8679,7 +8626,7 @@ def _render_luna_prose(value: str, product: str = "timing") -> None:
         )
 
 def _brief_story_date(value: str) -> str:
-    """Make engine date labels read like prose: 07 AUG 2026 -> 7 Aug 2026."""
+    """Make engine date labels read like prose while preserving their selected year."""
     raw = re.sub(r"\s+", " ", str(value or "")).strip()
     match = re.fullmatch(r"0?(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})", raw)
     if match:
@@ -10211,9 +10158,8 @@ def timing_map_page() -> None:
     timing_sun_sign = st.selectbox(
         "What is your Sun sign (star sign)?",
         SIGNS,
-        index=SIGNS.index(str(st.session_state.get("timing-sun-sign-v9") or DEFAULT_SIGN))
-        if str(st.session_state.get("timing-sun-sign-v9") or DEFAULT_SIGN) in SIGNS
-        else SIGNS.index(DEFAULT_SIGN),
+        index=sign_select_index(st.session_state.get("timing-sun-sign-v9")),
+        placeholder="Select your star sign",
         key="timing-sun-sign-select-v9",
         help="Luna starts here. Your Sun sign is the primary whole-sign House 1 reference; birth details add natal timing underneath it.",
     )
@@ -10235,7 +10181,9 @@ def timing_map_page() -> None:
         generate = st.button("Build my Year Ahead", type="primary", use_container_width=True, key="timing-generate-v330")
 
     if generate:
-        if snapshot is None:
+        if timing_sun_sign not in SIGNS:
+            st.error("Select your star sign before building the Year Ahead.")
+        elif snapshot is None:
             st.error(validation_message or "Complete the birth details first.")
         else:
             calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
@@ -10511,7 +10459,8 @@ def solar_year_page() -> None:
         sign = st.selectbox(
             "What is your Sun sign (star sign)?",
             SIGNS,
-            index=SIGNS.index(DEFAULT_SIGN),
+            index=None,
+            placeholder="Select your star sign",
             key="solar-year-sign",
         )
     with c2:
@@ -10536,6 +10485,10 @@ def solar_year_page() -> None:
         help=city_input_help(timezone_name),
     )
     st.caption(browser_time_caption())
+
+    if sign not in SIGNS:
+        st.info("Select your star sign to calculate the Solar Convergence.")
+        return
 
     solar = daily_solar_convergence(
         sign,
@@ -10750,7 +10703,7 @@ PAYMENT_SUCCESS_REF = st.Page(
 MONTHLY_PAGE_REFS = {
     sign: st.Page(
         make_monthly_page(sign),
-        title=f"{sign} August 2026",
+        title=f"{sign} Monthly (legacy link)",
         url_path=f"august-2026-{sign_slug(sign)}",
         visibility="hidden",
     )

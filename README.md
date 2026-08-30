@@ -516,7 +516,7 @@ C(e,i,f) = T x O x A x H x R x I x D x F x P
 
 The engine calculates event strength, applies a hard evidence-to-scenario gate, derives the source/destination house path, assigns evidence to chronological roles, and then applies Luna's existing editorial voice and report layout.
 
-Production no longer selects a hand-written sign/month story profile. The v2.9.6 profiles remain only as a calibration archive in `monthly_story_profiles_v296_calibration.py`.
+Production no longer selects a hand-written sign/month story profile. The obsolete campaign calibration module is excluded from the v3.31 GitHub package.
 
 Validation:
 

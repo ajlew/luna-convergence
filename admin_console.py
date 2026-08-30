@@ -46,7 +46,7 @@ st.info(
 )
 
 if "forecast_year" not in st.session_state:
-    st.session_state.forecast_year = 2026
+    st.session_state.forecast_year = date.today().year
 if "result" not in st.session_state:
     st.session_state.result = None
 if "uploaded_profile" not in st.session_state:
@@ -88,7 +88,8 @@ with st.sidebar:
     sign = st.selectbox(
         "Star sign",
         SIGNS,
-        index=SIGNS.index("Sagittarius"),
+        index=None,
+        placeholder="Select a star sign",
     )
 
     period = st.radio("Forecast type", ["Daily", "Monthly", "Yearly"])
@@ -121,7 +122,7 @@ with st.sidebar:
     if period == "Daily":
         selected_date = st.date_input(
             "Date",
-            value=date(st.session_state.forecast_year, 7, 26),
+            value=date.today(),
             min_value=date(1900, 1, 1),
             max_value=date(2100, 12, 31),
         )
@@ -138,7 +139,7 @@ with st.sidebar:
             selected_month = st.selectbox(
                 "Month",
                 list(range(1, 13)),
-                index=6,
+                index=date.today().month - 1,
                 format_func=lambda number: month_name[number],
             )
 
@@ -176,6 +177,9 @@ profile = st.session_state.uploaded_profile
 reference_note = source_note(profile)
 
 if generate:
+    if sign not in SIGNS:
+        st.error("Select a star sign before generating analysis.")
+        st.stop()
     with st.spinner("Calculating positions, transitions, retrogrades and convergence points..."):
         if period == "Daily":
             result = daily_report(sign, selected_date, timezone_name, reference_note)
