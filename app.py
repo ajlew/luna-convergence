@@ -82,6 +82,7 @@ from weekly_view import (
     weekly_social_card_copy,
     week_label,
 )
+from weekly_voice_composer import load_weekly_voice_candidate
 from timing_map import (
     build_timing_map,
     month_intensity,
@@ -166,6 +167,7 @@ STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 LUNA_YOUTUBE_CHANNEL_URL = secret("LUNA_YOUTUBE_CHANNEL_URL")
 LUNA_YOUTUBE_FEATURED_VIDEO_URL = secret("LUNA_YOUTUBE_FEATURED_VIDEO_URL")
+LUNA_VOICE_MODE = secret("LUNA_VOICE_MODE", "preview").strip().lower()
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 
 LUNA_TRUST_STATEMENT = (
@@ -3841,6 +3843,60 @@ def _render_weekly_synthesis(days) -> None:
     )
 
 
+def _weekly_voice_copy_text(copy: dict) -> str:
+    lines = [str(copy["headline"]).strip(), "", str(copy["thesis"]).strip()]
+    for section in copy["sections"]:
+        lines.extend(
+            [
+                "",
+                str(section["headline"]).strip(),
+                str(section["evidence"]).strip(),
+                f"EXPERIENCE · {str(section['experience']).strip()}",
+                f"MEANING · {str(section['meaning']).strip()}",
+                f"YOUR MOVE · {str(section['move']).strip()}",
+            ]
+        )
+    lines.extend(["", str(copy["closing_rule"]).strip()])
+    return "\n".join(lines)
+
+
+def _render_weekly_voice_preview(days, monday: date, timezone_name: str) -> None:
+    """Compare deterministic v3.32 copy with a validated candidate in owner Studio only."""
+    if LUNA_VOICE_MODE == "off":
+        return
+
+    _render_weekly_heading("Luna Voice Composer · shadow preview", level=2)
+    st.caption(
+        "Editorial comparison only. Streamlit does not call a model, and the public Weekly View still uses the established deterministic copy."
+    )
+    current = build_weekly_synthesis(tuple(days))
+    loaded = load_weekly_voice_candidate(tuple(days), monday, timezone_name)
+    columns = st.columns(2, gap="large")
+    with columns[0]:
+        st.markdown("**CURRENT · v3.32 FALLBACK**")
+        current_text = "\n\n".join(
+            [current["headline"], *current["paragraphs"], current["rule"]]
+        )
+        st.code(current_text, language=None, wrap_lines=True)
+    with columns[1]:
+        st.markdown("**PROPOSED · VALIDATED VOICE COPY**")
+        if loaded.copy is not None:
+            st.success("Evidence lock passed. Safe for editorial review.")
+            st.code(_weekly_voice_copy_text(loaded.copy), language=None, wrap_lines=True)
+        else:
+            st.info(
+                "No valid candidate is active. Luna is using the v3.32 fallback without interruption."
+            )
+            with st.expander("Candidate status"):
+                for error in loaded.validation.errors:
+                    st.markdown(f"- {error}")
+                st.code(
+                    "python scripts/generate_weekly_voice.py "
+                    f"--week {monday.isoformat()} --timezone {timezone_name}",
+                    language="bash",
+                )
+
+
 
 def _weekly_sign_summary(
     sign: str,
@@ -4136,8 +4192,9 @@ def weekly_studio_page() -> None:
 4. Use the **1080 × 1920 SOCIAL CARD COPY** inside each sign. Luna selects a complete, prewritten short command; it never cuts a sentence to fit.
 5. Keep the longer interpretation on the website; do not squeeze it onto the social card.
 6. Use the existing **Monday-Sunday cards** for the seven separate Daily clips and as the evidence behind the weekly synthesis.
-7. Use **Week Ahead publishing copy** for the ready-to-paste YouTube title/description, Instagram Reel caption and opening voiceover.
-8. Export social/video artwork at **1080 × 1920 (9:16)**.
+7. Review **Luna Voice Composer · shadow preview** beside the unchanged v3.32 fallback. A candidate appears only after every evidence lock passes.
+8. Use **Week Ahead publishing copy** for the ready-to-paste YouTube title/description, Instagram Reel caption and opening voiceover.
+9. Export social/video artwork at **1080 × 1920 (9:16)**.
 
 **Production rule:** calculate the sky once; translate it twelve ways. Do not manually invent twelve different skies.
         """)
@@ -4163,6 +4220,7 @@ def weekly_studio_page() -> None:
     st.caption(f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · {timezone_name}")
 
     _render_weekly_synthesis(days)
+    _render_weekly_voice_preview(days, monday, timezone_name)
     _render_weekly_publish_package(days, monday)
 
     _render_weekly_heading("12 sign translations", level=2)

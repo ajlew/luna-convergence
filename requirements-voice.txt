@@ -1,0 +1,3 @@
+# The voice generator reuses requests from the main application requirements.
+# No model SDK is required: any OpenAI-compatible endpoint can be configured.
+
