@@ -1,0 +1,50 @@
+name: Generate weekly Luna voice preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: Any date in the production week (YYYY-MM-DD)
+        required: true
+      timezone:
+        description: IANA timezone
+        required: true
+        default: Australia/Sydney
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      LUNA_VOICE_BASE_URL: ${{ vars.LUNA_VOICE_BASE_URL }}
+      LUNA_VOICE_MODEL: ${{ vars.LUNA_VOICE_MODEL }}
+      LUNA_VOICE_PROVIDER: ${{ vars.LUNA_VOICE_PROVIDER }}
+      LUNA_VOICE_API_KEY: ${{ secrets.LUNA_VOICE_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install deterministic engine and voice client requirements
+        run: pip install -r requirements.txt -r requirements-voice.txt
+
+      - name: Generate and validate candidate
+        run: >-
+          python scripts/generate_weekly_voice.py
+          --week "${{ inputs.week }}"
+          --timezone "${{ inputs.timezone }}"
+
+      - name: Upload candidate for editorial review
+        uses: actions/upload-artifact@v4
+        with:
+          name: luna-weekly-voice-${{ inputs.week }}
+          path: generated/weekly/*.json
+          if-no-files-found: error
+          retention-days: 14
