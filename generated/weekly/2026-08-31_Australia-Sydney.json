@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "week_start": "2026-08-31",
+  "timezone": "Australia/Sydney",
+  "source_hash": "a5df73e7a055ed974d3e2971b21da586fa86526d81185a43467bbe4877b0bdf6",
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "copy": {
+    "headline": "BUILD THE OPENING TO LAST.",
+    "thesis": "Structure wins; force fails.",
+    "sections": [
+      {
+        "source_id": "2026-08-31:moon-saturn:conjunction",
+        "evidence": "Moon conjunct Saturn · exact today · approximately 1:18 pm AEST",
+        "headline": "Moon conjunct Saturn",
+        "experience": "Responsibility feels personal today. A limit, delay or duty may make the emotional weight feel larger than it is.",
+        "meaning": "Use discipline as containment, not punishment.",
+        "move": "Set one boundary. Complete one necessary task. Delay permanent emotional conclusions."
+      },
+      {
+        "source_id": "2026-09-01:jupiter-saturn:trine",
+        "evidence": "Jupiter trine Saturn · major sky event",
+        "headline": "Jupiter trine Saturn",
+        "experience": "Jupiter creates room to grow while Saturn supplies the limit, sequence and structure that can make the growth sustainable.",
+        "meaning": "The opening can last, but the Mars–Saturn pressure warns that force and bad timing will waste it.",
+        "move": "Choose one expansion. Give it a boundary, budget and next step."
+      },
+      {
+        "source_id": "2026-09-02:moon-sun:trine",
+        "evidence": "Sun trine Moon · exact today · approximately 10:43 am AEST",
+        "headline": "Sun trine Moon",
+        "experience": "Your visible direction and emotional response are briefly supporting each other.",
+        "meaning": "Ease creates usable momentum, not a guaranteed result.",
+        "move": "Use the clear opening while action feels natural."
+      },
+      {
+        "source_id": "2026-09-03:mars-saturn:square",
+        "evidence": "Mars square Saturn · separating · 0.81° orb at closest approach",
+        "headline": "Mars square Saturn",
+        "experience": "More pressure will not repair bad timing.",
+        "meaning": "Technique now beats aggression.",
+        "move": "Change the method before adding effort."
+      },
+      {
+        "source_id": "2026-09-04:moon-uranus:conjunction",
+        "evidence": "Moon conjunct Uranus · exact today · approximately 7:27 am AEST",
+        "headline": "Moon conjunct Uranus",
+        "experience": "An emotional reaction or sudden development can disrupt the expected rhythm.",
+        "meaning": "Freedom is useful. Impulse is not the same as direction.",
+        "move": "Pause before changing the plan. Keep the useful surprise."
+      },
+      {
+        "source_id": "2026-09-05:mercury-moon:square",
+        "evidence": "Moon square Mercury · exact today · approximately 7:29 am AEST",
+        "headline": "Moon square Mercury",
+        "experience": "What you feel and what was said are not producing the same conclusion.",
+        "meaning": "Irritation can identify the gap, but it cannot verify the interpretation.",
+        "move": "Check the message before sending the response."
+      },
+      {
+        "source_id": "2026-09-06:true-node-venus:trine",
+        "evidence": "Venus trine True Node · applying · 2.37° orb at closest approach",
+        "headline": "Venus trine True Node",
+        "experience": "What you value and the direction developing ahead are moving with less resistance.",
+        "meaning": "Support is available, but it still needs a chosen destination.",
+        "move": "Put one relationship or value-led decision in motion."
+      }
+    ],
+    "closing_rule": "Use structure to protect the opportunity. Do not answer pressure with more force."
+  }
+}
