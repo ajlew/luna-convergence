@@ -173,6 +173,19 @@ LUNA_VOICE_BASE_URL = secret("LUNA_VOICE_BASE_URL")
 LUNA_VOICE_MODEL = secret("LUNA_VOICE_MODEL")
 LUNA_VOICE_API_KEY = secret("LUNA_VOICE_API_KEY")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
+_VOICE_ERRORS: dict[str, str] = {}
+
+
+def _record_voice_error(product: str, error: object) -> None:
+    """Keep a safe per-run diagnostic without exposing credentials."""
+    message = " ".join(str(error or "Unknown voice error").split())
+    if LUNA_VOICE_API_KEY:
+        message = message.replace(LUNA_VOICE_API_KEY, "[redacted]")
+    _VOICE_ERRORS[product] = message[:700]
+
+
+def _voice_error(product: str) -> str:
+    return _VOICE_ERRORS.get(product, "No provider response was accepted.")
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -212,8 +225,17 @@ def _cached_guided_luna_collection(
 def _guided_luna_copy(product: str, facts: dict) -> dict | None:
     """Return validated generated prose; never block the calculated fallback."""
     if LUNA_VOICE_MODE not in {"published", "live"}:
+        _record_voice_error(product, f"LUNA_VOICE_MODE is {LUNA_VOICE_MODE or 'empty'}, not published/live.")
         return None
     if not (LUNA_VOICE_BASE_URL and LUNA_VOICE_MODEL and LUNA_VOICE_API_KEY):
+        missing = [
+            name for name, value in (
+                ("LUNA_VOICE_BASE_URL", LUNA_VOICE_BASE_URL),
+                ("LUNA_VOICE_MODEL", LUNA_VOICE_MODEL),
+                ("LUNA_VOICE_API_KEY", LUNA_VOICE_API_KEY),
+            ) if not value
+        ]
+        _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
         return _cached_guided_luna_copy(
@@ -223,15 +245,25 @@ def _guided_luna_copy(product: str, facts: dict) -> dict | None:
             LUNA_VOICE_MODEL,
             LUNA_VOICE_API_KEY,
         )
-    except Exception:
+    except Exception as exc:
+        _record_voice_error(product, exc)
         return None
 
 
 def _guided_luna_collection(product: str, facts: dict) -> dict | None:
     """Return a validated multi-item Luna collection, cached by its calculated facts."""
     if LUNA_VOICE_MODE not in {"published", "live"}:
+        _record_voice_error(product, f"LUNA_VOICE_MODE is {LUNA_VOICE_MODE or 'empty'}, not published/live.")
         return None
     if not (LUNA_VOICE_BASE_URL and LUNA_VOICE_MODEL and LUNA_VOICE_API_KEY):
+        missing = [
+            name for name, value in (
+                ("LUNA_VOICE_BASE_URL", LUNA_VOICE_BASE_URL),
+                ("LUNA_VOICE_MODEL", LUNA_VOICE_MODEL),
+                ("LUNA_VOICE_API_KEY", LUNA_VOICE_API_KEY),
+            ) if not value
+        ]
+        _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
         return _cached_guided_luna_collection(
@@ -241,7 +273,8 @@ def _guided_luna_collection(product: str, facts: dict) -> dict | None:
             LUNA_VOICE_MODEL,
             LUNA_VOICE_API_KEY,
         )
-    except Exception:
+    except Exception as exc:
+        _record_voice_error(product, exc)
         return None
 
 
@@ -4066,6 +4099,27 @@ def _weekly_day_voice_collection(days, monday: date, timezone_name: str) -> dict
 
 def _weekly_sign_voice_collection(days, monday: date, timezone_name: str) -> dict[str, dict]:
     packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
+    shared_context = {
+        "week_pattern": {
+            "controlling_planet": packet["calculated_pattern"]["controlling_planet"],
+            "dominant_planets": packet["calculated_pattern"]["dominant_planets"],
+            "pressure_source_ids": packet["calculated_pattern"]["pressure_source_ids"],
+            "support_source_ids": packet["calculated_pattern"]["support_source_ids"],
+        },
+        "events": [
+            {
+                "source_id": event["source_id"],
+                "date": event["date"],
+                "technical_label": event["technical_label"],
+                "planets": event["planets"],
+                "aspect": event["aspect"],
+                "role": event["role"],
+                "phase": event["phase"],
+                "orb_degrees": event["orb_degrees"],
+            }
+            for event in packet["events"]
+        ],
+    }
     items = []
     for sign in SIGNS:
         summary = _weekly_sign_summary(sign, monday, timezone_name, days)
@@ -4075,32 +4129,63 @@ def _weekly_sign_voice_collection(days, monday: date, timezone_name: str) -> dic
                 "sign": sign,
                 "houses": list(summary["houses"]),
                 "life_areas": list(summary["areas"]),
-                "week_pattern": {
-                    "controlling_planet": packet["calculated_pattern"]["controlling_planet"],
-                    "dominant_planets": packet["calculated_pattern"]["dominant_planets"],
-                    "pressure_source_ids": packet["calculated_pattern"]["pressure_source_ids"],
-                    "support_source_ids": packet["calculated_pattern"]["support_source_ids"],
-                },
-                "events": [
-                    {
-                        "source_id": event["source_id"],
-                        "date": event["date"],
-                        "technical_label": event["technical_label"],
-                        "role": event["role"],
-                        "phase": event["phase"],
-                        "orb_degrees": event["orb_degrees"],
-                    }
-                    for event in packet["events"]
-                ],
             }
         )
     generated = _guided_luna_collection(
         "weekly_signs",
-        {"week_start": monday.isoformat(), "timezone": timezone_name, "items": items},
+        {
+            "week_start": monday.isoformat(),
+            "timezone": timezone_name,
+            "shared_context": shared_context,
+            "items": items,
+        },
     )
     if not generated:
         return {}
     return {str(item["source_id"]): item for item in generated["items"]}
+
+
+def _weekly_single_sign_voice(
+    sign: str,
+    days,
+    monday: date,
+    timezone_name: str,
+) -> dict | None:
+    """Generate only the selected public sign instead of billing for all twelve."""
+    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
+    summary = _weekly_sign_summary(sign, monday, timezone_name, days)
+    facts = {
+        "week_start": monday.isoformat(),
+        "timezone": timezone_name,
+        "shared_context": {
+            "week_pattern": packet["calculated_pattern"],
+            "events": [
+                {
+                    "source_id": event["source_id"],
+                    "date": event["date"],
+                    "technical_label": event["technical_label"],
+                    "planets": event["planets"],
+                    "aspect": event["aspect"],
+                    "role": event["role"],
+                    "phase": event["phase"],
+                    "orb_degrees": event["orb_degrees"],
+                }
+                for event in packet["events"]
+            ],
+        },
+        "items": [
+            {
+                "source_id": sign,
+                "sign": sign,
+                "houses": list(summary["houses"]),
+                "life_areas": list(summary["areas"]),
+            }
+        ],
+    }
+    generated = _guided_luna_collection("weekly_signs", facts)
+    if not generated or not generated.get("items"):
+        return None
+    return generated["items"][0]
 
 
 def _weekly_social_card_from_voice(sign: str, copy: dict, monday: date, areas: list[str]) -> str:
@@ -4216,8 +4301,7 @@ def _render_weekly_sign_layer(
     days=None,
 ) -> None:
     summary = _weekly_sign_summary(sign, monday, timezone_name, days)
-    voices = _weekly_sign_voice_collection(days, monday, timezone_name)
-    voice = voices.get(sign)
+    voice = _weekly_single_sign_voice(sign, days, monday, timezone_name)
     _render_weekly_heading(f"{sign} · The Week Ahead", level=2)
     st.markdown("**WHERE IT LANDS**  ")
     st.markdown(" · ".join(summary["areas"]))
@@ -4518,6 +4602,8 @@ def weekly_studio_page() -> None:
 
     _render_weekly_heading("12 sign translations", level=2)
     sign_voices = _weekly_sign_voice_collection(days, monday, timezone_name)
+    if not sign_voices:
+        st.warning("12-sign voice diagnostic: " + _voice_error("weekly_signs"))
     sign_summaries = []
     for sign in SIGNS:
         try:
@@ -4556,6 +4642,8 @@ def weekly_studio_page() -> None:
 
     _render_weekly_heading("Monday-Sunday source cards", level=2)
     day_voices = _weekly_day_voice_collection(days, monday, timezone_name)
+    if not day_voices:
+        st.warning("Seven-day voice diagnostic: " + _voice_error("weekly_days"))
     _render_weekly_cards(days, monday, studio=True, voice_items=day_voices)
     combined_copy = _weekly_daily_scripts_from_voice(days, day_voices)
     st.download_button("Download all seven daily scripts", data=combined_copy, file_name=f"luna_week_{monday.isoformat()}_daily_canva_copy.txt", mime="text/plain", use_container_width=True)

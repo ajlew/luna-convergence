@@ -46,11 +46,15 @@ _PROHIBITED = (
     "karmic and highly aligned",
 )
 _IMPERATIVES = {
-    "act", "allow", "answer", "ask", "build", "change", "check", "choose",
-    "clarify", "complete", "contain", "decide", "define", "delay", "do",
-    "finish", "give", "hold", "keep", "let", "make", "move", "name",
-    "notice", "pause", "protect", "put", "release", "review", "set", "state",
-    "stop", "test", "trust", "use", "verify", "wait", "watch", "write",
+    "accept", "act", "allow", "answer", "apply", "ask", "begin", "build",
+    "change", "check", "choose", "clarify", "complete", "contain", "cut",
+    "decide", "define", "delay", "do", "drop", "end", "face", "feel",
+    "finish", "follow", "give", "hold", "keep", "lead", "lean", "let",
+    "listen", "look", "make", "move", "name", "notice", "open", "pause",
+    "pick", "protect", "put", "read", "release", "remember", "reset",
+    "review", "say", "send", "set", "slow", "start", "state", "stay",
+    "step", "stop", "take", "test", "treat", "trust", "turn", "use",
+    "verify", "wait", "watch", "write",
 }
 
 
@@ -112,6 +116,12 @@ def collection_facts_hash(product: str, facts: dict[str, Any]) -> str:
 
 def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
     rule = _COLLECTION_RULES.get(product, "Write one concise interpretation per supplied item.")
+    shared_rule = (
+        "The top-level shared_context is calculated evidence that applies to every item. Use it together with each "
+        "item's own houses and life areas, without copying the same story between items.\n\n"
+        if facts.get("shared_context")
+        else ""
+    )
     return (
         "You are Luna. The supplied JSON contains closed calculations from Luna's deterministic astrology engine. "
         "Never recalculate, repair or invent astrology. Interpret only the supplied items. Preserve every source_id "
@@ -122,9 +132,13 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
         "Use ordinary language, varied sentence rhythm and at most one short cheeky observation per item. Do not use "
         "generic flattery, therapy slogans, mystical padding, emojis, jargon lists or closing questions. "
         + rule
-        + "\n\nReturn JSON only with exactly these keys: items, facts_hash. Each items entry must contain exactly: "
+        + "\n\n"
+        + shared_rule
+        + "Return JSON only with exactly these keys: items, facts_hash. Each items entry must contain exactly: "
         "source_id, headline, story, affirmation, your_move. story is one complete paragraph string. Copy facts_hash "
-        "exactly. Begin every your_move with an imperative verb.\n\n"
+        "exactly. Begin every your_move with one of these imperative verbs: "
+        + ", ".join(sorted(_IMPERATIVES))
+        + ".\n\n"
         "Never claim perfect alignment, automatic luck, guarantees, certainty, destiny, karmic inevitability, "
         "manifestation as fact, or that the worst is over.\n\n"
         "CALCULATED COLLECTION:\n"
@@ -260,7 +274,9 @@ def validate_guided_collection_copy(
     facts_text = json.dumps(facts, ensure_ascii=False, default=str)
     supplied_numbers = set(re.findall(r"\b\d+(?:\.\d+)?(?::\d+)?\b", facts_text))
     all_texts: list[str] = []
+    story_texts: list[str] = []
     supplied_by_id = {str(item.get("source_id") or ""): item for item in supplied_items}
+    shared_context = facts.get("shared_context") or {}
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             errors.append(f"Item {index + 1} is not an object.")
@@ -276,13 +292,18 @@ def validate_guided_collection_copy(
                 errors.append(f"Item {index + 1} {key} exceeds its word limit.")
             all_texts.append(value)
             item_texts.append(value)
+            if key == "story" and value:
+                story_texts.append(value)
         move = " ".join(str(item.get("your_move") or "").split())
         if move:
             first = re.sub(r"[^a-z]", "", move.split()[0].lower())
             if first not in _IMPERATIVES:
                 errors.append(f"Item {index + 1} your_move is not clearly imperative.")
         supplied_item_text = json.dumps(
-            supplied_by_id.get(str(item.get("source_id") or ""), {}),
+            {
+                "shared_context": shared_context,
+                "item": supplied_by_id.get(str(item.get("source_id") or ""), {}),
+            },
             ensure_ascii=False,
             default=str,
         )
@@ -316,13 +337,17 @@ def validate_guided_collection_copy(
     if invented:
         errors.append("The response invented numeric evidence: " + ", ".join(invented) + ".")
 
-    normalized = [re.sub(r"[^a-z0-9]+", " ", value.lower()).strip() for value in all_texts if value]
-    if len(normalized) != len(set(normalized)):
-        errors.append("The response duplicates collection prose.")
+    normalized_stories = [
+        re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+        for value in story_texts
+        if value
+    ]
+    if len(normalized_stories) != len(set(normalized_stories)):
+        errors.append("The response duplicates a complete collection story.")
     return not errors, tuple(dict.fromkeys(errors))
 
 
-def generate_guided_collection_copy(
+def _generate_guided_collection_batch(
     product: str,
     facts: dict[str, Any],
     *,
@@ -330,6 +355,7 @@ def generate_guided_collection_copy(
     model: str,
     api_key: str,
 ) -> dict[str, Any]:
+    """Generate and validate one collection batch."""
     prompt = build_guided_collection_prompt(product, facts)
     errors: tuple[str, ...] = ()
     for attempt in range(2):
@@ -348,3 +374,62 @@ def generate_guided_collection_copy(
                 + " | ".join(errors)
             )
     raise ValueError("Guided Luna collection failed validation: " + " | ".join(errors))
+
+
+def generate_guided_collection_copy(
+    product: str,
+    facts: dict[str, Any],
+    *,
+    base_url: str,
+    model: str,
+    api_key: str,
+) -> dict[str, Any]:
+    """Generate a collection without letting one malformed item erase the batch.
+
+    Groq normally receives the complete collection so the items retain a shared
+    narrative. If that response reaches the provider but fails Luna's evidence
+    contract twice, retry each calculated item independently. Provider/network
+    failures are deliberately not multiplied into many doomed requests.
+    """
+    try:
+        return _generate_guided_collection_batch(
+            product,
+            facts,
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+        )
+    except ValueError as batch_error:
+        supplied_items = list(facts.get("items") or [])
+        if len(supplied_items) <= 1:
+            raise
+
+        recovered_items: list[dict[str, Any]] = []
+        for supplied_item in supplied_items:
+            item_facts = {key: value for key, value in facts.items() if key != "items"}
+            item_facts["items"] = [supplied_item]
+            try:
+                recovered = _generate_guided_collection_batch(
+                    product,
+                    item_facts,
+                    base_url=base_url,
+                    model=model,
+                    api_key=api_key,
+                )
+            except Exception as item_error:
+                source_id = str(supplied_item.get("source_id") or "unknown")
+                raise ValueError(
+                    f"Guided Luna collection recovery failed for {source_id}: {item_error}"
+                ) from batch_error
+            recovered_items.extend(recovered["items"])
+
+        recovered_copy = {
+            "items": recovered_items,
+            "facts_hash": collection_facts_hash(product, facts),
+        }
+        valid, errors = validate_guided_collection_copy(product, recovered_copy, facts)
+        if not valid:
+            raise ValueError(
+                "Guided Luna recovered collection failed validation: " + " | ".join(errors)
+            ) from batch_error
+        return recovered_copy
