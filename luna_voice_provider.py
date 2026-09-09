@@ -69,7 +69,7 @@ def generate_openai_compatible_json(
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.72,
-        "max_tokens": 4200,
+        "max_tokens": 8000,
         "response_format": {"type": "json_object"},
     }
     try:

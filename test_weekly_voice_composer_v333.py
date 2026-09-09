@@ -159,7 +159,7 @@ def test_missing_candidate_returns_safe_fallback_status(tmp_path: Path):
     assert "No generated candidate" in loaded.validation.errors[0]
 
 
-def test_public_weekly_page_prefers_cached_voice_and_never_calls_provider():
+def test_public_weekly_page_prefers_llm_voice_and_uses_factual_fallback():
     source = Path("app.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     functions = {
@@ -169,6 +169,7 @@ def test_public_weekly_page_prefers_cached_voice_and_never_calls_provider():
     }
 
     assert "_render_weekly_public_story" in functions["weekly_page"]
-    assert "_render_weekly_synthesis" in functions["weekly_page"]
-    assert "generate_openai_compatible_json" not in source
+    assert "_render_weekly_synthesis" not in functions["weekly_page"]
+    assert "_render_voice_unavailable" in functions["weekly_page"]
+    assert "_weekly_llm_copy" in functions["_render_weekly_public_story"]
     assert 'secret("LUNA_VOICE_MODE", "published")' in source
