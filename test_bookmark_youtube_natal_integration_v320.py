@@ -15,7 +15,8 @@ def test_daily_sign_is_bookmarkable_without_exposing_birth_data():
 def test_youtube_is_optional_and_does_not_clutter_empty_daily():
     assert 'LUNA_YOUTUBE_FEATURED_VIDEO_URL = secret("LUNA_YOUTUBE_FEATURED_VIDEO_URL")' in APP
     assert 'if not LUNA_YOUTUBE_FEATURED_VIDEO_URL:' in APP
-    assert 'st.video(LUNA_YOUTUBE_FEATURED_VIDEO_URL)' in APP
+    assert 'playable_url = _youtube_playable_url(LUNA_YOUTUBE_FEATURED_VIDEO_URL)' in APP
+    assert 'st.video(playable_url)' in APP
     assert 'LUNA_YOUTUBE_CHANNEL_URL = secret("LUNA_YOUTUBE_CHANNEL_URL")' in APP
 
 

@@ -13,7 +13,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from luna_voice_provider import generate_openai_compatible_json  # noqa: E402
 from weekly_view import build_weekly_view, monday_for  # noqa: E402
 from weekly_voice_composer import (  # noqa: E402
     build_weekly_voice_packet,
@@ -69,6 +68,10 @@ def main() -> int:
         provider = "response-file"
         model = args.response_file.name
     else:
+        # Keep packet-only and response-file validation independent from the
+        # HTTP client. This lets Luna inspect calculations without API packages.
+        from luna_voice_provider import generate_openai_compatible_json
+
         copy = generate_openai_compatible_json(build_weekly_voice_prompt(packet))
         provider = os.getenv("LUNA_VOICE_PROVIDER", "openai-compatible")
         model = os.getenv("LUNA_VOICE_MODEL", "")
@@ -89,4 +92,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

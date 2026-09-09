@@ -1,7 +1,8 @@
 # Validated weekly voice candidates
 
-The Streamlit app never calls a language model. It only reads a candidate from
-this directory when Weekly Studio is in preview mode.
+The Streamlit app never calls a language model. It reads one validated, cached
+weekly story from this directory. If the candidate is current, the public Weekly
+View publishes it; otherwise Luna automatically uses the deterministic fallback.
 
 Generate a candidate outside the app:
 
@@ -19,6 +20,5 @@ Required environment variables:
 - `LUNA_VOICE_PROVIDER` — optional display/audit label.
 
 Only candidates that pass the evidence and language validator are written.
-Committing a validated JSON file makes it available to the private comparison
-inside Weekly Studio. The public Weekly View continues using deterministic copy.
-
+The manual GitHub Action generates, validates and commits the candidate to the
+branch from which it was run. Weekly Studio still provides the editorial comparison.

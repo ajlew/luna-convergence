@@ -1,0 +1,29 @@
+{
+  "schema_version": "2.0",
+  "week_start": "2026-09-07",
+  "timezone": "Australia/Sydney",
+  "source_hash": "e53a40b4cdc1ad52bc5eb155d693187fe859c97cc4a688166f1fe33728bcf2eb",
+  "provider": "openai-codex",
+  "model": "gpt-5",
+  "copy": {
+    "headline": "LET THE INNER REVOLUTION FINISH ITS SENTENCE.",
+    "opening": "This week changes the direction from the inside first. Stop demanding instant certainty from a process that is still rearranging the furniture.",
+    "story": [
+      "Uranus stationing retrograde is the hinge of the week. The Moon's sextile to Uranus offers an early emotional preview: a different response becomes possible before the full reason is obvious. Notice what suddenly feels too cramped, stale or automatic. You do not have to blow up the plan; just stop pretending the old version still fits.",
+      "Venus trine the True Node keeps values, relationships and future direction in the same conversation, while Venus entering Scorpio removes the appetite for polite half-interest. Choose depth without manufacturing drama. The New Moon in Virgo helps by bringing the grand emotional revelation back to earth: tidy the detail, reset the routine and give the desire somewhere practical to live.",
+      "Sun sextile Mars restores useful momentum. Act on what is clear enough, especially where one direct move can replace a week of circling. This is not a demand to rush. It is permission to stop confusing hesitation with wisdom. Even the cosmos has meetings that could have been an email.",
+      "Then Mercury opposite Neptune blurs the message just as Mercury trine Pluto asks you to investigate beneath it. Do not crown the first feeling as fact. Check what was said, look for the missing detail and let deeper attention do what anxious guessing cannot. Clarity is available, but it arrives through verification rather than volume."
+    ],
+    "affirmation": "You are allowed to change your mind when better information arrives; that is discernment, not failure.",
+    "your_move": "Pause before reacting. Verify the message. Choose the change that creates more honesty, then give it one practical next step.",
+    "evidence_ids": [
+      "2026-09-07:true-node-venus:trine",
+      "2026-09-08:moon-uranus:sextile",
+      "2026-09-09:mars-sun:sextile",
+      "2026-09-10:true-node-venus:trine",
+      "2026-09-11:uranus-uranus:station",
+      "2026-09-12:mercury-neptune:opposition",
+      "2026-09-13:mercury-pluto:trine"
+    ]
+  }
+}

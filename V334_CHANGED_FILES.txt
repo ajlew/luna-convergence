@@ -1,0 +1,20 @@
+Luna v3.34 — Guided Luna Everywhere
+
+Upload these paths without changing their folder structure:
+
+app.py
+site_config.py
+luna_guided_voice.py
+luna_voice_provider.py
+weekly_voice_composer.py
+scripts/generate_weekly_voice.py
+.github/workflows/generate-weekly-voice-preview.yml
+generated/weekly/README.md
+generated/weekly/2026-09-07_Australia-Sydney.json
+GITHUB_UPDATE_V334_GUIDED_LUNA_EVERYWHERE.md
+test_guided_luna_everywhere_v334.py
+test_weekly_voice_composer_v333.py
+test_bookmark_youtube_natal_integration_v320.py
+
+Do not upload the ZIP itself. Extract it, open the included luna-convergence
+folder, and upload the contents of that folder to the repository root.

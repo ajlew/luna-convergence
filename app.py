@@ -82,7 +82,8 @@ from weekly_view import (
     weekly_social_card_copy,
     week_label,
 )
-from weekly_voice_composer import load_weekly_voice_candidate
+from weekly_voice_composer import build_weekly_voice_packet, load_weekly_voice_candidate
+from luna_guided_voice import generate_guided_voice_copy
 from timing_map import (
     build_timing_map,
     month_intensity,
@@ -167,8 +168,63 @@ STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 LUNA_YOUTUBE_CHANNEL_URL = secret("LUNA_YOUTUBE_CHANNEL_URL")
 LUNA_YOUTUBE_FEATURED_VIDEO_URL = secret("LUNA_YOUTUBE_FEATURED_VIDEO_URL")
-LUNA_VOICE_MODE = secret("LUNA_VOICE_MODE", "preview").strip().lower()
+LUNA_VOICE_MODE = secret("LUNA_VOICE_MODE", "published").strip().lower()
+LUNA_VOICE_BASE_URL = secret("LUNA_VOICE_BASE_URL")
+LUNA_VOICE_MODEL = secret("LUNA_VOICE_MODEL")
+LUNA_VOICE_API_KEY = secret("LUNA_VOICE_API_KEY")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_guided_luna_copy(
+    product: str,
+    facts_json: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+) -> dict:
+    return generate_guided_voice_copy(
+        product,
+        json.loads(facts_json),
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+    )
+
+
+def _guided_luna_copy(product: str, facts: dict) -> dict | None:
+    """Return validated generated prose; never block the calculated fallback."""
+    if LUNA_VOICE_MODE not in {"published", "live"}:
+        return None
+    if not (LUNA_VOICE_BASE_URL and LUNA_VOICE_MODEL and LUNA_VOICE_API_KEY):
+        return None
+    try:
+        return _cached_guided_luna_copy(
+            product,
+            json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
+            LUNA_VOICE_BASE_URL,
+            LUNA_VOICE_MODEL,
+            LUNA_VOICE_API_KEY,
+        )
+    except Exception:
+        return None
+
+
+def _render_guided_luna_story(copy: dict, kicker: str) -> None:
+    paragraphs = "".join(
+        f"<p>{escape(str(paragraph).strip())}</p>" for paragraph in copy["story"]
+    )
+    st.markdown(
+        f"""<section class="weekly-synthesis luna-guided-story">
+<div class="weekly-kicker">{escape(kicker)}</div>
+<div class="weekly-sign-heading" role="heading" aria-level="2">{escape(str(copy['headline']).strip())}</div>
+<p><strong>{escape(str(copy['opening']).strip())}</strong></p>
+{paragraphs}
+<p class="weekly-synthesis-rule"><strong>REMEMBER ·</strong> {escape(str(copy['affirmation']).strip())}</p>
+<p><strong>YOUR MOVE · {escape(str(copy['your_move']).strip())}</strong></p>
+</section>""",
+        unsafe_allow_html=True,
+    )
 
 LUNA_TRUST_STATEMENT = (
     "The astrology is calculated, not guessed. Ephemeris data and programmed rules determine "
@@ -3583,6 +3639,35 @@ def _daily_narrative_for_landing(
     )
 
 
+def _daily_guided_facts(narrative, sign: str, reading_date: date, timezone_name: str) -> dict:
+    evidence = narrative.evidence
+    return {
+        "sign": sign,
+        "date": reading_date.isoformat(),
+        "timezone": timezone_name,
+        "major_event": getattr(narrative, "major_event_label", ""),
+        "supporting_events": list(getattr(narrative, "supporting_events", ()) or ()),
+        "active_planets": list(evidence.active_planets),
+        "aspect": evidence.aspect_label,
+        "aspect_type": evidence.aspect_type,
+        "orb": evidence.orb,
+        "configured_orb": evidence.configured_orb,
+        "phase": evidence.phase,
+        "activated_houses": list(evidence.activated_houses),
+        "house_meanings": list(evidence.house_meanings),
+        "strongest_influence": evidence.strongest_influence,
+        "active_window": evidence.active_window,
+        "strength_score": evidence.strength_score,
+        "confidence": evidence.confidence_label,
+        "convergence": evidence.convergence_label,
+        "convergence_score": evidence.convergence_score,
+        "convergence_window": evidence.convergence_window,
+        "technical_aspects": list(narrative.technical_aspects),
+        "sun_house": narrative.sun_house,
+        "moon_house": narrative.moon_house,
+    }
+
+
 def _query_daily_sign() -> str | None:
     try:
         raw = str(st.query_params.get("sign", "") or "").strip().lower()
@@ -3666,16 +3751,27 @@ def _render_lean_daily(path: str) -> None:
     timezone_name = browser_timezone_name()
     narrative = _daily_narrative_for_landing(sign, reading_date, timezone_name)
 
-    story = tuple(narrative.today_story[:2])
+    guided = _guided_luna_copy(
+        "daily",
+        _daily_guided_facts(narrative, sign, reading_date, timezone_name),
+    )
+    if guided:
+        story = tuple([guided["opening"], *guided["story"], guided["affirmation"]])
+        headline = guided["headline"]
+        action_today = guided["your_move"]
+    else:
+        story = tuple(narrative.today_story[:2])
+        headline = narrative.hook_headline
+        action_today = narrative.action_today
     story_html = "".join(
         f"<p>{escape(paragraph)}</p>" for paragraph in story if paragraph
     )
-    connected_daily = _daily_connected_meaning(narrative)
+    connected_daily = "" if guided else _daily_connected_meaning(narrative)
     connected_daily_html = ""
     if connected_daily:
         clean_connected = escape(connected_daily).replace("**", "")
         connected_daily_html = f'<div class="lean-daily-meaning">{clean_connected}</div>'
-    question = narrative.reflection_questions[0] if narrative.reflection_questions else ""
+    question = "" if guided else (narrative.reflection_questions[0] if narrative.reflection_questions else "")
     monthly_href = "/monthly"
     major_daily_html = (
         f'<div class="lean-daily-major-event">Major sky event · {escape(narrative.major_event_label)}</div>'
@@ -3695,12 +3791,12 @@ def _render_lean_daily(path: str) -> None:
   </div>
   {major_daily_html}
   {supporting_daily_html}
-  <h1>{escape(narrative.hook_headline)}</h1>
+  <h1>{escape(headline)}</h1>
   <div class="lean-daily-story">{story_html}</div>
   {connected_daily_html}
   <div class="lean-daily-move">
     <div class="lean-daily-label">Your move</div>
-    <p>{escape(narrative.action_today)}</p>
+    <p>{escape(action_today)}</p>
   </div>
   {f'<div class="lean-daily-question">{escape(question)}</div>' if question else ''}
   <div class="lean-daily-reset">Focus Reset</div>
@@ -3844,20 +3940,59 @@ def _render_weekly_synthesis(days) -> None:
 
 
 def _weekly_voice_copy_text(copy: dict) -> str:
-    lines = [str(copy["headline"]).strip(), "", str(copy["thesis"]).strip()]
-    for section in copy["sections"]:
-        lines.extend(
-            [
-                "",
-                str(section["headline"]).strip(),
-                str(section["evidence"]).strip(),
-                f"EXPERIENCE · {str(section['experience']).strip()}",
-                f"MEANING · {str(section['meaning']).strip()}",
-                f"YOUR MOVE · {str(section['move']).strip()}",
-            ]
-        )
-    lines.extend(["", str(copy["closing_rule"]).strip()])
+    lines = [str(copy["headline"]).strip(), "", str(copy["opening"]).strip()]
+    for paragraph in copy["story"]:
+        lines.extend(["", str(paragraph).strip()])
+    lines.extend(
+        [
+            "",
+            f"REMEMBER · {str(copy['affirmation']).strip()}",
+            "",
+            f"YOUR MOVE · {str(copy['your_move']).strip()}",
+        ]
+    )
     return "\n".join(lines)
+
+
+def _render_weekly_voice_story(copy: dict) -> None:
+    paragraphs = "".join(
+        f"<p>{escape(str(paragraph).strip())}</p>" for paragraph in copy["story"]
+    )
+    st.markdown(
+        f"""
+<section class="weekly-synthesis weekly-voice-story" aria-label="Luna's week ahead">
+  <div class="weekly-kicker">Luna's week ahead</div>
+  <div class="weekly-sign-heading" role="heading" aria-level="2">{escape(str(copy['headline']).strip())}</div>
+  <p class="weekly-voice-opening">{escape(str(copy['opening']).strip())}</p>
+  {paragraphs}
+  <p class="weekly-synthesis-rule"><strong>REMEMBER ·</strong> {escape(str(copy['affirmation']).strip())}</p>
+  <p><strong>YOUR MOVE · {escape(str(copy['your_move']).strip())}</strong></p>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_weekly_calculated_evidence(days, monday: date, timezone_name: str) -> None:
+    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
+    with st.expander("See the calculations behind Luna's reading", expanded=False):
+        st.caption(f"Calculated for {timezone_name}. The writing layer cannot change these facts.")
+        for event in packet["events"]:
+            st.markdown(f"**{event['weekday']} · {event['technical_label']}**  ")
+            st.markdown(event["evidence"])
+            if event["supporting_events"]:
+                st.caption("Also active · " + " · ".join(event["supporting_events"]))
+
+
+def _render_weekly_public_story(days, monday: date, timezone_name: str) -> bool:
+    if LUNA_VOICE_MODE not in {"published", "live"}:
+        return False
+    loaded = load_weekly_voice_candidate(tuple(days), monday, timezone_name)
+    if loaded.copy is None:
+        return False
+    _render_weekly_voice_story(loaded.copy)
+    _render_weekly_calculated_evidence(days, monday, timezone_name)
+    return True
 
 
 def _render_weekly_voice_preview(days, monday: date, timezone_name: str) -> None:
@@ -3867,7 +4002,7 @@ def _render_weekly_voice_preview(days, monday: date, timezone_name: str) -> None
 
     _render_weekly_heading("Luna Voice Composer · shadow preview", level=2)
     st.caption(
-        "Editorial comparison only. Streamlit does not call a model, and the public Weekly View still uses the established deterministic copy."
+        "Streamlit does not call a model. A validated candidate is cached and can publish automatically; the established copy remains the fallback."
     )
     current = build_weekly_synthesis(tuple(days))
     loaded = load_weekly_voice_candidate(tuple(days), monday, timezone_name)
@@ -4003,16 +4138,17 @@ def weekly_page() -> None:
         unsafe_allow_html=True,
     )
     st.markdown("**Your Sun sign is the first reference. See where the week lands. Keep one rule while the mood changes.**")
-    _render_weekly_synthesis(days)
+    if not _render_weekly_public_story(days, monday, timezone_name):
+        _render_weekly_synthesis(days)
     try:
         _render_weekly_sign_layer(sign, monday, timezone_name, days)
     except Exception as exc:
         st.warning("Luna could not build the sign-specific weekly layer, so the shared seven-day sky is shown below.")
         if EDITOR_PREVIEW_ENABLED:
             st.exception(exc)
-    _render_weekly_heading("The shared sky · Seven days", level=2)
-    st.caption(f"Dates and exact-day labels use {timezone_name}.")
-    _render_weekly_cards(days, monday, studio=True)
+    with st.expander("The shared sky · Seven calculated days", expanded=False):
+        st.caption(f"Dates and exact-day labels use {timezone_name}.")
+        _render_weekly_cards(days, monday, studio=True)
     complete_report_print_button(
         "Print / Save complete Week Ahead",
         key="weekly-view-complete-report",
@@ -8013,6 +8149,25 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             st.markdown(paragraph)
 
     events = _monthly_canonical_events(narrative, result)
+    monthly_facts = {
+        "sign": sign,
+        "period": period_key,
+        "timezone": timezone_name,
+        "events": [
+            {
+                "date": event.get("date"),
+                "transit": event.get("transit"),
+                "signal": event.get("signal"),
+                "influence": event.get("influence"),
+                "houses": sorted(event.get("houses") or []),
+                "planets": list(event.get("planets") or []),
+                "also_active": list(event.get("also") or []),
+            }
+            for event in events
+        ],
+        "natal_contacts": list((result.get("natal_overlay") or {}).get("contacts") or []),
+    }
+    guided_month = _guided_luna_copy("monthly", monthly_facts)
     context_for_voice = " ".join(visible_context[:1]) if 'visible_context' in locals() else ""
     events = _luna_voice_v2_events(
         events,
@@ -8022,8 +8177,10 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         context=context_for_voice,
     )
 
-    month_story = _monthly_story_of_month(events, sign)
-    if month_story:
+    month_story = None if guided_month else _monthly_story_of_month(events, sign)
+    if guided_month:
+        _render_guided_luna_story(guided_month, "Luna's month ahead")
+    elif month_story:
         st.markdown("## The story of your month")
         for paragraph in month_story.get("paragraphs", []):
             _render_luna_prose(paragraph, product="monthly")
@@ -8035,7 +8192,11 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
             )
             _render_luna_prose(human_arc_sentence(month_arc), product="monthly")
 
-    _render_monthly_reader_calendar_streamlit(narrative, result)
+    if guided_month:
+        with st.expander("Calculated dates and detailed evidence", expanded=False):
+            _render_monthly_reader_calendar_streamlit(narrative, result)
+    else:
+        _render_monthly_reader_calendar_streamlit(narrative, result)
 
     if snapshot is not None:
         with st.expander("Personal contacts on these dates"):
@@ -8060,6 +8221,9 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
                         f"house {h} — {HOUSE_NAMES.get(h, '')}" for h in sorted(event["houses"])
                     )
                     st.markdown(labels)
+
+    if guided_month:
+        return
 
     st.markdown("## Where it lands")
 
@@ -8568,13 +8732,45 @@ def natal_snapshot_page() -> None:
     )
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
 
+    natal_facts = {
+        "birth_time_precision": "known" if snapshot.birth_time_known else "unknown",
+        "dominant_element": snapshot.dominant_element,
+        "dominant_modality": snapshot.dominant_modality,
+        "moon_uncertain_between": list(snapshot.moon_uncertain),
+        "positions": [
+            {
+                "planet": item.planet,
+                "sign": item.sign,
+                "degree": round(item.degree, 2),
+                "retrograde": item.retrograde,
+                "house": item.house,
+            }
+            for item in snapshot.positions
+        ],
+        "ascendant": snapshot.ascendant.sign if snapshot.ascendant else None,
+        "midheaven": snapshot.midheaven.sign if snapshot.midheaven else None,
+        "aspects": [
+            {
+                "planet_1": item.planet1,
+                "aspect": item.name,
+                "planet_2": item.planet2,
+                "orb": round(item.orb, 2),
+                "strength": round(item.strength, 3),
+            }
+            for item in snapshot.aspects[:12]
+        ],
+    }
+    guided_natal = _guided_luna_copy("natal", natal_facts)
     st.markdown("### Read the pattern")
-    _render_luna_prose(
-        "Put the placements together. Notice where what you want, what you feel, how you appear and how you act pull in different directions. "
-        "Use the contradiction. That is where the behavioural pattern becomes visible."
-    )
-    for paragraph in _timing_natal_person_summary(snapshot, None):
-        _render_luna_prose(paragraph, product="natal")
+    if guided_natal:
+        _render_guided_luna_story(guided_natal, "Luna reads the whole chart")
+    else:
+        _render_luna_prose(
+            "Put the placements together. Notice where what you want, what you feel, how you appear and how you act pull in different directions. "
+            "Use the contradiction. That is where the behavioural pattern becomes visible."
+        )
+        for paragraph in _timing_natal_person_summary(snapshot, None):
+            _render_luna_prose(paragraph, product="natal")
 
     birth_bits = [birth_date.strftime("%d %B %Y")]
     if time_known and birth_time_value is not None:
@@ -10315,8 +10511,61 @@ def timing_map_page() -> None:
     st.markdown("### What kind of period is it?")
     st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
 
-    year_story = _timing_year_story(report)
-    if year_story:
+    yearly_facts = {
+        "start_date": report.start_date.isoformat(),
+        "end_date": report.end_date.isoformat(),
+        "timezone": report.timezone_name,
+        "recurring_themes": report.major_games,
+        "exact_dates": report.turning_points,
+        "major_shifts": report.rule_changes,
+        "transits": [
+            {
+                "transiting_planet": story.transit_planet,
+                "natal_target": story.natal_target,
+                "aspect": story.aspect,
+                "natal_house": story.natal_house,
+                "score": round(story.score, 3),
+                "polarity": story.polarity,
+                "active_periods": [
+                    {"start": period.start_date.isoformat(), "end": period.end_date.isoformat()}
+                    for period in story.periods
+                ],
+                "exact_hits": [
+                    {
+                        "date": hit.exact_date.isoformat(),
+                        "orb": round(hit.orb, 3),
+                        "retrograde": hit.retrograde,
+                    }
+                    for hit in story.hits
+                ],
+            }
+            for story in report.stories
+        ],
+        "major_sky_events": [
+            {
+                key: item.get(key)
+                for key in ("event_date", "display_label", "technical_label", "tier", "planets", "aspect", "phase")
+                if item.get(key) is not None
+            }
+            for item in (getattr(report, "major_sky_events", ()) or ())
+            if isinstance(item, dict)
+        ],
+        "personal_major_contacts": [
+            {
+                key: item.get(key)
+                for key in ("event_date", "display_label", "natal_target", "aspect", "orb", "house")
+                if item.get(key) is not None
+            }
+            for item in (getattr(report, "personal_major_events", ()) or ())
+            if isinstance(item, dict)
+        ],
+    }
+    guided_year = _guided_luna_copy("yearly", yearly_facts)
+    year_story = None if guided_year else _timing_year_story(report)
+    if guided_year:
+        st.markdown("## The story of your year")
+        _render_guided_luna_story(guided_year, "Luna's strategic map")
+    elif year_story:
         st.markdown("## The story of your year")
         for paragraph in year_story.get("paragraphs", []):
             _render_luna_prose(paragraph, product="timing")

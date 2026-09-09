@@ -68,8 +68,8 @@ def generate_openai_compatible_json(
             },
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.55,
-        "max_tokens": 2600,
+        "temperature": 0.72,
+        "max_tokens": 4200,
         "response_format": {"type": "json_object"},
     }
     try:
@@ -88,4 +88,3 @@ def generate_openai_compatible_json(
     except (requests.RequestException, KeyError, IndexError, TypeError, ValueError) as exc:
         raise VoiceProviderError(f"Voice provider request failed: {exc}") from exc
     return _json_content(content)
-
