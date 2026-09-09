@@ -45,6 +45,7 @@ def generate_openai_compatible_json(
     api_key: str | None = None,
     timeout: float | None = None,
     max_tokens: int | None = None,
+    response_format: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Call any OpenAI-compatible chat-completions endpoint outside Streamlit."""
     resolved_base = str(base_url or os.getenv("LUNA_VOICE_BASE_URL", "")).strip()
@@ -73,9 +74,10 @@ def generate_openai_compatible_json(
         ],
         "temperature": 0.72,
         "max_tokens": resolved_max_tokens,
-        "response_format": {"type": "json_object"},
+        "response_format": response_format or {"type": "json_object"},
     }
     response = None
+    used_unconstrained_json_recovery = False
     for attempt in range(3):
         try:
             response = requests.post(
@@ -87,6 +89,23 @@ def generate_openai_compatible_json(
                 json=payload,
                 timeout=resolved_timeout,
             )
+            if (
+                response.status_code == 400
+                and "json_validate_failed" in str(response.text or "")
+                and "response_format" in payload
+                and not used_unconstrained_json_recovery
+            ):
+                # Some compatible providers can reject their own best-effort JSON
+                # generation before returning it. Retry once without constrained
+                # decoding; Luna's parser and deterministic validator still guard
+                # the returned object.
+                payload.pop("response_format", None)
+                payload["messages"][0]["content"] += (
+                    " Return one syntactically valid JSON object only, with no "
+                    "markdown fences or commentary."
+                )
+                used_unconstrained_json_recovery = True
+                continue
             if response.status_code == 429 or 500 <= response.status_code < 600:
                 if attempt < 2:
                     retry_after = response.headers.get("Retry-After", "")

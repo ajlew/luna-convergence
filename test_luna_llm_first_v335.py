@@ -8,6 +8,7 @@ from luna_guided_voice import (
     validate_guided_collection_copy,
 )
 from luna_voice_provider import VoiceProviderError
+import luna_voice_provider
 
 
 def _facts():
@@ -84,9 +85,97 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
     assert '_guided_luna_copy("solar"' in app
 
 
-def test_build_label_is_v3353():
+def test_build_label_is_v3354():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.35.3 — Groq Payload Recovery" in config
+    assert "Luna v3.35.4 — Groq Strict JSON Recovery" in config
+
+
+def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
+    facts = _facts()
+    captured = {}
+
+    def fake_provider(prompt, **kwargs):
+        captured.update(kwargs)
+        payload = __import__("json").loads(
+            prompt.split("CALCULATED COLLECTION:\n", 1)[1].split("\n\nCORRECTION REPORT:", 1)[0]
+        )
+        result = _copy()
+        result["facts_hash"] = payload["facts_hash"]
+        return result
+
+    monkeypatch.setattr("luna_guided_voice.generate_openai_compatible_json", fake_provider)
+    generate_guided_collection_copy(
+        "weekly_days",
+        facts,
+        base_url="https://example.invalid",
+        model="test-model",
+        api_key="test-key",
+    )
+    response_format = captured["response_format"]
+    assert response_format["type"] == "json_schema"
+    assert response_format["json_schema"]["strict"] is True
+    schema = response_format["json_schema"]["schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == {"items", "facts_hash"}
+
+
+def test_provider_recovers_from_groq_json_validate_failed(monkeypatch):
+    calls = []
+
+    class FakeResponse:
+        def __init__(self, status_code, body, data=None):
+            self.status_code = status_code
+            self.text = body
+            self.headers = {}
+            self._data = data
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise luna_voice_provider.requests.RequestException(
+                    f"{self.status_code} Client Error"
+                )
+
+        def json(self):
+            return self._data
+
+    responses = iter(
+        [
+            FakeResponse(400, '{"error":{"code":"json_validate_failed"}}'),
+            FakeResponse(
+                200,
+                "",
+                {"choices": [{"message": {"content": '{"status":"recovered"}'}}]},
+            ),
+        ]
+    )
+
+    def fake_post(_url, **kwargs):
+        calls.append(__import__("copy").deepcopy(kwargs["json"]))
+        return next(responses)
+
+    monkeypatch.setattr(luna_voice_provider.requests, "post", fake_post)
+    result = luna_voice_provider.generate_openai_compatible_json(
+        "Return the object.",
+        base_url="https://example.invalid",
+        model="test-model",
+        api_key="test-key",
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "test",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                    "required": ["status"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    )
+    assert result == {"status": "recovered"}
+    assert calls[0]["response_format"]["type"] == "json_schema"
+    assert "response_format" not in calls[1]
 
 
 def test_shared_week_context_is_valid_evidence_for_each_sign():

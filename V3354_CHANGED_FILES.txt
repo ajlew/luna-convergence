@@ -1,0 +1,10 @@
+Luna v3.35.4 - Groq Strict JSON Recovery
+
+Upload these files to the repository root:
+
+luna_guided_voice.py
+luna_voice_provider.py
+site_config.py
+test_luna_llm_first_v335.py
+GITHUB_UPDATE_V3354_STRICT_JSON_RECOVERY.md
+V3354_CHANGED_FILES.txt

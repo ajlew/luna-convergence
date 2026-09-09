@@ -69,6 +69,32 @@ def facts_hash(product: str, facts: dict[str, Any]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _guided_voice_response_format(product: str, facts: dict[str, Any]) -> dict[str, Any]:
+    """Groq strict schema for one complete Luna reading."""
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "luna_guided_voice",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "headline": {"type": "string"},
+                    "opening": {"type": "string"},
+                    "story": {"type": "array", "items": {"type": "string"}},
+                    "affirmation": {"type": "string"},
+                    "your_move": {"type": "string"},
+                    "facts_hash": {"type": "string", "enum": [facts_hash(product, facts)]},
+                },
+                "required": [
+                    "headline", "opening", "story", "affirmation", "your_move", "facts_hash"
+                ],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
 def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
     product_rule = _PRODUCT_RULES.get(product, _PRODUCT_RULES["monthly"])
     return (
@@ -112,6 +138,46 @@ def collection_facts_hash(product: str, facts: dict[str, Any]) -> str:
         default=str,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _guided_collection_response_format(product: str, facts: dict[str, Any]) -> dict[str, Any]:
+    """Groq strict schema for a bounded Luna collection batch."""
+    source_ids = [str(item.get("source_id") or "") for item in facts.get("items") or []]
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "luna_guided_collection",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source_id": {"type": "string", "enum": source_ids},
+                                "headline": {"type": "string"},
+                                "story": {"type": "string"},
+                                "affirmation": {"type": "string"},
+                                "your_move": {"type": "string"},
+                            },
+                            "required": [
+                                "source_id", "headline", "story", "affirmation", "your_move"
+                            ],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "facts_hash": {
+                        "type": "string",
+                        "enum": [collection_facts_hash(product, facts)],
+                    },
+                },
+                "required": ["items", "facts_hash"],
+                "additionalProperties": False,
+            },
+        },
+    }
 
 
 def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
@@ -246,6 +312,7 @@ def generate_guided_voice_copy(
             model=model,
             api_key=api_key,
             max_tokens=output_budget,
+            response_format=_guided_voice_response_format(product, facts),
         )
         valid, errors = validate_guided_voice_copy(product, copy, facts)
         if valid:
@@ -377,6 +444,7 @@ def _generate_guided_collection_batch(
             model=model,
             api_key=api_key,
             max_tokens=output_budget,
+            response_format=_guided_collection_response_format(product, facts),
         )
         valid, errors = validate_guided_collection_copy(product, copy, facts)
         if valid:
