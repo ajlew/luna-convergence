@@ -7,6 +7,7 @@ from luna_guided_voice import (
     generate_guided_collection_copy,
     validate_guided_collection_copy,
 )
+from luna_voice_provider import VoiceProviderError
 
 
 def _facts():
@@ -83,9 +84,9 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
     assert '_guided_luna_copy("solar"' in app
 
 
-def test_build_label_is_v3352():
+def test_build_label_is_v3353():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.35.2 — Sign Feed Recovery" in config
+    assert "Luna v3.35.3 — Groq Payload Recovery" in config
 
 
 def test_shared_week_context_is_valid_evidence_for_each_sign():
@@ -169,3 +170,50 @@ def test_public_weekly_page_requests_only_the_selected_sign():
     body = match.group(0)
     assert "_weekly_single_sign_voice" in body
     assert "_weekly_sign_voice_collection" not in body
+
+
+def test_413_collection_is_split_until_groq_accepts_it(monkeypatch):
+    facts = {
+        "items": [
+            {"source_id": name, "technical_label": f"signal {name}"}
+            for name in ("Aries", "Taurus", "Gemini", "Cancer")
+        ]
+    }
+    request_sizes = []
+    token_budgets = []
+
+    def fake_provider(prompt, **kwargs):
+        payload = __import__("json").loads(prompt.split("CALCULATED COLLECTION:\n", 1)[1].split("\n\nCORRECTION REPORT:", 1)[0])
+        supplied = payload["facts"]["items"]
+        request_sizes.append(len(supplied))
+        token_budgets.append(kwargs["max_tokens"])
+        if len(supplied) > 1:
+            raise VoiceProviderError("413 Payload Too Large")
+        item = supplied[0]
+        return {
+            "items": [
+                {
+                    "source_id": item["source_id"],
+                    "headline": "USE THE CALCULATED SIGNAL.",
+                    "story": f"For {item['source_id']}, stay with the supplied pattern and turn its pressure into one practical response.",
+                    "affirmation": "You can respond without inventing certainty.",
+                    "your_move": "Check the signal. Make the useful move.",
+                }
+            ],
+            "facts_hash": payload["facts_hash"],
+        }
+
+    monkeypatch.setattr("luna_guided_voice.generate_openai_compatible_json", fake_provider)
+    copy = generate_guided_collection_copy(
+        "weekly_signs",
+        facts,
+        base_url="https://example.invalid",
+        model="test-model",
+        api_key="test-key",
+    )
+    assert [item["source_id"] for item in copy["items"]] == [
+        "Aries", "Taurus", "Gemini", "Cancer"
+    ]
+    assert max(request_sizes) <= 3
+    assert 1 in request_sizes
+    assert max(token_budgets) < 8000

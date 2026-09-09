@@ -5,7 +5,7 @@ import json
 import re
 from typing import Any
 
-from luna_voice_provider import generate_openai_compatible_json
+from luna_voice_provider import VoiceProviderError, generate_openai_compatible_json
 
 
 GUIDED_VOICE_SCHEMA_VERSION = "1.0"
@@ -229,6 +229,15 @@ def generate_guided_voice_copy(
     api_key: str,
 ) -> dict[str, Any]:
     prompt = build_guided_voice_prompt(product, facts)
+    output_budget = {
+        "daily": 1400,
+        "weekly": 2200,
+        "weekly_sign": 1400,
+        "monthly": 2600,
+        "yearly": 3600,
+        "natal": 3200,
+        "solar": 1400,
+    }.get(product, 2600)
     errors: tuple[str, ...] = ()
     for attempt in range(2):
         copy = generate_openai_compatible_json(
@@ -236,6 +245,7 @@ def generate_guided_voice_copy(
             base_url=base_url,
             model=model,
             api_key=api_key,
+            max_tokens=output_budget,
         )
         valid, errors = validate_guided_voice_copy(product, copy, facts)
         if valid:
@@ -357,6 +367,8 @@ def _generate_guided_collection_batch(
 ) -> dict[str, Any]:
     """Generate and validate one collection batch."""
     prompt = build_guided_collection_prompt(product, facts)
+    item_count = max(1, len(list(facts.get("items") or [])))
+    output_budget = min(2600, 500 + item_count * 450)
     errors: tuple[str, ...] = ()
     for attempt in range(2):
         copy = generate_openai_compatible_json(
@@ -364,6 +376,7 @@ def _generate_guided_collection_batch(
             base_url=base_url,
             model=model,
             api_key=api_key,
+            max_tokens=output_budget,
         )
         valid, errors = validate_guided_collection_copy(product, copy, facts)
         if valid:
@@ -376,6 +389,59 @@ def _generate_guided_collection_batch(
     raise ValueError("Guided Luna collection failed validation: " + " | ".join(errors))
 
 
+def _collection_subset_facts(
+    facts: dict[str, Any],
+    items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    subset = {key: value for key, value in facts.items() if key != "items"}
+    subset["items"] = items
+    return subset
+
+
+def _is_payload_too_large(error: Exception) -> bool:
+    message = str(error).lower()
+    return "413" in message or "payload too large" in message or "request too large" in message
+
+
+def _generate_collection_partition(
+    product: str,
+    facts: dict[str, Any],
+    *,
+    base_url: str,
+    model: str,
+    api_key: str,
+) -> list[dict[str, Any]]:
+    """Generate one small partition and split again on 413 or validation failure."""
+    try:
+        generated = _generate_guided_collection_batch(
+            product,
+            facts,
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+        )
+        return list(generated["items"])
+    except (ValueError, VoiceProviderError) as batch_error:
+        supplied_items = list(facts.get("items") or [])
+        if len(supplied_items) <= 1:
+            raise
+        if isinstance(batch_error, VoiceProviderError) and not _is_payload_too_large(batch_error):
+            raise
+        midpoint = max(1, len(supplied_items) // 2)
+        recovered: list[dict[str, Any]] = []
+        for partition in (supplied_items[:midpoint], supplied_items[midpoint:]):
+            recovered.extend(
+                _generate_collection_partition(
+                    product,
+                    _collection_subset_facts(facts, partition),
+                    base_url=base_url,
+                    model=model,
+                    api_key=api_key,
+                )
+            )
+        return recovered
+
+
 def generate_guided_collection_copy(
     product: str,
     facts: dict[str, Any],
@@ -384,52 +450,32 @@ def generate_guided_collection_copy(
     model: str,
     api_key: str,
 ) -> dict[str, Any]:
-    """Generate a collection without letting one malformed item erase the batch.
+    """Generate bounded collection requests, then restore the original order and lock."""
+    supplied_items = list(facts.get("items") or [])
+    if not supplied_items:
+        raise ValueError("Guided Luna collection contains no calculated items.")
 
-    Groq normally receives the complete collection so the items retain a shared
-    narrative. If that response reaches the provider but fails Luna's evidence
-    contract twice, retry each calculated item independently. Provider/network
-    failures are deliberately not multiplied into many doomed requests.
-    """
-    try:
-        return _generate_guided_collection_batch(
-            product,
-            facts,
-            base_url=base_url,
-            model=model,
-            api_key=api_key,
+    # Three items keeps input + reserved output safely below Groq's request cap.
+    recovered_items: list[dict[str, Any]] = []
+    for start in range(0, len(supplied_items), 3):
+        partition = supplied_items[start:start + 3]
+        recovered_items.extend(
+            _generate_collection_partition(
+                product,
+                _collection_subset_facts(facts, partition),
+                base_url=base_url,
+                model=model,
+                api_key=api_key,
+            )
         )
-    except ValueError as batch_error:
-        supplied_items = list(facts.get("items") or [])
-        if len(supplied_items) <= 1:
-            raise
 
-        recovered_items: list[dict[str, Any]] = []
-        for supplied_item in supplied_items:
-            item_facts = {key: value for key, value in facts.items() if key != "items"}
-            item_facts["items"] = [supplied_item]
-            try:
-                recovered = _generate_guided_collection_batch(
-                    product,
-                    item_facts,
-                    base_url=base_url,
-                    model=model,
-                    api_key=api_key,
-                )
-            except Exception as item_error:
-                source_id = str(supplied_item.get("source_id") or "unknown")
-                raise ValueError(
-                    f"Guided Luna collection recovery failed for {source_id}: {item_error}"
-                ) from batch_error
-            recovered_items.extend(recovered["items"])
-
-        recovered_copy = {
-            "items": recovered_items,
-            "facts_hash": collection_facts_hash(product, facts),
-        }
-        valid, errors = validate_guided_collection_copy(product, recovered_copy, facts)
-        if not valid:
-            raise ValueError(
-                "Guided Luna recovered collection failed validation: " + " | ".join(errors)
-            ) from batch_error
-        return recovered_copy
+    recovered_copy = {
+        "items": recovered_items,
+        "facts_hash": collection_facts_hash(product, facts),
+    }
+    valid, errors = validate_guided_collection_copy(product, recovered_copy, facts)
+    if not valid:
+        raise ValueError(
+            "Guided Luna recombined collection failed validation: " + " | ".join(errors)
+        )
+    return recovered_copy
