@@ -18,7 +18,7 @@ from PIL import Image
 import streamlit as st
 import streamlit.components.v1 as components
 
-from astrology_engine import SIGNS, HOUSE_NAMES
+from astrology_engine import SIGNS, HOUSE_NAMES, positions_for_date
 from date_display import human_date
 from customer_experience import (
     HOUSE_VOICE,
@@ -32,6 +32,7 @@ from daily_narrative_v3 import (
     reading_comparison_text,
     render_daily_narrative_v3,
 )
+from daily_voice_publisher import load_daily_voice_candidate
 from monthly_narrative_v1 import build_monthly_narrative
 from monthly_experience_v1 import render_monthly_experience, build_monthly_reader_chronology
 from monthly_report_pipeline import (
@@ -84,6 +85,7 @@ from weekly_view import (
 )
 from weekly_voice_composer import build_weekly_voice_packet, load_weekly_voice_candidate
 from luna_guided_voice import generate_guided_collection_copy, generate_guided_voice_copy
+from luna_report_bundle import assemble_report_bundle
 from timing_map import (
     build_timing_map,
     month_intensity,
@@ -168,6 +170,7 @@ STATCOUNTER_PROJECT_ID = secret("STATCOUNTER_PROJECT_ID")
 STATCOUNTER_SECURITY_CODE = secret("STATCOUNTER_SECURITY_CODE")
 LUNA_YOUTUBE_CHANNEL_URL = secret("LUNA_YOUTUBE_CHANNEL_URL")
 LUNA_YOUTUBE_FEATURED_VIDEO_URL = secret("LUNA_YOUTUBE_FEATURED_VIDEO_URL")
+LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START = secret("LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START")
 LUNA_VOICE_MODE = secret("LUNA_VOICE_MODE", "published").strip().lower()
 LUNA_VOICE_BASE_URL = secret("LUNA_VOICE_BASE_URL")
 LUNA_VOICE_MODEL = secret("LUNA_VOICE_MODEL")
@@ -3775,6 +3778,13 @@ def _remember_daily_sign_in_url(sign: str) -> None:
 def _render_optional_luna_video() -> None:
     if not LUNA_YOUTUBE_FEATURED_VIDEO_URL:
         return
+    if LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START:
+        try:
+            configured_week = date.fromisoformat(LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START)
+        except ValueError:
+            return
+        if configured_week != monday_for(browser_local_date()):
+            return
     st.markdown('<section class="luna-video-slot">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Luna short</div>', unsafe_allow_html=True)
     playable_url = _youtube_playable_url(LUNA_YOUTUBE_FEATURED_VIDEO_URL)
@@ -3835,10 +3845,10 @@ def _render_lean_daily(path: str) -> None:
     timezone_name = browser_timezone_name()
     narrative = _daily_narrative_for_landing(sign, reading_date, timezone_name)
 
-    guided = _guided_luna_copy(
-        "daily",
-        _daily_guided_facts(narrative, sign, reading_date, timezone_name),
-    )
+    daily_facts = _daily_guided_facts(narrative, sign, reading_date, timezone_name)
+    guided = load_daily_voice_candidate(sign, reading_date, timezone_name, daily_facts)
+    if guided is None and LUNA_VOICE_MODE == "live":
+        guided = _guided_luna_copy("daily", daily_facts)
     if guided:
         story = tuple([guided["opening"], *guided["story"], guided["affirmation"]])
         headline = guided["headline"]
@@ -5826,22 +5836,13 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, int, 
     )
     st.markdown('<div class="eyebrow">FREE · PERSONAL MONTH</div>', unsafe_allow_html=True)
     st.markdown(
-        "Start with your Sun sign — your star sign. Luna treats that sign as whole-sign House 1, "
-        "then maps the rest of the sky from there. Birth details add age/history and natal precision downstream."
+        "Enter your birth date and Luna calculates your Sun sign rather than asking you to supply it twice. "
+        "A known birth time adds angles and houses; an unknown time never receives invented precision."
     )
 
     with st.container(border=True):
-        forecast_cols = st.columns(3, gap="medium")
+        forecast_cols = st.columns(2, gap="medium")
         with forecast_cols[0]:
-            selected_sun_sign = st.selectbox(
-                "What is your Sun sign (star sign)?",
-                SIGNS,
-                index=sign_select_index(st.session_state.get("free-monthly-sun-sign")),
-                placeholder="Select your star sign",
-                key="free-monthly-sun-sign-input",
-                help="This is Luna's first reference point. Your Sun sign becomes whole-sign House 1 for the forecast.",
-            )
-        with forecast_cols[1]:
             forecast_month = int(st.selectbox(
                 "Forecast month",
                 list(range(1, 13)),
@@ -5849,7 +5850,7 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, int, 
                 format_func=lambda value: month_name[value],
                 key="free-monthly-forecast-month-input",
             ))
-        with forecast_cols[2]:
+        with forecast_cols[1]:
             forecast_year = int(st.number_input(
                 "Forecast year",
                 min_value=1950,
@@ -5928,17 +5929,12 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, int, 
         )
 
     if submitted:
-        if selected_sun_sign not in SIGNS:
-            st.error("Select your star sign before Luna builds the month.")
-            st.session_state["free-monthly-ready"] = False
-            return None, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, False
         if birth_date_value is None:
-            st.error("Add your birth date so Luna can verify the Sun sign and add the personal layers without inventing precision.")
+            st.error("Add your birth date so Luna can calculate the Sun sign and personal layers without inventing precision.")
             st.session_state["free-monthly-ready"] = False
             return None, None, current_timezone, current_city, forecast_year, forecast_month, False
 
         st.session_state["free-monthly-ready"] = True
-        st.session_state["free-monthly-sun-sign"] = selected_sun_sign
         st.session_state["free-monthly-forecast-year"] = forecast_year
         st.session_state["free-monthly-forecast-month"] = forecast_month
         st.session_state["free-monthly-birth-date"] = birth_date_value
@@ -5992,12 +5988,10 @@ def _free_monthly_profile() -> tuple[object | None, date | None, str, str, int, 
         st.error("Luna needs a valid birth date before building the personal layers of the Monthly.")
         return None, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, False
 
-    calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
-    selected_sign = str(st.session_state.get("free-monthly-sun-sign") or "")
-    if calculated_sign and selected_sign in SIGNS and calculated_sign != selected_sign:
+    if not time_known and _date_only_sun_sign_is_ambiguous(birth_date_value):
         st.error(
-            f"Your birth date calculates as {calculated_sign}, while you selected {selected_sign}. "
-            "Check the star sign or birth date before continuing so Luna does not build two different reference frames."
+            "The Sun changed signs during your birth date. Add your birth time and birthplace so Luna can calculate "
+            "the correct Sun sign instead of guessing."
         )
         return snapshot, birth_date_value, current_timezone, current_city, forecast_year, forecast_month, False
 
@@ -6012,6 +6006,17 @@ def _monthly_sun_sign_from_snapshot(snapshot) -> str | None:
             if value in SIGNS:
                 return value
     return None
+
+
+def _date_only_sun_sign_is_ambiguous(birth_date_value: date) -> bool:
+    """True when the tropical Sun changes sign during the UTC date.
+
+    Date-only natal snapshots use noon UTC.  This guard prevents Luna from
+    presenting that neutral calculation point as certainty on an ingress date.
+    """
+    early = positions_for_date(birth_date_value, "UTC", 0)["Sun"].sign
+    late = positions_for_date(birth_date_value, "UTC", 23)["Sun"].sign
+    return early != late
 
 
 _MONTHLY_READER_LABELS = {
@@ -8273,17 +8278,13 @@ def _render_personal_major_events(
     product: str,
     *,
     limit: int = 6,
+    prepared: tuple[list, dict[str, dict], dict | None] | None = None,
 ) -> None:
     if snapshot is None:
         return
-
-    activations = personalize_serialized_signals(
-        values or [],
-        snapshot,
-        timezone_name,
-        limit=max(limit * 3, 12),
+    groups, voices, _generated = prepared or _personal_major_voice_data(
+        values, snapshot, timezone_name, limit=limit
     )
-    groups = group_personal_activations(activations)[:limit]
     if not groups:
         return
 
@@ -8293,6 +8294,57 @@ def _render_personal_major_events(
         "Luna shows the contacts together and interprets the combined pressure."
     )
 
+    for index, group in enumerate(groups):
+        first = group[0]
+        badge = _personal_major_badge(first, group)
+        voice = voices.get(f"personal:{index}")
+        interpretation = str(voice["story"]) if voice else ""
+        action = str(voice["your_move"]) if voice else ""
+        headline = str(voice["headline"]) if voice else str(first.display_label)
+        affirmation = (
+            f'<p><strong>REMEMBER ·</strong> {escape(str(voice["affirmation"]))}</p>'
+            if voice else ""
+        )
+        interpretation_html = f"<p>{escape(interpretation)}</p>" if interpretation else ""
+        contacts = "".join(
+            f'<li>{escape(_personal_contact_label(item))}</li>'
+            for item in group
+        )
+        action_html = (
+            f'<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(action)}</p></div>'
+            if action else ""
+        )
+        st.markdown(
+            f"""<article class="timing-story personal-major-story">
+<div class="timing-meta">{escape(_timing_date_label(first.event_date).upper())} · {escape(badge)}</div>
+<h3>{escape(headline)}</h3>
+{interpretation_html}
+{affirmation}
+<ul class="timing-scenarios">{contacts}</ul>
+{action_html}
+</article>""",
+            unsafe_allow_html=True,
+        )
+
+
+def _personal_major_voice_data(
+    values,
+    snapshot,
+    timezone_name: str,
+    *,
+    limit: int = 6,
+) -> tuple[list, dict[str, dict], dict | None]:
+    if snapshot is None:
+        return [], {}, None
+    activations = personalize_serialized_signals(
+        values or [],
+        snapshot,
+        timezone_name,
+        limit=max(limit * 3, 12),
+    )
+    groups = group_personal_activations(activations)[:limit]
+    if not groups:
+        return [], {}, None
     collection_facts = {
         "timezone": timezone_name,
         "items": [
@@ -8319,39 +8371,14 @@ def _render_personal_major_events(
     voices = {
         str(item["source_id"]): item for item in (generated or {}).get("items", [])
     }
-
-    for index, group in enumerate(groups):
-        first = group[0]
-        badge = _personal_major_badge(first, group)
-        voice = voices.get(f"personal:{index}")
-        interpretation = str(voice["story"]) if voice else "Luna voice unavailable; calculated contacts are shown below."
-        action = str(voice["your_move"]) if voice else ""
-        headline = str(voice["headline"]) if voice else str(first.display_label)
-        affirmation = (
-            f'<p><strong>REMEMBER ·</strong> {escape(str(voice["affirmation"]))}</p>'
-            if voice else ""
-        )
-        contacts = "".join(
-            f'<li>{escape(_personal_contact_label(item))}</li>'
-            for item in group
-        )
-        action_html = (
-            f'<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(action)}</p></div>'
-            if action else ""
-        )
-        st.markdown(
-            f"""<article class="timing-story personal-major-story">
-<div class="timing-meta">{escape(_timing_date_label(first.event_date).upper())} · {escape(badge)}</div>
-<h3>{escape(headline)}</h3>
-<p>{escape(interpretation)}</p>
-{affirmation}
-<ul class="timing-scenarios">{contacts}</ul>
-{action_html}
-</article>""",
-            unsafe_allow_html=True,
-        )
+    return groups, voices, generated
 
 def _monthly_event_voice_collection(narrative, result, sign: str, timezone_name: str) -> dict[str, dict]:
+    _generated, voices = _monthly_event_voice_data(narrative, result, sign, timezone_name)
+    return voices
+
+
+def _monthly_event_voice_data(narrative, result, sign: str, timezone_name: str) -> tuple[dict | None, dict[str, dict]]:
     rows = build_monthly_reader_chronology(narrative, result)
     items = []
     for index, row in enumerate(rows):
@@ -8370,8 +8397,8 @@ def _monthly_event_voice_collection(narrative, result, sign: str, timezone_name:
         {"sign": sign, "timezone": timezone_name, "items": items},
     )
     if not generated:
-        return {}
-    return {str(item["source_id"]): item for item in generated["items"]}
+        return None, {}
+    return generated, {str(item["source_id"]): item for item in generated["items"]}
 
 
 def _render_monthly_reader_calendar_streamlit(
@@ -8403,7 +8430,7 @@ def _render_monthly_reader_calendar_streamlit(
             headline = str(voice["headline"])
             move = str(voice["your_move"])
         else:
-            body_html = "<p>Luna's writing service did not return validated copy. The calculated date remains current.</p>"
+            body_html = ""
             headline = str(item.get("technical") or "Calculated date")
             move = ""
         technical = escape(str(item.get("technical") or ""))
@@ -8461,6 +8488,31 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         "natal_contacts": list((result.get("natal_overlay") or {}).get("contacts") or []),
     }
     guided_month = _guided_luna_copy("monthly", monthly_facts)
+    event_generated, event_voice_items = _monthly_event_voice_data(
+        narrative, result, sign, timezone_name
+    )
+    personal_prepared = _personal_major_voice_data(
+        result.get("major_sky_registry") or result.get("major_sky_events") or [],
+        snapshot,
+        timezone_name,
+        limit=4,
+    )
+    personal_groups, _personal_voices, personal_generated = personal_prepared
+    monthly_sections: dict[str, object] = {"dated_events": event_generated or {}}
+    required_sections = ["dated_events"]
+    if personal_groups:
+        monthly_sections["personal_contacts"] = personal_generated or {}
+        required_sections.append("personal_contacts")
+    monthly_bundle = assemble_report_bundle(
+        "monthly",
+        main=guided_month,
+        sections=monthly_sections,
+        required_sections=tuple(required_sections),
+    )
+    st.session_state["monthly-voice-bundle-v336"] = {
+        key: monthly_bundle[key]
+        for key in ("report_id", "status", "complete", "missing_sections", "component_status")
+    }
     st.markdown(
         """
         <style>
@@ -8490,7 +8542,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="editorial-title">{escape(str(guided_month["headline"]) if guided_month else f"{sign} · {forecast_label}")}</div>',
+        f'<div class="editorial-title">{escape(str(guided_month["headline"]) if monthly_bundle["complete"] else f"{sign} · {forecast_label}")}</div>',
         unsafe_allow_html=True,
     )
 
@@ -8511,20 +8563,26 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         )
         st.markdown(solar_html, unsafe_allow_html=True)
 
-    if guided_month:
+    if monthly_bundle["complete"]:
         _render_guided_luna_story(guided_month, "Luna's month ahead")
     else:
-        _render_voice_unavailable(facts_label="monthly calculation")
+        _render_voice_unavailable(facts_label="complete monthly document")
 
-    with st.expander("Calculated dates and Luna's detailed reading", expanded=False):
+    detail_label = (
+        "Calculated dates and Luna's detailed reading"
+        if monthly_bundle["complete"]
+        else "Calculated dates"
+    )
+    with st.expander(detail_label, expanded=False):
         _render_monthly_reader_calendar_streamlit(
             narrative,
             result,
             sign=sign,
             timezone_name=timezone_name,
+            voice_items=event_voice_items if monthly_bundle["complete"] else {},
         )
 
-    if snapshot is not None:
+    if snapshot is not None and personal_groups and monthly_bundle["complete"]:
         with st.expander("Personal contacts on these dates"):
             _render_personal_major_events(
                 result.get("major_sky_registry") or result.get("major_sky_events") or [],
@@ -8532,6 +8590,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
                 timezone_name,
                 "monthly",
                 limit=4,
+                prepared=personal_prepared,
             )
 
     _monthly_chart_in_motion(
@@ -8724,7 +8783,7 @@ def _render_monthly_result_actions(sign: str, year: int, month: int) -> None:
 
 
 def monthly_sign_page() -> None:
-    """Unified free Monthly: Sun sign first, then optional natal precision."""
+    """Unified free Monthly: natal-derived Sun sign and optional timed precision."""
     set_page_metadata(
         "Monthly Astrology | Luna Convergence",
         "Free personalised Monthly astrology with key dates, love/work/money context, historical echoes and natal timing.",
@@ -8743,22 +8802,15 @@ def monthly_sign_page() -> None:
     if not ready:
         return
 
-    calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
-    selected_sign = str(st.session_state.get("free-monthly-sun-sign") or "")
-    sign = selected_sign if selected_sign in SIGNS else calculated_sign
+    sign = _monthly_sun_sign_from_snapshot(snapshot)
     if not sign:
-        st.error("Luna could not establish your Sun sign reference frame.")
-        return
-    if calculated_sign and sign != calculated_sign:
-        st.error(
-            f"Your birth date calculates as {calculated_sign}, while the selected star sign is {sign}. "
-            "Correct one of them before Luna builds the Monthly."
-        )
+        st.error("Luna could not calculate your Sun sign from the natal information supplied.")
         return
 
     # Keep the verified Sun sign available to the rest of Luna.  This is the
     # primary whole-sign House 1 reference; natal geometry adds precision later.
     st.session_state["monthly-calculated-sun-sign"] = sign
+    st.session_state["free-monthly-sun-sign"] = sign
     st.session_state["landing-daily-sign-v3195"] = sign
 
     set_page_metadata(
@@ -10747,16 +10799,6 @@ def timing_map_page() -> None:
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
 
-    timing_sun_sign = st.selectbox(
-        "What is your Sun sign (star sign)?",
-        SIGNS,
-        index=sign_select_index(st.session_state.get("timing-sun-sign-v9")),
-        placeholder="Select your star sign",
-        key="timing-sun-sign-select-v9",
-        help="Luna starts here. Your Sun sign is the primary whole-sign House 1 reference; birth details add natal timing underneath it.",
-    )
-    st.session_state["timing-sun-sign-v9"] = timing_sun_sign
-
     start_date = st.date_input(
         "Start the 12 months on",
         value=browser_local_date(),
@@ -10773,20 +10815,25 @@ def timing_map_page() -> None:
         generate = st.button("Build my Year Ahead", type="primary", use_container_width=True, key="timing-generate-v330")
 
     if generate:
-        if timing_sun_sign not in SIGNS:
-            st.error("Select your star sign before building the Year Ahead.")
-        elif snapshot is None:
+        if snapshot is None:
             st.error(validation_message or "Complete the birth details first.")
         else:
+            snapshot_birth_date = getattr(snapshot, "birth_date", None)
             calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
-            if calculated_sign and timing_sun_sign != calculated_sign:
+            if (
+                not bool(getattr(snapshot, "birth_time_known", False))
+                and isinstance(snapshot_birth_date, date)
+                and _date_only_sun_sign_is_ambiguous(snapshot_birth_date)
+            ):
                 st.error(
-                    f"Your birth date calculates as {calculated_sign}, while you selected {timing_sun_sign}. "
-                    "Check the star sign or birth date before building the Year Ahead."
+                    "The Sun changed signs during your birth date. Add your birth time and birthplace so Luna can "
+                    "calculate the correct Sun sign instead of guessing."
                 )
+            elif not calculated_sign:
+                st.error("Luna could not calculate your Sun sign from the natal information supplied.")
             else:
                 st.session_state["luna_natal_checkout_prefill"] = prefill_out or {}
-                st.session_state["timing-sun-sign-v9"] = timing_sun_sign
+                st.session_state["timing-calculated-sun-sign-v336"] = calculated_sign
                 with st.spinner("Luna is ranking the strongest 12-month contacts…"):
                     report = build_timing_map(
                         snapshot,
@@ -10819,7 +10866,9 @@ def timing_map_page() -> None:
 
     profile_summary = str(st.session_state.get("timing-map-summary-v330") or "Personal natal profile")
     st.markdown("## The year at a glance")
-    st.caption(f"{profile_summary} · {_timing_date_label(report.start_date)} → {_timing_date_label(report.end_date)}")
+    calculated_sign = str(st.session_state.get("timing-calculated-sun-sign-v336") or "")
+    sign_prefix = f"Calculated Sun sign: {calculated_sign} · " if calculated_sign else ""
+    st.caption(f"{sign_prefix}{profile_summary} · {_timing_date_label(report.start_date)} → {_timing_date_label(report.end_date)}")
 
     _render_timing_result_actions()
     st.markdown(
@@ -10889,11 +10938,92 @@ def timing_map_page() -> None:
         ],
     }
     guided_year = _guided_luna_copy("yearly", yearly_facts)
-    if guided_year:
+    personal_events = list(getattr(report, "personal_major_events", ()) or ())
+    personal_groups = group_serialized_personal_activations(personal_events)[:6]
+    personal_items = {
+        "items": [
+            {
+                "source_id": f"year-personal:{index}",
+                "date": str(group[0].get("event_date") or ""),
+                "display_label": str(group[0].get("display_label") or ""),
+                "event_class": str(group[0].get("event_class") or ""),
+                "contacts": [
+                    {
+                        "transiting_planet": str(item.get("transit_planet") or ""),
+                        "aspect": str(item.get("aspect") or ""),
+                        "natal_target": str(item.get("natal_target") or ""),
+                        "orb": float(item.get("orb") or 0.0),
+                        "house": item.get("house"),
+                    }
+                    for item in group
+                ],
+            }
+            for index, group in enumerate(personal_groups)
+        ]
+    }
+    personal_generated = (
+        _guided_luna_collection("personal_events", personal_items)
+        if personal_groups else None
+    )
+    personal_voices = {
+        str(item["source_id"]): item for item in (personal_generated or {}).get("items", [])
+    }
+    transit_collection_facts = {
+        "start_date": report.start_date.isoformat(),
+        "end_date": report.end_date.isoformat(),
+        "timezone": report.timezone_name,
+        "items": [
+            {
+                "source_id": f"year-transit:{index}",
+                "transiting_planet": story.transit_planet,
+                "aspect": story.aspect,
+                "natal_target": story.natal_target,
+                "natal_house": story.natal_house,
+                "polarity": story.polarity,
+                "score": round(story.score, 3),
+                "active_periods": [
+                    {"start": period.start_date.isoformat(), "end": period.end_date.isoformat()}
+                    for period in story.periods
+                ],
+                "exact_hits": [
+                    {"date": hit.exact_date.isoformat(), "orb": round(hit.orb, 3), "retrograde": hit.retrograde}
+                    for hit in story.hits
+                ],
+            }
+            for index, story in enumerate(report.stories)
+        ],
+    }
+    transit_generated = (
+        _guided_luna_collection("yearly_transits", transit_collection_facts)
+        if report.stories else None
+    )
+    transit_voices = {
+        str(item["source_id"]): item for item in (transit_generated or {}).get("items", [])
+    }
+    year_sections: dict[str, object] = {}
+    year_required: list[str] = []
+    if personal_groups:
+        year_sections["personal_contacts"] = personal_generated or {}
+        year_required.append("personal_contacts")
+    if report.stories:
+        year_sections["transit_stories"] = transit_generated or {}
+        year_required.append("transit_stories")
+    year_bundle = assemble_report_bundle(
+        "yearly",
+        main=guided_year,
+        sections=year_sections,
+        required_sections=tuple(year_required),
+    )
+    st.session_state["yearly-voice-bundle-v336"] = {
+        key: year_bundle[key]
+        for key in ("report_id", "status", "complete", "missing_sections", "component_status")
+    }
+
+    if year_bundle["complete"]:
         st.markdown("## The story of your year")
         _render_guided_luna_story(guided_year, "Luna's strategic map")
     else:
-        _render_voice_unavailable(facts_label="12-month transit calculation")
+        _render_voice_unavailable(facts_label="complete Year Ahead document")
 
     _render_major_sky_evidence(
         getattr(report, "major_sky_events", ()) or (),
@@ -10902,40 +11032,13 @@ def timing_map_page() -> None:
         limit=8,
     )
 
-    personal_events = list(getattr(report, "personal_major_events", ()) or ())
-    personal_groups = group_serialized_personal_activations(personal_events)
-    if personal_groups:
+    if personal_groups and year_bundle["complete"]:
         st.markdown("### Major events that directly hit your natal chart")
         st.caption(
             "Each sky event appears once. Multiple natal contacts are grouped so "
             "Luna can show the convergence instead of repeating the event."
         )
-        personal_items = {
-            "items": [
-                {
-                    "source_id": f"year-personal:{index}",
-                    "date": str(group[0].get("event_date") or ""),
-                    "display_label": str(group[0].get("display_label") or ""),
-                    "event_class": str(group[0].get("event_class") or ""),
-                    "contacts": [
-                        {
-                            "transiting_planet": str(item.get("transit_planet") or ""),
-                            "aspect": str(item.get("aspect") or ""),
-                            "natal_target": str(item.get("natal_target") or ""),
-                            "orb": float(item.get("orb") or 0.0),
-                            "house": item.get("house"),
-                        }
-                        for item in group
-                    ],
-                }
-                for index, group in enumerate(personal_groups[:6])
-            ]
-        }
-        personal_generated = _guided_luna_collection("personal_events", personal_items)
-        personal_voices = {
-            str(item["source_id"]): item for item in (personal_generated or {}).get("items", [])
-        }
-        for index, group in enumerate(personal_groups[:6]):
+        for index, group in enumerate(personal_groups):
             first = group[0]
             event_date = str(first.get("event_date") or "")
             try:
@@ -10972,39 +11075,9 @@ def timing_map_page() -> None:
                 unsafe_allow_html=True,
             )
 
-    transit_collection_facts = {
-        "start_date": report.start_date.isoformat(),
-        "end_date": report.end_date.isoformat(),
-        "timezone": report.timezone_name,
-        "items": [
-            {
-                "source_id": f"year-transit:{index}",
-                "transiting_planet": story.transit_planet,
-                "aspect": story.aspect,
-                "natal_target": story.natal_target,
-                "natal_house": story.natal_house,
-                "polarity": story.polarity,
-                "score": round(story.score, 3),
-                "active_periods": [
-                    {"start": period.start_date.isoformat(), "end": period.end_date.isoformat()}
-                    for period in story.periods
-                ],
-                "exact_hits": [
-                    {"date": hit.exact_date.isoformat(), "orb": round(hit.orb, 3), "retrograde": hit.retrograde}
-                    for hit in story.hits
-                ],
-            }
-            for index, story in enumerate(report.stories)
-        ],
-    }
-    transit_generated = _guided_luna_collection("yearly_transits", transit_collection_facts)
-    transit_voices = {
-        str(item["source_id"]): item for item in (transit_generated or {}).get("items", [])
-    }
-
     if not report.stories:
         st.info("No major exact contacts passed the current threshold in this 12-month window. Try a different start date.")
-    else:
+    elif year_bundle["complete"]:
         for number, story in enumerate(report.stories, start=1):
             voice = transit_voices.get(f"year-transit:{number - 1}")
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
@@ -11073,6 +11146,17 @@ def timing_map_page() -> None:
                 st.caption(
                     "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, "
                     "groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
+                )
+    else:
+        with st.expander("Calculated natal transits", expanded=False):
+            for story in report.stories:
+                periods_label = " · ".join(
+                    _timing_range_label(item.start_date, item.end_date) for item in story.periods
+                )
+                st.markdown(
+                    f"**{story.transit_planet} {story.aspect} natal {story.natal_target}**"
+                    + (f" · house {story.natal_house}" if story.natal_house else "")
+                    + f" · {periods_label}"
                 )
 
     timing_snapshot = st.session_state.get("timing-map-snapshot-v401")

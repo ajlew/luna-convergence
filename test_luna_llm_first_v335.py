@@ -85,9 +85,9 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
     assert '_guided_luna_copy("solar"' in app
 
 
-def test_build_label_is_v3356():
+def test_build_label_advances_beyond_v3356():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.35.6 — Groq Rate-Limit Pacing" in config
+    assert "Luna v3.36 — Atomic Guided Reports" in config
 
 
 def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):

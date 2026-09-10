@@ -59,9 +59,9 @@ def test_customer_forecast_pages_prefer_guided_luna_with_fallbacks():
         assert re.search(rf'_guided_luna_copy\(\s*"{product}"', app)
     assert "_render_weekly_public_story" in app
     assert "if guided" in app
-    assert "if guided_month" in app
+    assert 'if monthly_bundle["complete"]' in app
     assert "if guided_natal" in app
-    assert "if guided_year" in app
+    assert 'if year_bundle["complete"]' in app
 
 
 def test_personal_packets_do_not_send_raw_birth_identity():

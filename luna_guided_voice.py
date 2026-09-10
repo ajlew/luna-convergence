@@ -56,6 +56,16 @@ _IMPERATIVES = {
     "step", "stop", "take", "test", "treat", "trust", "turn", "use",
     "verify", "wait", "watch", "write",
 }
+_SECTION_LABEL = re.compile(
+    r"(?:^|[.!?]\s+)(?:your\s+move|remember|affirmation)\s*(?::|·|-)",
+    flags=re.IGNORECASE,
+)
+
+
+def _contains_move(story: str, move: str) -> bool:
+    normalized_story = re.sub(r"[^a-z0-9]+", " ", story.lower()).strip()
+    normalized_move = re.sub(r"[^a-z0-9]+", " ", move.lower()).strip()
+    return bool(len(normalized_move.split()) >= 4 and normalized_move in normalized_story)
 
 
 def facts_hash(product: str, facts: dict[str, Any]) -> str:
@@ -112,6 +122,8 @@ def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
         + product_rule
         + "\n\nReturn JSON only with exactly these keys: headline, opening, story, affirmation, your_move, facts_hash. "
         "story must be an array of paragraphs. Copy facts_hash exactly. Begin your_move with an imperative verb.\n\n"
+        "Do not write section labels such as Your move, Remember or Affirmation inside story. Do not repeat the "
+        "your_move sentence inside story; the application renders that field separately.\n\n"
         "Do not claim perfect alignment, automatic luck, guarantees, destiny, karmic inevitability, manifestation as "
         "fact, or that the worst is over.\n\n"
         "CALCULATED FACTS:\n"
@@ -205,6 +217,8 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
         "exactly. Begin every your_move with one of these imperative verbs: "
         + ", ".join(sorted(_IMPERATIVES))
         + ".\n\n"
+        "Do not write section labels such as Your move, Remember or Affirmation inside story. Do not repeat an "
+        "item's your_move sentence inside its story; the application renders that field separately.\n\n"
         "Never claim perfect alignment, automatic luck, guarantees, certainty, destiny, karmic inevitability, "
         "manifestation as fact, or that the worst is over.\n\n"
         "CALCULATED COLLECTION:\n"
@@ -279,6 +293,12 @@ def validate_guided_voice_copy(
         first = re.sub(r"[^a-z]", "", move.split()[0].lower())
         if first not in _IMPERATIVES:
             errors.append("your_move is not clearly imperative.")
+    for paragraph in story:
+        paragraph_text = " ".join(str(paragraph or "").split())
+        if _SECTION_LABEL.search(paragraph_text):
+            errors.append("story contains a reserved section label.")
+        if move and _contains_move(paragraph_text, move):
+            errors.append("story repeats the dedicated your_move field.")
 
     normalized = [re.sub(r"[^a-z0-9]+", " ", str(value).lower()).strip() for value in texts if value]
     if len(normalized) != len(set(normalized)):
@@ -376,6 +396,11 @@ def validate_guided_collection_copy(
             first = re.sub(r"[^a-z]", "", move.split()[0].lower())
             if first not in _IMPERATIVES:
                 errors.append(f"Item {index + 1} your_move is not clearly imperative.")
+        story_value = " ".join(str(item.get("story") or "").split())
+        if _SECTION_LABEL.search(story_value):
+            errors.append(f"Item {index + 1} story contains a reserved section label.")
+        if move and _contains_move(story_value, move):
+            errors.append(f"Item {index + 1} story repeats its dedicated your_move field.")
         supplied_item_text = json.dumps(
             {
                 "shared_context": shared_context,
