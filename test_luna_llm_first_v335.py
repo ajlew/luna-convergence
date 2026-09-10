@@ -85,9 +85,9 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
     assert '_guided_luna_copy("solar"' in app
 
 
-def test_build_label_is_v3355():
+def test_build_label_is_v3356():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.35.5 — Groq Completion Recovery" in config
+    assert "Luna v3.35.6 — Groq Rate-Limit Pacing" in config
 
 
 def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
@@ -229,6 +229,55 @@ def test_provider_retries_a_truncated_json_completion(monkeypatch):
     assert result == {"status": "complete"}
     assert calls[1]["max_completion_tokens"] > calls[0]["max_completion_tokens"]
     assert "shorter wording" in calls[1]["messages"][0]["content"]
+
+
+def test_provider_obeys_groq_decimal_retry_after(monkeypatch):
+    calls = []
+    sleeps = []
+
+    class FakeResponse:
+        text = ""
+
+        def __init__(self, status_code, content=None, retry_after=None):
+            self.status_code = status_code
+            self.content = content
+            self.headers = {"Retry-After": retry_after} if retry_after else {}
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise luna_voice_provider.requests.RequestException(
+                    f"{self.status_code} Client Error"
+                )
+
+        def json(self):
+            return {
+                "choices": [
+                    {"message": {"content": self.content}, "finish_reason": "stop"}
+                ]
+            }
+
+    responses = iter(
+        [
+            FakeResponse(429, retry_after="1.695s"),
+            FakeResponse(200, content='{"status":"paced"}'),
+        ]
+    )
+
+    def fake_post(_url, **kwargs):
+        calls.append(kwargs["json"])
+        return next(responses)
+
+    monkeypatch.setattr(luna_voice_provider.requests, "post", fake_post)
+    monkeypatch.setattr(luna_voice_provider.time, "sleep", sleeps.append)
+    result = luna_voice_provider.generate_openai_compatible_json(
+        "Return the object.",
+        base_url="https://example.invalid",
+        model="openai/gpt-oss-20b",
+        api_key="test-key",
+    )
+    assert result == {"status": "paced"}
+    assert len(calls) == 2
+    assert sleeps == [2.045]
 
 
 def test_shared_week_context_is_valid_evidence_for_each_sign():

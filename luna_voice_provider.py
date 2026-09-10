@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from typing import Any
 
@@ -10,6 +11,37 @@ import requests
 
 class VoiceProviderError(RuntimeError):
     pass
+
+
+def _duration_seconds(value: Any) -> float | None:
+    """Parse Groq retry/reset values such as 1.695s, 2m59.56s, or 500ms."""
+    text = str(value or "").strip().lower()
+    if not text:
+        return None
+    total = 0.0
+    matched = False
+    for amount, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(ms|m|s)?", text):
+        matched = True
+        number = float(amount)
+        total += number / 1000.0 if unit == "ms" else number * 60.0 if unit == "m" else number
+    return total if matched else None
+
+
+def _rate_limit_delay(response: Any, attempt: int) -> float:
+    """Prefer Groq's precise retry instruction and add a small safety margin."""
+    header_wait = _duration_seconds(response.headers.get("Retry-After", ""))
+    if header_wait is None:
+        match = re.search(
+            r"try again in\s+(\d+(?:\.\d+)?(?:ms|s|m))",
+            str(response.text or ""),
+            flags=re.IGNORECASE,
+        )
+        header_wait = _duration_seconds(match.group(1)) if match else None
+    if header_wait is None:
+        header_wait = _duration_seconds(response.headers.get("x-ratelimit-reset-tokens", ""))
+    if header_wait is None:
+        header_wait = float(min(2**attempt, 30))
+    return min(max(header_wait + 0.35, 0.75), 60.0)
 
 
 def _required_env(name: str) -> str:
@@ -83,7 +115,7 @@ def generate_openai_compatible_json(
         payload["include_reasoning"] = False
     response = None
     used_unconstrained_json_recovery = False
-    for attempt in range(3):
+    for attempt in range(6):
         try:
             response = requests.post(
                 f"{resolved_base.rstrip('/')}/chat/completions",
@@ -111,14 +143,13 @@ def generate_openai_compatible_json(
                 )
                 used_unconstrained_json_recovery = True
                 continue
-            if response.status_code == 429 or 500 <= response.status_code < 600:
+            if response.status_code == 429:
+                if attempt < 5:
+                    time.sleep(_rate_limit_delay(response, attempt))
+                    continue
+            elif 500 <= response.status_code < 600:
                 if attempt < 2:
-                    retry_after = response.headers.get("Retry-After", "")
-                    try:
-                        delay = min(max(float(retry_after), 0.5), 8.0)
-                    except (TypeError, ValueError):
-                        delay = float(2**attempt)
-                    time.sleep(delay)
+                    time.sleep(float(2**attempt))
                     continue
             response.raise_for_status()
             data = response.json()
@@ -148,7 +179,8 @@ def generate_openai_compatible_json(
                 or status_code == 429
                 or (status_code is not None and status_code >= 500)
             )
-            if attempt < 2 and isinstance(exc, requests.RequestException) and retryable_request:
+            retry_window = 5 if status_code == 429 else 2
+            if attempt < retry_window and isinstance(exc, requests.RequestException) and retryable_request:
                 time.sleep(float(2**attempt))
                 continue
             detail = ""
@@ -157,5 +189,5 @@ def generate_openai_compatible_json(
                 detail = f" HTTP {response.status_code}: {body}" if body else f" HTTP {response.status_code}."
             raise VoiceProviderError(f"Voice provider request failed.{detail} {exc}") from exc
     else:
-        raise VoiceProviderError("Voice provider request failed after three attempts.")
+        raise VoiceProviderError("Voice provider request failed after six attempts.")
     raise VoiceProviderError("Voice provider returned no usable JSON response.")
