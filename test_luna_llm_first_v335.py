@@ -85,9 +85,9 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
     assert '_guided_luna_copy("solar"' in app
 
 
-def test_build_label_is_v3354():
+def test_build_label_is_v3355():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.35.4 — Groq Strict JSON Recovery" in config
+    assert "Luna v3.35.5 — Groq Completion Recovery" in config
 
 
 def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
@@ -108,7 +108,7 @@ def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
         "weekly_days",
         facts,
         base_url="https://example.invalid",
-        model="test-model",
+        model="openai/gpt-oss-20b",
         api_key="test-key",
     )
     response_format = captured["response_format"]
@@ -157,7 +157,7 @@ def test_provider_recovers_from_groq_json_validate_failed(monkeypatch):
     result = luna_voice_provider.generate_openai_compatible_json(
         "Return the object.",
         base_url="https://example.invalid",
-        model="test-model",
+        model="openai/gpt-oss-20b",
         api_key="test-key",
         response_format={
             "type": "json_schema",
@@ -176,6 +176,59 @@ def test_provider_recovers_from_groq_json_validate_failed(monkeypatch):
     assert result == {"status": "recovered"}
     assert calls[0]["response_format"]["type"] == "json_schema"
     assert "response_format" not in calls[1]
+    assert calls[0]["reasoning_effort"] == "low"
+    assert calls[0]["include_reasoning"] is False
+    assert "max_completion_tokens" in calls[0]
+    assert "max_tokens" not in calls[0]
+
+
+def test_provider_retries_a_truncated_json_completion(monkeypatch):
+    calls = []
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+        headers = {}
+
+        def __init__(self, content, finish_reason):
+            self.content = content
+            self.finish_reason = finish_reason
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {"content": self.content},
+                        "finish_reason": self.finish_reason,
+                    }
+                ]
+            }
+
+    responses = iter(
+        [
+            FakeResponse('{"status":"cut off', "length"),
+            FakeResponse('{"status":"complete"}', "stop"),
+        ]
+    )
+
+    def fake_post(_url, **kwargs):
+        calls.append(__import__("copy").deepcopy(kwargs["json"]))
+        return next(responses)
+
+    monkeypatch.setattr(luna_voice_provider.requests, "post", fake_post)
+    result = luna_voice_provider.generate_openai_compatible_json(
+        "Return the object.",
+        base_url="https://example.invalid",
+        model="openai/gpt-oss-20b",
+        api_key="test-key",
+        max_tokens=950,
+    )
+    assert result == {"status": "complete"}
+    assert calls[1]["max_completion_tokens"] > calls[0]["max_completion_tokens"]
+    assert "shorter wording" in calls[1]["messages"][0]["content"]
 
 
 def test_shared_week_context_is_valid_evidence_for_each_sign():

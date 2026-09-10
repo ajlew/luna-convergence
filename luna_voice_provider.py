@@ -73,9 +73,14 @@ def generate_openai_compatible_json(
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.72,
-        "max_tokens": resolved_max_tokens,
+        "max_completion_tokens": resolved_max_tokens,
         "response_format": response_format or {"type": "json_object"},
     }
+    if resolved_model.startswith("openai/gpt-oss"):
+        # GPT-OSS reasoning shares the completion budget. Keep the hidden work
+        # short so the requested JSON has enough room to finish.
+        payload["reasoning_effort"] = "low"
+        payload["include_reasoning"] = False
     response = None
     used_unconstrained_json_recovery = False
     for attempt in range(3):
@@ -117,8 +122,25 @@ def generate_openai_compatible_json(
                     continue
             response.raise_for_status()
             data = response.json()
-            content = data["choices"][0]["message"]["content"]
-            break
+            choice = data["choices"][0]
+            content = choice["message"]["content"]
+            finish_reason = str(choice.get("finish_reason") or "")
+            try:
+                return _json_content(content)
+            except VoiceProviderError as parse_error:
+                if attempt < 2:
+                    current_budget = int(payload.get("max_completion_tokens") or resolved_max_tokens)
+                    payload["max_completion_tokens"] = min(
+                        8000,
+                        max(current_budget + 1200, int(current_budget * 1.75)),
+                    )
+                    payload["messages"][0]["content"] += (
+                        " The previous response was incomplete or malformed. "
+                        "Use shorter wording and finish the entire JSON object."
+                    )
+                    continue
+                suffix = f" Finish reason: {finish_reason}." if finish_reason else ""
+                raise VoiceProviderError(f"{parse_error}{suffix}") from parse_error
         except (requests.RequestException, KeyError, IndexError, TypeError, ValueError) as exc:
             status_code = response.status_code if response is not None else None
             retryable_request = (
@@ -136,4 +158,4 @@ def generate_openai_compatible_json(
             raise VoiceProviderError(f"Voice provider request failed.{detail} {exc}") from exc
     else:
         raise VoiceProviderError("Voice provider request failed after three attempts.")
-    return _json_content(content)
+    raise VoiceProviderError("Voice provider returned no usable JSON response.")

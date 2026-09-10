@@ -435,7 +435,9 @@ def _generate_guided_collection_batch(
     """Generate and validate one collection batch."""
     prompt = build_guided_collection_prompt(product, facts)
     item_count = max(1, len(list(facts.get("items") or [])))
-    output_budget = min(2600, 500 + item_count * 450)
+    # GPT-OSS spends part of the completion allowance on reasoning. Reserve
+    # enough room for the complete JSON even when a batch contains one item.
+    output_budget = min(4200, 1800 + item_count * 600)
     errors: tuple[str, ...] = ()
     for attempt in range(2):
         copy = generate_openai_compatible_json(
