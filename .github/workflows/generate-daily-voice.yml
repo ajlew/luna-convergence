@@ -1,0 +1,57 @@
+name: Generate and publish Daily Luna voice
+
+on:
+  schedule:
+    # 00:10 AEST / 01:10 AEDT: safely after the Sydney date changes all year.
+    - cron: "10 14 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: Reading date (YYYY-MM-DD); leave blank for today in Sydney
+        required: false
+      timezone:
+        description: IANA timezone
+        required: true
+        default: Australia/Sydney
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LUNA_VOICE_BASE_URL: https://api.groq.com/openai/v1
+      LUNA_VOICE_MODEL: openai/gpt-oss-20b
+      LUNA_VOICE_API_KEY: ${{ secrets.LUNA_VOICE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install calculation and voice requirements
+        run: pip install -r requirements.txt -r requirements-voice.txt
+      - name: Generate and validate all signs
+        env:
+          REQUESTED_DATE: ${{ inputs.date }}
+          REQUESTED_TIMEZONE: ${{ inputs.timezone }}
+        run: |
+          timezone="${REQUESTED_TIMEZONE:-Australia/Sydney}"
+          args=(--timezone "$timezone")
+          if [ -n "$REQUESTED_DATE" ]; then
+            args+=(--date "$REQUESTED_DATE")
+          fi
+          python scripts/generate_daily_voice.py "${args[@]}"
+      - name: Commit published Daily document
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated/daily/*.json
+          if git diff --cached --quiet; then
+            echo "The validated Daily document is already current."
+          else
+            git commit -m "Publish Luna Daily voice"
+            git push
+          fi
