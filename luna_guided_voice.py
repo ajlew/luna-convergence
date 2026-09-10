@@ -339,7 +339,7 @@ def generate_guided_voice_copy(
         "solar": 1400,
     }.get(product, 2600)
     errors: tuple[str, ...] = ()
-    last_copy: dict[str, Any] | None = None
+    best_errors: tuple[str, ...] = ()
     for attempt in range(3):
         copy = generate_openai_compatible_json(
             prompt,
@@ -349,32 +349,41 @@ def generate_guided_voice_copy(
             max_tokens=output_budget,
             response_format=_guided_voice_response_format(product, facts),
         )
-        last_copy = copy if isinstance(copy, dict) else None
         valid, errors = validate_guided_voice_copy(product, copy, facts)
         if valid:
             return copy
+        repaired = _repair_guided_voice_structure(product, copy, facts=facts)
+        repaired_valid, repaired_errors = validate_guided_voice_copy(
+            product, repaired, facts
+        )
+        if repaired_valid:
+            return repaired
+        if not best_errors or len(repaired_errors) < len(best_errors):
+            best_errors = repaired_errors
         if attempt < 2:
             prompt += (
                 "\n\nCORRECTION REPORT: The previous draft was rejected. Return a complete replacement and fix: "
-                + " | ".join(errors)
+                + " | ".join(repaired_errors or errors)
             )
-    repaired = _repair_guided_voice_structure(product, last_copy)
-    valid, repaired_errors = validate_guided_voice_copy(product, repaired, facts)
-    if valid:
-        return repaired
-    if repaired_errors:
-        errors = repaired_errors
+    if best_errors:
+        errors = best_errors
     raise ValueError("Guided Luna copy failed validation: " + " | ".join(errors))
 
 
 def _repair_guided_voice_structure(
     product: str,
     copy: dict[str, Any] | None,
+    *,
+    facts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Repair presentation structure without changing or inventing astrology."""
     if not isinstance(copy, dict):
         return {}
-    repaired = dict(copy)
+    expected = {"headline", "opening", "story", "affirmation", "your_move", "facts_hash"}
+    repaired = {key: value for key, value in copy.items() if key in expected}
+    if facts is not None:
+        # This is deterministic provenance metadata, not generated astrology.
+        repaired["facts_hash"] = facts_hash(product, facts)
     minimum, maximum = {
         "daily": (2, 3),
         "monthly": (3, 5),

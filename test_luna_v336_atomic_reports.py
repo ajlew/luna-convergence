@@ -134,9 +134,9 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v3362():
+def test_build_label_is_v3363():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.2 — Daily Validation Recovery" in config
+    assert "Luna v3.36.3 — Per-Attempt Voice Recovery" in config
 
 
 def test_footer_always_shows_build_label():
@@ -171,8 +171,11 @@ def test_live_voice_requests_show_reader_progress():
 
 def test_daily_generation_repairs_single_paragraph_and_non_imperative(monkeypatch):
     facts = _daily_facts()
+    calls = 0
 
     def fake_provider(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
         return {
             "headline": "CHECK THE CHANGE BEFORE CHASING IT.",
             "opening": "The reaction arrives before the explanation.",
@@ -197,3 +200,4 @@ def test_daily_generation_repairs_single_paragraph_and_non_imperative(monkeypatc
     )
     assert len(copy["story"]) == 2
     assert copy["your_move"].startswith("Do this:")
+    assert calls == 1
