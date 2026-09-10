@@ -81,6 +81,14 @@ def facts_hash(product: str, facts: dict[str, Any]) -> str:
 
 def _guided_voice_response_format(product: str, facts: dict[str, Any]) -> dict[str, Any]:
     """Groq strict schema for one complete Luna reading."""
+    minimum, maximum = {
+        "daily": (2, 3),
+        "monthly": (3, 5),
+        "yearly": (4, 6),
+        "natal": (3, 5),
+        "solar": (2, 3),
+        "weekly_sign": (2, 3),
+    }.get(product, (3, 5))
     return {
         "type": "json_schema",
         "json_schema": {
@@ -91,7 +99,12 @@ def _guided_voice_response_format(product: str, facts: dict[str, Any]) -> dict[s
                 "properties": {
                     "headline": {"type": "string"},
                     "opening": {"type": "string"},
-                    "story": {"type": "array", "items": {"type": "string"}},
+                    "story": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": minimum,
+                        "maxItems": maximum,
+                    },
                     "affirmation": {"type": "string"},
                     "your_move": {"type": "string"},
                     "facts_hash": {"type": "string", "enum": [facts_hash(product, facts)]},
@@ -121,7 +134,8 @@ def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
         "pretending the sky guarantees a reward. Avoid vague spiritual padding, jargon lists, emojis and closing questions. "
         + product_rule
         + "\n\nReturn JSON only with exactly these keys: headline, opening, story, affirmation, your_move, facts_hash. "
-        "story must be an array of paragraphs. Copy facts_hash exactly. Begin your_move with an imperative verb.\n\n"
+        "story must be an array of paragraphs. Copy facts_hash exactly. Begin your_move with one of these "
+        "imperative verbs: " + ", ".join(sorted(_IMPERATIVES)) + ".\n\n"
         "Do not write section labels such as Your move, Remember or Affirmation inside story. Do not repeat the "
         "your_move sentence inside story; the application renders that field separately.\n\n"
         "Do not claim perfect alignment, automatic luck, guarantees, destiny, karmic inevitability, manifestation as "
@@ -325,7 +339,8 @@ def generate_guided_voice_copy(
         "solar": 1400,
     }.get(product, 2600)
     errors: tuple[str, ...] = ()
-    for attempt in range(2):
+    last_copy: dict[str, Any] | None = None
+    for attempt in range(3):
         copy = generate_openai_compatible_json(
             prompt,
             base_url=base_url,
@@ -334,15 +349,77 @@ def generate_guided_voice_copy(
             max_tokens=output_budget,
             response_format=_guided_voice_response_format(product, facts),
         )
+        last_copy = copy if isinstance(copy, dict) else None
         valid, errors = validate_guided_voice_copy(product, copy, facts)
         if valid:
             return copy
-        if attempt == 0:
+        if attempt < 2:
             prompt += (
                 "\n\nCORRECTION REPORT: The previous draft was rejected. Return a complete replacement and fix: "
                 + " | ".join(errors)
             )
+    repaired = _repair_guided_voice_structure(product, last_copy)
+    valid, repaired_errors = validate_guided_voice_copy(product, repaired, facts)
+    if valid:
+        return repaired
+    if repaired_errors:
+        errors = repaired_errors
     raise ValueError("Guided Luna copy failed validation: " + " | ".join(errors))
+
+
+def _repair_guided_voice_structure(
+    product: str,
+    copy: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Repair presentation structure without changing or inventing astrology."""
+    if not isinstance(copy, dict):
+        return {}
+    repaired = dict(copy)
+    minimum, maximum = {
+        "daily": (2, 3),
+        "monthly": (3, 5),
+        "yearly": (4, 6),
+        "natal": (3, 5),
+        "solar": (2, 3),
+        "weekly_sign": (2, 3),
+    }.get(product, (3, 5))
+    raw_story = repaired.get("story")
+    if isinstance(raw_story, str):
+        paragraphs = [" ".join(raw_story.split())]
+    elif isinstance(raw_story, list):
+        paragraphs = [" ".join(str(value or "").split()) for value in raw_story]
+        paragraphs = [value for value in paragraphs if value]
+    else:
+        paragraphs = []
+
+    while paragraphs and len(paragraphs) < minimum:
+        index = max(range(len(paragraphs)), key=lambda item: len(paragraphs[item].split()))
+        paragraph = paragraphs[index]
+        sentences = [
+            value.strip()
+            for value in re.split(r"(?<=[.!?])\s+", paragraph)
+            if value.strip()
+        ]
+        if len(sentences) >= 2:
+            pivot = max(1, len(sentences) // 2)
+            parts = [" ".join(sentences[:pivot]), " ".join(sentences[pivot:])]
+        else:
+            words = paragraph.split()
+            if len(words) < 8:
+                break
+            pivot = len(words) // 2
+            parts = [" ".join(words[:pivot]), " ".join(words[pivot:])]
+        paragraphs[index:index + 1] = parts
+    if len(paragraphs) > maximum:
+        paragraphs = paragraphs[: maximum - 1] + [" ".join(paragraphs[maximum - 1:])]
+    repaired["story"] = paragraphs
+
+    move = " ".join(str(repaired.get("your_move") or "").split())
+    if move:
+        first = re.sub(r"[^a-z]", "", move.split()[0].lower())
+        if first not in _IMPERATIVES:
+            repaired["your_move"] = f"Do this: {move}"
+    return repaired
 
 
 def validate_guided_collection_copy(

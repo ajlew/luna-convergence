@@ -13,6 +13,7 @@ from daily_voice_publisher import (
 from luna_guided_voice import (
     collection_facts_hash,
     facts_hash,
+    generate_guided_voice_copy,
     validate_guided_collection_copy,
 )
 from luna_report_bundle import assemble_report_bundle
@@ -133,9 +134,9 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v3361():
+def test_build_label_is_v3362():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.1 — Daily Publishing Recovery" in config
+    assert "Luna v3.36.2 — Daily Validation Recovery" in config
 
 
 def test_footer_always_shows_build_label():
@@ -166,3 +167,33 @@ def test_live_voice_requests_show_reader_progress():
     assert "_VOICE_LOADING_LABELS" in app
     assert "Keep this page open" in app
     assert "with st.spinner(_voice_loading_label(product))" in app
+
+
+def test_daily_generation_repairs_single_paragraph_and_non_imperative(monkeypatch):
+    facts = _daily_facts()
+
+    def fake_provider(*_args, **_kwargs):
+        return {
+            "headline": "CHECK THE CHANGE BEFORE CHASING IT.",
+            "opening": "The reaction arrives before the explanation.",
+            "story": [
+                "The Moon makes the pressure immediate enough to notice. Uranus exposes the rule that no longer fits, so the interruption can become useful information."
+            ],
+            "affirmation": "You can respond without surrendering your judgement.",
+            "your_move": "You should check the facts before reacting.",
+            "facts_hash": facts_hash("daily", facts),
+        }
+
+    monkeypatch.setattr(
+        "luna_guided_voice.generate_openai_compatible_json",
+        fake_provider,
+    )
+    copy = generate_guided_voice_copy(
+        "daily",
+        facts,
+        base_url="https://example.invalid",
+        model="test-model",
+        api_key="test-key",
+    )
+    assert len(copy["story"]) == 2
+    assert copy["your_move"].startswith("Do this:")
