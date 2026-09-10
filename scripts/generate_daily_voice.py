@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
+from datetime import date, datetime
 import os
 from pathlib import Path
 import sys
+import time
+from zoneinfo import ZoneInfo
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -62,20 +64,39 @@ def _facts(sign: str, reading_date: date, timezone_name: str) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate all 12 published Daily Luna readings.")
-    parser.add_argument("--date", required=True, help="Reading date in YYYY-MM-DD format.")
+    parser.add_argument(
+        "--date",
+        help="Reading date in YYYY-MM-DD format. Defaults to today in --timezone.",
+    )
     parser.add_argument("--timezone", default="Australia/Sydney")
+    parser.add_argument(
+        "--pause-seconds",
+        type=float,
+        default=8.0,
+        help="Pause between signs to stay inside provider token-per-minute limits.",
+    )
     args = parser.parse_args()
-    reading_date = date.fromisoformat(args.date)
+    try:
+        timezone = ZoneInfo(args.timezone)
+    except Exception as exc:
+        raise SystemExit(f"Invalid IANA timezone: {args.timezone}") from exc
+    reading_date = (
+        date.fromisoformat(args.date)
+        if args.date
+        else datetime.now(timezone).date()
+    )
     base_url = os.environ["LUNA_VOICE_BASE_URL"]
     model = os.environ["LUNA_VOICE_MODEL"]
     api_key = os.environ["LUNA_VOICE_API_KEY"]
     copies = {}
-    for sign in SIGNS:
+    for index, sign in enumerate(SIGNS):
         facts = _facts(sign, reading_date, args.timezone)
         copies[sign] = generate_guided_voice_copy(
             "daily", facts, base_url=base_url, model=model, api_key=api_key
         )
         print(f"Validated {sign}")
+        if index < len(SIGNS) - 1 and args.pause_seconds > 0:
+            time.sleep(args.pause_seconds)
     output = daily_candidate_path(reading_date, args.timezone)
     write_daily_voice_document(
         output,
@@ -87,4 +108,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

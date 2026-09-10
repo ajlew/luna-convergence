@@ -178,6 +178,24 @@ LUNA_VOICE_API_KEY = secret("LUNA_VOICE_API_KEY")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 _VOICE_ERRORS: dict[str, str] = {}
 
+_VOICE_LOADING_LABELS = {
+    "daily": "Luna is reading today's calculated sky. Keep this page open…",
+    "monthly": "Luna is connecting your month. Keep this page open…",
+    "monthly_events": "Luna is writing the dated turning points. Keep this page open…",
+    "personal_events": "Luna is connecting the transits to the natal chart. Keep this page open…",
+    "yearly": "Luna is building the strategic year. Keep this page open…",
+    "yearly_transits": "Luna is writing the major transit chapters. Keep this page open…",
+    "weekly_signs": "Luna is translating the week for all 12 signs. Keep this page open…",
+    "weekly_days": "Luna is connecting Monday through Sunday. Keep this page open…",
+}
+
+
+def _voice_loading_label(product: str) -> str:
+    return _VOICE_LOADING_LABELS.get(
+        product,
+        "Luna is connecting the calculated evidence. Keep this page open…",
+    )
+
 
 def _record_voice_error(product: str, error: object) -> None:
     """Keep a safe per-run diagnostic without exposing credentials."""
@@ -241,13 +259,14 @@ def _guided_luna_copy(product: str, facts: dict) -> dict | None:
         _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
-        return _cached_guided_luna_copy(
-            product,
-            json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
-            LUNA_VOICE_BASE_URL,
-            LUNA_VOICE_MODEL,
-            LUNA_VOICE_API_KEY,
-        )
+        with st.spinner(_voice_loading_label(product)):
+            return _cached_guided_luna_copy(
+                product,
+                json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
+                LUNA_VOICE_BASE_URL,
+                LUNA_VOICE_MODEL,
+                LUNA_VOICE_API_KEY,
+            )
     except Exception as exc:
         _record_voice_error(product, exc)
         return None
@@ -269,13 +288,14 @@ def _guided_luna_collection(product: str, facts: dict) -> dict | None:
         _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
-        return _cached_guided_luna_collection(
-            product,
-            json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
-            LUNA_VOICE_BASE_URL,
-            LUNA_VOICE_MODEL,
-            LUNA_VOICE_API_KEY,
-        )
+        with st.spinner(_voice_loading_label(product)):
+            return _cached_guided_luna_collection(
+                product,
+                json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
+                LUNA_VOICE_BASE_URL,
+                LUNA_VOICE_MODEL,
+                LUNA_VOICE_API_KEY,
+            )
     except Exception as exc:
         _record_voice_error(product, exc)
         return None
@@ -3778,13 +3798,15 @@ def _remember_daily_sign_in_url(sign: str) -> None:
 def _render_optional_luna_video() -> None:
     if not LUNA_YOUTUBE_FEATURED_VIDEO_URL:
         return
-    if LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START:
-        try:
-            configured_week = date.fromisoformat(LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START)
-        except ValueError:
-            return
-        if configured_week != monday_for(browser_local_date()):
-            return
+    # A URL without a dated week can remain stale forever. Require the date lock.
+    if not LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START:
+        return
+    try:
+        configured_week = date.fromisoformat(LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START)
+    except ValueError:
+        return
+    if configured_week != monday_for(browser_local_date()):
+        return
     st.markdown('<section class="luna-video-slot">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Luna short</div>', unsafe_allow_html=True)
     playable_url = _youtube_playable_url(LUNA_YOUTUBE_FEATURED_VIDEO_URL)
@@ -8488,8 +8510,14 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         "natal_contacts": list((result.get("natal_overlay") or {}).get("contacts") or []),
     }
     guided_month = _guided_luna_copy("monthly", monthly_facts)
+    monthly_voice_diagnostics = {
+        "main": "accepted" if guided_month else _voice_error("monthly")
+    }
     event_generated, event_voice_items = _monthly_event_voice_data(
         narrative, result, sign, timezone_name
+    )
+    monthly_voice_diagnostics["dated_events"] = (
+        "accepted" if event_generated else _voice_error("monthly_events")
     )
     personal_prepared = _personal_major_voice_data(
         result.get("major_sky_registry") or result.get("major_sky_events") or [],
@@ -8498,6 +8526,10 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         limit=4,
     )
     personal_groups, _personal_voices, personal_generated = personal_prepared
+    if personal_groups:
+        monthly_voice_diagnostics["personal_contacts"] = (
+            "accepted" if personal_generated else _voice_error("personal_events")
+        )
     monthly_sections: dict[str, object] = {"dated_events": event_generated or {}}
     required_sections = ["dated_events"]
     if personal_groups:
@@ -8513,6 +8545,7 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         key: monthly_bundle[key]
         for key in ("report_id", "status", "complete", "missing_sections", "component_status")
     }
+    st.session_state["monthly-voice-bundle-v336"]["diagnostics"] = monthly_voice_diagnostics
     st.markdown(
         """
         <style>
@@ -8567,6 +8600,14 @@ def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_n
         _render_guided_luna_story(guided_month, "Luna's month ahead")
     else:
         _render_voice_unavailable(facts_label="complete monthly document")
+        missing_labels = ", ".join(monthly_bundle["missing_sections"])
+        st.caption(f"Monthly voice diagnostic · missing: {missing_labels}")
+        with st.expander("Monthly voice technical diagnostic"):
+            for component in monthly_bundle["missing_sections"]:
+                st.markdown(
+                    f"**{escape(component.replace('_', ' ').title())}:** "
+                    f"{escape(monthly_voice_diagnostics.get(component, 'No validated response was accepted.'))}"
+                )
 
     detail_label = (
         "Calculated dates and Luna's detailed reading"
@@ -11376,7 +11417,8 @@ def footer() -> None:
         f"""
 <div class="small-note">
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
-{"<br><strong>Preview build:</strong> " + escape(BUILD_LABEL) if EDITOR_PREVIEW_ENABLED else ""}
+<br><strong>Build:</strong> {escape(BUILD_LABEL)}
+{"<br><strong>Preview mode enabled</strong>" if EDITOR_PREVIEW_ENABLED else ""}
 <br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,

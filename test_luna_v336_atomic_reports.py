@@ -133,6 +133,36 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v336():
+def test_build_label_is_v3361():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36 — Atomic Guided Reports" in config
+    assert "Luna v3.36.1 — Daily Publishing Recovery" in config
+
+
+def test_footer_always_shows_build_label():
+    app = Path("app.py").read_text(encoding="utf-8")
+    footer = app.split("def footer()", 1)[1].split("install_css()", 1)[0]
+    assert "<strong>Build:</strong> {escape(BUILD_LABEL)}" in footer
+
+
+def test_daily_workflow_is_scheduled_and_date_is_optional():
+    workflow = Path(".github/workflows/generate-daily-voice.yml").read_text(encoding="utf-8")
+    assert 'cron: "10 14 * * *"' in workflow
+    assert "required: false" in workflow
+    script = Path("scripts/generate_daily_voice.py").read_text(encoding="utf-8")
+    assert "datetime.now(timezone).date()" in script
+    assert "default=8.0" in script
+
+
+def test_featured_video_requires_week_lock():
+    app = Path("app.py").read_text(encoding="utf-8")
+    video = app.split("def _render_optional_luna_video", 1)[1].split(
+        "def _render_lean_daily", 1
+    )[0]
+    assert "if not LUNA_YOUTUBE_FEATURED_VIDEO_WEEK_START" in video
+
+
+def test_live_voice_requests_show_reader_progress():
+    app = Path("app.py").read_text(encoding="utf-8")
+    assert "_VOICE_LOADING_LABELS" in app
+    assert "Keep this page open" in app
+    assert "with st.spinner(_voice_loading_label(product))" in app
