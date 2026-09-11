@@ -113,13 +113,18 @@ def test_collection_rejects_embedded_move_section():
     assert any("repeats its dedicated your_move" in error for error in errors)
 
 
-def test_natal_driven_forms_do_not_ask_for_sun_sign():
+def test_free_monthly_asks_for_sign_but_paid_natal_monthly_does_not():
     app = Path("app.py").read_text(encoding="utf-8")
     monthly_form = app.split("def _free_monthly_profile", 1)[1].split(
         "def _monthly_sun_sign_from_snapshot", 1
     )[0]
+    paid_monthly = app.split("with monthly_tab:", 1)[1].split("with yearly_tab:", 1)[0]
     timing_form = app.split("def timing_map_page", 1)[1].split("def solar_year_page", 1)[0]
-    assert "What is your Sun sign (star sign)?" not in monthly_form
+    assert "What is your Sun sign (star sign)?" in monthly_form
+    assert "birth_date" not in monthly_form
+    assert "What is your Sun sign (star sign)?" not in paid_monthly
+    assert "_build_monthly_checkout_natal" in paid_monthly
+    assert "_monthly_sun_sign_from_snapshot" in paid_monthly
     assert "What is your Sun sign (star sign)?" not in timing_form
     assert "timing-sun-sign-select-v9" not in timing_form
     assert 'st.session_state["timing-calculated-sun-sign-v336"]' in timing_form
@@ -135,9 +140,9 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v337():
+def test_build_label_is_v338():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.37 — Calculated Intelligence" in config
+    assert "Luna v3.38 — Fast Monthly" in config
 
 
 def test_footer_always_shows_build_label():

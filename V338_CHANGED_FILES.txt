@@ -1,0 +1,15 @@
+Luna v3.38 — Fast Monthly
+
+Upload these files while preserving their paths:
+
+app.py
+site_config.py
+monthly_voice_publisher.py
+scripts/generate_monthly_voice.py
+.github/workflows/generate-monthly-voice.yml
+test_fast_monthly_v338.py
+test_luna_v336_atomic_reports.py
+test_guided_luna_everywhere_v334.py
+GITHUB_UPDATE_V338_FAST_MONTHLY.md
+V338_CHANGED_FILES.txt
+

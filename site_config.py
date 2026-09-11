@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.37 — Calculated Intelligence"
+BUILD_LABEL = "Luna v3.38 — Fast Monthly"
 EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
-    "Daily, monthly and yearly astrology explained through planetary transitions, "
-    "whole-sign houses, retrogrades and convergence points."
+    "Daily, weekly and monthly astrology by sign, with paid personal natal timing "
+    "for readers who want exact chart contacts."
 )
 
 MONTHLY_PRICE = "A$3.30"

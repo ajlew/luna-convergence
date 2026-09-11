@@ -59,7 +59,8 @@ def test_customer_forecast_pages_prefer_guided_luna_with_fallbacks():
         assert re.search(rf'_guided_luna_copy\(\s*"{product}"', app)
     assert "_render_weekly_public_story" in app
     assert "if guided" in app
-    assert 'if monthly_bundle["complete"]' in app
+    assert "load_monthly_voice_candidate" in app
+    assert 'elif LUNA_VOICE_MODE == "live"' in app
     assert "if guided_natal" in app
     assert 'if year_bundle["complete"]' in app
 
