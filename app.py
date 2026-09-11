@@ -259,14 +259,18 @@ def _guided_luna_copy(product: str, facts: dict) -> dict | None:
         _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
-        with st.spinner(_voice_loading_label(product)):
-            return _cached_guided_luna_copy(
+        with st.status(_voice_loading_label(product), expanded=True) as voice_status:
+            voice_status.write("Calculations ready · identifying the strongest pattern…")
+            result = _cached_guided_luna_copy(
                 product,
                 json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
                 LUNA_VOICE_BASE_URL,
                 LUNA_VOICE_MODEL,
                 LUNA_VOICE_API_KEY,
             )
+            voice_status.write("Interpretation written · checking every stated fact…")
+            voice_status.update(label="Luna's interpretation is ready.", state="complete", expanded=False)
+            return result
     except Exception as exc:
         _record_voice_error(product, exc)
         return None
@@ -288,14 +292,18 @@ def _guided_luna_collection(product: str, facts: dict) -> dict | None:
         _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
-        with st.spinner(_voice_loading_label(product)):
-            return _cached_guided_luna_collection(
+        with st.status(_voice_loading_label(product), expanded=True) as voice_status:
+            voice_status.write("Calculations ready · connecting the supplied events…")
+            result = _cached_guided_luna_collection(
                 product,
                 json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
                 LUNA_VOICE_BASE_URL,
                 LUNA_VOICE_MODEL,
                 LUNA_VOICE_API_KEY,
             )
+            voice_status.write("Collection written · validating each item against its evidence…")
+            voice_status.update(label="Luna's complete interpretation is ready.", state="complete", expanded=False)
+            return result
     except Exception as exc:
         _record_voice_error(product, exc)
         return None
@@ -8935,16 +8943,6 @@ def natal_snapshot_page() -> None:
     )
 
     with st.container(border=True):
-        natal_sun_sign = st.selectbox(
-            "What is your Sun sign (star sign)?",
-            SIGNS,
-            index=sign_select_index(st.session_state.get("natal-sun-sign-v9")),
-            placeholder="Select your star sign",
-            key="natal-sun-sign-select-v9",
-            help="Luna starts with your Sun sign as whole-sign House 1. Birth details then add Moon, planets, angles and natal precision.",
-        )
-        st.session_state["natal-sun-sign-v9"] = natal_sun_sign
-
         birth_date = st.date_input(
             "Birth date",
             value=None,
@@ -9054,11 +9052,6 @@ def natal_snapshot_page() -> None:
         st.markdown('</section>', unsafe_allow_html=True)
         return
 
-    if natal_sun_sign not in SIGNS:
-        st.error("Select your star sign before creating the snapshot.")
-        st.markdown('</section>', unsafe_allow_html=True)
-        return
-
     if birth_date is None:
         st.error("Choose your birth date before creating the snapshot.")
         st.markdown('</section>', unsafe_allow_html=True)
@@ -9108,13 +9101,12 @@ def natal_snapshot_page() -> None:
         longitude=longitude,
     )
     calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
-    if calculated_sign and natal_sun_sign != calculated_sign:
-        st.error(
-            f"Your birth date calculates as {calculated_sign}, while you selected {natal_sun_sign}. "
-            "Check the star sign or birth date before Luna builds the snapshot."
-        )
+    if not calculated_sign:
+        st.error("Luna could not calculate your Sun sign from the birth information supplied.")
         st.markdown('</section>', unsafe_allow_html=True)
         return
+    natal_sun_sign = calculated_sign
+    st.caption(f"Calculated Sun sign · {calculated_sign}")
 
     # Reuse the same birth inputs if this customer later opens the paid Monthly
     # checkout during the same app session. These details stay in Streamlit

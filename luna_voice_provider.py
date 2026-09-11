@@ -63,18 +63,21 @@ def _json_content(value: str) -> dict[str, Any]:
     try:
         result = json.loads(text)
     except json.JSONDecodeError as exc:
-        if exc.msg != "Extra data":
-            raise VoiceProviderError(f"The provider did not return valid JSON: {exc}") from exc
-        # Some compatible models return a complete object and then append a
-        # duplicate object or commentary. Recover only the first complete JSON
-        # value; Luna's deterministic schema and evidence validators still
-        # decide whether that object is safe to publish.
+        # Recover one complete leading value when a compatible model adds a
+        # duplicate object or brief commentary. The evidence validator still
+        # decides whether the recovered prose is safe to publish.
         try:
-            result, _end = json.JSONDecoder().raw_decode(text)
+            start_candidates = [index for index in (text.find("{"), text.find("[")) if index >= 0]
+            start = min(start_candidates) if start_candidates else 0
+            result, _end = json.JSONDecoder().raw_decode(text[start:])
         except json.JSONDecodeError as recovery_exc:
             raise VoiceProviderError(
                 f"The provider did not return valid JSON: {recovery_exc}"
             ) from recovery_exc
+    # Some JSON-mode models wrap the requested object in a singleton array.
+    # This is a harmless transport variation, not an astrology error.
+    if isinstance(result, list) and len(result) == 1 and isinstance(result[0], dict):
+        result = result[0]
     if not isinstance(result, dict):
         raise VoiceProviderError("The provider response must be one JSON object.")
     return result

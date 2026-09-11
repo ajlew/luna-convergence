@@ -53,12 +53,17 @@ def make_daily_voice_document(
     reading_date: date,
     timezone_name: str,
     copies: dict[str, dict[str, Any]],
+    *,
+    status: dict[str, str] | None = None,
+    diagnostics: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": DAILY_VOICE_SCHEMA_VERSION,
         "date": reading_date.isoformat(),
         "timezone": timezone_name,
         "signs": copies,
+        "status": status or {sign: "current" for sign in copies},
+        "diagnostics": diagnostics or {},
     }
 
 
@@ -75,4 +80,3 @@ def write_daily_voice_document(path: Path, document: dict[str, Any]) -> None:
 
 def expected_daily_hash(facts: dict[str, Any]) -> str:
     return facts_hash("daily", facts)
-

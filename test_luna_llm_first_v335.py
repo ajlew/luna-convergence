@@ -87,7 +87,7 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
 
 def test_build_label_advances_beyond_v3356():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.6 — Certainty Validation Recovery" in config
+    assert "Luna v3.37 — Calculated Intelligence" in config
 
 
 def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
@@ -99,9 +99,9 @@ def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
         payload = __import__("json").loads(
             prompt.split("CALCULATED COLLECTION:\n", 1)[1].split("\n\nCORRECTION REPORT:", 1)[0]
         )
-        result = _copy()
-        result["facts_hash"] = payload["facts_hash"]
-        return result
+        source_id = payload["facts"]["items"][0]["source_id"]
+        item = next(item for item in _copy()["items"] if item["source_id"] == source_id)
+        return {"items": [{key: value for key, value in item.items() if key != "source_id"}]}
 
     monkeypatch.setattr("luna_guided_voice.generate_openai_compatible_json", fake_provider)
     generate_guided_collection_copy(
@@ -116,7 +116,8 @@ def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
     assert response_format["json_schema"]["strict"] is True
     schema = response_format["json_schema"]["schema"]
     assert schema["additionalProperties"] is False
-    assert set(schema["required"]) == {"items", "facts_hash"}
+    assert set(schema["required"]) == {"items"}
+    assert "facts_hash" not in schema["properties"]
 
 
 def test_provider_recovers_from_groq_json_validate_failed(monkeypatch):
@@ -175,7 +176,7 @@ def test_provider_recovers_from_groq_json_validate_failed(monkeypatch):
     )
     assert result == {"status": "recovered"}
     assert calls[0]["response_format"]["type"] == "json_schema"
-    assert "response_format" not in calls[1]
+    assert calls[1]["response_format"] == {"type": "json_object"}
     assert calls[0]["reasoning_effort"] == "low"
     assert calls[0]["include_reasoning"] is False
     assert "max_completion_tokens" in calls[0]
@@ -334,7 +335,7 @@ def test_invalid_full_batch_recovers_each_item_independently(monkeypatch):
         ]
         if len(items) > 1:
             items.reverse()
-        return {"items": items, "facts_hash": payload["facts_hash"]}
+        return {"items": items}
 
     monkeypatch.setattr("luna_guided_voice.generate_openai_compatible_json", fake_provider)
     copy = generate_guided_collection_copy(
@@ -391,7 +392,6 @@ def test_413_collection_is_split_until_groq_accepts_it(monkeypatch):
                     "your_move": "Check the signal. Make the useful move.",
                 }
             ],
-            "facts_hash": payload["facts_hash"],
         }
 
     monkeypatch.setattr("luna_guided_voice.generate_openai_compatible_json", fake_provider)

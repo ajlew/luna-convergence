@@ -21,7 +21,7 @@ from daily_voice_publisher import (  # noqa: E402
     make_daily_voice_document,
     write_daily_voice_document,
 )
-from luna_guided_voice import generate_guided_voice_copy  # noqa: E402
+from luna_guided_voice import generate_guided_voice_copy, validate_guided_voice_copy  # noqa: E402
 
 
 def _facts(sign: str, reading_date: date, timezone_name: str) -> dict:
@@ -70,6 +70,11 @@ def main() -> int:
     )
     parser.add_argument("--timezone", default="Australia/Sydney")
     parser.add_argument(
+        "--sign",
+        choices=SIGNS,
+        help="Generate one sign only. Leave blank to generate or recover all signs.",
+    )
+    parser.add_argument(
         "--pause-seconds",
         type=float,
         default=8.0,
@@ -88,22 +93,63 @@ def main() -> int:
     base_url = os.environ["LUNA_VOICE_BASE_URL"]
     model = os.environ["LUNA_VOICE_MODEL"]
     api_key = os.environ["LUNA_VOICE_API_KEY"]
-    copies = {}
-    for index, sign in enumerate(SIGNS):
-        facts = _facts(sign, reading_date, args.timezone)
-        copies[sign] = generate_guided_voice_copy(
-            "daily", facts, base_url=base_url, model=model, api_key=api_key
-        )
-        print(f"Validated {sign}")
-        if index < len(SIGNS) - 1 and args.pause_seconds > 0:
-            time.sleep(args.pause_seconds)
     output = daily_candidate_path(reading_date, args.timezone)
-    write_daily_voice_document(
-        output,
-        make_daily_voice_document(reading_date, args.timezone, copies),
-    )
-    print(f"Published Daily document written to {output}")
-    return 0
+    copies: dict[str, dict] = {}
+    status: dict[str, str] = {}
+    diagnostics: dict[str, str] = {}
+    if output.exists():
+        try:
+            existing = __import__("json").loads(output.read_text(encoding="utf-8"))
+            if existing.get("date") == reading_date.isoformat() and existing.get("timezone") == args.timezone:
+                copies.update(existing.get("signs") or {})
+                status.update(existing.get("status") or {})
+                diagnostics.update(existing.get("diagnostics") or {})
+        except Exception:
+            pass
+
+    requested_signs = [args.sign] if args.sign else list(SIGNS)
+    successes = 0
+    failures = 0
+    for index, sign in enumerate(requested_signs):
+        print(f"Generating {sign}")
+        existing_copy = copies.pop(sign, None)
+        try:
+            facts = _facts(sign, reading_date, args.timezone)
+            existing_valid, _existing_errors = validate_guided_voice_copy(
+                "daily", existing_copy, facts
+            )
+            if existing_valid:
+                copies[sign] = existing_copy
+            copies[sign] = generate_guided_voice_copy(
+                "daily", facts, base_url=base_url, model=model, api_key=api_key
+            )
+            status[sign] = "current"
+            diagnostics.pop(sign, None)
+            successes += 1
+            print(f"Validated {sign}")
+        except Exception as exc:
+            diagnostics[sign] = " ".join(str(exc).split())[:500]
+            failures += 1
+            if sign in copies:
+                status[sign] = "current"
+                diagnostics[sign] = "Refresh failed; retained validated current copy. " + diagnostics[sign]
+            else:
+                status[sign] = "failed"
+            print(f"Failed {sign}: {diagnostics[sign]}", file=sys.stderr)
+        write_daily_voice_document(
+            output,
+            make_daily_voice_document(
+                reading_date,
+                args.timezone,
+                copies,
+                status=status,
+                diagnostics=diagnostics,
+            ),
+        )
+        if index < len(requested_signs) - 1 and args.pause_seconds > 0:
+            time.sleep(args.pause_seconds)
+    print(f"Daily document written to {output}: {successes} generated, {failures} failed")
+    return 0 if successes or copies else 1
 
 
 if __name__ == "__main__":

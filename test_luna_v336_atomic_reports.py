@@ -135,9 +135,9 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v3366():
+def test_build_label_is_v337():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.6 — Certainty Validation Recovery" in config
+    assert "Luna v3.37 — Calculated Intelligence" in config
 
 
 def test_footer_always_shows_build_label():
@@ -167,7 +167,8 @@ def test_live_voice_requests_show_reader_progress():
     app = Path("app.py").read_text(encoding="utf-8")
     assert "_VOICE_LOADING_LABELS" in app
     assert "Keep this page open" in app
-    assert "with st.spinner(_voice_loading_label(product))" in app
+    assert "with st.status(_voice_loading_label(product)" in app
+    assert "checking every stated fact" in app
 
 
 def test_daily_generation_repairs_single_paragraph_and_non_imperative(monkeypatch):

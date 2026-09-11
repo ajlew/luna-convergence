@@ -94,7 +94,7 @@ def facts_hash(product: str, facts: dict[str, Any]) -> str:
 
 
 def _guided_voice_response_format(product: str, facts: dict[str, Any]) -> dict[str, Any]:
-    """Groq strict schema for one complete Luna reading."""
+    """Provider schema for creative prose only; Python owns provenance."""
     minimum, maximum = {
         "daily": (2, 3),
         "monthly": (3, 5),
@@ -121,10 +121,9 @@ def _guided_voice_response_format(product: str, facts: dict[str, Any]) -> dict[s
                     },
                     "affirmation": {"type": "string"},
                     "your_move": {"type": "string"},
-                    "facts_hash": {"type": "string", "enum": [facts_hash(product, facts)]},
                 },
                 "required": [
-                    "headline", "opening", "story", "affirmation", "your_move", "facts_hash"
+                    "headline", "opening", "story", "affirmation", "your_move"
                 ],
                 "additionalProperties": False,
             },
@@ -147,8 +146,8 @@ def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
         "than one. Make the affirmation credible and specific: recognise the reader's capacity without praising them or "
         "pretending the sky guarantees a reward. Avoid vague spiritual padding, jargon lists, emojis and closing questions. "
         + product_rule
-        + "\n\nReturn JSON only with exactly these keys: headline, opening, story, affirmation, your_move, facts_hash. "
-        "story must be an array of paragraphs. Copy facts_hash exactly. Begin your_move with one of these "
+        + "\n\nReturn JSON only with exactly these keys: headline, opening, story, affirmation, your_move. "
+        "story must be an array of paragraphs. Begin your_move with one of these "
         "imperative verbs: " + ", ".join(sorted(_IMPERATIVES)) + ".\n\n"
         "Do not write section labels such as Your move, Remember or Affirmation inside story. Do not repeat the "
         "your_move sentence inside story; the application renders that field separately.\n\n"
@@ -159,7 +158,6 @@ def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
             {
                 "schema_version": GUIDED_VOICE_SCHEMA_VERSION,
                 "product": product,
-                "facts_hash": facts_hash(product, facts),
                 "facts": facts,
             },
             ensure_ascii=False,
@@ -181,8 +179,8 @@ def collection_facts_hash(product: str, facts: dict[str, Any]) -> str:
 
 
 def _guided_collection_response_format(product: str, facts: dict[str, Any]) -> dict[str, Any]:
-    """Groq strict schema for a bounded Luna collection batch."""
-    source_ids = [str(item.get("source_id") or "") for item in facts.get("items") or []]
+    """Provider schema for prose items; Python owns IDs and provenance."""
+    item_count = len(list(facts.get("items") or []))
     return {
         "type": "json_schema",
         "json_schema": {
@@ -196,24 +194,21 @@ def _guided_collection_response_format(product: str, facts: dict[str, Any]) -> d
                         "items": {
                             "type": "object",
                             "properties": {
-                                "source_id": {"type": "string", "enum": source_ids},
                                 "headline": {"type": "string"},
                                 "story": {"type": "string"},
                                 "affirmation": {"type": "string"},
                                 "your_move": {"type": "string"},
                             },
                             "required": [
-                                "source_id", "headline", "story", "affirmation", "your_move"
+                                "headline", "story", "affirmation", "your_move"
                             ],
                             "additionalProperties": False,
                         },
-                    },
-                    "facts_hash": {
-                        "type": "string",
-                        "enum": [collection_facts_hash(product, facts)],
+                        "minItems": item_count,
+                        "maxItems": item_count,
                     },
                 },
-                "required": ["items", "facts_hash"],
+                "required": ["items"],
                 "additionalProperties": False,
             },
         },
@@ -230,8 +225,8 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
     )
     return (
         "You are Luna. The supplied JSON contains closed calculations from Luna's deterministic astrology engine. "
-        "Never recalculate, repair or invent astrology. Interpret only the supplied items. Preserve every source_id "
-        "exactly and return the items in their supplied order.\n\n"
+        "Never recalculate, repair or invent astrology. Interpret only the supplied items and return one result for "
+        "each item in the supplied order. Python attaches source IDs after generation.\n\n"
         "Each item must feel written for a human, not assembled from a template. Name the recognisable emotional or "
         "practical tension, explain why it matters, connect pressure with any supplied support, offer earned hope or "
         "agency, and finish with a useful action. Luna is warm, incisive, intimate, imperative-led and dryly cheeky. "
@@ -240,9 +235,9 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
         + rule
         + "\n\n"
         + shared_rule
-        + "Return JSON only with exactly these keys: items, facts_hash. Each items entry must contain exactly: "
-        "source_id, headline, story, affirmation, your_move. story is one complete paragraph string. Copy facts_hash "
-        "exactly. Begin every your_move with one of these imperative verbs: "
+        + "Return JSON only with exactly one top-level key: items. Each items entry must contain exactly: "
+        "headline, story, affirmation, your_move. story is one complete paragraph string. Begin every your_move "
+        "with one of these imperative verbs: "
         + ", ".join(sorted(_IMPERATIVES))
         + ".\n\n"
         "Do not write section labels such as Your move, Remember or Affirmation inside story. Do not repeat an "
@@ -254,7 +249,6 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
             {
                 "schema_version": GUIDED_COLLECTION_SCHEMA_VERSION,
                 "product": product,
-                "facts_hash": collection_facts_hash(product, facts),
                 "facts": facts,
             },
             ensure_ascii=False,
@@ -365,9 +359,6 @@ def generate_guided_voice_copy(
             max_tokens=output_budget,
             response_format=_guided_voice_response_format(product, facts),
         )
-        valid, errors = validate_guided_voice_copy(product, copy, facts)
-        if valid:
-            return copy
         repaired = _repair_guided_voice_structure(product, copy, facts=facts)
         repaired_valid, repaired_errors = validate_guided_voice_copy(
             product, repaired, facts
@@ -445,6 +436,36 @@ def _repair_guided_voice_structure(
         if first not in _IMPERATIVES:
             repaired["your_move"] = f"Do this: {move}"
     return repaired
+
+
+def _repair_guided_collection_structure(
+    copy: dict[str, Any] | None,
+    *,
+    product: str,
+    facts: dict[str, Any],
+) -> dict[str, Any]:
+    """Attach deterministic IDs/provenance and normalize harmless prose variations."""
+    supplied = list(facts.get("items") or [])
+    raw_items = list(copy.get("items") or []) if isinstance(copy, dict) else []
+    repaired_items: list[dict[str, Any]] = []
+    for source, raw in zip(supplied, raw_items):
+        if not isinstance(raw, dict):
+            continue
+        item = {
+            key: " ".join(str(raw.get(key) or "").split())
+            for key in ("headline", "story", "affirmation", "your_move")
+        }
+        item["source_id"] = str(source.get("source_id") or "")
+        move = item["your_move"]
+        if move:
+            first = re.sub(r"[^a-z]", "", move.split()[0].lower())
+            if first not in _IMPERATIVES:
+                item["your_move"] = f"Do this: {move}"
+        repaired_items.append(item)
+    return {
+        "items": repaired_items,
+        "facts_hash": collection_facts_hash(product, facts),
+    }
 
 
 def validate_guided_collection_copy(
@@ -577,6 +598,7 @@ def _generate_guided_collection_batch(
             max_tokens=output_budget,
             response_format=_guided_collection_response_format(product, facts),
         )
+        copy = _repair_guided_collection_structure(copy, product=product, facts=facts)
         valid, errors = validate_guided_collection_copy(product, copy, facts)
         if valid:
             return copy
@@ -654,10 +676,11 @@ def generate_guided_collection_copy(
     if not supplied_items:
         raise ValueError("Guided Luna collection contains no calculated items.")
 
-    # Three items keeps input + reserved output safely below Groq's request cap.
+    # One item per request prevents one malformed response from poisoning a
+    # complete sign/day/transit collection and removes ordering ambiguity.
     recovered_items: list[dict[str, Any]] = []
-    for start in range(0, len(supplied_items), 3):
-        partition = supplied_items[start:start + 3]
+    for start in range(0, len(supplied_items), 1):
+        partition = supplied_items[start:start + 1]
         recovered_items.extend(
             _generate_collection_partition(
                 product,
