@@ -17,6 +17,7 @@ from luna_guided_voice import (
     validate_guided_collection_copy,
 )
 from luna_report_bundle import assemble_report_bundle
+from luna_voice_provider import _json_content, generate_openai_compatible_json
 
 
 def _daily_facts():
@@ -134,9 +135,9 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v3363():
+def test_build_label_is_v3365():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.3 — Per-Attempt Voice Recovery" in config
+    assert "Luna v3.36.5 — Enforced JSON Recovery" in config
 
 
 def test_footer_always_shows_build_label():
@@ -201,3 +202,59 @@ def test_daily_generation_repairs_single_paragraph_and_non_imperative(monkeypatc
     assert len(copy["story"]) == 2
     assert copy["your_move"].startswith("Do this:")
     assert calls == 1
+
+
+def test_provider_recovers_first_complete_json_object_from_extra_data():
+    first = {"headline": "USE THE FIRST COMPLETE OBJECT."}
+    assert _json_content(json.dumps(first) + "\n" + json.dumps({"duplicate": True})) == first
+
+
+def test_provider_keeps_json_mode_after_strict_schema_rejection(monkeypatch):
+    payloads = []
+
+    class FakeResponse:
+        headers = {}
+
+        def __init__(self, status_code, text="", data=None):
+            self.status_code = status_code
+            self.text = text
+            self._data = data
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(self.text)
+
+        def json(self):
+            return self._data
+
+    responses = iter(
+        [
+            FakeResponse(400, '{"error":{"code":"json_validate_failed"}}'),
+            FakeResponse(
+                200,
+                data={
+                    "choices": [
+                        {
+                            "message": {"content": json.dumps({"status": "valid"})},
+                            "finish_reason": "stop",
+                        }
+                    ]
+                },
+            ),
+        ]
+    )
+
+    def fake_post(*_args, **kwargs):
+        payloads.append(kwargs["json"])
+        return next(responses)
+
+    monkeypatch.setattr("luna_voice_provider.requests.post", fake_post)
+    result = generate_openai_compatible_json(
+        "Return JSON.",
+        base_url="https://example.invalid",
+        model="openai/gpt-oss-20b",
+        api_key="test-key",
+        response_format={"type": "json_schema", "json_schema": {"schema": {}}},
+    )
+    assert result == {"status": "valid"}
+    assert payloads[1]["response_format"] == {"type": "json_object"}

@@ -63,7 +63,18 @@ def _json_content(value: str) -> dict[str, Any]:
     try:
         result = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise VoiceProviderError(f"The provider did not return valid JSON: {exc}") from exc
+        if exc.msg != "Extra data":
+            raise VoiceProviderError(f"The provider did not return valid JSON: {exc}") from exc
+        # Some compatible models return a complete object and then append a
+        # duplicate object or commentary. Recover only the first complete JSON
+        # value; Luna's deterministic schema and evidence validators still
+        # decide whether that object is safe to publish.
+        try:
+            result, _end = json.JSONDecoder().raw_decode(text)
+        except json.JSONDecodeError as recovery_exc:
+            raise VoiceProviderError(
+                f"The provider did not return valid JSON: {recovery_exc}"
+            ) from recovery_exc
     if not isinstance(result, dict):
         raise VoiceProviderError("The provider response must be one JSON object.")
     return result
@@ -114,7 +125,7 @@ def generate_openai_compatible_json(
         payload["reasoning_effort"] = "low"
         payload["include_reasoning"] = False
     response = None
-    used_unconstrained_json_recovery = False
+    used_json_mode_recovery = False
     for attempt in range(6):
         try:
             response = requests.post(
@@ -130,18 +141,19 @@ def generate_openai_compatible_json(
                 response.status_code == 400
                 and "json_validate_failed" in str(response.text or "")
                 and "response_format" in payload
-                and not used_unconstrained_json_recovery
+                and not used_json_mode_recovery
             ):
                 # Some compatible providers can reject their own best-effort JSON
-                # generation before returning it. Retry once without constrained
-                # decoding; Luna's parser and deterministic validator still guard
-                # the returned object.
-                payload.pop("response_format", None)
+                # generation before returning it. Downgrade strict JSON Schema to
+                # JSON Object mode rather than removing JSON enforcement entirely.
+                # Luna's deterministic validator still enforces every required
+                # field, facts hash and evidence rule.
+                payload["response_format"] = {"type": "json_object"}
                 payload["messages"][0]["content"] += (
                     " Return one syntactically valid JSON object only, with no "
                     "markdown fences or commentary."
                 )
-                used_unconstrained_json_recovery = True
+                used_json_mode_recovery = True
                 continue
             if response.status_code == 429:
                 if attempt < 5:
