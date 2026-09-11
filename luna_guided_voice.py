@@ -36,8 +36,6 @@ _PLANETS = {
 _PROHIBITED = (
     "perfect alignment",
     "automatic luck",
-    "guaranteed",
-    "guarantees",
     "will definitely",
     "will certainly",
     "the worst is over",
@@ -45,6 +43,11 @@ _PROHIBITED = (
     "fated to",
     "karmic and highly aligned",
 )
+_GUARANTEE_WORD = re.compile(r"\bguarantee(?:d|s|ing)?\b", flags=re.IGNORECASE)
+_GUARANTEE_NEGATORS = {
+    "no", "not", "never", "nothing", "neither", "without", "cannot",
+    "can't", "isn't", "aren't", "doesn't", "don't",
+}
 _IMPERATIVES = {
     "accept", "act", "allow", "answer", "apply", "ask", "begin", "build",
     "change", "check", "choose", "clarify", "complete", "contain", "cut",
@@ -66,6 +69,17 @@ def _contains_move(story: str, move: str) -> bool:
     normalized_story = re.sub(r"[^a-z0-9]+", " ", story.lower()).strip()
     normalized_move = re.sub(r"[^a-z0-9]+", " ", move.lower()).strip()
     return bool(len(normalized_move.split()) >= 4 and normalized_move in normalized_story)
+
+
+def _has_unnegated_guarantee(text: str) -> bool:
+    """Reject promises while allowing clear disclaimers such as 'nothing is guaranteed'."""
+    for match in _GUARANTEE_WORD.finditer(str(text or "")):
+        prefix = str(text or "")[: match.start()]
+        sentence = re.split(r"[.!?\n]+", prefix)[-1]
+        words = re.findall(r"[a-z]+(?:'[a-z]+)?", sentence.lower())[-5:]
+        if not any(word in _GUARANTEE_NEGATORS for word in words):
+            return True
+    return False
 
 
 def facts_hash(product: str, facts: dict[str, Any]) -> str:
@@ -288,6 +302,8 @@ def validate_guided_voice_copy(
     for phrase in _PROHIBITED:
         if phrase in combined.lower():
             errors.append(f"Prohibited certainty claim: {phrase}.")
+    if _has_unnegated_guarantee(combined):
+        errors.append("Prohibited certainty claim: guarantee.")
 
     facts_text = json.dumps(facts, ensure_ascii=False, default=str)
     for planet in sorted(_PLANETS):
@@ -515,6 +531,8 @@ def validate_guided_collection_copy(
     for phrase in _PROHIBITED:
         if phrase in combined.lower():
             errors.append(f"Prohibited certainty claim: {phrase}.")
+    if _has_unnegated_guarantee(combined):
+        errors.append("Prohibited certainty claim: guarantee.")
     for planet in sorted(_PLANETS):
         if re.search(rf"\b{re.escape(planet)}\b", combined, flags=re.IGNORECASE) and not re.search(
             rf"\b{re.escape(planet)}\b", facts_text, flags=re.IGNORECASE

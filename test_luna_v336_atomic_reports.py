@@ -135,9 +135,9 @@ def test_published_daily_does_not_generate_on_page_visit():
     assert 'LUNA_VOICE_MODE == "live"' in daily
 
 
-def test_build_label_is_v3365():
+def test_build_label_is_v3366():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.5 — Enforced JSON Recovery" in config
+    assert "Luna v3.36.6 — Certainty Validation Recovery" in config
 
 
 def test_footer_always_shows_build_label():
@@ -258,3 +258,19 @@ def test_provider_keeps_json_mode_after_strict_schema_rejection(monkeypatch):
     )
     assert result == {"status": "valid"}
     assert payloads[1]["response_format"] == {"type": "json_object"}
+
+
+def test_negated_guarantee_is_allowed_but_actual_promise_is_blocked():
+    facts = _daily_facts()
+    safe = _daily_copy(facts)
+    safe["affirmation"] = "Nothing is guaranteed, but you can make the careful choice."
+    from luna_guided_voice import validate_guided_voice_copy
+
+    valid, errors = validate_guided_voice_copy("daily", safe, facts)
+    assert valid, errors
+
+    unsafe = _daily_copy(facts)
+    unsafe["affirmation"] = "This guarantees the outcome you want."
+    valid, errors = validate_guided_voice_copy("daily", unsafe, facts)
+    assert not valid
+    assert any("guarantee" in error for error in errors)

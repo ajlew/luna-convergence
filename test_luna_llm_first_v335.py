@@ -87,7 +87,7 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
 
 def test_build_label_advances_beyond_v3356():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.36.5 — Enforced JSON Recovery" in config
+    assert "Luna v3.36.6 — Certainty Validation Recovery" in config
 
 
 def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
