@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-09-13",
+  "timezone": "Australia/Sydney",
+  "signs": {
+    "Aries": {
+      "headline": "Mercury’s sharp eye meets Saturn’s stern hand",
+      "opening": "Today, your inner critic is louder than your inner voice. The Moon’s glare on Saturn forces you to confront the doubts that keep you from stepping fully into your own power.\n",
+      "story": [
+        "You’re juggling a new contract and a long‑standing partnership, and the tension feels like a tug‑of‑war in your chest. Mercury’s trine to Pluto gives you the sharpness to see hidden motives, but the opposite to Neptune reminds you that the truth can still be slippery. The 7th‑house focus on relationships clashes with the 1st‑house drive to act, so you’re pulled between listening to others and listening to yourself. The 24‑hour window is a brief moment to realign the two.",
+        "The pattern is a call to ground the ideal in concrete action. Acknowledge the fear, but let the evidence of your past successes be the compass that turns your doubts into decisions. When you can see the hidden motive, you can choose a path that feels both honest and inevitable."
+      ],
+      "affirmation": "You have the clarity to spot hidden motives and the resolve to act on them without letting fear dictate your next step.",
+      "your_move": "act on the insight you’ve gained today",
+      "facts_hash": "1f8893b15a32334c15908eb475b602bf11898b9b5dc591f7fc98c24f2cc9c369"
+    },
+    "Gemini": {
+      "headline": "Your Creative Network is on the Move",
+      "opening": "You’re feeling the tug between wanting to share a new idea and fearing the judgment of others.",
+      "story": [
+        "The Moon in your creative house 5 clashes with Saturn in the network house 11, making your enthusiasm feel like a tightrope walk over a crowded street. Every time you draft a proposal, the weight of criticism and the need for structure press in, so you hesitate to publish or present. Yet Mercury’s trine to Pluto gives you the power to transform those doubts into decisive, research‑backed pitches, while Neptune’s sextile to Pluto nudges you to let imagination guide the final polish. The result is a balance: bold, yet grounded, ideas that resonate with a broader audience.",
+        "When the moon’s opposition feels like a storm, remember that the same tension can clear the air. Use the next 24 hours to draft a clear outline, then tweak it with the insight that only a disciplined mind can bring. The sky’s alignment says the world is ready for your voice, not just your thoughts."
+      ],
+      "affirmation": "You can channel your creative spark into polished, impactful communication without surrendering your authenticity.",
+      "your_move": "act",
+      "facts_hash": "b45cbd5e50a1c91cba9f48ffd09985a3495e244cf4c8aa6877eeb673bbf5f5df"
+    }
+  },
+  "status": {
+    "Aries": "current",
+    "Taurus": "failed",
+    "Gemini": "current",
+    "Cancer": "failed",
+    "Leo": "failed",
+    "Virgo": "failed",
+    "Libra": "failed",
+    "Scorpio": "failed",
+    "Sagittarius": "failed",
+    "Capricorn": "failed",
+    "Aquarius": "failed",
+    "Pisces": "failed"
+  },
+  "diagnostics": {
+    "Taurus": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7249, Requested 1823. Please try again in 8.04s. Need more tokens? Upgrade to Dev Tier today at https://consol 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Cancer": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7729, Requested 1697. Please try again in 10.695s. Need more tokens? Upgrade to Dev Tier today at https://cons 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Leo": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6641, Requested 1383. Please try again in 180ms. Need more tokens? Upgrade to Dev Tier today at https://consol 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Virgo": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6880, Requested 1665. Please try again in 4.0875s. Need more tokens? Upgrade to Dev Tier today at https://cons 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Libra": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7181, Requested 1784. Please try again in 7.2375s. Need more tokens? Upgrade to Dev Tier today at https://cons 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Scorpio": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7863, Requested 1481. Please try again in 10.08s. Need more tokens? Upgrade to Dev Tier today at https://conso 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Sagittarius": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6768, Requested 1677. Please try again in 3.3375s. Need more tokens? Upgrade to Dev Tier today at https://cons 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Capricorn": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7034, Requested 1478. Please try again in 3.84s. Need more tokens? Upgrade to Dev Tier today at https://consol 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Aquarius": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7250, Requested 1346. Please try again in 4.47s. Need more tokens? Upgrade to Dev Tier today at https://consol 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "Pisces": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7449, Requested 1816. Please try again in 9.487499999s. Need more tokens? Upgrade to Dev Tier today at https:/ 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"
+  }
+}
