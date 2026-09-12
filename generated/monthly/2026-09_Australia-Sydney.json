@@ -2,14 +2,69 @@
   "schema_version": "1.0",
   "period": "2026-09",
   "timezone": "Australia/Sydney",
-  "signs": {},
+  "signs": {
+    "Virgo": {
+      "main": {
+        "headline": "Shared money, work, and the quiet of the 8th house",
+        "opening": "When the sky nudges your shared finances and your daily grind, you’ll feel the weight of joint obligations pressing in, like a stack of unpaid invoices on your desk.",
+        "story": [
+          "The 8th house is in the spotlight, pulling the spotlight onto shared money, debts, and the trust you place in others. In the middle of September, Mercury’s sextile to Mars gives a quick, almost electric push to move forward—think of a sudden decision to consolidate a joint loan or to renegotiate a contract. That same burst of energy is tempered by Jupiter trine Saturn, which reminds you that expansion and structure can coexist; you can grow your shared resources while keeping them grounded. But the 8th house is not just about numbers. It also signals a deeper psychological shift. The 12th house, close in weight, hints that hidden patterns and old habits about money may surface.",
+          "If you’ve been avoiding a conversation about debt, the full moon in Aries at the end of the month will bring that issue into the light, forcing you to confront it. Meanwhile, the 6th house keeps you focused on routine work and health. The New Moon in Virgo on the 11th urges you to set a new routine for budgeting, and the Uranus retrograde pivot suggests that the way you handle finances might need a radical tweak—perhaps a new app or a different approach to tracking expenses.",
+          "The 10th house, tied to career and reputation, reminds you that how you manage shared money can ripple into your professional life. A late payment or a well‑timed investment can either damage or reinforce your standing. All of this is happening against the backdrop of the September equinox, when the Sun moves into Libra. That shift signals a desire for balance, a chance to realign your personal and shared resources toward fairness and harmony."
+        ],
+        "affirmation": "You have the tools to navigate shared responsibilities without losing sight of your own well‑being. By setting clear boundaries and embracing small, consistent steps, you can bring order to the chaos of joint obligations and still maintain your personal energy.",
+        "your_move": "act",
+        "facts_hash": "4dd15b9f62a74ac3de167e7c61233b205859d3f2b97148a58b14a6a75b28f682"
+      },
+      "dated_events": {
+        "items": [
+          {
+            "headline": "Start Strong, Virgo: Your Mind‑Muscle Alliance",
+            "story": "Mercury’s sextile to Mars on the 1st gives you a mental spark that’s ready to ignite action—think of it as a turbo‑charged thought engine. The extra boost from Jupiter trine Saturn keeps the fire steady, so you can push forward without burning out. Don’t let the urge to multitask turn into scatter‑gun chaos; focus on one goal, then move on.",
+            "affirmation": "I channel my intellect and energy into purposeful action.",
+            "your_move": "Do this: focus on one goal and move forward",
+            "source_id": "01 SEP:0"
+          },
+          {
+            "headline": "New Moon in Virgo: A Pivot for Precision",
+            "story": "The 11th brings a fresh start under a New Moon in Virgo, sharpening your focus on details and routines. With Uranus retrograde pivoting, you might feel a sudden urge to tweak long‑held habits—think of it as a cosmic edit button. Embrace the urge to refine rather than overhaul; small, intentional adjustments can ripple into lasting clarity.",
+            "affirmation": "I welcome precise change and trust my practical instincts to guide me forward.",
+            "your_move": "act on the smallest tweak that feels right today and watch the momentum build.",
+            "source_id": "11 SEP:1"
+          },
+          {
+            "headline": "Mercury’s bright conversation on 22 Sep",
+            "story": "On the 22nd, Mercury’s sextile with Jupiter lights a path of easy, expansive dialogue. The tension you feel is the urge to speak up versus the fear of overcommitting. This planetary pairing reminds you that your words can grow without restraint—just keep them grounded in a single truth. Let the optimism of Jupiter cushion the risk of being too blunt, and you’ll find that speaking your mind becomes a gentle, constructive act.",
+            "affirmation": "I speak with clarity and confidence, knowing my voice expands with honesty.",
+            "your_move": "act on the invitation to share your thoughts today",
+            "source_id": "22 SEP:2"
+          },
+          {
+            "headline": "Sun’s Libra Leap: Your Inner Balance Shakes",
+            "story": "September’s equinox nudges your Virgo precision toward a fresh equilibrium. As the Sun slips into Libra, the urge to weigh every detail against fairness grows, making you question whether your meticulous plans truly serve you or just your own high standards. The pressure to let go of perfection and embrace partnership feels like a tug‑of‑war between order and harmony, and that tension can sap your energy if you stay stuck in analysis.",
+            "affirmation": "I trust my inner compass to navigate between precision and partnership.",
+            "your_move": "accept the pull toward balance and let go of the need to control every outcome.",
+            "source_id": "23 SEP:3"
+          },
+          {
+            "headline": "Full Moon’s Fiery Push",
+            "story": "The full moon in Aries lights up the Virgo sky, sparking a restless urge to act before the week ends. Your usual methodical rhythm feels stifled; you’re tempted to launch projects without the usual vetting. This energy can be harnessed as a launchpad, but if you let impulsivity win, the details will crumble. Channel the moon’s blaze into a single, decisive action that aligns with your long‑term plan.",
+            "affirmation": "I let focused energy guide my actions, turning impulse into purposeful progress.",
+            "your_move": "Choose one project to start today, and outline a concrete first step that keeps your standards intact.",
+            "source_id": "27 SEP:4"
+          }
+        ],
+        "facts_hash": "b05d0c8191168fcfd1237bcee432f7fd708c5b90cea3176e2f33735316ee29df"
+      }
+    }
+  },
   "status": {
     "Aries": "failed",
     "Taurus": "failed",
     "Gemini": "failed",
     "Cancer": "failed",
     "Leo": "failed",
-    "Virgo": "failed",
+    "Virgo": "current",
     "Libra": "failed",
     "Scorpio": "failed"
   },
@@ -19,7 +74,6 @@
     "Gemini": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198994, Requested 1698. Please try again in 4m58.944s. Need more tokens? Upgrade to Dev Tier today at https://c 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
     "Cancer": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198398, Requested 1626. Please try again in 10.368s. Need more tokens? Upgrade to Dev Tier today at https://con 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
     "Leo": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199421, Requested 1699. Please try again in 8m3.84s. Need more tokens? Upgrade to Dev Tier today at https://con 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
-    "Virgo": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199565, Requested 1690. Please try again in 9m2.159999999s. Need more tokens? Upgrade to Dev Tier today at http 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
     "Libra": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199801, Requested 1637. Please try again in 10m21.216s. Need more tokens? Upgrade to Dev Tier today at https:// 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
     "Scorpio": "Voice provider request failed. HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m1gw6whxe7g8h4csryn3yzjg` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199085, Requested 1837. Please try again in 6m38.304s. Need more tokens? Upgrade to Dev Tier today at https://c 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"
   }
