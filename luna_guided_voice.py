@@ -13,21 +13,21 @@ GUIDED_COLLECTION_SCHEMA_VERSION = "1.0"
 
 _PRODUCT_RULES = {
     "daily": "Be quick and sharp. Keep the complete reading to 90-120 words: two short story paragraphs, then a concise affirmation and decisive move.",
-    "weekly": "Tell one connected weekly story. Use 3-5 paragraphs and 230-380 words.",
-    "weekly_sign": "Translate the weekly pattern through the supplied houses. Use 2-3 short paragraphs and 140-240 words.",
-    "monthly": "Tell a developing story. Use 3-5 paragraphs and 260-450 words.",
-    "yearly": "Map the strategic arc. Use 4-6 paragraphs and 380-650 words.",
-    "natal": "Explain the person as one integrated character. Use 3-5 paragraphs and 280-500 words.",
-    "solar": "Explain the current solar phase as a practical seasonal instruction. Use 2-3 short paragraphs and 140-240 words.",
+    "weekly": "Tell one connected weekly story. Use 3-4 compact paragraphs and 155-255 words.",
+    "weekly_sign": "Translate the weekly pattern through the supplied houses. Use 2 short paragraphs and 95-160 words.",
+    "monthly": "Tell a developing story. Use 3-4 compact paragraphs and 175-300 words.",
+    "yearly": "Map the strategic arc. Use 4 compact paragraphs and 255-435 words.",
+    "natal": "Explain the person as one integrated character. Use 3-4 compact paragraphs and 190-335 words.",
+    "solar": "Explain the current solar phase as a practical seasonal instruction. Use 2 short paragraphs and 95-160 words.",
 }
 
 _COLLECTION_RULES = {
-    "weekly_days": "Write one vivid 55-95 word daily reading per supplied day.",
-    "weekly_signs": "Write one distinctive 90-150 word weekly reading per supplied sign. Use its supplied houses and life areas.",
-    "monthly_events": "Write one useful 70-120 word interpretation per calculated date.",
-    "natal_signatures": "Write one 80-130 word behavioural interpretation per calculated natal signature.",
-    "yearly_transits": "Write one strategic 100-170 word interpretation per calculated personal transit.",
-    "personal_events": "Write one 75-130 word interpretation per calculated event contacting the natal chart.",
+    "weekly_days": "Write one vivid 40-65 word complete reading per supplied day.",
+    "weekly_signs": "Write one distinctive 60-100 word complete weekly reading per supplied sign. Use its supplied houses and life areas.",
+    "monthly_events": "Write one useful 45-80 word complete interpretation per calculated date.",
+    "natal_signatures": "Write one 55-85 word complete behavioural interpretation per calculated natal signature.",
+    "yearly_transits": "Write one strategic 70-115 word complete interpretation per calculated personal transit.",
+    "personal_events": "Write one 50-85 word complete interpretation per calculated event contacting the natal chart.",
 }
 _PLANETS = {
     "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
@@ -345,12 +345,12 @@ def generate_guided_voice_copy(
         # Daily is read on a phone. A small completion budget protects both the
         # reader's time and the scheduled publisher's provider allowance.
         "daily": 750,
-        "weekly": 2200,
-        "weekly_sign": 1400,
-        "monthly": 2600,
-        "yearly": 3600,
-        "natal": 3200,
-        "solar": 1400,
+        "weekly": 1500,
+        "weekly_sign": 950,
+        "monthly": 1750,
+        "yearly": 2400,
+        "natal": 2150,
+        "solar": 950,
     }.get(product, 2600)
     errors: tuple[str, ...] = ()
     best_errors: tuple[str, ...] = ()
@@ -593,7 +593,7 @@ def _generate_guided_collection_batch(
     item_count = max(1, len(list(facts.get("items") or [])))
     # GPT-OSS spends part of the completion allowance on reasoning. Reserve
     # enough room for the complete JSON even when a batch contains one item.
-    output_budget = min(4200, 1800 + item_count * 600)
+    output_budget = min(2800, 1200 + item_count * 400)
     errors: tuple[str, ...] = ()
     for attempt in range(2):
         copy = generate_openai_compatible_json(

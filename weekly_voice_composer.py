@@ -247,7 +247,7 @@ def build_weekly_voice_prompt(packet: dict[str, Any]) -> str:
         "Affirm the reader without flattery or guarantees. Write in Luna's imperative-led voice: clear, intimate, "
         "consequence-first, dry, lightly cheeky and emotionally intelligent. Include at most one cheeky aside in the "
         "whole reading. Do not use emojis, jargon-heavy bullet lists or a closing question.\n\n"
-        "Aim for 230-380 words in total. Let major events carry more narrative weight than fast lunar triggers. "
+        "Aim for 155-255 words in total. Let major events carry more narrative weight than fast lunar triggers. "
         "Do not give every event equal space and do not repeat technical evidence line by line.\n\n"
         "Return JSON only with exactly these keys:\n"
         "headline: string; opening: string; story: array of 3-5 paragraph strings; affirmation: string; "
