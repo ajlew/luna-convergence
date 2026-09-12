@@ -1,0 +1,72 @@
+name: Generate and publish Monthly Luna voice
+
+on:
+  schedule:
+    # Build the next month on the 25th at 00:25 Sydney winter time.
+    - cron: "25 14 25 * *"
+  workflow_dispatch:
+    inputs:
+      year:
+        description: Forecast year; leave blank for the current Sydney month
+        required: false
+      month:
+        description: Forecast month number; leave blank for the current Sydney month
+        required: false
+      timezone:
+        description: IANA timezone
+        required: true
+        default: Australia/Sydney
+      sign:
+        description: Optional sign to generate or recover; leave blank for all signs
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      LUNA_VOICE_BASE_URL: https://api.groq.com/openai/v1
+      LUNA_VOICE_MODEL: openai/gpt-oss-20b
+      LUNA_VOICE_API_KEY: ${{ secrets.LUNA_VOICE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install calculation and voice requirements
+        run: pip install -r requirements.txt -r requirements-voice.txt
+      - name: Generate and validate Monthly signs
+        id: generate
+        continue-on-error: true
+        env:
+          REQUESTED_YEAR: ${{ inputs.year }}
+          REQUESTED_MONTH: ${{ inputs.month }}
+          REQUESTED_TIMEZONE: ${{ inputs.timezone }}
+          REQUESTED_SIGN: ${{ inputs.sign }}
+        run: |
+          timezone="${REQUESTED_TIMEZONE:-Australia/Sydney}"
+          args=(--timezone "$timezone")
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then args+=(--next-month); fi
+          if [ -n "$REQUESTED_YEAR" ]; then args+=(--year "$REQUESTED_YEAR"); fi
+          if [ -n "$REQUESTED_MONTH" ]; then args+=(--month "$REQUESTED_MONTH"); fi
+          if [ -n "$REQUESTED_SIGN" ]; then args+=(--sign "$REQUESTED_SIGN"); fi
+          python scripts/generate_monthly_voice.py "${args[@]}"
+      - name: Commit validated Monthly document
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated/monthly/*.json
+          if git diff --cached --quiet; then
+            echo "No new validated Monthly material was produced."
+          else
+            git commit -m "Publish Luna Monthly voice"
+            git push
+          fi
+      - name: Fail if any requested sign remains incomplete
+        if: steps.generate.outcome == 'failure'
+        run: exit 1
