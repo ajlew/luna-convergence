@@ -1695,7 +1695,7 @@ hr {
 
 .weekly-view {
     width:100%;
-    max-width:1120px;
+    max-width:760px;
     margin:0 auto;
     padding:.5rem 0 3.5rem;
 }
@@ -1719,28 +1719,28 @@ hr {
 }
 
 .weekly-range {
-    display:inline-block;
-    margin:.85rem 0 1.2rem;
-    padding:.38rem .55rem;
-    border:1px solid var(--black);
+    display:block;
+    margin:.45rem 0 2.65rem;
+    padding:0;
     font-size:.68rem;
+    color:var(--muted);
 }
 
 .weekly-page-title {
-    max-width:900px;
+    max-width:760px;
     margin:0 0 1.1rem;
-    font-family:"IBM Plex Mono", "Courier New", monospace;
-    font-size:clamp(2.7rem,7vw,5.8rem);
-    line-height:.95;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:clamp(3rem,7vw,5.6rem);
+    line-height:.92;
     letter-spacing:-.055em;
-    font-weight:600;
+    font-weight:400;
 }
 
 .weekly-section-heading,
 .weekly-sign-heading {
-    font-family:"IBM Plex Mono", "Courier New", monospace;
-    font-weight:600;
-    letter-spacing:-.035em;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-weight:400;
+    letter-spacing:-.025em;
 }
 
 .weekly-section-heading {
@@ -1756,30 +1756,35 @@ hr {
 }
 
 .weekly-synthesis {
-    max-width:900px;
-    margin:1.5rem 0 2.5rem;
-    padding:1.25rem 1.35rem;
-    border:1px solid var(--black);
-    background:var(--soft);
+    max-width:760px;
+    margin:1.5rem 0 2.8rem;
+    padding:0 0 .2rem;
+    border:0;
+    background:transparent;
 }
 
 .weekly-synthesis p {
-    max-width:780px;
-    margin:.55rem 0;
+    max-width:680px;
+    margin:0 0 1.1rem;
+    font-family:"Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
+    font-size:clamp(1.08rem, 1.7vw, 1.28rem);
+    line-height:1.68;
+    font-weight:350;
 }
 
 .weekly-synthesis-rule {
-    margin-top:1rem !important;
-    padding-top:.85rem;
+    margin:1.7rem 0 1.15rem !important;
+    padding-top:1.15rem;
     border-top:1px solid var(--black);
-    font-weight:600;
+    font-weight:400 !important;
 }
 
 .weekly-intro {
     max-width:760px;
-    margin:0 0 3rem;
+    margin:0 0 2.5rem;
     color:var(--muted);
-    font-size:1rem;
+    font-size:1.02rem;
+    line-height:1.6;
 }
 
 .weekly-grid {
@@ -1839,11 +1844,11 @@ hr {
 .weekly-card-title {
     min-height:2.3em;
     margin:.2rem 0 1rem;
-    font-family:"IBM Plex Mono", "Courier New", monospace;
-    font-size:clamp(1.35rem,2.3vw,2.15rem);
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:clamp(1.65rem,2.3vw,2.15rem);
     line-height:1.08;
     letter-spacing:-.035em;
-    font-weight:600;
+    font-weight:400;
 }
 
 .weekly-card p {
@@ -1866,7 +1871,37 @@ hr {
 
 .weekly-move p {
     margin:0;
-    font-weight:600;
+    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
+    font-size:1.25rem;
+    font-weight:400;
+    line-height:1.28;
+}
+
+.weekly-sign-layer {
+    max-width:760px;
+    margin:2.4rem 0 2.8rem;
+    padding:1.4rem 0 0;
+    border-top:1px solid var(--black);
+}
+
+.weekly-where-lands {
+    max-width:680px;
+    margin:.15rem 0 1.5rem;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.67rem;
+    line-height:1.65;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+
+.weekly-sign-story {
+    max-width:680px;
+    margin:0 0 1.1rem;
+    font-family:"Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
+    font-size:clamp(1.08rem, 1.7vw, 1.28rem);
+    line-height:1.68;
+    font-weight:350;
 }
 
 .weekly-studio-controls {
@@ -4342,15 +4377,18 @@ def _render_weekly_sign_layer(
 ) -> None:
     summary = _weekly_sign_summary(sign, monday, timezone_name, days)
     voice = _weekly_single_sign_voice(sign, days, monday, timezone_name)
-    _render_weekly_heading(f"{sign} · The Week Ahead", level=2)
-    st.markdown("**WHERE IT LANDS**  ")
-    st.markdown(" · ".join(summary["areas"]))
     if voice:
-        _render_weekly_heading(str(voice["headline"]), level=3, sign=True)
-        _render_luna_prose(str(voice["story"]), product="weekly")
-        st.markdown(f"**REMEMBER · {voice['affirmation']}**")
-        st.markdown("**YOUR MOVE**  ")
-        st.markdown(f"**{voice['your_move']}**")
+        st.markdown(
+            f'''<section class="weekly-sign-layer" aria-label="{escape(sign)} weekly reading">
+<div class="weekly-kicker">{escape(sign)} · The week ahead</div>
+<div class="weekly-where-lands">Where it lands · {escape(" · ".join(summary["areas"]))}</div>
+<div class="weekly-sign-heading" role="heading" aria-level="2">{escape(str(voice["headline"]))}</div>
+<p class="weekly-sign-story">{escape(str(voice["story"]))}</p>
+<div class="weekly-synthesis-rule"><strong>REMEMBER ·</strong> {escape(str(voice["affirmation"]))}</div>
+<div class="weekly-move"><div class="weekly-move-label">Your move</div><p>{escape(str(voice["your_move"]))}</p></div>
+</section>''',
+            unsafe_allow_html=True,
+        )
     else:
         _render_voice_unavailable(facts_label="whole-sign house calculation")
 
