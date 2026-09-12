@@ -92,6 +92,7 @@ def generate_openai_compatible_json(
     timeout: float | None = None,
     max_tokens: int | None = None,
     response_format: dict[str, Any] | None = None,
+    rate_limit_retries: int = 5,
 ) -> dict[str, Any]:
     """Call any OpenAI-compatible chat-completions endpoint outside Streamlit."""
     resolved_base = str(base_url or os.getenv("LUNA_VOICE_BASE_URL", "")).strip()
@@ -159,7 +160,7 @@ def generate_openai_compatible_json(
                 used_json_mode_recovery = True
                 continue
             if response.status_code == 429:
-                if attempt < 5:
+                if attempt < rate_limit_retries:
                     time.sleep(_rate_limit_delay(response, attempt))
                     continue
             elif 500 <= response.status_code < 600:
@@ -194,7 +195,7 @@ def generate_openai_compatible_json(
                 or status_code == 429
                 or (status_code is not None and status_code >= 500)
             )
-            retry_window = 5 if status_code == 429 else 2
+            retry_window = rate_limit_retries if status_code == 429 else 2
             if attempt < retry_window and isinstance(exc, requests.RequestException) and retryable_request:
                 time.sleep(float(2**attempt))
                 continue

@@ -12,7 +12,7 @@ GUIDED_VOICE_SCHEMA_VERSION = "1.0"
 GUIDED_COLLECTION_SCHEMA_VERSION = "1.0"
 
 _PRODUCT_RULES = {
-    "daily": "Be quick and sharp. Use 2-3 short story paragraphs and 120-220 words.",
+    "daily": "Be quick and sharp. Keep the complete reading to 90-120 words: two short story paragraphs, then a concise affirmation and decisive move.",
     "weekly": "Tell one connected weekly story. Use 3-5 paragraphs and 230-380 words.",
     "weekly_sign": "Translate the weekly pattern through the supplied houses. Use 2-3 short paragraphs and 140-240 words.",
     "monthly": "Tell a developing story. Use 3-5 paragraphs and 260-450 words.",
@@ -140,7 +140,7 @@ def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
         "Select the dominant calculated event or character thread. Connect the remaining factors into one emotional "
         "narrative. Explain why the period matters in ordinary language. Give the reader earned hope, agency and a "
         "useful direction. Affirm without flattering, guaranteeing, diagnosing or promising an outcome.\n\n"
-        "Luna is imperative-led, intimate, emotionally intelligent, consequence-first and can be hilarious and dryly cheeky. Name the "
+        "Luna is imperative-led, intimate, emotionally intelligent, consequence-first and dryly cheeky. Name the "
         "human tension before explaining it. Use concrete ordinary-life examples when the supplied houses or life areas "
         "support them. Vary sentence rhythm. Include one memorable image or dry tongue-in-cheek observation, but no more "
         "than one. Make the affirmation credible and specific: recognise the reader's capacity without praising them or "
@@ -337,10 +337,14 @@ def generate_guided_voice_copy(
     base_url: str,
     model: str,
     api_key: str,
+    max_attempts: int = 3,
+    rate_limit_retries: int = 5,
 ) -> dict[str, Any]:
     prompt = build_guided_voice_prompt(product, facts)
     output_budget = {
-        "daily": 1400,
+        # Daily is read on a phone. A small completion budget protects both the
+        # reader's time and the scheduled publisher's provider allowance.
+        "daily": 750,
         "weekly": 2200,
         "weekly_sign": 1400,
         "monthly": 2600,
@@ -350,7 +354,8 @@ def generate_guided_voice_copy(
     }.get(product, 2600)
     errors: tuple[str, ...] = ()
     best_errors: tuple[str, ...] = ()
-    for attempt in range(3):
+    max_attempts = max(1, int(max_attempts))
+    for attempt in range(max_attempts):
         copy = generate_openai_compatible_json(
             prompt,
             base_url=base_url,
@@ -358,6 +363,7 @@ def generate_guided_voice_copy(
             api_key=api_key,
             max_tokens=output_budget,
             response_format=_guided_voice_response_format(product, facts),
+            rate_limit_retries=rate_limit_retries,
         )
         repaired = _repair_guided_voice_structure(product, copy, facts=facts)
         repaired_valid, repaired_errors = validate_guided_voice_copy(
@@ -367,7 +373,7 @@ def generate_guided_voice_copy(
             return repaired
         if not best_errors or len(repaired_errors) < len(best_errors):
             best_errors = repaired_errors
-        if attempt < 2:
+        if attempt < max_attempts - 1:
             prompt += (
                 "\n\nCORRECTION REPORT: The previous draft was rejected. Return a complete replacement and fix: "
                 + " | ".join(repaired_errors or errors)

@@ -121,7 +121,15 @@ def main() -> int:
             if existing_valid:
                 copies[sign] = existing_copy
             copies[sign] = generate_guided_voice_copy(
-                "daily", facts, base_url=base_url, model=model, api_key=api_key
+                "daily",
+                facts,
+                base_url=base_url,
+                model=model,
+                api_key=api_key,
+                # One original and at most one correction. A daily quota error
+                # must not consume the rest of Luna's allowance by retrying.
+                max_attempts=2,
+                rate_limit_retries=0,
             )
             status[sign] = "current"
             diagnostics.pop(sign, None)
