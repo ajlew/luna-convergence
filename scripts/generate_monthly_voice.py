@@ -114,6 +114,10 @@ def main() -> int:
                     base_url=base_url,
                     model=model,
                     api_key=api_key,
+                    # A publisher is not a live chat: do not turn malformed
+                    # output into repeated quota burn.
+                    max_attempts=1,
+                    rate_limit_retries=0,
                 )
             if not events_valid:
                 print(f"Generating {sign} dated events")
@@ -123,6 +127,8 @@ def main() -> int:
                     base_url=base_url,
                     model=model,
                     api_key=api_key,
+                    max_attempts=1,
+                    rate_limit_retries=0,
                 )
 
             signs[sign] = payload

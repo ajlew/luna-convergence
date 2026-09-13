@@ -107,6 +107,13 @@ def generate_openai_compatible_json(
     resolved_timeout = float(timeout or os.getenv("LUNA_VOICE_TIMEOUT", "120"))
     resolved_max_tokens = int(max_tokens or os.getenv("LUNA_VOICE_MAX_TOKENS", "8000"))
 
+    provider_response_format = response_format or {"type": "json_object"}
+    # Groq's gpt-oss endpoint intermittently rejects otherwise valid strict
+    # JSON-schema completions. JSON-object mode keeps transport valid; Python
+    # remains Luna's strict schema, evidence and word-count gate.
+    if resolved_model.startswith("openai/gpt-oss"):
+        provider_response_format = {"type": "json_object"}
+
     payload = {
         "model": resolved_model,
         "messages": [
@@ -121,7 +128,7 @@ def generate_openai_compatible_json(
         ],
         "temperature": 0.72,
         "max_completion_tokens": resolved_max_tokens,
-        "response_format": response_format or {"type": "json_object"},
+        "response_format": provider_response_format,
     }
     if resolved_model.startswith("openai/gpt-oss"):
         # GPT-OSS reasoning shares the completion budget. Keep the hidden work
@@ -175,15 +182,10 @@ def generate_openai_compatible_json(
             try:
                 return _json_content(content)
             except VoiceProviderError as parse_error:
-                if attempt < 2:
-                    current_budget = int(payload.get("max_completion_tokens") or resolved_max_tokens)
-                    payload["max_completion_tokens"] = min(
-                        8000,
-                        max(current_budget + 1200, int(current_budget * 1.75)),
-                    )
+                if attempt < 1:
                     payload["messages"][0]["content"] += (
-                        " The previous response was incomplete or malformed. "
-                        "Use shorter wording and finish the entire JSON object."
+                        " The previous response was malformed. Use shorter wording "
+                        "and finish one valid JSON object."
                     )
                     continue
                 suffix = f" Finish reason: {finish_reason}." if finish_reason else ""

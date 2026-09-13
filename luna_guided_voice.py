@@ -12,22 +12,43 @@ GUIDED_VOICE_SCHEMA_VERSION = "1.0"
 GUIDED_COLLECTION_SCHEMA_VERSION = "1.0"
 
 _PRODUCT_RULES = {
-    "daily": "Be quick and sharp. Keep the complete reading to 90-120 words: two short story paragraphs, then a concise affirmation and decisive move.",
-    "weekly": "Tell one connected weekly story. Use 3-4 compact paragraphs and 155-255 words.",
-    "weekly_sign": "Translate the weekly pattern through the supplied houses. Use 2 short paragraphs and 95-160 words.",
-    "monthly": "Tell a developing story. Use 3-4 compact paragraphs and 175-300 words.",
-    "yearly": "Map the strategic arc. Use 4 compact paragraphs and 255-435 words.",
-    "natal": "Explain the person as one integrated character. Use 3-4 compact paragraphs and 190-335 words.",
-    "solar": "Explain the current solar phase as a practical seasonal instruction. Use 2 short paragraphs and 95-160 words.",
+    "daily": "Be quick and sharp. Keep the complete response, including headline, opening, story, affirmation and move, to 90-120 words. Use two short story paragraphs.",
+    "weekly": "Tell one connected weekly story. Keep the complete response to 155-255 words and use 3-4 compact story paragraphs.",
+    "weekly_sign": "Translate the weekly pattern through the supplied houses. Keep the complete response to 95-160 words and use 2 short story paragraphs.",
+    "monthly": "Tell a developing story. Keep the complete response to 175-300 words and use 3-4 compact story paragraphs.",
+    "yearly": "Map the strategic arc. Keep the complete response to 255-435 words and use 4 compact story paragraphs.",
+    "natal": "Explain the person as one integrated character. Keep the complete response to 190-335 words and use 3-4 compact story paragraphs.",
+    "solar": "Explain the current solar phase as a practical seasonal instruction. Keep the complete response to 95-160 words and use 2 short story paragraphs.",
+}
+
+# Reader-facing limits. Prompting alone did not make shorter copy reliable, so
+# validation now prevents a verbose provider from publishing overlong text.
+_PRODUCT_WORD_TARGETS = {
+    "daily": (90, 120),
+    "weekly": (155, 255),
+    "weekly_sign": (95, 160),
+    "monthly": (175, 300),
+    "yearly": (255, 435),
+    "natal": (190, 335),
+    "solar": (95, 160),
 }
 
 _COLLECTION_RULES = {
-    "weekly_days": "Write one vivid 40-65 word complete reading per supplied day.",
-    "weekly_signs": "Write one distinctive 60-100 word complete weekly reading per supplied sign. Use its supplied houses and life areas.",
-    "monthly_events": "Write one useful 45-80 word complete interpretation per calculated date.",
-    "natal_signatures": "Write one 55-85 word complete behavioural interpretation per calculated natal signature.",
-    "yearly_transits": "Write one strategic 70-115 word complete interpretation per calculated personal transit.",
-    "personal_events": "Write one 50-85 word complete interpretation per calculated event contacting the natal chart.",
+    "weekly_days": "Keep each complete reading, including all fields, to 40-65 words.",
+    "weekly_signs": "Keep each complete weekly reading, including all fields, to 60-100 words. Use its supplied houses and life areas.",
+    "monthly_events": "Keep each complete interpretation, including all fields, to 45-80 words.",
+    "natal_signatures": "Keep each complete behavioural interpretation, including all fields, to 55-85 words.",
+    "yearly_transits": "Keep each complete strategic interpretation, including all fields, to 70-115 words.",
+    "personal_events": "Keep each complete interpretation, including all fields, to 50-85 words.",
+}
+
+_COLLECTION_WORD_TARGETS = {
+    "weekly_days": (40, 65),
+    "weekly_signs": (60, 100),
+    "monthly_events": (45, 80),
+    "natal_signatures": (55, 85),
+    "yearly_transits": (70, 115),
+    "personal_events": (50, 85),
 }
 _PLANETS = {
     "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
@@ -63,6 +84,10 @@ _SECTION_LABEL = re.compile(
     r"(?:^|[.!?]\s+)(?:your\s+move|remember|affirmation)\s*(?::|·|-)",
     flags=re.IGNORECASE,
 )
+
+
+def _word_count(value: str) -> int:
+    return len(re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", str(value or "")))
 
 
 def _contains_move(story: str, move: str) -> bool:
@@ -153,6 +178,8 @@ def build_guided_voice_prompt(product: str, facts: dict[str, Any]) -> str:
         "your_move sentence inside story; the application renders that field separately.\n\n"
         "Do not claim perfect alignment, automatic luck, guarantees, destiny, karmic inevitability, manifestation as "
         "fact, or that the worst is over.\n\n"
+        "Do not use digits or numerical figures anywhere in Luna's prose. The application displays calculated dates, "
+        "orbs and timing separately. Refer to early, middle or late in the period when timing matters.\n\n"
         "CALCULATED FACTS:\n"
         + json.dumps(
             {
@@ -244,6 +271,8 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
         "item's your_move sentence inside its story; the application renders that field separately.\n\n"
         "Never claim perfect alignment, automatic luck, guarantees, certainty, destiny, karmic inevitability, "
         "manifestation as fact, or that the worst is over.\n\n"
+        "Do not use digits or numerical figures anywhere in the prose. The application displays calculated dates, "
+        "orbs and timing separately.\n\n"
         "CALCULATED COLLECTION:\n"
         + json.dumps(
             {
@@ -291,6 +320,14 @@ def validate_guided_voice_copy(
 
     texts = [copy.get("headline"), copy.get("opening"), *(story or []), copy.get("affirmation"), copy.get("your_move")]
     combined = "\n".join(" ".join(str(value or "").split()) for value in texts)
+    target_minimum, target_maximum = _PRODUCT_WORD_TARGETS.get(product, (175, 300))
+    words = _word_count(combined)
+    if words < target_minimum:
+        errors.append(f"Luna copy is below its {target_minimum}-word minimum.")
+    elif words > target_maximum:
+        errors.append(f"Luna copy exceeds its {target_maximum}-word maximum.")
+    if re.search(r"\d", combined):
+        errors.append("Luna prose must not contain numerical figures.")
     if "?" in combined:
         errors.append("Luna copy must not end by asking the reader for more information.")
     for phrase in _PROHIBITED:
@@ -344,14 +381,14 @@ def generate_guided_voice_copy(
     output_budget = {
         # Daily is read on a phone. A small completion budget protects both the
         # reader's time and the scheduled publisher's provider allowance.
-        "daily": 750,
-        "weekly": 1500,
-        "weekly_sign": 950,
-        "monthly": 1750,
-        "yearly": 2400,
-        "natal": 2150,
-        "solar": 950,
-    }.get(product, 2600)
+        "daily": 600,
+        "weekly": 1050,
+        "weekly_sign": 700,
+        "monthly": 1250,
+        "yearly": 1650,
+        "natal": 1350,
+        "solar": 700,
+    }.get(product, 1500)
     errors: tuple[str, ...] = ()
     best_errors: tuple[str, ...] = ()
     max_attempts = max(1, int(max_attempts))
@@ -539,6 +576,14 @@ def validate_guided_collection_copy(
             default=str,
         )
         item_combined = "\n".join(item_texts)
+        item_minimum, item_maximum = _COLLECTION_WORD_TARGETS.get(product, (45, 80))
+        item_words = _word_count(item_combined)
+        if item_words < item_minimum:
+            errors.append(f"Item {index + 1} is below its {item_minimum}-word minimum.")
+        elif item_words > item_maximum:
+            errors.append(f"Item {index + 1} exceeds its {item_maximum}-word maximum.")
+        if re.search(r"\d", item_combined):
+            errors.append(f"Item {index + 1} contains numerical figures.")
         for planet in sorted(_PLANETS):
             if re.search(rf"\b{re.escape(planet)}\b", item_combined, flags=re.IGNORECASE) and not re.search(
                 rf"\b{re.escape(planet)}\b", supplied_item_text, flags=re.IGNORECASE
@@ -587,15 +632,19 @@ def _generate_guided_collection_batch(
     base_url: str,
     model: str,
     api_key: str,
+    max_attempts: int,
+    rate_limit_retries: int,
 ) -> dict[str, Any]:
     """Generate and validate one collection batch."""
     prompt = build_guided_collection_prompt(product, facts)
     item_count = max(1, len(list(facts.get("items") or [])))
     # GPT-OSS spends part of the completion allowance on reasoning. Reserve
     # enough room for the complete JSON even when a batch contains one item.
-    output_budget = min(2800, 1200 + item_count * 400)
+    # Collection entries are deliberately short. Keep multi-event Months below
+    # a free-tier day's quota rather than allowing a large batch to expand.
+    output_budget = min(1600, 700 + item_count * 200)
     errors: tuple[str, ...] = ()
-    for attempt in range(2):
+    for attempt in range(max(1, int(max_attempts))):
         copy = generate_openai_compatible_json(
             prompt,
             base_url=base_url,
@@ -603,12 +652,13 @@ def _generate_guided_collection_batch(
             api_key=api_key,
             max_tokens=output_budget,
             response_format=_guided_collection_response_format(product, facts),
+            rate_limit_retries=rate_limit_retries,
         )
         copy = _repair_guided_collection_structure(copy, product=product, facts=facts)
         valid, errors = validate_guided_collection_copy(product, copy, facts)
         if valid:
             return copy
-        if attempt == 0:
+        if attempt < max(1, int(max_attempts)) - 1:
             prompt += (
                 "\n\nCORRECTION REPORT: The previous collection was rejected. Return a complete replacement and fix: "
                 + " | ".join(errors)
@@ -637,6 +687,8 @@ def _generate_collection_partition(
     base_url: str,
     model: str,
     api_key: str,
+    max_attempts: int,
+    rate_limit_retries: int,
 ) -> list[dict[str, Any]]:
     """Generate one small partition and split again on 413 or validation failure."""
     try:
@@ -646,6 +698,8 @@ def _generate_collection_partition(
             base_url=base_url,
             model=model,
             api_key=api_key,
+            max_attempts=max_attempts,
+            rate_limit_retries=rate_limit_retries,
         )
         return list(generated["items"])
     except (ValueError, VoiceProviderError) as batch_error:
@@ -664,6 +718,8 @@ def _generate_collection_partition(
                     base_url=base_url,
                     model=model,
                     api_key=api_key,
+                    max_attempts=max_attempts,
+                    rate_limit_retries=rate_limit_retries,
                 )
             )
         return recovered
@@ -676,6 +732,8 @@ def generate_guided_collection_copy(
     base_url: str,
     model: str,
     api_key: str,
+    max_attempts: int = 2,
+    rate_limit_retries: int = 5,
 ) -> dict[str, Any]:
     """Generate bounded collection requests, then restore the original order and lock."""
     supplied_items = list(facts.get("items") or [])
@@ -685,8 +743,11 @@ def generate_guided_collection_copy(
     # One item per request prevents one malformed response from poisoning a
     # complete sign/day/transit collection and removes ordering ambiguity.
     recovered_items: list[dict[str, Any]] = []
-    for start in range(0, len(supplied_items), 1):
-        partition = supplied_items[start:start + 1]
+    # Monthly dated events share one sky context. One concise batch avoids
+    # paying the model's reasoning overhead once for every calendar card.
+    partition_size = len(supplied_items) if product == "monthly_events" else 1
+    for start in range(0, len(supplied_items), partition_size):
+        partition = supplied_items[start:start + partition_size]
         recovered_items.extend(
             _generate_collection_partition(
                 product,
@@ -694,6 +755,8 @@ def generate_guided_collection_copy(
                 base_url=base_url,
                 model=model,
                 api_key=api_key,
+                max_attempts=max_attempts,
+                rate_limit_retries=rate_limit_retries,
             )
         )
 
