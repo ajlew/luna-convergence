@@ -253,9 +253,8 @@ def build_weekly_voice_prompt(packet: dict[str, Any]) -> str:
         "Do not give every event equal space and do not repeat technical evidence line by line.\n\n"
         "Return JSON only with exactly these keys:\n"
         "headline: string; opening: string; story: array of 3-5 paragraph strings; affirmation: string; "
-        "your_move: string; evidence_ids: array of strings.\n"
-        "Use every supplied source_id exactly once in evidence_ids, in supplied order. evidence_ids are provenance, "
-        "not prose. Keep your_move complete and begin it with an imperative verb.\n\n"
+        "your_move: string. Python attaches evidence_ids from the closed packet, so do not return source IDs. "
+        "Keep your_move complete and begin it with an imperative verb.\n\n"
         "Never claim perfect alignment, automatic luck, guarantees, certainty, destiny, karmic inevitability, "
         "manifestation as fact, or that the worst is over. Hope must come from a supplied supportive factor or from "
         "the reader's available choice.\n\n"
@@ -274,6 +273,54 @@ def _all_text(copy: dict[str, Any]) -> list[str]:
     if isinstance(copy.get("story"), list):
         values.extend(copy["story"])
     return [_clean(item) for item in values if _clean(item)]
+
+
+def _repair_weekly_voice_copy(copy: Any, packet: dict[str, Any]) -> dict[str, Any]:
+    """Normalize harmless layout variation; provenance remains deterministic."""
+    if not isinstance(copy, dict):
+        return {}
+    repaired = {
+        key: _clean(copy.get(key))
+        for key in ("headline", "opening", "affirmation", "your_move")
+    }
+    raw_story = copy.get("story")
+    if isinstance(raw_story, list):
+        source_paragraphs = [_clean(value) for value in raw_story if _clean(value)]
+    else:
+        source_paragraphs = [_clean(raw_story)] if _clean(raw_story) else []
+
+    paragraphs: list[str] = []
+    for paragraph in source_paragraphs:
+        sentences = [
+            _clean(value)
+            for value in re.split(r"(?<=[.!?])\s+", paragraph)
+            if _clean(value)
+        ]
+        current: list[str] = []
+        current_words = 0
+        for sentence in sentences or [paragraph]:
+            words = sentence.split()
+            if current and current_words + len(words) > 85:
+                paragraphs.append(" ".join(current))
+                current, current_words = [], 0
+            current.extend(words)
+            current_words += len(words)
+        if current:
+            paragraphs.append(" ".join(current))
+
+    while paragraphs and len(paragraphs) < 3:
+        index = max(range(len(paragraphs)), key=lambda item: len(paragraphs[item].split()))
+        words = paragraphs[index].split()
+        if len(words) < 10:
+            break
+        pivot = len(words) // 2
+        paragraphs[index:index + 1] = [" ".join(words[:pivot]), " ".join(words[pivot:])]
+    if len(paragraphs) > 5:
+        paragraphs = paragraphs[:4] + [" ".join(paragraphs[4:])]
+
+    repaired["story"] = paragraphs
+    repaired["evidence_ids"] = [event["source_id"] for event in packet.get("events", [])]
+    return repaired
 
 
 def _contains_unqualified_claim(text: str, phrase: str) -> bool:
@@ -397,6 +444,7 @@ def make_candidate_document(
     provider: str,
     model: str,
 ) -> dict[str, Any]:
+    copy = _repair_weekly_voice_copy(copy, packet)
     validation = validate_weekly_voice_copy(copy, packet)
     if not validation.valid:
         raise ValueError("Weekly voice candidate failed validation: " + " | ".join(validation.errors))
