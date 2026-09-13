@@ -247,7 +247,9 @@ def build_weekly_voice_prompt(packet: dict[str, Any]) -> str:
         "Affirm the reader without flattery or guarantees. Write in Luna's imperative-led voice: clear, intimate, "
         "consequence-first, dry, lightly cheeky and emotionally intelligent. Include at most one cheeky aside in the "
         "whole reading. Do not use emojis, jargon-heavy bullet lists or a closing question.\n\n"
-        "Aim for 155-255 words in total. Let major events carry more narrative weight than fast lunar triggers. "
+        "Keep the complete response, including headline, opening, story, affirmation and move, to 155-255 words. "
+        "Do not use digits or numerical figures in Luna's prose; calculated dates, times and orbs display separately. "
+        "Let major events carry more narrative weight than fast lunar triggers. "
         "Do not give every event equal space and do not repeat technical evidence line by line.\n\n"
         "Return JSON only with exactly these keys:\n"
         "headline: string; opening: string; story: array of 3-5 paragraph strings; affirmation: string; "
@@ -336,6 +338,13 @@ def validate_weekly_voice_copy(copy: Any, packet: dict[str, Any]) -> VoiceValida
 
     texts = _all_text(copy)
     combined = "\n".join(texts)
+    word_count = len(re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", combined))
+    if word_count < 155:
+        errors.append("The complete weekly reading is below the 155-word minimum.")
+    elif word_count > 255:
+        errors.append("The complete weekly reading exceeds the 255-word maximum.")
+    if re.search(r"\d", combined):
+        errors.append("Luna weekly prose must not contain numerical figures.")
     lower = combined.lower()
     if "?" in combined:
         errors.append("Luna voice copy must not ask the reader a question.")

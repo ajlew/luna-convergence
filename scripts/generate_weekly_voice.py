@@ -72,7 +72,15 @@ def main() -> int:
         # HTTP client. This lets Luna inspect calculations without API packages.
         from luna_voice_provider import generate_openai_compatible_json
 
-        copy = generate_openai_compatible_json(build_weekly_voice_prompt(packet))
+        copy = generate_openai_compatible_json(
+            build_weekly_voice_prompt(packet),
+            # The Weekly preview previously fell back to the provider's large
+            # default completion budget. Keep it aligned with the concise
+            # 155-255 word product contract.
+            max_tokens=1050,
+            response_format={"type": "json_object"},
+            rate_limit_retries=0,
+        )
         provider = os.getenv("LUNA_VOICE_PROVIDER", "openai-compatible")
         model = os.getenv("LUNA_VOICE_MODEL", "")
 
