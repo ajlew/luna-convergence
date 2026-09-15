@@ -119,6 +119,67 @@ class PlainWorkflowTests(unittest.TestCase):
         self.assertEqual(WORD_RANGES, {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380)})
         self.assertIn("End with one clear imperative action", prompt_for(packet()))
 
+class GlobalRecoveryTests(unittest.TestCase):
+    def test_rate_limit_waits_full_interval_for_every_product(self):
+        from unittest.mock import Mock
+        for product, repeats in (("daily", 1), ("weekly", 2), ("monthly", 4)):
+            with self.subTest(product=product):
+                body = "\n\n".join([BODY] * repeats)
+                limited = Mock(status_code=429, headers={"Retry-After": "75"})
+                success = Mock(status_code=200)
+                success.json.return_value = {"choices": [{"message": {"content": body}, "finish_reason": "stop"}]}
+                post = Mock(side_effect=[limited, success])
+                sleep = Mock()
+                with patch.dict("os.environ", {"LUNA_VOICE_BASE_URL": "https://example.invalid",
+                    "LUNA_VOICE_MODEL": "test", "LUNA_VOICE_API_KEY": "test"}):
+                    self.assertEqual(generate_text(packet(product=product), post=post, sleep=sleep), body)
+                self.assertEqual(sum(c.args[0] for c in sleep.call_args_list), 75)
+                for call in post.call_args_list:
+                    self.assertNotIn("response_format", call.kwargs["json"])
+
+    def test_later_run_does_not_regenerate_successful_signs(self):
+        from unittest.mock import Mock
+        for product, repeats in (("daily", 1), ("weekly", 2), ("monthly", 4)):
+            with self.subTest(product=product), tempfile.TemporaryDirectory() as root:
+                def build(prod, target, sign, tz):
+                    p = packet(sign, prod)
+                    if prod == "monthly":
+                        p["period"] = "2026-09"
+                    return p
+                generate = Mock(return_value="\n\n".join([BODY] * repeats))
+                for _ in range(2):
+                    self.assertEqual(run_signs(product, date(2026, 9, 15), "Australia/Sydney", ["Virgo"],
+                        build=build, generate=generate, root=root, pause=0), 0)
+                self.assertEqual(generate.call_count, 1)
+
+    def test_retired_workflows_cannot_generate_or_schedule(self):
+        import yaml
+        for name in ("daily-voice", "weekly-voice-preview", "monthly-voice"):
+            data = yaml.safe_load(Path(f".github/workflows/generate-{name}.yml").read_text())
+            self.assertNotIn("schedule", data.get("on", data.get(True)))
+            self.assertNotIn("python", str(data["jobs"]))
+
+    def test_all_legacy_scripts_use_shared_plain_entry(self):
+        for product in ("daily", "weekly", "monthly"):
+            source = Path(f"scripts/generate_{product}_voice.py").read_text()
+            self.assertIn("from scripts.legacy_plain_entry import main", source)
+            self.assertNotIn("guided", source)
+        from scripts.legacy_plain_entry import main
+        with patch("scripts.legacy_plain_entry.generate", return_value=0) as generate:
+            main("weekly", ["--week", "2026-09-14"])
+            self.assertIn("2026-09-14", generate.call_args.args[0])
+            main("monthly", ["--year", "2026", "--month", "9"])
+            self.assertIn("2026-09-01", generate.call_args.args[0])
+
+    def test_long_rate_limit_and_secret_errors_are_safe(self):
+        from plain_voice_generator import GenerationError, retry_delay
+        with self.assertRaises(GenerationError):
+            retry_delay({"Retry-After": "3600"}, 0)
+        self.assertEqual(retry_delay({"Retry-After": "NaN"}, 0), 30)
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaisesRegex(GenerationError, "missing configuration"):
+                generate_text(packet(), post=lambda *a, **k: self.fail("should not call provider"))
+
 
 if __name__ == "__main__":
     unittest.main()

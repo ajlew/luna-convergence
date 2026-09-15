@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from plain_readings import (ROOT, current_reading, make_reading, read_document,
                             reading_path, write_document)
-from plain_voice_generator import generate_text
+from plain_voice_generator import GenerationError, generate_text
 
 
 def run_signs(product, target, timezone, signs, *, build, generate=generate_text,
@@ -28,22 +28,27 @@ def run_signs(product, target, timezone, signs, *, build, generate=generate_text
         try:
             packet = build(product, target, sign, timezone)
             # A new calculation must not retain stale prose after a failed refresh.
-            if not current_reading(copies.get(sign), packet):
-                copies.pop(sign, None)
+            if current_reading(copies.get(sign), packet):
+                statuses[sign] = "published"
+                print(f"{sign}: already current")
+                write_document(path, document)
+                continue
+            copies.pop(sign, None)
             copies[sign] = make_reading(packet, generate(packet))
             statuses[sign] = "published"
         except Exception as exc:
             failures += 1
             # Do not store exception strings which might contain credentials.
             statuses[sign] = "failed"
-            print(f"{sign}: failed ({type(exc).__name__})", file=sys.stderr)
+            detail = str(exc) if isinstance(exc, GenerationError) else type(exc).__name__
+            print(f"{sign}: failed ({detail})", file=sys.stderr)
         write_document(path, document)
         if pause and index < len(signs) - 1:
             time.sleep(pause)
     return 1 if failures else 0
 
 
-def main():
+def main(argv=None):
     from astrology_engine import SIGNS
     from reading_facts import build_packet
     from site_config import DEFAULT_TIMEZONE
@@ -53,7 +58,7 @@ def main():
     parser.add_argument("--sign", choices=SIGNS)
     parser.add_argument("--timezone", default=DEFAULT_TIMEZONE)
     parser.add_argument("--pause", type=float, default=8.0)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     today = datetime.now(ZoneInfo(args.timezone)).date()
     if args.date:
         target = date.fromisoformat(args.date)

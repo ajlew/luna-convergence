@@ -50,9 +50,9 @@ Do not replace only app.py. Base inspected: 809d32d; reconcile changes if main h
    but the final save step commits successful signs. Rerun only the failed sign.
 4. Inspect actual Daily, Weekly, Monthly and Studio output on desktop and mobile.
    Confirm real generated voice quality, event/house relevance and no repeated move.
-5. Existing legacy generation workflows may be present on GitHub but were absent from
-   this checkout. Review and disable their schedules when switching to the new job;
-   this package does not silently delete unknown remote files or workflows.
+5. This recovery package replaces all three known legacy workflow files with manual-only
+   retirement notices. Their scripts forward to the shared plain-text generator.
+   Only generate-plain-readings.yml owns the new generation schedules.
 6. Merge/deploy only after these checks. No push, merge, deployment or scheduled job
    has been performed from this session.
 
