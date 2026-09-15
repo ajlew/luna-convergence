@@ -91,7 +91,9 @@ def test_house_three_is_communication_not_travel():
 def test_weekly_studio_uses_non_anchor_content_headings_and_no_word_chopper():
     source = Path("app.py").read_text(encoding="utf-8")
 
-    assert '<div class="weekly-card-title" role="heading"' in source
+    renderer = Path("plain_readings.py").read_text(encoding="utf-8")
+    assert '<h2>Luna’s reading</h2>' in renderer
+    assert "plain_reading_html(packet, reading)" in source
     assert '<h2>{escape(item.headline)}</h2>' not in source
     assert 'words if len(words) <= 6 else words[:6]' not in source
     assert 'st.markdown("## 12 sign translations")' not in source

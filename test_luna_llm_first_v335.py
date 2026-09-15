@@ -76,9 +76,10 @@ def test_voice_prompt_requires_human_story_and_earned_hope():
 
 def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
     app = Path("app.py").read_text(encoding="utf-8")
-    assert 'headline = "CALCULATIONS READY. LUNA\'S VOICE IS PAUSED."' in app
-    assert '_guided_luna_collection("weekly_days"' in app
-    assert '"weekly_signs"' in app
+    assert "CALCULATIONS READY. LUNA'S VOICE IS PAUSED." not in app
+    assert "Luna's writing service is temporarily unavailable." not in app
+    assert "def _calculated_luna_copy" not in app
+    assert '_render_free_plain("weekly", monday, sign)' in app
     assert re.search(r'_guided_luna_collection\(\s*"monthly_events"', app)
     assert re.search(r'_guided_luna_collection\(\s*"natal_signatures"', app)
     assert re.search(r'_guided_luna_collection\(\s*"yearly_transits"', app)
@@ -87,7 +88,7 @@ def test_customer_pages_do_not_call_legacy_interpretation_fallbacks():
 
 def test_build_label_advances_beyond_v3356():
     config = Path("site_config.py").read_text(encoding="utf-8")
-    assert "Luna v3.37 — Calculated Intelligence" in config
+    assert "Luna v3.39 — Plain-text Readings" in config
 
 
 def test_collection_generation_uses_groq_strict_json_schema(monkeypatch):
@@ -355,13 +356,13 @@ def test_invalid_full_batch_recovers_each_item_independently(monkeypatch):
 def test_public_weekly_page_requests_only_the_selected_sign():
     app = Path("app.py").read_text(encoding="utf-8")
     match = re.search(
-        r"def _render_weekly_sign_layer\([\s\S]+?(?=\ndef _weekly_choice_options)",
+        r"def weekly_page\([\s\S]+?(?=\ndef weekly_studio_page)",
         app,
     )
     assert match
     body = match.group(0)
-    assert "_weekly_single_sign_voice" in body
-    assert "_weekly_sign_voice_collection" not in body
+    assert '_render_free_plain("weekly", monday, sign)' in body
+    assert "_guided_luna_collection" not in body
 
 
 def test_413_collection_is_split_until_groq_accepts_it(monkeypatch):

@@ -32,12 +32,9 @@ from daily_narrative_v3 import (
     reading_comparison_text,
     render_daily_narrative_v3,
 )
-from daily_voice_publisher import load_daily_voice_candidate
-from monthly_voice_publisher import (
-    build_public_monthly_event_facts,
-    build_public_monthly_facts,
-    load_monthly_voice_candidate,
-)
+from plain_readings import load_reading as load_plain_reading, reading_html as plain_reading_html, split_move as split_plain_move
+from reading_facts import build_packet as build_plain_packet
+from monthly_voice_publisher import build_public_monthly_event_facts
 from monthly_narrative_v1 import build_monthly_narrative
 from monthly_experience_v1 import render_monthly_experience, build_monthly_reader_chronology
 from monthly_report_pipeline import (
@@ -79,16 +76,9 @@ from monthly_natal_overlay import build_monthly_natal_overlay
 from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
 from weekly_view import (
-    all_video_copy,
-    build_weekly_sign_translation,
-    build_weekly_synthesis,
-    build_weekly_view,
     default_week_start,
     monday_for,
-    weekly_social_card_copy,
-    week_label,
 )
-from weekly_voice_composer import build_weekly_voice_packet, load_weekly_voice_candidate
 from luna_guided_voice import generate_guided_collection_copy, generate_guided_voice_copy
 from luna_report_bundle import assemble_report_bundle
 from timing_map import (
@@ -141,7 +131,7 @@ WEEKLY_BACKGROUND_PATH = ASSET_DIR / "luna_weekly_video_background_1080x1920.png
 
 st.set_page_config(
     page_title=f"{BRAND_NAME} | Strategic Horoscopes",
-    page_icon=Image.open(FAVICON_PATH),
+    page_icon=Image.open(FAVICON_PATH) if FAVICON_PATH.is_file() else None,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -264,18 +254,13 @@ def _guided_luna_copy(product: str, facts: dict) -> dict | None:
         _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
-        with st.status(_voice_loading_label(product), expanded=True) as voice_status:
-            voice_status.write("Calculations ready · identifying the strongest pattern…")
-            result = _cached_guided_luna_copy(
-                product,
-                json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
-                LUNA_VOICE_BASE_URL,
-                LUNA_VOICE_MODEL,
-                LUNA_VOICE_API_KEY,
-            )
-            voice_status.write("Interpretation written · checking every stated fact…")
-            voice_status.update(label="Luna's interpretation is ready.", state="complete", expanded=False)
-            return result
+        return _cached_guided_luna_copy(
+            product,
+            json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
+            LUNA_VOICE_BASE_URL,
+            LUNA_VOICE_MODEL,
+            LUNA_VOICE_API_KEY,
+        )
     except Exception as exc:
         _record_voice_error(product, exc)
         return None
@@ -297,18 +282,13 @@ def _guided_luna_collection(product: str, facts: dict) -> dict | None:
         _record_voice_error(product, "Missing Streamlit secret(s): " + ", ".join(missing))
         return None
     try:
-        with st.status(_voice_loading_label(product), expanded=True) as voice_status:
-            voice_status.write("Calculations ready · connecting the supplied events…")
-            result = _cached_guided_luna_collection(
-                product,
-                json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
-                LUNA_VOICE_BASE_URL,
-                LUNA_VOICE_MODEL,
-                LUNA_VOICE_API_KEY,
-            )
-            voice_status.write("Collection written · validating each item against its evidence…")
-            voice_status.update(label="Luna's complete interpretation is ready.", state="complete", expanded=False)
-            return result
+        return _cached_guided_luna_collection(
+            product,
+            json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
+            LUNA_VOICE_BASE_URL,
+            LUNA_VOICE_MODEL,
+            LUNA_VOICE_API_KEY,
+        )
     except Exception as exc:
         _record_voice_error(product, exc)
         return None
@@ -324,10 +304,10 @@ def _luna_voice_ready() -> bool:
 
 
 def _render_voice_unavailable(*, facts_label: str = "calculated evidence below") -> None:
-    st.info(
-        "Luna's writing service is temporarily unavailable. "
-        f"The {facts_label} remains current; no canned interpretation has been substituted."
-    )
+    """Legacy callers retain their calculated panels; never fabricate prose."""
+    return
+
+
 
 
 def _render_guided_luna_story(copy: dict, kicker: str) -> None:
@@ -2501,12 +2481,15 @@ def complete_report_print_button(
     )
 
 def brand_header() -> None:
-    encoded_icon = base64.b64encode(BRAND_ICON_PATH.read_bytes()).decode("ascii")
+    icon_html = ""
+    if BRAND_ICON_PATH.is_file():
+        encoded_icon = base64.b64encode(BRAND_ICON_PATH.read_bytes()).decode("ascii")
+        icon_html = f'<img class="brand-icon" src="data:image/png;base64,{encoded_icon}" alt="Saturn hexagon mark">'
     st.markdown(
         f"""
 <div class="brand-row">
   <div class="brand-lockup">
-    <img class="brand-icon" src="data:image/png;base64,{encoded_icon}" alt="Saturn hexagon mark">
+    {icon_html}
     <div class="brand-name">{escape(BRAND_NAME)}</div>
   </div>
 </div>
@@ -3862,6 +3845,17 @@ def _render_optional_luna_video() -> None:
     st.markdown('</section>', unsafe_allow_html=True)
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def _cached_plain_packet(product: str, period: date, sign: str, timezone_name: str) -> dict:
+    return build_plain_packet(product, period, sign, timezone_name)
+
+
+def _render_free_plain(product: str, period: date, sign: str) -> None:
+    packet = _cached_plain_packet(product, period, sign, DEFAULT_TIMEZONE)
+    reading = load_plain_reading(packet)
+    st.markdown(plain_reading_html(packet, reading), unsafe_allow_html=True)
+
+
 def _render_lean_daily(path: str) -> None:
     set_page_metadata(
         "Daily Horoscope | Luna Convergence",
@@ -3906,76 +3900,10 @@ def _render_lean_daily(path: str) -> None:
         )
         st.session_state["tracked_landing_daily_sign"] = sign
 
-    reading_date = browser_local_date()
-    timezone_name = browser_timezone_name()
-    narrative = _daily_narrative_for_landing(sign, reading_date, timezone_name)
-
-    daily_facts = _daily_guided_facts(narrative, sign, reading_date, timezone_name)
-    guided = load_daily_voice_candidate(sign, reading_date, timezone_name, daily_facts)
-    if guided is None and LUNA_VOICE_MODE == "live":
-        guided = _guided_luna_copy("daily", daily_facts)
-    if guided:
-        story = tuple([guided["opening"], *guided["story"], guided["affirmation"]])
-        headline = guided["headline"]
-        action_today = guided["your_move"]
-    else:
-        evidence = narrative.evidence
-        technical = " · ".join(
-            value for value in (
-                str(evidence.aspect_label or "").strip(),
-                str(evidence.phase or "").strip(),
-                f"{float(evidence.orb):.2f}° orb" if evidence.orb is not None else "",
-            ) if value
-        )
-        story = (
-            technical or "The planetary positions have been calculated for this date.",
-            "Luna's writing service did not return validated copy, so no canned interpretation has been substituted.",
-        )
-        headline = "CALCULATIONS READY. LUNA'S VOICE IS PAUSED."
-        action_today = "Use the calculated evidence and return shortly for Luna's interpretation."
-    story_html = "".join(
-        f"<p>{escape(paragraph)}</p>" for paragraph in story if paragraph
-    )
-    connected_daily = ""
-    connected_daily_html = ""
-    if connected_daily:
-        clean_connected = escape(connected_daily).replace("**", "")
-        connected_daily_html = f'<div class="lean-daily-meaning">{clean_connected}</div>'
-    question = ""
-    monthly_href = "/monthly"
-    major_daily_html = (
-        f'<div class="lean-daily-major-event">Major sky event · {escape(narrative.major_event_label)}</div>'
-        if getattr(narrative, "major_event_label", "") else ""
-    )
-    supporting_daily_html = (
-        f'<div class="lean-daily-supporting-event">Also active · {escape(" · ".join(narrative.supporting_events))}</div>'
-        if getattr(narrative, "supporting_events", ()) else ""
-    )
-
-    st.markdown(
-        f"""
-<section class="lean-daily" aria-label="Today's horoscope">
-  <div class="lean-daily-meta">
-    <strong>{escape(sign)}</strong>
-    <span>{escape(_daily_date_label(reading_date))}</span>
-  </div>
-  {major_daily_html}
-  {supporting_daily_html}
-  <h1>{escape(headline)}</h1>
-  <div class="lean-daily-story">{story_html}</div>
-  {connected_daily_html}
-  <div class="lean-daily-move">
-    <div class="lean-daily-label">Your move</div>
-    <p>{escape(action_today)}</p>
-  </div>
-  {f'<div class="lean-daily-question">{escape(question)}</div>' if question else ''}
-  <div class="lean-daily-reset">Focus Reset</div>
-  <a class="lean-monthly-link" href="{monthly_href}">See your {escape(month_name[reading_date.month])} forecast →</a>
-  <div class="lean-bookmark-note">Bookmark this page in your browser and Luna will reopen on {escape(sign)}.</div>
-</section>
-        """,
-        unsafe_allow_html=True,
-    )
+    reading_date = datetime.now(ZoneInfo(DEFAULT_TIMEZONE)).date()
+    _render_free_plain("daily", reading_date, sign)
+    st.markdown(f'<a class="lean-monthly-link" href="/monthly">See your {escape(month_name[reading_date.month])} forecast →</a>',
+                unsafe_allow_html=True)
     _render_optional_luna_video()
 
 
@@ -4012,385 +3940,6 @@ def daily_page() -> None:
 
 
 
-def _weekly_cards_html(days, voice_items: dict[str, dict] | None = None) -> str:
-    cards: list[str] = []
-    voice_items = voice_items or {}
-    for item in days:
-        major_label = str(getattr(item, "major_event_label", "") or "").strip()
-        evidence = str(getattr(item, "evidence", "") or "").strip()
-        major_html = (
-            f'<div class="weekly-major-event">{escape(major_label)}</div>'
-            if major_label else ""
-        )
-        evidence_html = ""
-        if evidence:
-            same_event = bool(
-                major_label
-                and (
-                    evidence.lower() == major_label.lower()
-                    or evidence.lower().startswith(major_label.lower() + " ·")
-                )
-            )
-            if not same_event:
-                evidence_html = f'<div class="weekly-evidence">{escape(evidence)}</div>'
-        supporting_html = (
-            f'<div class="weekly-supporting-event">Also active · {escape(" · ".join(item.supporting_events))}</div>'
-            if getattr(item, "supporting_events", ()) else ""
-        )
-        voice = voice_items.get(item.reading_date.isoformat())
-        if voice:
-            headline = str(voice["headline"])
-            story_copy = f'<p>{escape(str(voice["story"]))}</p><p><strong>REMEMBER ·</strong> {escape(str(voice["affirmation"]))}</p>'
-            action = str(voice["your_move"])
-        else:
-            headline = str(item.major_event_label or item.evidence or "Calculated sky")
-            story_copy = '<p>Luna\'s writing service did not return validated copy. The calculated evidence above remains current.</p>'
-            action = "Use the calculated evidence and return shortly for Luna's interpretation."
-        cards.append(
-            f"""
-<article class="weekly-card">
-  <div class="weekly-card-meta">
-    <strong>{escape(item.weekday)}</strong>
-    <span>{escape(item.date_label)}</span>
-  </div>
-  {major_html}
-  {evidence_html}
-  {supporting_html}
-  <div class="weekly-card-title" role="heading" aria-level="2">{escape(headline)}</div>
-  {story_copy}
-  <div class="weekly-move">
-    <div class="weekly-move-label">Your move</div>
-    <p>{escape(action)}</p>
-  </div>
-</article>
-            """
-        )
-    return "".join(cards)
-
-def _render_weekly_cards(days, monday: date, *, studio: bool = False, voice_items: dict[str, dict] | None = None) -> None:
-    studio_class = " weekly-studio" if studio else ""
-    if studio:
-        heading = (
-            '<div class="weekly-kicker">Seven-day production preview</div>'
-            f'<div class="weekly-range">{escape(week_label(monday))}</div>'
-        )
-    else:
-        heading = (
-            '<div class="weekly-kicker">Week ahead · Monday to Sunday</div>'
-            f'<div class="weekly-range">{escape(week_label(monday))}</div>'
-            '<div class="weekly-page-title" role="heading" aria-level="1">Seven days. One changing sky.</div>'
-            '<p class="weekly-intro">The shared planetary weather before it moves through your star sign. Each day gives you the evidence, the human pressure point and one clean move.</p>'
-        )
-    st.markdown(
-        f"""
-<section class="weekly-view{studio_class}" aria-label="Luna weekly astrology view">
-  {heading}
-  <div class="weekly-grid">{_weekly_cards_html(days, voice_items)}</div>
-</section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _render_weekly_heading(text: str, *, level: int = 2, sign: bool = False) -> None:
-    css_class = "weekly-sign-heading" if sign else "weekly-section-heading"
-    st.markdown(
-        f'<div class="{css_class}" role="heading" aria-level="{int(level)}">{escape(text)}</div>',
-        unsafe_allow_html=True,
-    )
-
-
-def _render_weekly_synthesis(days) -> None:
-    synthesis = build_weekly_synthesis(tuple(days))
-    paragraphs = "".join(
-        f"<p>{escape(paragraph)}</p>" for paragraph in synthesis["paragraphs"]
-    )
-    st.markdown(
-        f"""
-<section class="weekly-synthesis" aria-label="The week in one story">
-  <div class="weekly-kicker">The week in one story</div>
-  <div class="weekly-sign-heading" role="heading" aria-level="2">{escape(synthesis['headline'])}</div>
-  {paragraphs}
-  <p class="weekly-synthesis-rule">{escape(synthesis['rule'])}</p>
-</section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _weekly_voice_copy_text(copy: dict) -> str:
-    lines = [str(copy["headline"]).strip(), "", str(copy["opening"]).strip()]
-    for paragraph in copy["story"]:
-        lines.extend(["", str(paragraph).strip()])
-    lines.extend(
-        [
-            "",
-            f"REMEMBER · {str(copy['affirmation']).strip()}",
-            "",
-            f"YOUR MOVE · {str(copy['your_move']).strip()}",
-        ]
-    )
-    return "\n".join(lines)
-
-
-def _weekly_llm_copy(days, monday: date, timezone_name: str) -> dict | None:
-    """Prefer an approved weekly candidate, then generate from the same closed packet."""
-    if LUNA_VOICE_MODE not in {"published", "live"}:
-        return None
-    loaded = load_weekly_voice_candidate(tuple(days), monday, timezone_name)
-    if loaded.copy is not None:
-        return loaded.copy
-    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
-    return _guided_luna_copy("weekly", packet)
-
-
-def _weekly_day_voice_collection(days, monday: date, timezone_name: str) -> dict[str, dict]:
-    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
-    facts = {
-        "week_start": monday.isoformat(),
-        "timezone": timezone_name,
-        "items": [
-            {
-                "source_id": event["date"],
-                "weekday": event["weekday"],
-                "technical_label": event["technical_label"],
-                "evidence": event["evidence"],
-                "planets": event["planets"],
-                "aspect": event["aspect"],
-                "phase": event["phase"],
-                "orb_degrees": event["orb_degrees"],
-                "exact_time_label": event["exact_time_label"],
-                "role": event["role"],
-                "supporting_events": event["supporting_events"],
-            }
-            for event in packet["events"]
-        ],
-    }
-    generated = _guided_luna_collection("weekly_days", facts)
-    if not generated:
-        return {}
-    return {str(item["source_id"]): item for item in generated["items"]}
-
-
-def _weekly_sign_voice_collection(days, monday: date, timezone_name: str) -> dict[str, dict]:
-    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
-    shared_context = {
-        "week_pattern": {
-            "controlling_planet": packet["calculated_pattern"]["controlling_planet"],
-            "dominant_planets": packet["calculated_pattern"]["dominant_planets"],
-            "pressure_source_ids": packet["calculated_pattern"]["pressure_source_ids"],
-            "support_source_ids": packet["calculated_pattern"]["support_source_ids"],
-        },
-        "events": [
-            {
-                "source_id": event["source_id"],
-                "date": event["date"],
-                "technical_label": event["technical_label"],
-                "planets": event["planets"],
-                "aspect": event["aspect"],
-                "role": event["role"],
-                "phase": event["phase"],
-                "orb_degrees": event["orb_degrees"],
-            }
-            for event in packet["events"]
-        ],
-    }
-    items = []
-    for sign in SIGNS:
-        summary = _weekly_sign_summary(sign, monday, timezone_name, days)
-        items.append(
-            {
-                "source_id": sign,
-                "sign": sign,
-                "houses": list(summary["houses"]),
-                "life_areas": list(summary["areas"]),
-            }
-        )
-    generated = _guided_luna_collection(
-        "weekly_signs",
-        {
-            "week_start": monday.isoformat(),
-            "timezone": timezone_name,
-            "shared_context": shared_context,
-            "items": items,
-        },
-    )
-    if not generated:
-        return {}
-    return {str(item["source_id"]): item for item in generated["items"]}
-
-
-def _weekly_single_sign_voice(
-    sign: str,
-    days,
-    monday: date,
-    timezone_name: str,
-) -> dict | None:
-    """Generate only the selected public sign instead of billing for all twelve."""
-    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
-    summary = _weekly_sign_summary(sign, monday, timezone_name, days)
-    facts = {
-        "week_start": monday.isoformat(),
-        "timezone": timezone_name,
-        "shared_context": {
-            "week_pattern": packet["calculated_pattern"],
-            "events": [
-                {
-                    "source_id": event["source_id"],
-                    "date": event["date"],
-                    "technical_label": event["technical_label"],
-                    "planets": event["planets"],
-                    "aspect": event["aspect"],
-                    "role": event["role"],
-                    "phase": event["phase"],
-                    "orb_degrees": event["orb_degrees"],
-                }
-                for event in packet["events"]
-            ],
-        },
-        "items": [
-            {
-                "source_id": sign,
-                "sign": sign,
-                "houses": list(summary["houses"]),
-                "life_areas": list(summary["areas"]),
-            }
-        ],
-    }
-    generated = _guided_luna_collection("weekly_signs", facts)
-    if not generated or not generated.get("items"):
-        return None
-    return generated["items"][0]
-
-
-def _weekly_social_card_from_voice(sign: str, copy: dict, monday: date, areas: list[str]) -> str:
-    sunday = monday + timedelta(days=6)
-    date_line = f"{monday.strftime('%d %b').lstrip('0')}–{sunday.strftime('%d %b').lstrip('0')}".upper()
-    return "\n".join(
-        [
-            f"{sign.upper()} · {date_line}",
-            str(copy["headline"]).strip().upper(),
-            " · ".join(areas).upper(),
-            str(copy["affirmation"]).strip(),
-            str(copy["your_move"]).strip().upper(),
-        ]
-    )
-
-
-def _weekly_daily_scripts_from_voice(days, voice_items: dict[str, dict]) -> str:
-    blocks = []
-    for day in days:
-        copy = voice_items.get(day.reading_date.isoformat())
-        evidence = str(day.evidence or day.major_event_label or "Calculated sky")
-        if copy:
-            blocks.append(
-                "\n".join(
-                    [
-                        f"{day.weekday.upper()} · {day.date_label.upper()}",
-                        evidence,
-                        str(copy["headline"]).strip(),
-                        str(copy["story"]).strip(),
-                        f"REMEMBER · {str(copy['affirmation']).strip()}",
-                        f"YOUR MOVE · {str(copy['your_move']).strip()}",
-                    ]
-                )
-            )
-        else:
-            blocks.append(f"{day.weekday.upper()} · {day.date_label.upper()}\n{evidence}\nLuna voice unavailable.")
-    return "\n\n---\n\n".join(blocks)
-
-
-def _render_weekly_voice_story(copy: dict) -> None:
-    paragraphs = "".join(
-        f"<p>{escape(str(paragraph).strip())}</p>" for paragraph in copy["story"]
-    )
-    st.markdown(
-        f"""
-<section class="weekly-synthesis weekly-voice-story" aria-label="Luna's week ahead">
-  <div class="weekly-kicker">Luna's week ahead</div>
-  <div class="weekly-sign-heading" role="heading" aria-level="2">{escape(str(copy['headline']).strip())}</div>
-  <p class="weekly-voice-opening">{escape(str(copy['opening']).strip())}</p>
-  {paragraphs}
-  <p class="weekly-synthesis-rule"><strong>REMEMBER ·</strong> {escape(str(copy['affirmation']).strip())}</p>
-  <p><strong>YOUR MOVE · {escape(str(copy['your_move']).strip())}</strong></p>
-</section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _render_weekly_calculated_evidence(days, monday: date, timezone_name: str) -> None:
-    packet = build_weekly_voice_packet(tuple(days), monday, timezone_name)
-    with st.expander("See the calculations behind Luna's reading", expanded=False):
-        st.caption(f"Calculated for {timezone_name}. The writing layer cannot change these facts.")
-        for event in packet["events"]:
-            st.markdown(f"**{event['weekday']} · {event['technical_label']}**  ")
-            st.markdown(event["evidence"])
-            if event["supporting_events"]:
-                st.caption("Also active · " + " · ".join(event["supporting_events"]))
-
-
-def _render_weekly_public_story(days, monday: date, timezone_name: str) -> bool:
-    copy = _weekly_llm_copy(days, monday, timezone_name)
-    if copy is None:
-        return False
-    _render_weekly_voice_story(copy)
-    _render_weekly_calculated_evidence(days, monday, timezone_name)
-    return True
-
-
-def _render_weekly_voice_preview(days, monday: date, timezone_name: str) -> None:
-    """Show the active LLM-first weekly copy and its evidence status in Studio."""
-    _render_weekly_heading("Luna Voice Composer · active output", level=2)
-    st.caption(
-        "Calculated evidence enters Luna's guided writing layer. Legacy forecast prose is not used as a customer fallback."
-    )
-    copy = _weekly_llm_copy(days, monday, timezone_name)
-    if copy is not None:
-        st.success("Evidence lock passed. This is the active customer story.")
-        st.code(_weekly_voice_copy_text(copy), language=None, wrap_lines=True)
-    else:
-        _render_voice_unavailable(facts_label="seven-day calculation")
-        _render_weekly_calculated_evidence(days, monday, timezone_name)
-
-
-
-def _weekly_sign_summary(
-    sign: str,
-    monday: date,
-    timezone_name: str,
-    days=None,
-) -> dict:
-    return build_weekly_sign_translation(
-        sign,
-        monday,
-        timezone_name,
-        tuple(days) if days is not None else None,
-    )
-
-
-def _render_weekly_sign_layer(
-    sign: str,
-    monday: date,
-    timezone_name: str,
-    days=None,
-) -> None:
-    summary = _weekly_sign_summary(sign, monday, timezone_name, days)
-    voice = _weekly_single_sign_voice(sign, days, monday, timezone_name)
-    if voice:
-        st.markdown(
-            f'''<section class="weekly-sign-layer" aria-label="{escape(sign)} weekly reading">
-<div class="weekly-kicker">{escape(sign)} · The week ahead</div>
-<div class="weekly-where-lands">Where it lands · {escape(" · ".join(summary["areas"]))}</div>
-<div class="weekly-sign-heading" role="heading" aria-level="2">{escape(str(voice["headline"]))}</div>
-<p class="weekly-sign-story">{escape(str(voice["story"]))}</p>
-<div class="weekly-synthesis-rule"><strong>REMEMBER ·</strong> {escape(str(voice["affirmation"]))}</div>
-<div class="weekly-move"><div class="weekly-move-label">Your move</div><p>{escape(str(voice["your_move"]))}</p></div>
-</section>''',
-            unsafe_allow_html=True,
-        )
-    else:
-        _render_voice_unavailable(facts_label="whole-sign house calculation")
 
 
 
@@ -4430,303 +3979,54 @@ def _youtube_playable_url(url: str) -> str:
     return value
 
 def weekly_page() -> None:
-    set_page_metadata(
-        "Weekly Astrology View | Luna Convergence",
-        "One changing sky, translated for your star sign, with the week's evidence and practical moves.",
-        "/weekly-view",
-    )
-    today = browser_local_date()
-    sign = st.selectbox(
-        "What is your Sun sign (star sign)?",
-        SIGNS,
-        key="weekly-sign-v331",
-        help="Luna starts with your Sun sign as whole-sign House 1, then shows how the shared sky lands from that reference.",
-    )
+    set_page_metadata("Weekly Astrology | Luna Convergence",
+                      "Your sign's week ahead, calculated and interpreted by Luna.", "/weekly-view")
+    today = datetime.now(ZoneInfo(DEFAULT_TIMEZONE)).date()
+    sign = st.selectbox("What is your Sun sign (star sign)?", SIGNS, index=None,
+                        placeholder="Choose your star sign", key="weekly-sign-v331")
     current_monday = default_week_start(today)
     week_options = _weekly_choice_options(today)
-    monday = st.selectbox(
-        "Choose week",
-        week_options,
-        index=week_options.index(current_monday),
-        format_func=lambda value: _weekly_choice_label(value, current_monday),
-        key="weekly-view-week-v332",
-    )
-    timezone_name = browser_timezone_name()
-    try:
-        days = build_weekly_view(monday, timezone_name)
-    except Exception as exc:
-        st.error("Luna could not calculate this week's planetary pattern.")
-        if EDITOR_PREVIEW_ENABLED:
-            st.exception(exc)
+    monday = st.selectbox("Choose week", week_options,
+                          index=week_options.index(current_monday),
+                          format_func=lambda value: _weekly_choice_label(value, current_monday),
+                          key="weekly-view-week-v332")
+    if sign is None:
         return
-
-    st.markdown('<div class="weekly-kicker">Week ahead · Monday to Sunday</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="weekly-range">{escape(week_label(monday))}</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="weekly-page-title" role="heading" aria-level="1">One changing sky.</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("**Your Sun sign is the first reference. See where the week lands. Keep one rule while the mood changes.**")
-    if not _render_weekly_public_story(days, monday, timezone_name):
-        _render_voice_unavailable(facts_label="weekly calculation")
-        _render_weekly_calculated_evidence(days, monday, timezone_name)
-    try:
-        _render_weekly_sign_layer(sign, monday, timezone_name, days)
-    except Exception as exc:
-        st.warning("Luna could not build the sign-specific weekly layer, so the shared seven-day sky is shown below.")
-        if EDITOR_PREVIEW_ENABLED:
-            st.exception(exc)
-    with st.expander("The shared sky · Seven calculated days", expanded=False):
-        st.caption(f"Dates and exact-day labels use {timezone_name}.")
-        _render_weekly_cards(
-            days,
-            monday,
-            studio=True,
-            voice_items=_weekly_day_voice_collection(days, monday, timezone_name),
-        )
-    complete_report_print_button(
-        "Print / Save complete Week Ahead",
-        key="weekly-view-complete-report",
-    )
-    st.markdown('<a class="lean-monthly-link" href="/daily-horoscope">Open your sign-specific Daily Horoscope →</a>', unsafe_allow_html=True)
-
-
-
-def _weekly_publish_date_range(monday: date) -> str:
-    sunday = monday + timedelta(days=6)
-    if monday.month == sunday.month:
-        return f"{monday.day}–{sunday.day} {monday.strftime('%B')} {sunday.year}"
-    if monday.year == sunday.year:
-        return f"{monday.day} {monday.strftime('%B')}–{sunday.day} {sunday.strftime('%B')} {sunday.year}"
-    return f"{monday.day} {monday.strftime('%B')} {monday.year}–{sunday.day} {sunday.strftime('%B')} {sunday.year}"
-
-
-def _weekly_publish_distinct(values, limit: int = 4) -> list[str]:
-    found = []
-    seen = set()
-    for value in values:
-        clean = " ".join(str(value or "").split()).strip(" .")
-        key = clean.lower()
-        if clean and key not in seen:
-            seen.add(key)
-            found.append(clean)
-        if len(found) >= limit:
-            break
-    return found
-
-
-def _weekly_publish_package(days, monday: date, voice_copy: dict | None = None) -> dict:
-    """Format validated Luna prose for publishing without adding legacy interpretation."""
-    date_range = _weekly_publish_date_range(monday)
-    weekly_url = f"{PUBLIC_SITE_URL}/weekly-view"
-    daily_url = f"{PUBLIC_SITE_URL}/"
-    voice_copy = voice_copy or {}
-    headline = str(voice_copy.get("headline") or "LUNA'S WEEK AHEAD").strip()
-    opening = str(voice_copy.get("opening") or "").strip()
-    story = [str(value).strip() for value in (voice_copy.get("story") or []) if str(value).strip()]
-    affirmation = str(voice_copy.get("affirmation") or "").strip()
-    move = str(voice_copy.get("your_move") or "").strip()
-    synthesis_text = " ".join([opening, *story]).strip()
-
-    title = f"Week Ahead Astrology | {date_range}"
-
-    description = (
-        "Seven days. One changing sky.\n\n"
-        + synthesis_text
-        + (f"\n\nRemember: {affirmation}" if affirmation else "")
-        + (f"\n\nYour move: {move}" if move else "")
-        + "\n\nSeven pressure points. Seven practical moves. Monday to Sunday.\n\n"
-        + f"See the complete Week Ahead:\n{weekly_url}\n\n"
-        + f"Read your Daily Horoscope:\n{daily_url}\n\n"
-        + "Read the signal. Check the evidence. Make your move.\n\n"
-        + "#astrology #weeklyhoroscope #zodiac"
-    )
-    instagram = (
-        f"THE WEEK AHEAD · {date_range.upper()}\n\n"
-        + headline
-        + "\n\n"
-        + synthesis_text
-        + (f"\n\nREMEMBER · {affirmation}" if affirmation else "")
-        + (f"\n\nYOUR MOVE · {move}" if move else "")
-        + "\n\n"
-        + f"Full Week Ahead: {weekly_url}\n\n"
-        + "#astrology #weeklyhoroscope #zodiac #astrologyforecast #horoscope #lunaconvergence"
-    )
-    opening_script = (
-        "Seven days. One changing sky. "
-        + synthesis_text
-        + (f" Remember: {affirmation}." if affirmation else "")
-        + (f" {move}" if move else "")
-    )
-
-    youtube_tags = (
-    "weekly horoscope, weekly astrology, astrology forecast, zodiac forecast, "
-    "week ahead astrology, horoscope this week, astrology this week, "
-    "Aries horoscope, Taurus horoscope, Gemini horoscope, Cancer horoscope, "
-    "Leo horoscope, Virgo horoscope, Libra horoscope, Scorpio horoscope, "
-    "Sagittarius horoscope, Capricorn horoscope, Aquarius horoscope, Pisces horoscope, "
-    "Luna Convergence"
-    )
-    return {
-        "title": title,
-        "youtube_description": description,
-        "instagram_caption": instagram,
-        "opening_script": opening_script,
-        "youtube_tags": youtube_tags,
-    }
-
-
-def _render_weekly_publish_package(days, monday: date, voice_copy: dict | None = None) -> None:
-    package = _weekly_publish_package(days, monday, voice_copy)
-
-    _render_weekly_heading("Week Ahead publishing copy", level=2)
-    st.caption(
-        "Generated from the selected production week. Copy these directly into YouTube Shorts and Instagram Reels, "
-        "then make any final editorial adjustment before publishing."
-    )
-
-    st.markdown("**YouTube title**")
-    st.code(package["title"], language=None, wrap_lines=True)
-
-    st.markdown("**YouTube description**")
-    st.code(package["youtube_description"], language=None, wrap_lines=True)
-
-    st.markdown("**Instagram Reel caption**")
-    st.code(package["instagram_caption"], language=None, wrap_lines=True)
-
-    st.markdown("**Opening voiceover / first-frame script**")
-    st.code(package["opening_script"], language=None, wrap_lines=True)
-
-    with st.expander("YouTube comma-separated tags"):
-        st.code(package["youtube_tags"], language=None, wrap_lines=True)
-
-    download_copy = (
-        "YOUTUBE TITLE\n"
-        + package["title"]
-        + "\n\nYOUTUBE DESCRIPTION\n"
-        + package["youtube_description"]
-        + "\n\nINSTAGRAM REEL CAPTION\n"
-        + package["instagram_caption"]
-        + "\n\nOPENING VOICEOVER / FIRST FRAME\n"
-        + package["opening_script"]
-        + "\n\nYOUTUBE TAGS\n"
-        + package["youtube_tags"]
-    )
-    st.download_button(
-        "Download Week Ahead publishing copy",
-        data=download_copy,
-        file_name=f"luna_week_{monday.isoformat()}_publishing_copy.txt",
-        mime="text/plain",
-        use_container_width=True,
-    )
+    _render_free_plain("weekly", monday, sign)
+    complete_report_print_button("Print / Save complete Week Ahead", key="weekly-view-complete-report")
+    st.markdown('<a class="lean-monthly-link" href="/daily-horoscope">Open your Daily Horoscope →</a>',
+                unsafe_allow_html=True)
 
 
 
 def weekly_studio_page() -> None:
-    """Hidden owner workspace for the shared weekly sky and 12 sign translations."""
-    set_page_metadata(
-        "Weekly Video Studio | Luna Convergence",
-        "Private Luna production workspace for one weekly sky, twelve sign cards and Monday-to-Sunday source material.",
-        "/weekly-studio",
-    )
-    st.markdown('<div class="eyebrow">Owner production workspace</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="weekly-page-title" role="heading" aria-level="1">Weekly video studio</div>',
-        unsafe_allow_html=True,
-    )
-
-    with st.expander("How to use this studio", expanded=True):
-        st.markdown("""
-1. **Choose any date** in the week you want. Luna automatically snaps it back to Monday.
-2. Confirm the **timezone**. This controls the calculated weekly sky.
-3. Use **One Changing Sky** as the opening frame of the weekly video.
-4. Use the **1080 × 1920 SOCIAL CARD COPY** inside each sign. It is generated from the same calculated weekly pattern and whole-sign houses.
-5. Keep the longer interpretation on the website; do not squeeze it onto the social card.
-6. Use the guided **Monday-Sunday cards** for the seven separate Daily clips and as the evidence behind the weekly synthesis.
-7. Review **Luna Voice Composer · active output**. Copy appears only after the evidence lock passes; canned forecast prose is not substituted.
-8. Use **Week Ahead publishing copy** for the ready-to-paste YouTube title/description, Instagram Reel caption and opening voiceover.
-9. Export social/video artwork at **1080 × 1920 (9:16)**.
-
-**Production rule:** calculate the sky once; translate it twelve ways. Do not manually invent twelve different skies.
-        """)
-
-    with st.form("weekly-studio-controls-v332", clear_on_submit=False):
-        controls = st.columns(2, gap="medium")
-        current_monday = default_week_start(browser_local_date())
-        week_options = _weekly_choice_options(browser_local_date())
-        with controls[0]:
-            selected_monday = st.selectbox(
-                "Choose week",
-                week_options,
-                index=week_options.index(current_monday),
-                format_func=lambda value: _weekly_choice_label(value, current_monday),
-                key="weekly-studio-week-v332",
-            )
-        with controls[1]:
-            timezone_name = st.selectbox("Timezone", TIMEZONES, index=timezone_select_index(), key="weekly-studio-timezone-v332")
-        st.form_submit_button("Build weekly sky + 12 signs", type="primary", use_container_width=True)
-
-    monday = selected_monday
-    days = build_weekly_view(monday, timezone_name)
-    st.caption(f"Production week: Monday {monday.strftime('%d %B %Y').lstrip('0')} · {timezone_name}")
-
-    weekly_voice = _weekly_llm_copy(days, monday, timezone_name)
-    if weekly_voice:
-        _render_weekly_voice_story(weekly_voice)
-    else:
-        _render_voice_unavailable(facts_label="weekly calculation")
-    _render_weekly_voice_preview(days, monday, timezone_name)
-    _render_weekly_publish_package(days, monday, weekly_voice)
-
-    _render_weekly_heading("12 sign translations", level=2)
-    sign_voices = _weekly_sign_voice_collection(days, monday, timezone_name)
-    if not sign_voices:
-        st.warning("12-sign voice diagnostic: " + _voice_error("weekly_signs"))
-    sign_summaries = []
+    """Website, social-card excerpt and full video copy share the same saved prose."""
+    st.markdown("## Weekly video studio")
+    today = datetime.now(ZoneInfo(DEFAULT_TIMEZONE)).date()
+    options = _weekly_choice_options(today)
+    current = default_week_start(today)
+    monday = st.selectbox("Choose week", options, index=options.index(current),
+                          format_func=lambda value: _weekly_choice_label(value, current))
+    st.caption("Sydney dates. Generate or retry a sign through the scheduled reading job. Studio only reads saved text.")
+    copies = []
     for sign in SIGNS:
-        try:
-            sign_summaries.append(
-                _weekly_sign_summary(sign, monday, timezone_name, days)
-            )
-        except Exception as exc:
-            if EDITOR_PREVIEW_ENABLED:
-                st.warning(f"{sign}: sign translation unavailable: {exc}")
-
-    for item in sign_summaries:
-        with st.expander(item["sign"], expanded=False):
-            voice = sign_voices.get(item["sign"])
-            st.markdown("**WHERE IT LANDS**  ")
-            st.markdown(" · ".join(item["areas"]))
-            if voice:
-                _render_weekly_heading(str(voice["headline"]), level=3, sign=True)
-                st.markdown(str(voice["story"]))
-                st.markdown(f"**REMEMBER · {voice['affirmation']}**")
-                st.markdown("**YOUR MOVE**  ")
-                st.markdown(f"**{voice['your_move']}**")
-                st.markdown("**1080 × 1920 SOCIAL CARD COPY**")
-                st.code(
-                    _weekly_social_card_from_voice(item["sign"], voice, monday, list(item["areas"])),
-                    language=None,
-                    wrap_lines=True,
-                )
+        packet = _cached_plain_packet("weekly", monday, sign, DEFAULT_TIMEZONE)
+        reading = load_plain_reading(packet)
+        with st.expander(sign):
+            st.markdown(plain_reading_html(packet, reading), unsafe_allow_html=True)
+            if reading:
+                body = reading["voice_body"]
+                _, move = split_plain_move(body)
+                st.markdown("**Social card excerpt · final action**")
+                st.code(f"{sign} · {packet['period']}\n{move}", language=None)
+                st.markdown("**Full website / video narration**")
+                st.code(body, language=None, wrap_lines=True)
+                copies.append(f"{sign} · {packet['period']}\n\n{body}")
             else:
-                _render_voice_unavailable(facts_label="whole-sign house calculation")
-
-    all_sign_copy = "\n\n---\n\n".join(
-        _weekly_social_card_from_voice(i["sign"], sign_voices[i["sign"]], monday, list(i["areas"]))
-        for i in sign_summaries if i["sign"] in sign_voices
-    )
-    st.download_button("Download all 12 sign cards copy", data=all_sign_copy, file_name=f"luna_week_{monday.isoformat()}_12_signs.txt", mime="text/plain", use_container_width=True)
-
-    _render_weekly_heading("Monday-Sunday source cards", level=2)
-    day_voices = _weekly_day_voice_collection(days, monday, timezone_name)
-    if not day_voices:
-        st.warning("Seven-day voice diagnostic: " + _voice_error("weekly_days"))
-    _render_weekly_cards(days, monday, studio=True, voice_items=day_voices)
-    combined_copy = _weekly_daily_scripts_from_voice(days, day_voices)
-    st.download_button("Download all seven daily scripts", data=combined_copy, file_name=f"luna_week_{monday.isoformat()}_daily_canva_copy.txt", mime="text/plain", use_container_width=True)
-    if WEEKLY_BACKGROUND_PATH.exists():
-        st.download_button("Download 1080 × 1920 background", data=WEEKLY_BACKGROUND_PATH.read_bytes(), file_name="luna_weekly_video_background_1080x1920.png", mime="image/png", use_container_width=True)
+                st.caption("No current reading. Retry this sign in the reading-generation job.")
+    if copies:
+        st.download_button("Download Weekly narration", data="\n\n---\n\n".join(copies),
+                            file_name=f"luna-weekly-{monday.isoformat()}.txt", mime="text/plain")
 
 
 
@@ -8378,185 +7678,13 @@ def _render_monthly_reader_calendar_streamlit(
 
 
 def _render_monthly_transit_style_v3(narrative, result, *, sign: str, timezone_name: str, birth_date_value: date | None, snapshot=None) -> None:
-    forecast_year, forecast_month, forecast_label = monthly_period_from_result(result, narrative)
-    period_key = f"{forecast_year:04d}-{forecast_month:02d}"
-    events = _monthly_canonical_events(narrative, result)
-    monthly_facts = build_public_monthly_facts(narrative, result, sign, timezone_name)
-    event_facts = build_public_monthly_event_facts(narrative, result, sign, timezone_name)
-    published = load_monthly_voice_candidate(
-        sign,
-        forecast_year,
-        forecast_month,
-        timezone_name,
-        monthly_facts,
-        event_facts,
-    )
-    if published:
-        guided_month = published.get("main")
-        event_generated = published.get("dated_events")
-    elif LUNA_VOICE_MODE == "live":
-        guided_month = _guided_luna_copy("monthly", monthly_facts)
-        event_generated = _guided_luna_collection("monthly_events", event_facts)
-    else:
-        guided_month = None
-        event_generated = None
-        _record_voice_error(
-            "monthly",
-            "No validated pre-generated Monthly document exists for this sign, month and timezone.",
-        )
-        _record_voice_error(
-            "monthly_events",
-            "No validated pre-generated Monthly dated-event collection exists.",
-        )
-    event_voice_items = {
-        str(item["source_id"]): item for item in (event_generated or {}).get("items", [])
-    }
-    monthly_voice_diagnostics = {
-        "main": "accepted" if guided_month else _voice_error("monthly"),
-        "dated_events": "accepted" if event_generated else _voice_error("monthly_events"),
-    }
-    monthly_sections: dict[str, object] = {"dated_events": event_generated or {}}
-    required_sections = ["dated_events"]
-    monthly_bundle = assemble_report_bundle(
-        "monthly",
-        main=guided_month,
-        sections=monthly_sections,
-        required_sections=tuple(required_sections),
-    )
-    st.session_state["monthly-voice-bundle-v336"] = {
-        key: monthly_bundle[key]
-        for key in ("report_id", "status", "complete", "missing_sections", "component_status")
-    }
-    st.session_state["monthly-voice-bundle-v336"]["diagnostics"] = monthly_voice_diagnostics
-    st.markdown(
-        """
-        <style>
-        .timing-watch{
-            margin:.55rem 0 0;
-            font-size:.92rem;
-            line-height:1.45;
-        }
-        .luna-voice-lead{
-            font-family:"Bauer Bodoni","Bodoni 72",Didot,Georgia,serif;
-            font-size:1.12rem;
-            line-height:1.45;
-            margin:.2rem 0 .8rem;
-        }
-        @media (max-width:700px){
-            .solar-orientation-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-            .solar-orientation-grid > div:nth-child(2){border-right:0 !important;}
-            .solar-orientation-grid > div:nth-child(-n+2){border-bottom:1px solid #111;}
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f'<div class="eyebrow">MONTHLY · {escape(sign.upper())} · {escape(forecast_label.upper())}</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="editorial-title">{escape(str(guided_month["headline"]) if guided_month else f"{sign} · {forecast_label}")}</div>',
-        unsafe_allow_html=True,
-    )
-
-    solar = dict(result.get("solar_convergence") or {})
-    if solar:
-        start_sun = str(solar.get("start_solar_sign") or solar.get("solar_sign") or "—")
-        end_sun = str(solar.get("end_solar_sign") or solar.get("solar_sign") or "—")
-        current_sun = start_sun if start_sun == end_sun else f"{start_sun} → {end_sun}"
-        next_gate = solar_gate_label(str(solar.get("next_solar_gate") or "Solar gate"))
-        next_gate_date = human_date(solar.get("next_gate_date")) if solar.get("next_gate_date") else "—"
-        solar_html = (
-            '<div class="solar-orientation-grid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-top:1px solid #111;border-bottom:1px solid #111;margin:1.35rem 0 1.5rem">'
-            f'<div style="padding:.8rem;border-right:1px solid #111"><span class="timing-meta">YOUR SUN / HOUSE 1</span><br><strong>{escape(sign)}</strong></div>'
-            f'<div style="padding:.8rem;border-right:1px solid #111"><span class="timing-meta">MOVING SUN</span><br><strong>{escape(current_sun)}</strong></div>'
-            f'<div style="padding:.8rem;border-right:1px solid #111"><span class="timing-meta">NEXT SOLAR ANCHOR</span><br><strong>{escape(next_gate)}</strong></div>'
-            f'<div style="padding:.8rem"><span class="timing-meta">ANCHOR DATE</span><br><strong>{escape(next_gate_date)}</strong></div>'
-            '</div>'
-        )
-        st.markdown(solar_html, unsafe_allow_html=True)
-
-    if guided_month:
-        _render_guided_luna_story(guided_month, "Luna's month ahead")
-    else:
-        _render_voice_unavailable(facts_label="calculated monthly evidence below")
-        st.caption("Monthly voice diagnostic · main interpretation is not yet published")
-        with st.expander("Monthly voice technical diagnostic"):
-            st.markdown(f"**Main:** {escape(monthly_voice_diagnostics['main'])}")
-
-    detail_label = (
-        "Calculated dates and Luna's detailed reading"
-        if event_generated
-        else "Calculated dates"
-    )
-    with st.expander(detail_label, expanded=False):
+    year, month, _ = monthly_period_from_result(result, narrative)
+    _render_free_plain("monthly", date(year, month, 1), sign)
+    with st.expander("Key dates", expanded=False):
         _render_monthly_reader_calendar_streamlit(
-            narrative,
-            result,
-            sign=sign,
-            timezone_name=timezone_name,
-            voice_items=event_voice_items,
-        )
-
-    if not event_generated:
-        with st.expander("Monthly dated-voice diagnostic"):
-            st.markdown(f"**Dated events:** {escape(monthly_voice_diagnostics['dated_events'])}")
-
-    _monthly_chart_in_motion(
-        snapshot,
-        result,
-        events,
-        sign,
-        include_legacy_interpretation=False,
-    )
-
-    # Preserve the full technical trace without making the reader re-read the
-    # month in a second chronology.
-    if events:
-        with st.expander("Why Luna sees these dates"):
-            for event in events:
-                st.markdown(f"**{event['transit']}** · active {event['influence']}")
-                if event["houses"]:
-                    labels = ", ".join(
-                        f"house {h} — {HOUSE_NAMES.get(h, '')}" for h in sorted(event["houses"])
-                    )
-                    st.markdown(labels)
-
-    return
-
-    st.markdown("## Where it lands")
-
-    voice_used = [_monthly_main_headline(narrative, sign)]
-    for event in events:
-        voice_used.extend([
-            str(event.get("title") or ""),
-            str(event.get("voice_lead") or ""),
-            str(event.get("move") or ""),
-            str(event.get("watch") or ""),
-        ])
-    area_copy = _luna_voice_v2_areas(sign, voice_used, period_key)
-
-    for category in ("LOVE", "WORK", "MONEY"):
-        visible_title, visible_body = area_copy[category]
-        st.markdown(f'<div class="timing-meta">{category}</div>', unsafe_allow_html=True)
-        st.markdown(f"### {escape(finalize_customer_prose(visible_title, product='monthly'))}")
-        _render_luna_prose(visible_body, product="monthly")
-
-    move_title, move_steps = _monthly_action_plan(narrative, result)
-    st.markdown("## Your move")
-    if move_title:
-        st.markdown(f"### {finalize_customer_prose(move_title, product='monthly')}")
-    if move_steps:
-        for index, step in enumerate(move_steps, start=1):
-            cleaned_step = _monthly_clean_final_step(step)
-            if cleaned_step:
-                st.markdown(f"{index}. {cleaned_step}")
-    else:
-        fallback = next((event["move"] for event in reversed(events) if event["move"]), "")
-        if fallback:
-            _render_luna_prose(fallback, product="monthly")
+            narrative, result, sign=sign, timezone_name=timezone_name, voice_items={})
+    events = _monthly_canonical_events(narrative, result)
+    _monthly_chart_in_motion(snapshot, result, events, sign, include_legacy_interpretation=False)
 
 
 def _render_monthly_result_actions(sign: str, year: int, month: int) -> None:

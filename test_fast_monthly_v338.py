@@ -91,6 +91,5 @@ def test_public_monthly_source_has_no_natal_form_or_live_voice_in_published_mode
     assert "birth_date" not in public_form
     assert "birth_time" not in public_form
     assert "birth_city" not in public_form
-    assert 'LUNA_VOICE_MODE == "live"' in source
-    assert "load_monthly_voice_candidate" in source
-
+    assert '_render_free_plain("monthly", date(year, month, 1), sign)' in source
+    assert "load_plain_reading(packet)" in source
