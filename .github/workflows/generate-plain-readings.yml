@@ -1,0 +1,75 @@
+name: Generate Luna plain-text readings
+on:
+  schedule:
+    # 20:00 AEST / 21:00 AEDT: prepare tomorrow before Sydney midnight.
+    - cron: '0 10 * * *'
+    # Saturday evening Sydney: prepare the coming Monday's week.
+    - cron: '0 11 * * 6'
+    # The 25th in Sydney: prepare next month.
+    - cron: '0 10 25 * *'
+  workflow_dispatch:
+    inputs:
+      product:
+        description: Reading product
+        required: true
+        type: choice
+        options: [daily, weekly, monthly]
+      date:
+        description: Target date YYYY-MM-DD (Monday for Weekly; first day for Monthly)
+        required: true
+        type: string
+      sign:
+        description: Optional sign to retry; blank generates all twelve
+        required: false
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: luna-plain-reading-writer
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing app dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Generate independent sign readings
+        env:
+          LUNA_VOICE_BASE_URL: ${{ secrets.LUNA_VOICE_BASE_URL || vars.LUNA_VOICE_BASE_URL }}
+          LUNA_VOICE_MODEL: ${{ secrets.LUNA_VOICE_MODEL || vars.LUNA_VOICE_MODEL }}
+          LUNA_VOICE_API_KEY: ${{ secrets.LUNA_VOICE_API_KEY }}
+          REQUEST_PRODUCT: ${{ inputs.product }}
+          REQUEST_DATE: ${{ inputs.date }}
+          REQUEST_SIGN: ${{ inputs.sign }}
+          SCHEDULE: ${{ github.event.schedule }}
+        shell: bash
+        run: |
+          product="$REQUEST_PRODUCT"
+          if [ -z "$product" ]; then
+            case "$SCHEDULE" in
+              '0 11 * * 6') product=weekly ;;
+              '0 10 25 * *') product=monthly ;;
+              *) product=daily ;;
+            esac
+          fi
+          args=(--product "$product")
+          if [ -n "$REQUEST_DATE" ]; then args+=(--date "$REQUEST_DATE"); fi
+          if [ -n "$REQUEST_SIGN" ]; then args+=(--sign "$REQUEST_SIGN"); fi
+          python scripts/generate_plain_readings.py "${args[@]}"
+      - name: Save completed signs even if another sign failed
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -d generated/readings ]; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- generated/readings
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Publish Luna plain-text readings'
+          git pull --rebase
+          git push
