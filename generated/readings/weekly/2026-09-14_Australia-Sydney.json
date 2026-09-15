@@ -53,10 +53,37 @@
       "voice_version": "plain-text-1",
       "voice_body": "Your week starts with a sudden spark of insight that feels like a bolt of lightning: Mercury trine Uranus in the career house pushes you to rethink how you present yourself to the world. A fresh idea—maybe a new project, a different angle on an old report—comes to you in a flash, and you’ll feel the urge to act before anyone else does. The Sun sextile Mars at dawn gives you that extra push, turning curiosity into concrete action; imagine grabbing a coffee with a colleague to pitch a prototype that could redefine your role.  \n\nLater, the Moon’s dance with Uranus and Jupiter reminds you that emotional turbulence can also bring abundance. When the Moon squares Saturn, a stubborn deadline or a rigid routine threatens to stall you, but the trine to Jupiter offers a cushion of optimism. Use the tension as a catalyst: tweak your schedule, set micro‑goals, and celebrate the small wins. Your move: schedule a 15‑minute “innovation sprint” tomorrow and let the sparks fly.",
       "status": "published"
+    },
+    "Aries": {
+      "product": "weekly",
+      "period": "2026-09-14",
+      "sign": "Aries",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Monday · Mercury trine Uranus · major sky event",
+        "Tuesday · Sun sextile Mars · exact today · approximately 5:53 am AEST",
+        "Wednesday · Neptune sextile Pluto · major sky event",
+        "Also active · Venus square Pluto",
+        "Thursday · Moon opposite Uranus · exact today · approximately 1:58 pm AEST",
+        "Friday · Moon trine Jupiter · exact today · approximately 1:01 pm AEST",
+        "Also active · Mercury opposite Saturn",
+        "Saturday · Mercury opposite Saturn · separating · 0.27° orb at closest approach",
+        "Sunday · Moon square Saturn · exact today · approximately 3:59 pm AEST"
+      ],
+      "life_areas": [
+        "identity, energy and personal direction",
+        "relationships, clients, contracts and competitors",
+        "communication, sales, learning and local movement",
+        "networks, audiences, alliances and long-term goals"
+      ],
+      "facts_hash": "0c88e339ea4546a53c74eb687d15337057e546189f2254a7e90f466a01fc2764",
+      "voice_version": "plain-text-1",
+      "voice_body": "You’re in the thick of an Aries‑charged week where the mind feels like a high‑speed train on a track that’s suddenly been rewired. Monday’s Mercury‑Uranus trine opens a tunnel for ideas that leap from the abstract to the actionable—think a client pitch that turns into a partnership overnight. By Tuesday, the Sun’s sextile Mars sparks a burst of confidence; you can launch that pitch at dawn, feel the adrenaline, and watch the room shift. The week’s slow undercurrent is the Neptune‑Pluto alignment, nudging you to let deeper motives surface—perhaps a long‑term goal that feels suddenly attainable. Thursday’s Moon‑Uranus opposition will test your flexibility; if a plan stalls, improvise or pivot, because the universe is offering a new angle. Friday’s Moon‑Jupiter trine is the sweet spot for closing deals or solidifying alliances—use the optimism to seal contracts or expand your network.  \n\nYour move: schedule a brainstorming session now, then act on the first spark that feels right.",
+      "status": "published"
     }
   },
   "jobs": {
-    "Aries": "failed",
+    "Aries": "published",
     "Taurus": "failed",
     "Gemini": "failed",
     "Cancer": "failed",
