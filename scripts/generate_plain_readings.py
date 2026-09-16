@@ -59,13 +59,28 @@ def main(argv=None):
     from reading_facts import build_packet
     from site_config import DEFAULT_TIMEZONE
     parser = argparse.ArgumentParser()
-    parser.add_argument("--product", choices=("daily", "weekly", "monthly", "studio"), required=True)
+    parser.add_argument("--product", choices=("daily", "weekly", "monthly", "studio", "all"), required=True)
     parser.add_argument("--date", help="Explicit period date for manual runs")
     parser.add_argument("--sign", choices=SIGNS)
     parser.add_argument("--timezone", default=DEFAULT_TIMEZONE)
     parser.add_argument("--pause", type=float, default=30.0)
     args = parser.parse_args(argv)
     today = datetime.now(ZoneInfo(args.timezone)).date()
+    if args.product == "all":
+        chosen = args.date or today.isoformat()
+        result = 0
+        for product in ("daily", "weekly", "monthly"):
+            forwarded = ["--product", product, "--date", chosen,
+                         "--timezone", args.timezone, "--pause", str(args.pause)]
+            if args.sign:
+                forwarded += ["--sign", args.sign]
+            status = main(forwarded)
+            result = max(result, status)
+            if status == 2:
+                break
+            if args.pause and product != "monthly":
+                time.sleep(args.pause)
+        return result
     if args.date:
         target = date.fromisoformat(args.date)
     elif args.product == "monthly":

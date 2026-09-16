@@ -4010,7 +4010,7 @@ def weekly_studio_page() -> None:
     current = default_week_start(today)
     monday = st.selectbox("Choose week", options, index=options.index(current),
                           format_func=lambda value: _weekly_choice_label(value, current))
-    st.caption(f"{week_label(monday)} · {DEFAULT_TIMEZONE}")
+    st.caption(f"{_weekly_choice_label(monday, current)} · {DEFAULT_TIMEZONE}")
     with st.expander("How to use this studio", expanded=True):
         st.markdown("""1. Use **One changing sky** for the weekly master voiceover, approximately 45 seconds.
 2. Copy the **1080 × 1920 sign cards** into your portrait design.

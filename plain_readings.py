@@ -49,6 +49,11 @@ def prompt_for(packet: dict) -> str:
     product = packet["product"]
     low, high = WORD_RANGES[product]
     brief = {k: v for k, v in packet.items() if k != "calculation_header"}
+    guidance = {
+        "daily": "Explain the strongest aspect, then how the supporting influences change the practical picture today. ",
+        "weekly": "Trace the early-week, midweek and weekend progression. Connect support and pressure, rather than describing only the easiest aspects. ",
+        "monthly": "Build a beginning, middle and end for the month. Explain the turning points, including supplied eclipses and seasonal gates. Group related events into human themes instead of reciting every transit. ",
+    }.get(product, "Explain the collective pattern clearly for a spoken video. ")
     return (
         "You are Luna. Interpret this calculated brief as one connected human story. "
         "Python has already calculated the sky; do not recalculate or add events, dates, "
@@ -58,6 +63,12 @@ def prompt_for(packet: dict) -> str:
         "Write alive, intimate, imperative-led prose. Be incisive, humorous and affirming. "
         "Include a restrained tongue-in-cheek observation when it fits. Give concrete examples "
         "supported by the brief, connect pressure with support, and keep the reader's agency. "
+        "For each important aspect you mention, explain its symbolic meaning in ordinary language, "
+        "then connect it to the supplied life areas and a useful response. "
+        "Treat examples as choices, not predictions: no invented windfalls, meetings, investment gains or personal events. "
+        "Use a house number only when the brief explicitly associates that house with that event. "
+        "Never turn a closest-approach label into an exact time, or imply a guaranteed effect. "
+        + guidance +
         "No dreary advice template, generic flattery, cosmic filler, guarantees or magical promises. "
         "Do not repeat the calculation list.\n\n"
         f"Aim for roughly {low}-{high} words in {PARAGRAPHS[product]} short paragraphs. Prioritise a complete, useful reading over an exact count. "
@@ -117,7 +128,7 @@ def write_document(path: Path, document: dict) -> None:
 def split_move(body: str) -> tuple[str, str]:
     """Extract the last sentence without losing paragraph breaks or duplicating it."""
     body = re.sub(r"(?im)^\s*(?:\*\*)?your move(?:\*\*)?\s*[:—–-]\s*", "", body.strip())
-    endings = list(re.finditer(r'[.!?][”"\u2019]?\s+(?=[A-Z])', body))
+    endings = list(re.finditer(r'[.!?][”"\u2019]?\s+(?=\S)', body))
     if not endings:
         return "", body
     boundary = endings[-1].end()
@@ -126,7 +137,14 @@ def split_move(body: str) -> tuple[str, str]:
 
 
 def reading_html(packet: dict, reading: dict | None) -> str:
-    header = "".join(f"<li>{escape(str(line))}</li>" for line in packet["calculation_header"])
+    lines = list(dict.fromkeys(packet["calculation_header"]))
+    if packet["product"] == "monthly":
+        unique = {}
+        for line in lines:
+            key = str(line).casefold().replace("opposition", "opposite")
+            unique.setdefault(key, line)
+        lines = sorted(unique.values(), key=str)
+    header = "".join(f"<li>{escape(str(line))}</li>" for line in lines)
     areas = escape(" · ".join(packet["life_areas"]))
     html = ('<style>.luna-plain-reading{max-width:820px;overflow-wrap:anywhere;}'
             '.luna-plain-reading p{line-height:1.65;}'

@@ -102,8 +102,6 @@ def generate_text(packet: dict, *, post=None, sleep=time.sleep) -> str:
         if not errors:
             return body.strip()
         if revision < 1:
-            low, high = WORD_RANGES[packet['product']]
-            target = (low + high) // 2
             # Edit the rejected draft. The old loop asked for a brand-new draft each time.
             messages = messages[:2] + ([{'role': 'assistant', 'content': body}] if isinstance(body, str) else [])
             messages.append({'role': 'user', 'content':
