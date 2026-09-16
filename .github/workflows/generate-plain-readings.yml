@@ -1,4 +1,5 @@
 name: Generate Luna plain-text readings
+run-name: Luna ${{ inputs.product || 'scheduled' }} · ${{ inputs.date || 'next period' }} · ${{ inputs.sign || 'all signs' }}
 on:
   schedule:
     # 20:00 AEST / 21:00 AEDT: prepare tomorrow before Sydney midnight.
@@ -10,12 +11,12 @@ on:
   workflow_dispatch:
     inputs:
       product:
-        description: Reading product
+        description: all = Daily + Weekly + Monthly; studio = video scripts
         required: true
         type: choice
-        options: [daily, weekly, monthly]
+        options: [all, daily, weekly, monthly, studio]
       date:
-        description: Target date YYYY-MM-DD (Monday for Weekly; first day for Monthly)
+        description: Target date YYYY-MM-DD (all uses its day, week and month)
         required: true
         type: string
       sign:
@@ -30,7 +31,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
