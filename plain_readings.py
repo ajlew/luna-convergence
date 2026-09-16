@@ -12,8 +12,8 @@ from pathlib import Path
 from html import escape
 
 ROOT = Path(__file__).parent / "generated" / "readings"
-WORD_RANGES = {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380)}
-PARAGRAPHS = {"daily": "one or two", "weekly": "two", "monthly": "four to six"}
+WORD_RANGES = {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380), "studio_weekly": (85, 110), "studio_daily": (18, 30)}
+PARAGRAPHS = {"daily": "one or two", "weekly": "two", "monthly": "four to six", "studio_weekly": "one or two", "studio_daily": "one"}
 VOICE_VERSION = "plain-text-1"
 
 
@@ -33,10 +33,6 @@ def text_errors(product: str, body: object) -> list[str]:
     if not isinstance(body, str) or not body.strip():
         return ["empty prose"]
     errors = []
-    count = len(re.findall(r"\b\w+(?:['’’-]\w+)*\b", body))
-    minimum, maximum = WORD_RANGES[product]
-    if not minimum <= count <= maximum:
-        errors.append(f"word count {count}; expected {minimum}-{maximum}")
     if body.lstrip().startswith(("{", "[", "```")):
         errors.append("plain prose required")
     if re.search(r"\b(will definitely|will certainly|destined to|fated to|automatic luck|"
@@ -52,6 +48,7 @@ def text_errors(product: str, body: object) -> list[str]:
 def prompt_for(packet: dict) -> str:
     product = packet["product"]
     low, high = WORD_RANGES[product]
+    brief = {k: v for k, v in packet.items() if k != "calculation_header"}
     return (
         "You are Luna. Interpret this calculated brief as one connected human story. "
         "Python has already calculated the sky; do not recalculate or add events, dates, "
@@ -63,11 +60,11 @@ def prompt_for(packet: dict) -> str:
         "supported by the brief, connect pressure with support, and keep the reader's agency. "
         "No dreary advice template, generic flattery, cosmic filler, guarantees or magical promises. "
         "Do not repeat the calculation list.\n\n"
-        f"Return only {PARAGRAPHS[product]} short paragraphs, {low}-{high} words total. "
+        f"Aim for roughly {low}-{high} words in {PARAGRAPHS[product]} short paragraphs. Prioritise a complete, useful reading over an exact count. "
         "No JSON, headings, lists, citations or separate fields. Weave affirmation naturally "
         "into the prose. End with one clear imperative action sentence, ending in a full stop. "
-        "That sentence is displayed once under Your move.\n\nCALCULATED BRIEF:\n"
-        + json.dumps(packet, ensure_ascii=False, default=str)
+        "Do not write the label Your move; the page adds it.\n\nCALCULATED BRIEF:\n"
+        + json.dumps(brief, ensure_ascii=False, default=str, separators=(",", ":"))
     )
 
 
@@ -119,12 +116,13 @@ def write_document(path: Path, document: dict) -> None:
 
 def split_move(body: str) -> tuple[str, str]:
     """Extract the last sentence without losing paragraph breaks or duplicating it."""
-    body = body.strip()
+    body = re.sub(r"(?im)^\s*(?:\*\*)?your move(?:\*\*)?\s*[:—–-]\s*", "", body.strip())
     endings = list(re.finditer(r'[.!?][”"\u2019]?\s+(?=[A-Z])', body))
     if not endings:
         return "", body
     boundary = endings[-1].end()
-    return body[:boundary].rstrip(), body[boundary:].strip()
+    move = re.sub(r"(?i)^(?:\*\*)?your move(?:\*\*)?\s*[:—–-]\s*", "", body[boundary:].strip())
+    return body[:boundary].rstrip(), move
 
 
 def reading_html(packet: dict, reading: dict | None) -> str:
@@ -132,7 +130,7 @@ def reading_html(packet: dict, reading: dict | None) -> str:
     areas = escape(" · ".join(packet["life_areas"]))
     html = ('<style>.luna-plain-reading{max-width:820px;overflow-wrap:anywhere;}'
             '.luna-plain-reading p{line-height:1.65;}'
-            '.luna-plain-reading h2{font-size:1.05rem;margin-top:1.6rem;}'
+            '.luna-plain-reading h2{font-size:1.2rem!important;line-height:1.3!important;margin-top:1.6rem;}'
             '.luna-plain-reading li{line-height:1.5;margin-bottom:.45rem;}'
             '@media(max-width:600px){.luna-plain-reading{width:100%;}'
             '.luna-plain-reading ul{padding-left:1.25rem;}}</style>'

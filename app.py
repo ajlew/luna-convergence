@@ -4000,34 +4000,92 @@ def weekly_page() -> None:
 
 
 def weekly_studio_page() -> None:
-    """Website, social-card excerpt and full video copy share the same saved prose."""
+    """Production tools reuse scheduled prose; opening this page never calls the LLM."""
+    from studio_readings import studio_packet, COLLECTIVE, publishing_copy, sign_card
+    set_page_metadata("Weekly Video Studio | Luna Convergence",
+                      "Weekly video, twelve sign cards and seven daily clips.", "/weekly-studio")
     st.markdown("## Weekly video studio")
     today = datetime.now(ZoneInfo(DEFAULT_TIMEZONE)).date()
     options = _weekly_choice_options(today)
     current = default_week_start(today)
     monday = st.selectbox("Choose week", options, index=options.index(current),
                           format_func=lambda value: _weekly_choice_label(value, current))
-    st.caption("Sydney dates. Generate or retry a sign through the scheduled reading job. Studio only reads saved text.")
-    copies = []
+    st.caption(f"{week_label(monday)} · {DEFAULT_TIMEZONE}")
+    with st.expander("How to use this studio", expanded=True):
+        st.markdown("""1. Use **One changing sky** for the weekly master voiceover, approximately 45 seconds.
+2. Copy the **1080 × 1920 sign cards** into your portrait design.
+3. Use **Monday–Sunday clips** for seven separate short videos, approximately 8–12 seconds each.
+4. Copy the publishing text into YouTube and Instagram. Check the spoken timing before export.
+5. Download the scripts below. Keep the full sign reading on the website.
+
+One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.""")
+    master_packet = studio_packet("studio_weekly", monday, COLLECTIVE, DEFAULT_TIMEZONE)
+    master = load_plain_reading(master_packet)
+    st.markdown("### One changing sky")
+    if master:
+        st.code(master["voice_body"], language=None, wrap_lines=True)
+        st.download_button("Download 45-second master script", master["voice_body"],
+                           file_name=f"luna-master-{monday}.txt", mime="text/plain")
+    with st.expander("The shared sky · Seven calculated days"):
+        for row in master_packet["events"]:
+            st.markdown(f"**{row['date']} · {row['event']}**")
+            for support in row["supporting_events"]:
+                st.write(f"Also active · {support}")
+    st.markdown("### Week Ahead publishing copy")
+    if master:
+        package = publishing_copy(monday, master["voice_body"], PUBLIC_SITE_URL)
+        for label, text in package.items():
+            st.markdown(f"**{label}**")
+            st.code(text, language=None, wrap_lines=True)
+        st.download_button("Download Week Ahead publishing copy",
+                           "\n\n".join(f"{k}\n{v}" for k, v in package.items()),
+                           file_name=f"luna-publishing-{monday}.txt", mime="text/plain")
+    st.markdown("### 12 sign cards · 1080 × 1920")
+    cards, narrations = [], []
     for sign in SIGNS:
         packet = _cached_plain_packet("weekly", monday, sign, DEFAULT_TIMEZONE)
         reading = load_plain_reading(packet)
         with st.expander(sign):
             st.markdown(plain_reading_html(packet, reading), unsafe_allow_html=True)
             if reading:
-                body = reading["voice_body"]
-                _, move = split_plain_move(body)
-                st.markdown("**Social card excerpt · final action**")
-                st.code(f"{sign} · {packet['period']}\n{move}", language=None)
-                st.markdown("**Full website / video narration**")
-                st.code(body, language=None, wrap_lines=True)
-                copies.append(f"{sign} · {packet['period']}\n\n{body}")
-            else:
-                st.caption("No current reading. Retry this sign in the reading-generation job.")
-    if copies:
-        st.download_button("Download Weekly narration", data="\n\n---\n\n".join(copies),
-                            file_name=f"luna-weekly-{monday.isoformat()}.txt", mime="text/plain")
-
+                card = sign_card(sign, monday, reading["voice_body"])
+                st.markdown("**1080 × 1920 social card copy**")
+                st.code(card, language=None, wrap_lines=True)
+                st.markdown("**Full website / sign narration**")
+                st.code(reading["voice_body"], language=None, wrap_lines=True)
+                cards.append(card)
+                narrations.append(f"{sign}\n\n{reading['voice_body']}")
+    if cards:
+        st.download_button(f"Download sign cards copy ({len(cards)}/12)", "\n\n---\n\n".join(cards),
+                           file_name=f"luna-sign-cards-{monday}.txt", mime="text/plain")
+        st.download_button("Download Weekly narration", "\n\n---\n\n".join(narrations),
+                           file_name=f"luna-weekly-{monday}.txt", mime="text/plain")
+    st.markdown("### Monday–Sunday clips")
+    scripts = []
+    for offset in range(7):
+        day = monday + timedelta(days=offset)
+        packet = studio_packet("studio_daily", day, COLLECTIVE, DEFAULT_TIMEZONE)
+        reading = load_plain_reading(packet)
+        with st.expander(day.strftime("%A · %d %B")):
+            for line in packet["calculation_header"]:
+                st.write(line)
+            if reading:
+                text = reading["voice_body"]
+                st.markdown("**8–12 second script**")
+                st.code(text, language=None, wrap_lines=True)
+                st.markdown("**Title**")
+                st.code(f"{day:%A %d %B} | {packet['events'][0]['event']}", language=None)
+                st.markdown("**Caption**")
+                st.code(f"{text}\n\n{PUBLIC_SITE_URL}/weekly-view\n#astrology #horoscope #LunaConvergence", language=None)
+                scripts.append(f"{day:%A %d %B}\n\n{text}")
+    if scripts:
+        st.download_button(f"Download daily scripts ({len(scripts)}/7)", "\n\n---\n\n".join(scripts),
+                           file_name=f"luna-daily-clips-{monday}.txt", mime="text/plain")
+    if WEEKLY_BACKGROUND_PATH.exists():
+        st.download_button("Download 1080 × 1920 background", WEEKLY_BACKGROUND_PATH.read_bytes(),
+                           file_name=WEEKLY_BACKGROUND_PATH.name, mime="image/png")
+    st.caption(f"Saved for this week: {len(cards)}/12 sign scripts · {len(scripts)}/7 daily clips · "
+               f"{1 if master else 0}/1 weekly master.")
 
 
 # ---------------------------------------------------------------------------

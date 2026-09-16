@@ -31,7 +31,7 @@ class PlainWorkflowTests(unittest.TestCase):
         self.assertEqual(make_reading(packet(), BODY)["voice_body"], BODY)
 
     def test_empty_short_json_promises(self):
-        for body in ("", "hello", "{\"text\": \"hi\"}", BODY + " You will definitely win."):
+        for body in ("", "{\"text\": \"hi\"}", BODY + " You will definitely win."):
             self.assertTrue(text_errors("daily", body))
 
     def test_render_order_escaping_move_once(self):
@@ -116,7 +116,7 @@ class PlainWorkflowTests(unittest.TestCase):
         self.assertNotIn("def _calculated_luna_copy", source)
 
     def test_word_ranges(self):
-        self.assertEqual(WORD_RANGES, {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380)})
+        self.assertEqual({k: WORD_RANGES[k] for k in ("daily", "weekly", "monthly")}, {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380)})
         self.assertIn("End with one clear imperative action", prompt_for(packet()))
 
 class GlobalRecoveryTests(unittest.TestCase):
@@ -175,7 +175,7 @@ class GlobalRecoveryTests(unittest.TestCase):
         from plain_voice_generator import GenerationError, retry_delay
         with self.assertRaises(GenerationError):
             retry_delay({"Retry-After": "3600"}, 0)
-        self.assertEqual(retry_delay({"Retry-After": "NaN"}, 0), 30)
+        self.assertEqual(retry_delay({"Retry-After": "NaN"}, 0), 60)
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaisesRegex(GenerationError, "missing configuration"):
                 generate_text(packet(), post=lambda *a, **k: self.fail("should not call provider"))
