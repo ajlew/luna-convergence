@@ -519,7 +519,7 @@ h1,
 h2,
 [data-testid="stMarkdownContainer"] h2 {
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, "Times New Roman", serif !important;
-    font-size:clamp(2rem, 4vw, 4rem) !important;
+    font-size:clamp(1.7rem, 3vw, 2.55rem) !important;
     line-height:1.02 !important;
     margin-top: 2.6rem !important;
 }
@@ -527,7 +527,7 @@ h2,
 h3,
 [data-testid="stMarkdownContainer"] h3 {
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, "Times New Roman", serif !important;
-    font-size:clamp(1.35rem, 2vw, 2rem) !important;
+    font-size:clamp(1.7rem, 3vw, 2.55rem) !important;
     line-height:1.12 !important;
 }
 
@@ -4031,6 +4031,20 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
             st.markdown(f"**{row['date']} · {row['event']}**")
             for support in row["supporting_events"]:
                 st.write(f"Also active · {support}")
+    from luna_reading_style import meaning_html
+    st.markdown("### Day-by-day astrological breakdown")
+    meanings = []
+    for offset in range(7):
+        day = monday + timedelta(days=offset)
+        packet = studio_packet("studio_meaning", day, COLLECTIVE, DEFAULT_TIMEZONE)
+        reading = load_plain_reading(packet)
+        if reading:
+            event = packet["events"][0]["event"]
+            st.markdown(meaning_html(day, event, reading["voice_body"]), unsafe_allow_html=True)
+            meanings.append(f"{day:%A %d %B} · {event}\n\n{reading['voice_body']}")
+    if meanings:
+        st.download_button("Download meaning & energy", "\n\n".join(meanings),
+                           file_name=f"luna-meaning-energy-{monday}.txt", mime="text/plain")
     st.markdown("### Week Ahead publishing copy")
     if master:
         package = publishing_copy(monday, master["voice_body"], PUBLIC_SITE_URL)
@@ -4085,7 +4099,7 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
         st.download_button("Download 1080 × 1920 background", WEEKLY_BACKGROUND_PATH.read_bytes(),
                            file_name=WEEKLY_BACKGROUND_PATH.name, mime="image/png")
     st.caption(f"Saved for this week: {len(cards)}/12 sign scripts · {len(scripts)}/7 daily clips · "
-               f"{1 if master else 0}/1 weekly master.")
+               f"{1 if master else 0}/1 weekly master · {len(meanings)}/7 meaning & energy readings.")
 
 
 # ---------------------------------------------------------------------------

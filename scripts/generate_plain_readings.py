@@ -81,6 +81,17 @@ def main(argv=None):
             if args.pause and product != "monthly":
                 time.sleep(args.pause)
         return result
+    # Scheduled Daily repairs today first, then prepares tomorrow. Cached signs cost no calls.
+    if args.product == "daily" and not args.date:
+        result = 0
+        for day in (today, today + timedelta(days=1)):
+            status = main(["--product", "daily", "--date", day.isoformat(),
+                           "--timezone", args.timezone, "--pause", str(args.pause)]
+                          + (["--sign", args.sign] if args.sign else []))
+            result = max(result, status)
+            if status == 2:
+                break
+        return result
     if args.date:
         target = date.fromisoformat(args.date)
     elif args.product == "monthly":
@@ -104,7 +115,8 @@ def main(argv=None):
     if args.product == "studio":
         from studio_readings import studio_packet, COLLECTIVE
         for product, day in [("studio_weekly", target)] + [
-                ("studio_daily", target + timedelta(days=i)) for i in range(7)]:
+                (kind, target + timedelta(days=i))
+                for i in range(7) for kind in ("studio_meaning", "studio_daily")]:
             if args.pause:
                 time.sleep(args.pause)
             status = run_signs(product, day, args.timezone, [COLLECTIVE],

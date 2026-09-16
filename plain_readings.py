@@ -12,8 +12,8 @@ from pathlib import Path
 from html import escape
 
 ROOT = Path(__file__).parent / "generated" / "readings"
-WORD_RANGES = {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380), "studio_weekly": (85, 110), "studio_daily": (18, 30)}
-PARAGRAPHS = {"daily": "one or two", "weekly": "two", "monthly": "four to six", "studio_weekly": "one or two", "studio_daily": "one"}
+WORD_RANGES = {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380), "studio_weekly": (85, 110), "studio_daily": (18, 30), "studio_meaning": (55, 90)}
+PARAGRAPHS = {"daily": "one or two", "weekly": "two", "monthly": "four to six", "studio_weekly": "one or two", "studio_daily": "one", "studio_meaning": "one or two"}
 VOICE_VERSION = "plain-text-1"
 
 
@@ -50,6 +50,7 @@ def prompt_for(packet: dict) -> str:
     low, high = WORD_RANGES[product]
     brief = {k: v for k, v in packet.items() if k != "calculation_header"}
     guidance = {
+        "studio_meaning": "Explain this day’s collective meaning and energy. Name the main aspect and explain how active supporting aspects colour it. Distinguish slow background changes from brief emotional triggers. Offer a concrete response without personal houses or birth-chart claims. ",
         "daily": "Explain the strongest aspect, then how the supporting influences change the practical picture today. ",
         "weekly": "Trace the early-week, midweek and weekend progression. Connect support and pressure, rather than describing only the easiest aspects. ",
         "monthly": "Build a beginning, middle and end for the month. Explain the turning points, including supplied eclipses and seasonal gates. Group related events into human themes instead of reciting every transit. ",
@@ -146,16 +147,12 @@ def reading_html(packet: dict, reading: dict | None) -> str:
         lines = sorted(unique.values(), key=str)
     header = "".join(f"<li>{escape(str(line))}</li>" for line in lines)
     areas = escape(" · ".join(packet["life_areas"]))
-    html = ('<style>.luna-plain-reading{max-width:820px;overflow-wrap:anywhere;}'
-            '.luna-plain-reading p{line-height:1.65;}'
-            '.luna-plain-reading h2{font-size:1.2rem!important;line-height:1.3!important;margin-top:1.6rem;}'
-            '.luna-plain-reading li{line-height:1.5;margin-bottom:.45rem;}'
-            '@media(max-width:600px){.luna-plain-reading{width:100%;}'
-            '.luna-plain-reading ul{padding-left:1.25rem;}}</style>'
-            f'<section class="luna-plain-reading"><div class="eyebrow">'
+    from luna_reading_style import STYLE
+    html = (STYLE + f'<section class="luna-plain-reading"><div class="eyebrow">'
             f'{escape(packet["sign"])} · {escape(packet["period"])}</div>'
-            f'<h2>Key calculations</h2><p>Dates and times: {escape(packet["timezone"])}</p>'
-            f'<ul>{header}</ul><p>{areas}</p>')
+            f'<details class="luna-calculations"><summary>Key calculations</summary>'
+            f'<p>Dates and times: {escape(packet["timezone"])}</p>'
+            f'<ul>{header}</ul><p>{areas}</p></details>')
     if reading:
         body, move = split_move(reading["voice_body"])
         paragraphs = "".join(f"<p>{escape(p)}</p>" for p in re.split(r"\n\s*\n", body) if p)
