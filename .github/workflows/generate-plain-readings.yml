@@ -1,6 +1,16 @@
 name: Generate Luna plain-text readings
-run-name: Luna ${{ inputs.product || 'scheduled' }} · ${{ inputs.date || 'next period' }} · ${{ inputs.sign || 'all signs' }}
+run-name: Luna ${{ inputs.product || 'scheduled' }} · ${{ inputs.date || 'Sydney current period' }} · ${{ inputs.sign || 'all signs' }}
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/generate-plain-readings.yml'
+      - 'scripts/generate_plain_readings.py'
+      - 'plain_readings.py'
+      - 'plain_voice_generator.py'
+      - 'reading_quality.py'
+      - 'reading_facts.py'
+      - 'studio_readings.py'
   schedule:
     # 20:00 AEST / 21:00 AEDT: prepare tomorrow before Sydney midnight.
     - cron: '0 10 * * *'
@@ -13,18 +23,28 @@ on:
   workflow_dispatch:
     inputs:
       product:
-        description: all = Daily + Weekly + Monthly; studio = meaning, energy and video scripts
+        description: all = Daily + Weekly + Studio + Monthly (current copies are skipped)
         required: true
         type: choice
         options: [all, daily, weekly, monthly, studio]
       date:
-        description: Target date YYYY-MM-DD (all uses its day, week and month)
-        required: true
+        description: Target date YYYY-MM-DD; blank uses today in Sydney
+        required: false
         type: string
       sign:
         description: Optional sign to retry; blank generates all twelve
         required: false
         type: string
+      refresh:
+        description: Rewrite selected readings even if current (uses additional LLM calls)
+        required: false
+        type: boolean
+        default: false
+      check_only:
+        description: Check completeness only; no generation charges
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency:
@@ -33,7 +53,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -49,6 +69,9 @@ jobs:
           REQUEST_PRODUCT: ${{ inputs.product }}
           REQUEST_DATE: ${{ inputs.date }}
           REQUEST_SIGN: ${{ inputs.sign }}
+          REQUEST_REFRESH: ${{ inputs.refresh }}
+          CHECK_ONLY: ${{ inputs.check_only }}
+          EVENT_NAME: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
         shell: bash
         run: |
@@ -57,13 +80,26 @@ jobs:
             case "$SCHEDULE" in
               '0 11 * * 6') product=weekly ;;
               '0 10 25 * *') product=monthly ;;
-              *) product=daily ;;
+              *) product=maintain ;;
             esac
           fi
+          # Manual blank dates mean today, never an accidental future date.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -z "$REQUEST_DATE" ]; then
+            REQUEST_DATE=$(python -c 'from datetime import datetime; from zoneinfo import ZoneInfo; print(datetime.now(ZoneInfo("Australia/Sydney")).date())')
+          fi
           args=(--product "$product")
+          if [ "$REQUEST_REFRESH" = "true" ]; then args+=(--refresh); fi
+          if [ "$CHECK_ONLY" = "true" ]; then args+=(--check-only); fi
           if [ -n "$REQUEST_DATE" ]; then args+=(--date "$REQUEST_DATE"); fi
           if [ -n "$REQUEST_SIGN" ]; then args+=(--sign "$REQUEST_SIGN"); fi
-          python scripts/generate_plain_readings.py "${args[@]}"
+          result=0
+          python scripts/generate_plain_readings.py "${args[@]}" || result=$?
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$product" = "weekly" ] && [ "$result" -ne 2 ]; then
+            studio_result=0
+            python scripts/generate_plain_readings.py --product studio || studio_result=$?
+            if [ "$studio_result" -gt "$result" ]; then result=$studio_result; fi
+          fi
+          exit "$result"
       - name: Save completed signs even if another sign failed
         if: always()
         shell: bash
