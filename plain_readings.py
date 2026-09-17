@@ -48,8 +48,10 @@ def text_errors(product: str, body: object) -> list[str]:
 def prompt_for(packet: dict) -> str:
     product = packet["product"]
     low, high = WORD_RANGES[product]
-    brief = {k: v for k, v in packet.items() if k != "calculation_header"}
+    from reading_quality import grounded_brief
+    brief = grounded_brief(packet)
     guidance = {
+        "studio_weekly": "Give a complete collective weekly overview: opening mood, midweek shift, weekend resolution and one useful move. Name the key supporting and challenging aspects. This is also the master voiceover. ",
         "studio_meaning": "Explain this day’s collective meaning and energy. Name the main aspect and explain how active supporting aspects colour it. Distinguish slow background changes from brief emotional triggers. Offer a concrete response without personal houses or birth-chart claims. ",
         "daily": "Explain the strongest aspect, then how the supporting influences change the practical picture today. ",
         "weekly": "Trace the early-week, midweek and weekend progression. Connect support and pressure, rather than describing only the easiest aspects. ",
@@ -61,13 +63,17 @@ def prompt_for(packet: dict) -> str:
         "times, signs or houses. Use the actual supplied life areas. Distinguish slow "
         "background influences from brief triggers; separating does not mean becoming exact. "
         "Describe possibilities, not promised events.\n\n"
-        "Write alive, intimate, imperative-led prose. Be incisive, humorous and affirming. "
+        "Open with a capitalised imperative sentence addressed to the reader. Write alive, intimate, imperative-led prose. Be incisive, humorous and affirming. "
         "Include a restrained tongue-in-cheek observation when it fits. Give concrete examples "
         "supported by the brief, connect pressure with support, and keep the reader's agency. "
         "For each important aspect you mention, explain its symbolic meaning in ordinary language, "
         "then connect it to the supplied life areas and a useful response. "
         "Treat examples as choices, not predictions: no invented windfalls, meetings, investment gains or personal events. "
-        "Use a house number only when the brief explicitly associates that house with that event. "
+        "Use only the event_life_areas belonging to the event you are discussing. Never borrow a life area from a different event. "
+        "For example, translate each supplied house meaning directly rather than guessing from its number. "
+        "Keep house numbers out of the finished prose; explain their supplied human meaning instead. "
+        "Mention and explain every required_turning_point, even when this needs more words. "
+        "Do not predict investment profits, double money, or recommend speculative action. "
         "Never turn a closest-approach label into an exact time, or imply a guaranteed effect. "
         + guidance +
         "No dreary advice template, generic flattery, cosmic filler, guarantees or magical promises. "
@@ -81,12 +87,14 @@ def prompt_for(packet: dict) -> str:
 
 
 def make_reading(packet: dict, body: str) -> dict:
-    errors = text_errors(packet["product"], body)
+    from reading_quality import content_errors, WRITING_REVISION
+    errors = text_errors(packet["product"], body) + content_errors(packet, body)
     if errors:
         raise ValueError("; ".join(errors))
     return {**{key: packet[key] for key in
                ("product", "period", "sign", "timezone", "calculation_header", "life_areas")},
             "facts_hash": packet_hash(packet), "voice_version": VOICE_VERSION,
+            "writing_revision": WRITING_REVISION,
             "voice_body": body.strip(), "status": "published"}
 
 
@@ -155,8 +163,17 @@ def reading_html(packet: dict, reading: dict | None) -> str:
             f'<ul>{header}</ul><p>{areas}</p></details>')
     if reading:
         body, move = split_move(reading["voice_body"])
+        move = re.sub(r"[A-Za-z]", lambda m: m.group().upper(), move, count=1)
         paragraphs = "".join(f"<p>{escape(p)}</p>" for p in re.split(r"\n\s*\n", body) if p)
         html += (f'<h2>Luna’s reading</h2>{paragraphs}<div class="lean-daily-move">'
                  f'<div class="lean-daily-label">Your move</div><p>{escape(move)}</p></div>')
     # Missing prose is not replaced by invented interpretation or internal errors.
     return html + "</section>"
+
+
+def generation_current(value, packet):
+    """Refresh earlier writing once; keep the public storage format compatible."""
+    from reading_quality import WRITING_REVISION, content_errors
+    return (current_reading(value, packet) is not None
+            and value.get('writing_revision') == WRITING_REVISION
+            and not content_errors(packet, value.get('voice_body')))

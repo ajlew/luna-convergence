@@ -19,7 +19,7 @@ def studio_packet(product, target, sign, timezone):
     end = monday + timedelta(days=6) if product == 'studio_weekly' else target
     start = monday if product == 'studio_weekly' else target
     major = [{'date': e.event_date.isoformat(), 'event': e.display_label,
-              'technical': e.technical_label, 'planets': list(e.planets)}
+              'technical': e.technical_label, 'planets': list(e.planets), 'tier': e.tier}
              for e in major_sky_events(start, end, timezone_name=timezone)]
     return {'product': product, 'period': start.isoformat(), 'sign': COLLECTIVE,
             'timezone': timezone, 'calculation_header': [f"{r['date']} · {r['event']}" for r in rows],

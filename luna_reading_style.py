@@ -9,7 +9,9 @@ STYLE = """<style>
 .luna-calculations summary{cursor:pointer;}
 .luna-calculations li{margin:.45rem 0;}
 .luna-editorial{padding:1.35rem 0;border-bottom:1px solid #111;}
-.luna-plain-reading .lean-daily-move p{font-family:"Bodoni Moda",Georgia,serif!important;font-size:clamp(1.7rem,3vw,2.55rem);line-height:1.25;}
+.luna-plain-reading .lean-daily-move p{font-family:"Bodoni Moda",Georgia,serif!important;font-size:clamp(1.2rem,1.8vw,1.5rem);line-height:1.4;}
+.luna-plain-reading .lean-daily-move{max-width:100%;padding:1rem 0;}
+.luna-plain-reading .lean-daily-label{margin:.3rem 0;}
 @media(max-width:600px){.luna-calculations ul{padding-left:1.2rem;}}
 @media print{.luna-calculations::details-content{display:block;content-visibility:visible;}}
 </style>"""

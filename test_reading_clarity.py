@@ -31,7 +31,10 @@ class ClarityTests(unittest.TestCase):
         with patch('scripts.generate_plain_readings.run_signs',return_value=0) as run:
             self.assertEqual(main(['--product','all','--date','2026-09-16','--pause','0']),0)
             self.assertEqual([(c.args[0],c.args[1]) for c in run.call_args_list],
-                [('daily',date(2026,9,16)),('weekly',date(2026,9,14)),('monthly',date(2026,9,1))])
+                [('daily',date(2026,9,16)),('weekly',date(2026,9,14))]
+                + [('studio_weekly',date(2026,9,14))]
+                + [(kind,date(2026,9,14+i)) for i in range(7) for kind in ('studio_meaning','studio_daily')]
+                + [('monthly',date(2026,9,1))])
         with patch('scripts.generate_plain_readings.run_signs',return_value=2) as run:
             self.assertEqual(main(['--product','all','--date','2026-09-16','--pause','0']),2)
             self.assertEqual(run.call_count,1)

@@ -4021,9 +4021,11 @@ def weekly_studio_page() -> None:
 One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.""")
     master_packet = studio_packet("studio_weekly", monday, COLLECTIVE, DEFAULT_TIMEZONE)
     master = load_plain_reading(master_packet)
-    st.markdown("### One changing sky")
+    st.markdown("### Weekly overview · One changing sky")
     if master:
-        st.code(master["voice_body"], language=None, wrap_lines=True)
+        st.markdown(plain_reading_html(master_packet, master), unsafe_allow_html=True)
+        with st.expander("Copy the master voiceover"):
+            st.code(master["voice_body"], language=None, wrap_lines=True)
         st.download_button("Download 45-second master script", master["voice_body"],
                            file_name=f"luna-master-{monday}.txt", mime="text/plain")
     with st.expander("The shared sky · Seven calculated days"):
