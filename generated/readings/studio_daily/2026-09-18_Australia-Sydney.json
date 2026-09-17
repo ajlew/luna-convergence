@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-18",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-18 · Moon trine Jupiter · exact today · approximately 1:01 pm AEST"
+      ],
+      "life_areas": [],
+      "facts_hash": "75632e84adbe6b720b145317dd4fd7946b16ad178678451951e3647c0fa80712",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "Embrace the day’s gentle lift: the Moon’s trine with Jupiter invites optimism, while Mercury’s opposition to Saturn reminds you that clarity often comes after patience. Let curiosity guide your choice—ask a question, draft a plan, or simply pause to savor the moment. Remember, the sky offers support, not a script. Seize the moment and make a decision that feels right.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

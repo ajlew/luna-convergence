@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-14",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-14 · Mercury trine Uranus · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "fd755aeb211c627da6c640be8cd9181591249bd66720d677aed556e9c902816e",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "SIT DOWN, listen: today’s Mercury‑Uranus trine sparks a sudden burst of inventive clarity—think of a bright idea popping in a meeting or a flash of inspiration while cooking. It’s a gentle push to trust your quick wit and share that spark before it fizzles. Embrace the unexpected, jot it down, and let the universe applaud your fresh thinking. Act on this spark now.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-17",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-17 · Moon opposite Uranus · exact today · approximately 1:58 pm AEST"
+      ],
+      "life_areas": [],
+      "facts_hash": "64dcd87448ba2ba79521dc738b215c34730605647e71ef72825d2ce83b1bd9b5",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "Open your eyes to the sudden jolt of change that the Moon opposite Uranus brings—an unexpected shift that can feel like a surprise thunderclap in your routine. This celestial clash urges you to pause, reflect on what feels out of place, and then embrace the spark of innovation that follows. Let the tension be a reminder that discomfort can illuminate hidden paths; when you feel that electric pressure, choose to experiment, tweak, or simply breathe. Take action now: notice the shift, acknowledge the urge, and step boldly into the new possibility.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

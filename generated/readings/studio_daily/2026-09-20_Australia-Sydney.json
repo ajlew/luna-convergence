@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-20",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-20 · Moon square Saturn · exact today · approximately 3:59 pm AEST"
+      ],
+      "life_areas": [],
+      "facts_hash": "a6f48a76ebd53a3f87cf5b87902c04ca201c457b86c92eacf48c6689409d813a",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "Pause, breathe, and feel the Moon’s pull clash with Saturn’s stubborn gravity—tightening plans, sharpening focus, and inviting you to turn frustration into purposeful action. Now, rewrite your schedule to honor both patience and urgency.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}
