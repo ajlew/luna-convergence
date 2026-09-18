@@ -164,8 +164,8 @@
       ],
       "facts_hash": "1aaf6c59d15551a71083a0d27973cb24d77b1c5ce93151b060ec02e99a25b050",
       "voice_version": "plain-text-1",
-      "writing_revision": "weekly-chronology-1",
-      "voice_body": "STOP and listen to the week’s quiet drumbeat: Monday’s Mercury‑Uranus trine opens a corridor where shared finances and family roots can shift without the usual drama. Picture a joint loan suddenly feeling lighter because a partner’s fresh idea sparks a new income stream—this is the “opportunity” voice of the sky, inviting you to lean into collaborative budgeting.  \n\nTuesday’s Sun‑Mars sextile nudges relationships and creative ventures into action. Think of a client proposal that feels both urgent and inspiring; the energy here says, “draft now, launch soon.” By Wednesday, Neptune‑Pluto’s alignment presses you to let go of hidden patterns that tie your worth to possessions. It’s a gentle reminder that true value comes from within, so consider decluttering or reassessing what truly supports you. Thursday’s Moon‑Uranus opposition warns that sudden home changes could ripple into career reputation—stay calm, communicate clearly, and let your authentic voice guide decisions.  \n\nFriday’s Moon‑Jupiter trine lifts work routines and health, offering a chance to align daily habits with long‑term goals. Use this moment to schedule a wellness check or a strategic meeting that feels both practical and uplifting. Saturday’s Mercury‑Saturn separation and Sunday’s Moon‑Saturn square close the week with a call to balance external obligations against internal resources; review budgets, set realistic deadlines, and honor your limits.  \n\nACT now: schedule a 15‑minute review of your shared finances and draft a brief action plan for the next month.",
+      "writing_revision": "evidence-precision-3",
+      "voice_body": "STOP. Open your calendar and let the week’s rhythm guide you.  \nMonday’s Mercury trine Uranus nudges you to rethink shared budgets and family routines—an opportunity to align finances with home life. Tuesday’s early sunrise, Sun sextile Mars, sparks a practical burst of creative drive; pitch a new project or flirt with a partnership, but keep the plans grounded.  \n\nWednesday’s Neptune sextile Pluto signals that hidden patterns in income and rest are coming to light—an audit of savings or a quiet retreat can bring clarity, especially when Venus square Pluto hints that travel or publishing ideas may need a cautious touch. Thursday’s Moon opposite Uranus flips career reputation against home freedom; a candid talk with a mentor or a family check‑in can balance the tension. Friday’s Moon trine Jupiter invites you to celebrate progress in work routines and health—share a success story or schedule a wellness check.  \n\nSaturday’s Mercury opposite Saturn, now separating at 0.27°, reminds you that patience is key with financial decisions; review contracts carefully. Sunday’s Moon square Saturn urges setting boundaries in networks and long‑term goals—draft a clear action plan before the week resets.  \nTake a moment now, write down one concrete step you’ll take today to align with this flow.",
       "status": "published"
     },
     "Taurus": {
@@ -192,8 +192,8 @@
       ],
       "facts_hash": "3f39772759000ee0d5d894f0d7b2475107d6a36e4e9cb9780b5833af7cab90f2",
       "voice_version": "plain-text-1",
-      "writing_revision": "weekly-chronology-1",
-      "voice_body": "READ THIS, THEN ACT.  \nMonday’s Mercury‑Uranus trine invites a fresh rhythm into your work routines and income. Think of a new workflow that cuts out redundant steps—maybe a quick automation or a clearer invoicing template. The opportunity is in the mundane, so let the novelty spark efficiency rather than overwhelm.  \n\nTuesday’s Sun‑Mars sextile lights up creativity and local sales. Use that burst of energy to pitch a fresh idea or to rehearse a presentation; the early‑morning light makes your enthusiasm contagious. By Wednesday, Neptune‑Pluto’s structural alignment nudges you to align hidden patterns with public goals—review your career narrative and ensure your reputation reflects your true values, especially while Venus clashes with Pluto in relationships.  \n\nThursday’s Moon‑Uranus opposition forces a check on shared finances; pause to audit joint budgets or debt plans. Friday’s Moon‑Jupiter trine offers relief—treat yourself to a family gathering that reinforces home foundations. Saturday’s Mercury‑Saturn tension warns against over‑planning; let spontaneity guide small decisions. Sunday’s Moon‑Saturn square reminds you to rest; schedule a quiet walk or a mindful journal session to balance the week’s push.  \n\nSchedule a 15‑minute audit of your work routines and income today.",
+      "writing_revision": "evidence-precision-3",
+      "voice_body": "LOOK AT THE SKY AND FOLLOW THE FLOW.  \nMonday’s Mercury trine Uranus nudges your daily grind—think of tweaking a workflow or adding a new tool to boost efficiency and income. It’s a gentle push to align routine with reward, so try swapping a habitual task for a fresh approach. Tuesday’s Sun sextile Mars lights up creativity and sales; channel that spark into a small pitch or a new design idea—just a quick email or sketch.  \nWednesday’s Neptune sextile Pluto invites deep reflection on career and closure. Use this pause to review a long‑term project, maybe draft a strategy memo that ties your public image to your inner values. Thursday’s Moon opposite Uranus shakes shared finances; consider revisiting a joint budget or renegotiating a shared expense to maintain harmony. Friday’s Moon trine Jupiter brings a supportive lift to home and family—plan a casual gathering or a small home improvement that feels generous.  \nSaturday’s Mercury opposite Saturn and Sunday’s Moon square Saturn bring structure and challenge; schedule a brief review of health routines and a travel plan, respectively, to keep momentum steady.  \nSTART YOUR WEEK BY REVISING ONE WORKFLOW TO BOOST EFFICIENCY.",
       "status": "published"
     },
     "Cancer": {
@@ -338,17 +338,17 @@
     }
   },
   "jobs": {
-    "Aries": "published",
+    "Aries": "failed",
     "Taurus": "published",
-    "Gemini": "published",
-    "Cancer": "published",
-    "Leo": "published",
-    "Virgo": "published",
-    "Libra": "published",
-    "Scorpio": "published",
-    "Sagittarius": "published",
-    "Capricorn": "published",
-    "Aquarius": "published",
+    "Gemini": "failed",
+    "Cancer": "failed",
+    "Leo": "failed",
+    "Virgo": "failed",
+    "Libra": "failed",
+    "Scorpio": "failed",
+    "Sagittarius": "failed",
+    "Capricorn": "failed",
+    "Aquarius": "failed",
     "Pisces": "published"
   }
 }
