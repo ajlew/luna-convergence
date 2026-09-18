@@ -108,8 +108,8 @@
       ],
       "facts_hash": "340dd4fbc432ebb38ac70a81850811be002d9d9ea87c72f68393cd8e67b80ce2",
       "voice_version": "plain-text-1",
-      "writing_revision": "weekly-chronology-1",
-      "voice_body": "STOP! Let the week’s pulse guide you, not the calendar.  \nMonday’s spark—Mercury dancing with Uranus—lights your creative side and your sense of self. Think of a new project or a fresh romantic idea; the energy is to experiment, not to plan every detail. Tuesday, the Sun’s early‑morning sextile with Mars pushes your home and income matters into action: tidy a corner of your living space, then jot a quick budget note. A small shift in routine can feel like a big win.  \nWednesday’s Neptune‑Pluto alignment invites you to reshape networks and long‑term goals. If you’re drafting a proposal or reaching out to a mentor, let the subtle push guide you, but keep the tone realistic. Thursday’s Moon‑Uranus opposition warns of sudden shifts in relationships or contracts; pause before signing anything hasty. Friday, the Moon trine Jupiter, softens that tension, encouraging you to share your ideas with friends or colleagues, and the extra support can turn a rough negotiation into a friendly dialogue.  \nSaturday’s Mercury‑Saturn tension reminds you to review your creative plans against realistic constraints—draft a list of doable tasks. Sunday’s Moon square Saturn cautions against over‑commitment; finish the week by setting boundaries for shared finances or shared responsibilities.  \nACT now: draft a simple, realistic plan for one creative or financial goal, then review it tomorrow.",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "TUNE IN, THEN TAKE ACTION.  \nMonday’s spark is the Mercury‑Uranus trine, a creative‑identity duet that invites you to prototype a new passion project or brand twist. Think of a quirky side hustle or a fresh social media angle—your energy and imagination are the currency. Tuesday’s Sun‑Mars sextile nudges you to turn that prototype into a tangible offer; a small, well‑timed launch or a client pitch at 5:53 am could set the tone for the week.  \n\nWednesday’s Neptune‑Pluto alignment reshapes your long‑term networks, so let a strategic partnership or a niche publication open its doors to you. Thursday’s Moon‑Uranus opposition warns that sudden shifts in relationships or contracts may feel jarring; keep a flexible mindset and stay present with your clients. Friday’s Moon‑Jupiter trine turns that tension into growth—use your communication skills to negotiate a favorable deal or to expand your local influence.  \n\nSaturday’s Mercury‑Saturn opposition and Sunday’s Moon‑Saturn square bring structure to creative and financial realms; review budgets, lock in contracts, and ground your ideas in clear, realistic terms. Draft a concise action plan for your project today and share it with a trusted colleague.",
       "status": "published"
     },
     "Libra": {
@@ -340,7 +340,7 @@
   "jobs": {
     "Aries": "published",
     "Taurus": "published",
-    "Gemini": "failed",
+    "Gemini": "published",
     "Cancer": "failed",
     "Leo": "failed",
     "Virgo": "failed",
