@@ -29,25 +29,31 @@ def build_packet(product: str, period_date: date, sign: str, timezone: str) -> d
     if product == "daily":
         # Preserve the existing Daily ranking and calculations. Only extract
         # factual fields; its legacy headlines, stories and advice are discarded.
-        from customer_experience import HOUSE_VOICE, free_daily_reading
-        from daily_narrative_v3 import build_daily_narrative
-        narrative = build_daily_narrative(
-            free_daily_reading(sign, period_date, timezone), sign=sign,
-            reading_date=period_date, timezone_name=timezone,
-            house_voice=HOUSE_VOICE, previous_texts=[])
-        evidence = narrative.evidence
+        from customer_experience import free_daily_reading
+        from daily_narrative_v3 import _evidence_snapshot
+        from major_event_registry import signals_for_day
+        reading = free_daily_reading(sign, period_date, timezone)
+        evidence = _evidence_snapshot(reading, sign, period_date, timezone)
+        primary, supporting = signals_for_day(
+            period_date, native_sign=sign, timezone_name=timezone, product="daily")
+        supporting_labels = tuple(item.display_label for item in supporting)
+        use_major = bool(primary and (primary.must_surface_in("daily")
+                         or primary.opportunity or primary.sky_score >= 80.0))
+        if primary and not use_major and primary.sky_score >= 72.0:
+            supporting_labels = (primary.display_label,) + supporting_labels
+        supporting_labels = tuple(dict.fromkeys(supporting_labels))
         start = end = period_date
         major = _major_rows(start, end, sign, timezone)
         ranked_houses = list(evidence.activated_houses)
         header = [str(evidence.aspect_label), str(evidence.phase)]
         if evidence.orb is not None:
             header.append(f"Orb · {evidence.orb:.2f}°")
-        header.extend(str(s) for s in (getattr(narrative, "supporting_events", ()) or ()))
+        header.extend(str(s) for s in supporting_labels)
         rows = [{"date": period_date.isoformat(), "aspect": evidence.aspect_label,
                  "planets": list(evidence.active_planets), "phase": evidence.phase,
                  "orb": evidence.orb, "houses": ranked_houses,
                  "house_meanings": list(evidence.house_meanings),
-                 "technical_aspects": list(narrative.technical_aspects)}]
+                 "technical_aspects": list(reading.aspects)}]
     elif product == "weekly":
         monday = monday_for(period_date)
         days = shared_week(monday, timezone)

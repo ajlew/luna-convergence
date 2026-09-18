@@ -6,7 +6,7 @@ import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from plain_readings import prompt_for, text_errors
+from plain_readings import prompt_for, text_errors, clean_prose
 from reading_quality import content_errors
 
 class GenerationError(RuntimeError):
@@ -95,6 +95,8 @@ def generate_text(packet: dict, *, post=None, sleep=time.sleep) -> str:
         try:
             choice = response.json()['choices'][0]
             body = choice['message']['content']
+            if isinstance(body, str):
+                body = clean_prose(body)
             errors = text_errors(packet['product'], body) + content_errors(packet, body)
             if choice.get('finish_reason') == 'length':
                 errors.append('response truncated')

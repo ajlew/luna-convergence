@@ -1,6 +1,6 @@
 """Saved collective video copy; no provider calls and no sign-specific houses."""
 from datetime import timedelta
-from plain_readings import load_reading, split_move
+from plain_readings import load_reading, split_move, clean_prose
 
 COLLECTIVE = 'All signs'
 
@@ -28,6 +28,7 @@ def studio_packet(product, target, sign, timezone):
 
 
 def publishing_copy(monday, body, public_url):
+    body = clean_prose(body)
     end = monday + timedelta(days=6)
     label = f'{monday:%d %B}–{end:%d %B %Y}'
     url = public_url.rstrip('/') + '/weekly-view'

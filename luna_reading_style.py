@@ -17,6 +17,8 @@ STYLE = """<style>
 </style>"""
 
 def meaning_html(day, event, body):
+    from plain_readings import clean_prose
+    body = clean_prose(body)
     paragraphs=''.join('<p>'+escape(p)+'</p>' for p in body.split('\n\n') if p.strip())
     return (STYLE + '<article class="luna-editorial"><div class="luna-meta">'
             + escape(day.strftime('%A · %d %B %Y')) + '</div><h3>' + escape(event)

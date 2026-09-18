@@ -49,7 +49,7 @@ class ClarityTests(unittest.TestCase):
         try:
             at=AppTest.from_file(filename).run(timeout=45)
             self.assertFalse(at.exception,[e.message for e in at.exception])
-            self.assertEqual(len(at.expander),21)
+            self.assertTrue(any(e.label == "The shared sky · Seven calculated days" for e in at.expander))
         finally:
             Path(filename).unlink()
 

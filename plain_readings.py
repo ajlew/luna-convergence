@@ -13,7 +13,7 @@ from html import escape
 
 ROOT = Path(__file__).parent / "generated" / "readings"
 WORD_RANGES = {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380), "studio_weekly": (85, 110), "studio_daily": (18, 30), "studio_meaning": (55, 90)}
-PARAGRAPHS = {"daily": "one or two", "weekly": "two", "monthly": "four to six", "studio_weekly": "one or two", "studio_daily": "one", "studio_meaning": "one or two"}
+PARAGRAPHS = {"daily": "one or two", "weekly": "three", "monthly": "four to six", "studio_weekly": "one or two", "studio_daily": "one", "studio_meaning": "one or two"}
 VOICE_VERSION = "plain-text-1"
 
 
@@ -57,6 +57,13 @@ def prompt_for(packet: dict) -> str:
         "weekly": "Trace the early-week, midweek and weekend progression. Connect support and pressure, rather than describing only the easiest aspects. ",
         "monthly": "Build a beginning, middle and end for the month. Explain the turning points, including supplied eclipses and seasonal gates. Group related events into human themes instead of reciting every transit. ",
     }.get(product, "Explain the collective pattern clearly for a spoken video. ")
+    if product in ('weekly', 'studio_weekly'):
+        guidance += ("Follow chronological_day_map in Monday-to-Sunday order. Never jump backwards. "
+            "For Weekly, use three connected passages: Monday–Tuesday, Wednesday–Thursday, Friday–Sunday. "
+            "For the Studio overview, summarise that same progression in spoken prose. "
+            "Keep every named aspect on its supplied weekday, including supporting aspects. "
+            "Do not move a Sunday event to Saturday or label a separating aspect as newly exact. "
+            "Mention days only where useful; no need to recite all seven in a short overview. ")
     return (
         "You are Luna. Interpret this calculated brief as one connected human story. "
         "Python has already calculated the sky; do not recalculate or add events, dates, "
@@ -79,22 +86,24 @@ def prompt_for(packet: dict) -> str:
         "No dreary advice template, generic flattery, cosmic filler, guarantees or magical promises. "
         "Do not repeat the calculation list.\n\n"
         f"Aim for roughly {low}-{high} words in {PARAGRAPHS[product]} short paragraphs. Prioritise a complete, useful reading over an exact count. "
-        "No JSON, headings, lists, citations or separate fields. Weave affirmation naturally "
+        "No Markdown emphasis marks, JSON, headings, lists, citations or separate fields. Weave affirmation naturally "
         "into the prose. End with one clear imperative action sentence, ending in a full stop. "
+        "Make that action specific to the supplied pattern: a concrete verb and task. Avoid vague closings such as embrace the fluctuations. "
         "Do not write the label Your move; the page adds it.\n\nCALCULATED BRIEF:\n"
         + json.dumps(brief, ensure_ascii=False, default=str, separators=(",", ":"))
     )
 
 
 def make_reading(packet: dict, body: str) -> dict:
-    from reading_quality import content_errors, WRITING_REVISION
+    from reading_quality import content_errors, writing_revision
+    body = clean_prose(body)
     errors = text_errors(packet["product"], body) + content_errors(packet, body)
     if errors:
         raise ValueError("; ".join(errors))
     return {**{key: packet[key] for key in
                ("product", "period", "sign", "timezone", "calculation_header", "life_areas")},
             "facts_hash": packet_hash(packet), "voice_version": VOICE_VERSION,
-            "writing_revision": WRITING_REVISION,
+            "writing_revision": writing_revision(packet["product"]),
             "voice_body": body.strip(), "status": "published"}
 
 
@@ -115,7 +124,7 @@ def current_reading(value: object, packet: dict) -> dict | None:
         return None
     if value.get("voice_version") != VOICE_VERSION or text_errors(packet["product"], value.get("voice_body")):
         return None
-    return value
+    return {**value, "voice_body": clean_prose(value["voice_body"])}
 
 
 def load_reading(packet: dict, root=ROOT) -> dict | None:
@@ -134,8 +143,14 @@ def write_document(path: Path, document: dict) -> None:
     temporary.replace(path)
 
 
+def clean_prose(body: str) -> str:
+    """Remove model emphasis delimiters without interpreting untrusted HTML."""
+    return re.sub(r"\*{1,3}|_{2,3}|`+", "", body).strip()
+
+
 def split_move(body: str) -> tuple[str, str]:
     """Extract the last sentence without losing paragraph breaks or duplicating it."""
+    body = clean_prose(body)
     body = re.sub(r"(?im)^\s*(?:\*\*)?your move(?:\*\*)?\s*[:—–-]\s*", "", body.strip())
     endings = list(re.finditer(r'[.!?][”"\u2019]?\s+(?=\S)', body))
     if not endings:
@@ -173,7 +188,7 @@ def reading_html(packet: dict, reading: dict | None) -> str:
 
 def generation_current(value, packet):
     """Refresh earlier writing once; keep the public storage format compatible."""
-    from reading_quality import WRITING_REVISION, content_errors
+    from reading_quality import writing_revision, content_errors
     return (current_reading(value, packet) is not None
-            and value.get('writing_revision') == WRITING_REVISION
+            and value.get('writing_revision') == writing_revision(packet['product'])
             and not content_errors(packet, value.get('voice_body')))
