@@ -11,12 +11,12 @@
       "life_areas": [],
       "facts_hash": "ba80141c70dfffdae7c8d093f98d677f6f45ccca233166fc370ea80facea0106",
       "voice_version": "plain-text-1",
-      "writing_revision": "event-grounding-2",
-      "voice_body": "LOOK UP, the cosmos is humming a new tune—Neptune’s dreamy sextile to Pluto invites deep insight, while Venus’s squaring Pluto reminds you that desire can clash with reality. Embrace the mystery, question the status quo, and let the subtle shift guide you toward clearer vision. Take a moment to journal your dreams tonight.",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Observe the day’s cosmic whisper: Neptune’s gentle sextile with Pluto invites deep insight, while Venus square Pluto urges caution in love or money matters. Embrace this chance to reflect on hidden motives, ask what truly matters, and consciously set boundaries today. Craft a brief journal entry summarizing one new perspective you gained.",
       "status": "published"
     }
   },
   "jobs": {
-    "All signs": "failed"
+    "All signs": "published"
   }
 }

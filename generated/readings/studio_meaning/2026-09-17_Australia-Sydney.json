@@ -11,12 +11,12 @@
       "life_areas": [],
       "facts_hash": "fe69a8f2963613ac897628fd4318f78c562f0ce6b516615d7247bb787e3ef036",
       "voice_version": "plain-text-1",
-      "writing_revision": "event-grounding-2",
-      "voice_body": "OPEN YOUR EYES TO THE SKY’S QUIRKY RING. Today, the Moon’s opposition to Uranus sparks an electric tension between the familiar and the unexpected. The Moon’s pull on your emotions feels suddenly unstable, while Uranus’s jolt urges you to break routine. Imagine a sudden burst of creativity that feels both thrilling and unsettling—perhaps you’re tempted to change a long‑held habit or experiment with a new hobby. Embrace that restless spark, but pause to assess whether the change serves your deeper goals. Let curiosity guide you, but keep your feet on the ground.  \n\nACT NOW: choose one small, bold experiment that could refresh your routine.",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STOP and notice the sky’s jolt at 1:58 pm AEST: the Moon is opposite Uranus. This opposition signals an electric pull between your emotional currents (the Moon) and sudden, rebellious change (Uranus). Feel the tension of old patterns clashing with fresh possibilities; your heart might feel unsettled, but that unrest is the spark that can ignite creativity or a new direction. Let that spark guide you: write down one idea that feels “out of the box” right now, then act on it today.",
       "status": "published"
     }
   },
   "jobs": {
-    "All signs": "failed"
+    "All signs": "published"
   }
 }
