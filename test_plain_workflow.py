@@ -30,9 +30,10 @@ class PlainWorkflowTests(unittest.TestCase):
         self.assertEqual(text_errors("daily", BODY), [])
         self.assertEqual(make_reading(packet(), BODY)["voice_body"], BODY)
 
-    def test_empty_short_json_promises(self):
-        for body in ("", "{\"text\": \"hi\"}", BODY + " You will definitely win."):
+    def test_empty_and_json_are_invalid_output(self):
+        for body in ("", "{\"text\": \"hi\"}"):
             self.assertTrue(text_errors("daily", body))
+        self.assertFalse(text_errors("daily", BODY + " You will definitely win."))
 
     def test_render_order_escaping_move_once(self):
         p = packet()

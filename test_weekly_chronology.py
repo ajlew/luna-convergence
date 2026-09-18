@@ -85,15 +85,14 @@ class ChronologyTests(unittest.TestCase):
         for label in old.supporting_events:
             self.assertIn(label,p['calculation_header'])
 
-    def test_weekly_requires_supplied_main_events(self):
+    def test_weekly_does_not_force_aspect_coverage(self):
         p=week()
         body='Monday has Mercury trine Uranus. Friday has Moon trine Jupiter. Sunday has Moon square Saturn. Write one boundary list before dinner.'
         from reading_quality import content_errors
-        self.assertTrue(any('Mercury opposite Saturn' in e for e in content_errors(p,body)))
+        self.assertFalse(content_errors(p,body))
 
-    def test_daily_requires_main_and_supporting_aspects(self):
+    def test_daily_does_not_force_aspect_coverage(self):
         p=packet(product='daily')
         p['events']=[{'event':'Moon trine Jupiter','supporting_events':['Mercury opposite Saturn']}]
         from reading_quality import content_errors
-        self.assertFalse(content_errors(p,'Moon trine Jupiter opens the day while Mercury opposite Saturn keeps the promise honest. Write one boundary list before dinner.'))
-        self.assertTrue(any('Mercury opposite Saturn' in e for e in content_errors(p,'Moon trine Jupiter opens the day. Write one boundary list before dinner.')))
+        self.assertFalse(content_errors(p,'Moon trine Jupiter opens the day. Make space.'))

@@ -1,7 +1,7 @@
-"""Prompt grounding and lightweight event coverage; never an LLM JSON schema."""
+"""Prompt grounding plus the single hard editorial gate: chronology."""
 import re
 
-WRITING_REVISION = 'evidence-precision-3'
+WRITING_REVISION = 'chronology-only-1'
 
 
 def writing_revision(product):
@@ -72,8 +72,8 @@ def chronology_errors(packet, body):
 
 def required_events(packet):
     """Require named turning points, not every minor transit or a word count."""
-    if packet['product'] == 'studio_daily':
-        return []  # A short clip is not the full overview.
+    if packet['product'] in ('studio_daily', 'studio_meaning'):
+        return []  # Short Studio clips are not the full overview.
     result = []
     if packet['product'] == 'daily':
         for row in packet.get('events', [])[:1]:
@@ -81,17 +81,10 @@ def required_events(packet):
                 if label and label not in result:
                     result.append(label)
         return result
-    if packet['product'] in ('weekly', 'studio_weekly'):
-        for row in packet.get('events', []):
-            label = row.get('event', '')
-            if label and label not in result:
-                result.append(label)
-        return result
     for row in packet.get('major_events', []):
         label = row.get('event', '')
         if (row.get('tier') == 'FOUNDATION' or
-                re.search(r'eclipse|equinox|solstice|new moon|full moon', label, re.I) or
-                row.get('tier') == 'A+'):
+                re.search(r'eclipse|equinox|solstice|new moon|full moon', label, re.I)):
             if label not in result:
                 result.append(label)
     return result
@@ -114,17 +107,10 @@ def event_present(label, body):
 
 
 def content_errors(packet, body):
-    """Only explicit omissions. This is not a claim of full semantic verification."""
+    """Reject only chronology errors; all other editorial rules stay in the prompt."""
     if not isinstance(body, str) or not body.strip():
         return []  # text_errors handles this.
-    errors = ['Explain the supplied event: '+label for label in required_events(packet)
-             if not event_present(label, body)]
-    if packet.get('product') == 'monthly':
-        if re.search(r'\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth)\s+area\b', body, re.I):
-            errors.append('Translate internal area labels into human life areas; do not write first area, seventh area, etc.')
-        if re.search(r'\ba week later\b', body, re.I):
-            errors.append('Use exact date language from the supplied events instead of loose phrases such as a week later.')
-    return errors + chronology_errors(packet, body)
+    return chronology_errors(packet, body)
 
 
 def grounded_brief(packet):

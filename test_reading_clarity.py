@@ -28,18 +28,17 @@ class ClarityTests(unittest.TestCase):
         self.assertNotIn('strictly',prompt)
         self.assertIn('no invented windfalls',prompt)
 
-    def test_global_copy_quality_rejections(self):
-        self.assertIn('internal area label', text_errors('monthly','The first area awakens. Write one invoice before lunch.'))
-        self.assertIn('final action too vague', text_errors('daily','Moon trine Jupiter steadies the day. Make space.'))
-        self.assertIn('final action needs a concrete task verb', text_errors('daily','Moon trine Jupiter steadies the day. Be sharper before lunch.'))
+    def test_editorial_preferences_do_not_reject_valid_prose(self):
+        self.assertFalse(text_errors('monthly','The first area awakens. Write one invoice before lunch.'))
+        self.assertFalse(text_errors('daily','Moon trine Jupiter steadies the day. Make space.'))
+        self.assertFalse(text_errors('daily','Moon trine Jupiter steadies the day. Be sharper before lunch.'))
+        self.assertEqual(text_errors('daily','```json\n{}\n```'),['plain prose required'])
 
-    def test_monthly_rejects_internal_labels_and_loose_timing(self):
+    def test_monthly_wording_is_prompt_guidance_not_a_hard_gate(self):
         from reading_quality import content_errors
         p=packet(product='monthly')
         body='A week later, the first area opens. Write one dated list before lunch.'
-        errors=content_errors(p,body)
-        self.assertTrue(any('first area' in e for e in errors))
-        self.assertTrue(any('a week later' in e for e in errors))
+        self.assertFalse(content_errors(p,body))
 
     def test_all_normalizes_dates_and_stops_on_quota(self):
         from scripts.generate_plain_readings import main

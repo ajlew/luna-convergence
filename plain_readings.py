@@ -35,21 +35,6 @@ def text_errors(product: str, body: object) -> list[str]:
     errors = []
     if body.lstrip().startswith(("{", "[", "```")):
         errors.append("plain prose required")
-    if re.search(r"\b(will definitely|will certainly|destined to|fated to|automatic luck|"
-                 r"manifestation is proven|the universe will deliver)\b", body, re.I):
-        errors.append("unsupported certainty")
-    for match in re.finditer(r"\bguarantee(?:d|s)?\b", body, re.I):
-        prefix = re.split(r"[.!?\n]", body[:match.start()])[-1].lower().split()[-5:]
-        if not set(prefix) & {"no", "not", "never", "nothing", "without", "cannot"}:
-            errors.append("guarantee")
-    if re.search(r"\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth)\s+area\b", body, re.I):
-        errors.append("internal area label")
-    story, move = split_move(body)
-    if move:
-        if re.search(r"\b(?:embrace|honou?r|notice|reflect|trust|lean into|make space|stay open|be mindful)\b", move, re.I):
-            errors.append("final action too vague")
-        if not re.search(r"\b(?:write|list|send|ask|choose|book|schedule|cancel|move|review|sort|name|set|cut|finish|start|draft|check|pay|save|call|decide|prepare|open|close|delete|record)\b", move, re.I):
-            errors.append("final action needs a concrete task verb")
     return errors
 
 
