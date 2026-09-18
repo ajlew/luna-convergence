@@ -42,6 +42,14 @@ def text_errors(product: str, body: object) -> list[str]:
         prefix = re.split(r"[.!?\n]", body[:match.start()])[-1].lower().split()[-5:]
         if not set(prefix) & {"no", "not", "never", "nothing", "without", "cannot"}:
             errors.append("guarantee")
+    if re.search(r"\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth)\s+area\b", body, re.I):
+        errors.append("internal area label")
+    story, move = split_move(body)
+    if move:
+        if re.search(r"\b(?:embrace|honou?r|notice|reflect|trust|lean into|make space|stay open|be mindful)\b", move, re.I):
+            errors.append("final action too vague")
+        if not re.search(r"\b(?:write|list|send|ask|choose|book|schedule|cancel|move|review|sort|name|set|cut|finish|start|draft|check|pay|save|call|decide|prepare|open|close|delete|record)\b", move, re.I):
+            errors.append("final action needs a concrete task verb")
     return errors
 
 
@@ -75,10 +83,14 @@ def prompt_for(packet: dict) -> str:
         "supported by the brief, connect pressure with support, and keep the reader's agency. "
         "For each important aspect you mention, explain its symbolic meaning in ordinary language, "
         "then connect it to the supplied life areas and a useful response. "
+        "Name the main calculated aspect and the useful support aspect when the brief supplies them. "
+        "If an event has a date, keep that event attached to that date; use exact date wording instead of loose phrases like a week later. "
         "Treat examples as choices, not predictions: no invented windfalls, meetings, investment gains or personal events. "
         "Use only the event_life_areas belonging to the event you are discussing. Never borrow a life area from a different event. "
         "For example, translate each supplied house meaning directly rather than guessing from its number. "
-        "Keep house numbers out of the finished prose; explain their supplied human meaning instead. "
+        "Keep house numbers and internal labels out of the finished prose; explain their supplied human meaning instead. "
+        "Do not write first area, second area, seventh area or similar internal labels. "
+        "When two slow or heavy aspects are supplied, keep their meanings separate before you blend them. "
         "Mention and explain every required_turning_point, even when this needs more words. "
         "Do not predict investment profits, double money, or recommend speculative action. "
         "Never turn a closest-approach label into an exact time, or imply a guaranteed effect. "
@@ -88,7 +100,7 @@ def prompt_for(packet: dict) -> str:
         f"Aim for roughly {low}-{high} words in {PARAGRAPHS[product]} short paragraphs. Prioritise a complete, useful reading over an exact count. "
         "No Markdown emphasis marks, JSON, headings, lists, citations or separate fields. Weave affirmation naturally "
         "into the prose. End with one clear imperative action sentence, ending in a full stop. "
-        "Make that action specific to the supplied pattern: a concrete verb and task. Avoid vague closings such as embrace the fluctuations. "
+        "Make that action specific to the supplied pattern: a concrete verb and task someone could do today. Avoid vague closings such as embrace the fluctuations, make space, trust the process, or notice what arises. "
         "Do not write the label Your move; the page adds it.\n\nCALCULATED BRIEF:\n"
         + json.dumps(brief, ensure_ascii=False, default=str, separators=(",", ":"))
     )

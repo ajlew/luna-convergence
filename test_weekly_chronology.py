@@ -39,7 +39,7 @@ class ChronologyTests(unittest.TestCase):
             p=packet(product=product);r=make_reading(p,BODY)
             self.assertTrue(generation_current(r,p))
             r['writing_revision']='event-grounding-2'
-            self.assertEqual(generation_current(r,p),product not in ('weekly','studio_weekly'))
+            self.assertFalse(generation_current(r,p))
             self.assertIsNotNone(current_reading(r,p))
     def test_formatting_and_publishing(self):
         body='**Emotional optimism.** Keep <script> out.\n\n**Write one plan.**'
@@ -53,7 +53,7 @@ class ChronologyTests(unittest.TestCase):
             self.assertTrue(copy[key].startswith(clean_prose(body)))
     def test_bounded_draft_correction(self):
         bad='Saturday brings Moon square Saturn. Make space.'
-        good='Sunday brings Moon square Saturn. Set one boundary.'
+        good='Monday brings Mercury trine Uranus. Friday brings Moon trine Jupiter. Saturday names Mercury opposite Saturn as separating pressure. Sunday brings Moon square Saturn. Set one boundary list.'
         def response(body):
             r=Mock(status_code=200)
             r.json.return_value={'choices':[{'message':{'content':body},'finish_reason':'stop'}]}
@@ -84,3 +84,16 @@ class ChronologyTests(unittest.TestCase):
         self.assertEqual(p['events'][0]['aspect'],old.evidence.aspect_label)
         for label in old.supporting_events:
             self.assertIn(label,p['calculation_header'])
+
+    def test_weekly_requires_supplied_main_events(self):
+        p=week()
+        body='Monday has Mercury trine Uranus. Friday has Moon trine Jupiter. Sunday has Moon square Saturn. Write one boundary list before dinner.'
+        from reading_quality import content_errors
+        self.assertTrue(any('Mercury opposite Saturn' in e for e in content_errors(p,body)))
+
+    def test_daily_requires_main_and_supporting_aspects(self):
+        p=packet(product='daily')
+        p['events']=[{'event':'Moon trine Jupiter','supporting_events':['Mercury opposite Saturn']}]
+        from reading_quality import content_errors
+        self.assertFalse(content_errors(p,'Moon trine Jupiter opens the day while Mercury opposite Saturn keeps the promise honest. Write one boundary list before dinner.'))
+        self.assertTrue(any('Mercury opposite Saturn' in e for e in content_errors(p,'Moon trine Jupiter opens the day. Write one boundary list before dinner.')))

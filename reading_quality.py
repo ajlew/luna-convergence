@@ -1,12 +1,12 @@
 """Prompt grounding and lightweight event coverage; never an LLM JSON schema."""
 import re
 
-WRITING_REVISION = 'event-grounding-2'
+WRITING_REVISION = 'evidence-precision-3'
 
 
 def writing_revision(product):
-    # Only these outputs need replacement; retain unrelated paid generations.
-    return 'weekly-chronology-1' if product in ('weekly', 'studio_weekly') else WRITING_REVISION
+    # Plain free and Studio copy share the same global evidence rules.
+    return WRITING_REVISION
 
 
 WEEKDAYS = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
@@ -75,6 +75,18 @@ def required_events(packet):
     if packet['product'] == 'studio_daily':
         return []  # A short clip is not the full overview.
     result = []
+    if packet['product'] == 'daily':
+        for row in packet.get('events', [])[:1]:
+            for label in [row.get('event', ''), *row.get('supporting_events', [])]:
+                if label and label not in result:
+                    result.append(label)
+        return result
+    if packet['product'] in ('weekly', 'studio_weekly'):
+        for row in packet.get('events', []):
+            label = row.get('event', '')
+            if label and label not in result:
+                result.append(label)
+        return result
     for row in packet.get('major_events', []):
         label = row.get('event', '')
         if (row.get('tier') == 'FOUNDATION' or
@@ -94,6 +106,9 @@ def event_present(label, body):
             # An eclipse type matters when two occur in the same period.
             qualifier = next((v for v in ('solar', 'lunar') if v in label), '') if phrase == 'eclipse' else ''
             return phrase in body and (not qualifier or qualifier in body)
+    keys = aspect_keys(label)
+    if keys:
+        return bool(keys & aspect_keys(body))
     planets = re.findall(r'\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto)\b', label)
     return bool(planets) and all(re.search(r'\b'+p+r'\b', body) for p in planets)
 
@@ -102,8 +117,14 @@ def content_errors(packet, body):
     """Only explicit omissions. This is not a claim of full semantic verification."""
     if not isinstance(body, str) or not body.strip():
         return []  # text_errors handles this.
-    return (['Explain the supplied event: '+label for label in required_events(packet)
-             if not event_present(label, body)] + chronology_errors(packet, body))
+    errors = ['Explain the supplied event: '+label for label in required_events(packet)
+             if not event_present(label, body)]
+    if packet.get('product') == 'monthly':
+        if re.search(r'\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth)\s+area\b', body, re.I):
+            errors.append('Translate internal area labels into human life areas; do not write first area, seventh area, etc.')
+        if re.search(r'\ba week later\b', body, re.I):
+            errors.append('Use exact date language from the supplied events instead of loose phrases such as a week later.')
+    return errors + chronology_errors(packet, body)
 
 
 def grounded_brief(packet):

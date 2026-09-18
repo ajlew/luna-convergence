@@ -2,7 +2,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 from unittest.mock import patch
-from plain_readings import split_move, reading_html, prompt_for
+from plain_readings import split_move, reading_html, prompt_for, text_errors
 from test_plain_workflow import packet
 
 class ClarityTests(unittest.TestCase):
@@ -23,8 +23,23 @@ class ClarityTests(unittest.TestCase):
         prompt=prompt_for(packet(product='weekly'))
         self.assertIn('early-week, midweek and weekend',prompt)
         self.assertIn('symbolic meaning',prompt)
+        self.assertIn('Name the main calculated aspect',prompt)
+        self.assertIn('Do not write first area',prompt)
         self.assertNotIn('strictly',prompt)
         self.assertIn('no invented windfalls',prompt)
+
+    def test_global_copy_quality_rejections(self):
+        self.assertIn('internal area label', text_errors('monthly','The first area awakens. Write one invoice before lunch.'))
+        self.assertIn('final action too vague', text_errors('daily','Moon trine Jupiter steadies the day. Make space.'))
+        self.assertIn('final action needs a concrete task verb', text_errors('daily','Moon trine Jupiter steadies the day. Be sharper before lunch.'))
+
+    def test_monthly_rejects_internal_labels_and_loose_timing(self):
+        from reading_quality import content_errors
+        p=packet(product='monthly')
+        body='A week later, the first area opens. Write one dated list before lunch.'
+        errors=content_errors(p,body)
+        self.assertTrue(any('first area' in e for e in errors))
+        self.assertTrue(any('a week later' in e for e in errors))
 
     def test_all_normalizes_dates_and_stops_on_quota(self):
         from scripts.generate_plain_readings import main
