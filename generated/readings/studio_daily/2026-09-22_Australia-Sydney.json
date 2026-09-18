@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-22",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-22 · Mercury sextile Jupiter · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "4e40a6f9414f6b0d9a6a50f2d053d45f5bdf21957c4afb6b9811eef1f3e9f889",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "Observe the gentle widening of your mind: Mercury’s dialogue with Jupiter invites expanded thinking, clearer communication, and playful curiosity. Let your questions flow, then jot the answers. Act: write a fresh idea and share it.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

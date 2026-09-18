@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-26",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-26 · Sun trine Pluto · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "69f5fb54ac1dec65a17a4bf494bdd56984c48531b4bab0a29ab238c4c0909bbf",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "LOOK! The Sun’s bright trine with Pluto invites deep transformation—think of a personal breakthrough or a new career path. Yet the Sun’s opposition to Neptune warns against illusion; keep your goals clear and grounded. Embrace the shift, then chart a realistic plan. Act now: write down one tangible step toward your new vision.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

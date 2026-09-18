@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-25",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-25 · Sun opposite Neptune · applying · 0.49° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "9f30ab7bb7ae57f6bb7783cf4ba8f230e54edb10714de8f781299568f3473009",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "LOOK UP—today’s Sun opposite Neptune signals a gentle tug between clarity and imagination. Trust your gut, let creativity flow, and watch how insight brightens the mundane. Act now: sketch a fresh idea and share it.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

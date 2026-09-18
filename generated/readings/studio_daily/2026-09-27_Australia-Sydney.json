@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-27",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-27 · Full Moon in Aries · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "6291e7e0bd3ff53759921261e86e2b14fa7a617dd2b507c76e87de68e8ab3466",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "TURN TO THE SKY, LET THE FULL MOON IN ARIES RAISE YOUR VOICE, REMINDING YOU THAT COURAGE IS A SHARED LIGHT, NOT A PERSONAL GLOW.  \nSTAND, BREATHE, AND SHOUT YOUR NEXT BIG IDEA.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

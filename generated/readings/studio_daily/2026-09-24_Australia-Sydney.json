@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-24",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-24 · Moon conjunct True Node · exact today · approximately 12:39 pm AEST"
+      ],
+      "life_areas": [],
+      "facts_hash": "e64b10b689d4403b729b765d81cb4bc754d25bd64fabc92e89f203a9d240e4f6",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "Open your heart to the quiet pivot of today’s Moon meeting its True Node at noon. This gentle alignment invites a fresh, honest perspective on personal growth and shared responsibility. It signals a shift: let go of old patterns that no longer serve, and welcome a clearer sense of purpose. Embrace the chance to act with intention—write down one new goal that aligns with your values. Take that step.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

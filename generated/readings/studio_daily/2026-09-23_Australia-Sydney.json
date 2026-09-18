@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-23",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-23 · September Equinox · Sun enters Libra · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "1bb95d73fc38ea1021bd75ebddb8e2af153c4a64622f8a23b32051ad85545d1c",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "Open your eyes to the equinox’s quiet call for balance. The Sun’s shift into Libra invites you to weigh work and play, love and solitude, and choose harmony. Take a breath, list your priorities, and align one small habit with that new equilibrium. Adjust your schedule, then act.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}
