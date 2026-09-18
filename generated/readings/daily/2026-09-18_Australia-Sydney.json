@@ -230,6 +230,27 @@
       "writing_revision": "event-grounding-2",
       "voice_body": "Savour the swell of good vibes: the Moon’s trine to Jupiter lifts your career aura and steadies your daily grind. Think of a promotion that feels almost inevitable—your reputation expands while your routines gain a new rhythm, like adding a fresh playlist to your commute. Yet Mercury’s opposition to Saturn reminds you to weigh every shared‑cash decision with discipline; a tempting joint venture may need a firm budget plan. Balance the expansive energy with grounded budgeting, and watch your professional and personal worlds align.  \n\nTake a moment now to review your income streams and refine one work routine that could boost both reputation and well‑being.",
       "status": "published"
+    },
+    "Virgo": {
+      "product": "daily",
+      "period": "2026-09-18",
+      "sign": "Virgo",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon trine Jupiter",
+        "Closest to exact today",
+        "Orb · 0.50°",
+        "Mercury opposite Saturn"
+      ],
+      "life_areas": [
+        "home, family and private foundations",
+        "rest, hidden matters, closure and psychological patterns"
+      ],
+      "facts_hash": "aef2ff2d468db5f2685de22fbe78b0af5c158c96819c259467900f26f059b049",
+      "voice_version": "plain-text-1",
+      "writing_revision": "event-grounding-2",
+      "voice_body": "LOOK AT THE SKY—today it’s saying, “Let your home feel the light.” The Moon’s gentle trine with Jupiter lifts the mood in the realm of home, family and private foundations. Imagine a quiet dinner where laughter feels almost celestial, or a spontaneous family walk that feels like a blessing. This upbeat energy invites you to nurture those bonds, to share a story or a song that brings everyone closer.\n\nYet, Mercury’s stern opposition to Saturn warns that the same domestic comfort can feel constrained by finances. Income, possessions, and shared money are under scrutiny. It’s a chance to tighten the purse strings, to review budgets, or to renegotiate a loan. Combine the supportive mood of the Moon‑Jupiter trine with the disciplined focus of Mercury‑Saturn: celebrate family while making clear, realistic plans for your shared finances.  \n\nPlan a family gathering that also includes a quick review of your household budget.",
+      "status": "published"
     }
   },
   "jobs": {
@@ -238,7 +259,7 @@
     "Gemini": "published",
     "Cancer": "published",
     "Leo": "published",
-    "Virgo": "failed",
+    "Virgo": "published",
     "Libra": "published",
     "Scorpio": "published",
     "Sagittarius": "published",
