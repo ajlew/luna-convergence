@@ -93,8 +93,8 @@ def main(argv=None):
         from weekly_view import default_week_start
         live_week = default_week_start(today)
         result = 0
-        for product, day in [('daily', today), ('weekly', live_week), ('studio', live_week),
-                             ('monthly', today), ('daily', today + timedelta(days=1))]:
+        for product, day in [('daily', today), ('weekly', live_week), ('monthly', today),
+                             ('studio', live_week), ('daily', today + timedelta(days=1))]:
             status = main(['--product', product, '--date', day.isoformat(),
                            '--timezone', args.timezone, '--pause', str(args.pause)] + flags)
             result = max(result, status)
@@ -106,7 +106,7 @@ def main(argv=None):
     if args.product == "all":
         chosen = args.date or today.isoformat()
         result = 0
-        for product in ("daily", "weekly", "studio", "monthly"):
+        for product in ("daily", "weekly", "monthly", "studio"):
             forwarded = ["--product", product, "--date", chosen,
                          "--timezone", args.timezone, "--pause", str(args.pause)]
             if args.sign:
@@ -115,7 +115,7 @@ def main(argv=None):
             result = max(result, status)
             if status == 2:
                 break
-            if args.pause and not args.check_only and product != "monthly":
+            if args.pause and not args.check_only and product != "studio":
                 time.sleep(args.pause)
         return result
     # Scheduled Daily repairs today first, then prepares tomorrow. Cached signs cost no calls.
