@@ -136,8 +136,8 @@
       ],
       "facts_hash": "f75344696ebd34651d727dc0a36098a5f871ae39e4044c5536f8238675fa9d75",
       "voice_version": "plain-text-1",
-      "writing_revision": "weekly-chronology-1",
-      "voice_body": "ACT NOW: let this week’s currents steer you, not just watch the tide. Monday’s Mercury‑Uranus trine nudges your sense of self and your drive toward new horizons—think of drafting a fresh project brief or booking that overseas workshop. The energy is yours to shape; let curiosity guide the first draft, not the fear of a blank page.  \n\nTuesday’s Sun‑Mars sextile lights the path to public results. Early dawn sparks a burst of confidence—use the quiet morning to outline a presentation or polish a résumé. By Wednesday, Neptune‑Pluto’s structural alignment invites deeper collaboration; reach out to a mentor or partner to co‑create something that blends vision with practicality. Thursday’s Moon‑Uranus opposition keeps you grounded in daily communication—reply to emails with clarity, avoid over‑committing to spontaneous trips. Friday’s Moon‑Jupiter trine expands your network; host a casual meetup or join an online forum that aligns with your long‑term goals.  \n\nSaturday’s Mercury‑Saturn opposition signals a pause: review what you’ve built, tighten timelines, and adjust your personal direction. Sunday’s Moon‑Saturn square tests the balance between home and work; set boundaries, perhaps schedule a family dinner or a quiet reading hour.  \n\nNOW: draft a one‑page action plan for each life area—identity, travel, career, relationships, creativity—aligning with the week’s energies and your own priorities.",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STOP, listen to the week’s pulse.  \nMonday, Mercury trine Uranus opens a door for fresh ideas about your identity and travel—think of a sudden impulse to draft a blog post or book chapter that could spark a new partnership overseas. Tuesday’s Sun sextile Mars gives you the drive to finish that draft and present it confidently, turning creative energy into public recognition.  \n\nWednesday’s Neptune sextile Pluto invites you to rethink how you collaborate, especially when Venus squares Pluto reminds you to guard your self‑worth while courting new clients. Thursday’s Moon opposite Uranus jolts your communication style; a spontaneous call or email could clear a long‑standing block. Friday’s Moon trine Jupiter encourages you to expand your network—send that invitation to a webinar or networking event that aligns with your long‑term goals.  \n\nSaturday, Mercury opposite Saturn tests your resolve; pause, review your plans, and tighten any loose contracts. Sunday’s Moon square Saturn urges you to ground yourself at home, balancing the week’s momentum with a quiet routine.  \nTake action now: draft that travel‑inspired piece and schedule a call with a potential collaborator.",
       "status": "published"
     },
     "Pisces": {
@@ -332,8 +332,8 @@
       ],
       "facts_hash": "596d9d4a86b2d467f72849bf4a0ddf2d374d1f0aac1200c6cecbebcd2ff686f8",
       "voice_version": "plain-text-1",
-      "writing_revision": "weekly-chronology-1",
-      "voice_body": "SCALE UP your curiosity, because this week’s sky is a playground of possibility and pressure. Monday’s Mercury‑Uranus trine opens doors to travel, publishing and creative entrepreneurship—think of a spontaneous overseas book tour or a daring design launch. Use the day to map out a clear itinerary, then let the unexpected twists fuel your narrative. Tuesday’s Sun‑Mars sextile nudges shared finances and work routines toward action; a quick audit of joint accounts or a new office layout can turn routine into momentum.  \n\nWednesday’s Neptune‑Pluto alignment invites deep communication and a re‑definition of self‑direction. Embrace a reflective journaling session or a workshop on local community engagement—let the structural shift guide your next step. Thursday’s Moon‑Uranus opposition tests your network against sudden change; stay flexible, but anchor your collaborations with honest check‑ins. Friday’s Moon‑Jupiter trine lifts relationships and contracts—draft a partnership proposal that balances optimism with realistic terms.  \n\nSaturday’s Mercury‑Saturn separation reminds you that clarity often follows tension; review travel plans or publishing contracts to ensure they fit your long‑term goals. Sunday’s Moon‑Saturn square signals a need for rest and psychological closure—schedule a quiet evening to process the week’s lessons.  \n\nACT: Draft a one‑page action plan that aligns your travel, creative projects, finances, and relationships with the week’s energetic cues.",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Tap into the spark that Monday’s Mercury‑Uranus trine offers – the sky is handing you a chance to blend travel or publishing with a dash of creative entrepreneurship. Imagine drafting an overseas article that doubles as a playful business pitch; the synergy of new routes and fresh ideas fuels both your portfolio and your curiosity.  \n\nTuesday’s Sun‑Mars sextile nudges you into action – early light invites a focused push on shared finances or routine health tasks. Picture a brisk walk that clears your mind before tackling a budget or a quick workout that primes you for a client meeting.  \n\nWednesday’s Neptune‑Pluto alignment invites deep communication and personal direction; this is a good moment to refine a presentation or re‑energise your career narrative, especially as Venus‑Pluto reminds you that reputation and authenticity can clash.  \n\nThursday’s Moon‑Uranus opposition signals a burst of creative tension; use the early afternoon to channel that energy into a new project idea.  \n\nFriday’s Moon‑Jupiter trine offers a supportive swell for networking and contracts, so schedule a meeting with a potential collaborator.  \n\nSaturday’s Mercury‑Saturn opposition warns against hasty travel plans or rushed publications; slow down, review, and communicate clearly.  \n\nSunday’s Moon‑Saturn square asks for rest and closure—use the late‑afternoon to journal patterns and set boundaries for the week ahead.  \n\nSchedule a 15‑minute brainstorming session today to merge travel and creativity into one actionable project.",
       "status": "published"
     }
   },
@@ -344,11 +344,11 @@
     "Cancer": "published",
     "Leo": "published",
     "Virgo": "published",
-    "Libra": "failed",
+    "Libra": "published",
     "Scorpio": "published",
     "Sagittarius": "published",
     "Capricorn": "published",
-    "Aquarius": "failed",
+    "Aquarius": "published",
     "Pisces": "published"
   }
 }
