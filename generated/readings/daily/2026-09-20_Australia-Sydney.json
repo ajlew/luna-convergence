@@ -1,6 +1,258 @@
 {
-  "signs": {},
+  "signs": {
+    "Aries": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Aries",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "career, reputation, authority and public results",
+        "identity, energy and personal direction"
+      ],
+      "facts_hash": "a47cdcd1e6c8bff2f6b2642b5befc81ae6eb1e3d682d5590ed48bcd52ccbe6c1",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK HERE: the Moon is square Saturn—your feelings are being tugged by a stern authority. Symbolically, it means sudden emotional friction when you try to push forward, like a boss questioning your enthusiasm or a partner doubting your plans. In career and reputation, it’s a cue to double‑check deadlines and public statements; in identity, it’s a reminder that your energy may feel throttled by self‑imposed limits. The supportive Neptune sextile Pluto urges you to let imagination mingle with transformation—draft a bold pitch or redesign your résumé. The Uranus trine Pluto suggests a sudden breakthrough; be ready to pivot. The Mercury opposition Saturn warns against rushed decisions—review contracts before signing. TODAY, draft a clear, realistic plan for your next project and share it with a trusted colleague.",
+      "status": "published"
+    },
+    "Taurus": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Taurus",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "travel, publishing, law, education and foreign markets",
+        "rest, hidden matters, closure and psychological patterns"
+      ],
+      "facts_hash": "5e8ffa73b1e63d75ba63cc7f4284396915986b9f678d3a8d98584c836fea8d51",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "TRAVEL WITH CARE, BUT DON’T QUIT YOUR JOURNEY.  \nToday the Moon’s tight square to Saturn presses on your travel and publishing ambitions (the realm of adventure, law, and foreign markets). It’s a reminder that freedom feels heavy—your plans may feel delayed or constrained by discipline and responsibility. The supportive Neptune‑Pluto sextile invites you to let imagination meet transformation; think of a book‑shop trip that could spark a career pivot. The Uranus‑Pluto trine encourages sudden change in your finances—perhaps a freelance gig that feels revolutionary. Meanwhile, Mercury’s opposition to Saturn warns against rushed decisions in daily work; pause, analyze, and structure your next steps.  \nPlan a mindful trip today, noting how each pause supports your long‑term vision.",
+      "status": "published"
+    },
+    "Gemini": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Gemini",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "shared money, debt, tax, trust and obligations",
+        "networks, audiences, alliances and long-term goals"
+      ],
+      "facts_hash": "86d1e6be0291b7bf6097cbb953101be557b94bd8b2bfdba58f3baa60f97950b5",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STOP, breathe, and notice the tug‑of‑war between your shared finances and your long‑term alliances. The Moon squaring Saturn in Gemini signals a pressure that feels like a budget meeting with a stern boss—your trust and obligations are being tested, while your networks are called into sharper focus. The supportive Neptune sextile Pluto nudges you to blend imagination with decisive power, letting your audience see a clearer vision. The Uranus trine Pluto invites sudden, innovative shifts in how you handle debts, perhaps a new tool or partnership. Mercury’s opposition to Saturn warns against hasty decisions; pause, analyze, then commit. Today, draft a clear financial plan that aligns with your network goals.",
+      "status": "published"
+    },
+    "Cancer": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Cancer",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "relationships, clients, contracts and competitors",
+        "career, reputation, authority and public results"
+      ],
+      "facts_hash": "207f5ff1df31e8d16b7bc15006c7811b0284953d89736d35bd3121db9bf1693f",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK TODAY FOR A MOMENT OF TIGHTENED TENSION: the Moon’s square to Saturn presses your emotional world against the hard wall of responsibility. In relationships and contracts, that pressure feels like a looming deadline; in career, it feels like a reputation on the line. The symbol is a tug‑of‑war between desire and discipline—think of a client who wants a quick fix but you must deliver a robust, long‑term solution.  \n\nThe supportive Neptune sextile Pluto brings imagination to that struggle, inviting you to reframe the contract as a transformative partnership rather than a simple transaction. Uranus trine Pluto reminds you that sudden insight can break old patterns, while Mercury opposition Saturn warns that clear, measured communication will keep the chaos from spiraling.  \nACT: draft a concise, honest proposal that balances urgency with structure.",
+      "status": "published"
+    },
+    "Leo": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Leo",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "work routines, health, service and operations",
+        "travel, publishing, law, education and foreign markets"
+      ],
+      "facts_hash": "1fea2b8a4be3ae9b935ee4f03cbdaba181219a9bd675f5ec80a66b9547ddcdf6",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK CLOSELY at how the Moon’s restless tides clash with Saturn’s stubborn anchor today. The tension between home rhythms and the demands of travel or learning pushes you to test limits in work routines and abroad. It’s not a cosmic curse—think of a Monday morning meeting that feels stuck, or a train delay that forces a new route.  \n\nNeptune’s gentle sextile to Pluto invites you to reframe the frustration as a chance for deep transformation. Use the urge to innovate (Uranus trine Pluto) to tweak your schedule, turning the delay into a creative brainstorming session. Mercury’s opposition to Saturn reminds you that clear, disciplined communication can cut through the chaos.  \n\nRe‑organise your daily tasks, mapping each to a specific time slot, and watch the tension resolve into purposeful action.",
+      "status": "published"
+    },
+    "Virgo": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Virgo",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "creativity, romance, pleasure and entrepreneurship",
+        "shared money, debt, tax, trust and obligations"
+      ],
+      "facts_hash": "fcd957cd9f1a4e4c021d9131032bdf55b0931c91ad1c1e9aa4de6e29a0a27ffc",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STOP! Let the Moon’s stubborn square to Saturn bite into your creative hustle and your shared finances today. The Moon, the pulse of imagination, feels squeezed by Saturn’s heavy hand of responsibility, so your passion projects may feel sluggish, and joint money matters could trigger tension or debt worries. But remember: the same Saturny pressure is the scaffolding that steadies your business. Use the day to tighten budgets, negotiate clear contracts, and channel your creativity into a project that also pays the bills. Today, draft a detailed expense plan and set a realistic deadline for your next creative launch.",
+      "status": "published"
+    },
+    "Libra": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Libra",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "home, family and private foundations",
+        "relationships, clients, contracts and competitors"
+      ],
+      "facts_hash": "12729446785cca7fe58c2fb258dc368333d17f2a3c5785ee852ea5bf4cfd9aaf",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STOP. Your home and your partnerships are in a tight‑rope dance today. The Moon’s square to Saturn feels like a stern coach shouting, “Get your act together,” pushing you to tighten routines at home while tightening the terms of any contracts or client deals. That stern pressure is softened by Neptune sextile Pluto, hinting that a bit of creative imagination can dissolve hard boundaries, and Uranus trine Pluto, reminding you that a sudden, bold tweak—maybe a new policy or a fresh negotiation angle—can spark real change. Mercury’s opposition to Saturn warns against rushing decisions; instead, pause, analyse, and draft clear, durable agreements. So, draft that revised contract, add a clause that protects your home life, and send it off by noon tomorrow.",
+      "status": "published"
+    },
+    "Scorpio": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Scorpio",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "communication, sales, learning and local movement",
+        "work routines, health, service and operations"
+      ],
+      "facts_hash": "f1be345c62fcf048fcc0ea9c38472bb3c12089a8dbc0300acd70b52dd8d4102e",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STAND UP, LISTEN, and speak your truth today. The Moon’s sharp angle to Saturn in the realms of communication and work tells you that your ideas feel boxed, and your routines feel stifled. Imagine the Moon as a restless tide, Saturn as a stubborn wall—together they urge you to test new ways of selling or learning, even if the plan feels unsteady. Neptune’s gentle touch with Pluto invites you to let imagination seep into the tasks that feel routine, while Uranus’s spark reminds you that a sudden tweak in your workflow can free you from old habits. Mercury’s cross‑road with Saturn warns against over‑analysis; instead, set a single, concrete action—send that email, book that meeting, or tweak your schedule—and watch the routine shift. \n\nACT NOW: draft a brief, bold proposal to a client or colleague and send it.",
+      "status": "published"
+    },
+    "Sagittarius": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Sagittarius",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "income, possessions and self-worth",
+        "creativity, romance, pleasure and entrepreneurship"
+      ],
+      "facts_hash": "cb31f18ec919d22a7ab6b67dfcbf542d16a0e17a94b86ae5c7fb44faae96bb27",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK UP, because the sky is shouting at you. The Moon’s tight square to Saturn is the headline—your finances and your creative spark are being nudged into a hard conversation. Imagine a budget meeting that feels like a creative block; the tension is the push to tighten spending while still keeping your passion alive. The Neptune‑Pluto sextile in the creative sector says your imagination can become a powerful tool for transformation—use that vision to re‑frame what “worth” means to you.  \n\nUranus trine Pluto is the sidekick that shakes up your routine, offering sudden inspiration to break out of stale patterns. Mercury’s opposition to Saturn warns that over‑analysis could stall your decisions; keep your communication crisp, don’t let fear of structure hold you back. Today, draft a simple list of expenses and a parallel list of creative projects you could monetize—then decide which one gets the first tweak.  \n\nACT: write down two concrete actions to balance your budget and your creative hustle.",
+      "status": "published"
+    },
+    "Capricorn": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Capricorn",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "identity, energy and personal direction",
+        "home, family and private foundations"
+      ],
+      "facts_hash": "cdacc6c5664396708b80ae82d1a57d61f3b66d31673a2495fc4f8c7843c72919",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Listen closely, today is your test of resolve.  \nThe Moon’s tight square to Saturn presses on your sense of self and the space you call home. Imagine the Moon’s restless tides tugging at your personal identity while Saturn’s stern hand demands structure. This tension can feel like a personal “I’m not good enough” echo, but it also signals a chance to rebuild foundations. If you feel your energy flagging at home, try a small, intentional ritual—light a candle, set a clear intention, and jot a single, honest thought about what you truly need.  \n\nNeptune’s gentle sextile to Pluto and Uranus’s trine to Pluto suggest that the boundaries you’re struggling with can be reshaped by creative insight and bold, sudden changes. Use the pressure on your home life to experiment: rearrange a room, call a relative you’ve avoided, or draft a new personal mission statement. When Saturn’s opposition to Mercury rattles your communication at work, keep your replies concise, grounded, and future‑oriented.  \nTake a moment now, write down one concrete step to strengthen your home environment.",
+      "status": "published"
+    },
+    "Aquarius": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Aquarius",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "rest, hidden matters, closure and psychological patterns",
+        "communication, sales, learning and local movement"
+      ],
+      "facts_hash": "301aff9b71fffd653b2315d8327fa9493f3aaee5775251bc87f96706ff423cd4",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STOP. Your mind feels cramped by the Moon’s square to Saturn—rest and communication are the two sides of that tension. The Moon in the rest house urges you to pause, to recognize hidden patterns that keep you from moving forward. The square pushes the same energy into your daily chatter, sales, or learning, forcing you to confront limits in the way you express yourself. The Neptune‑Pluto sextile in the communication zone reminds you that imagination and power can merge, turning uncertainty into a chance for transformation. The Uranus‑Pluto trine in the innovation sector suggests that a sudden breakthrough might come from breaking old habits, but the Mercury‑Saturn opposition warns you to temper excitement with discipline. \n\nTake the day’s pressure and turn it into a clear, focused conversation about one lingering issue. Draft a short note to yourself or a colleague: outline the hidden pattern, then propose a concrete step you can take tomorrow. This keeps the tension productive, uses the support of your creative imagination, and respects the disciplined structure Saturn offers.",
+      "status": "published"
+    },
+    "Pisces": {
+      "product": "daily",
+      "period": "2026-09-20",
+      "sign": "Pisces",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Moon square Saturn",
+        "Closest to exact today",
+        "Orb · 1.99°"
+      ],
+      "life_areas": [
+        "networks, audiences, alliances and long-term goals",
+        "income, possessions and self-worth"
+      ],
+      "facts_hash": "c71fb5dcd481be1df4a5c881668ed6689e3d6a9f306504c6c5f0b9e2b45299f2",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Squeeze the day’s tension into action. The Moon square Saturn presses your networks and income, urging you to tighten your alliances while guarding your finances. It signals that while you might feel held back, you can still carve a path by setting clear boundaries and sticking to a budget. Neptune sextile Pluto whispers that your ideals can blend with power—use creative projects that align with long‑term goals. Uranus trine Pluto reminds you that sudden shifts can open doors, so stay flexible. Mercury opposite Saturn warns against rushed decisions; pause, analyse, then commit. Today, draft a concrete budget that reflects your network goals.",
+      "status": "published"
+    }
+  },
   "jobs": {
-    "Aries": "failed"
+    "Aries": "published",
+    "Taurus": "published",
+    "Gemini": "published",
+    "Cancer": "published",
+    "Leo": "published",
+    "Virgo": "published",
+    "Libra": "published",
+    "Scorpio": "published",
+    "Sagittarius": "published",
+    "Capricorn": "published",
+    "Aquarius": "published",
+    "Pisces": "published"
   }
 }
