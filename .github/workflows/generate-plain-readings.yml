@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       product:
-        description: all = Daily + Weekly + Studio + Monthly (current copies are skipped)
+        description: all = Daily, 1h pause, Weekly, 1h pause, Monthly, 1h pause, Studio
         required: true
         type: choice
         options: [all, daily, weekly, monthly, studio]
@@ -53,7 +53,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -80,24 +80,49 @@ jobs:
             case "$SCHEDULE" in
               '0 11 * * 6') product=weekly ;;
               '0 10 25 * *') product=monthly ;;
-              *) product=maintain ;;
+              '0 20 * * *') product=maintain ;;
+              *) product=daily ;;
             esac
           fi
           # Manual blank dates mean today, never an accidental future date.
           if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -z "$REQUEST_DATE" ]; then
             REQUEST_DATE=$(python -c 'from datetime import datetime; from zoneinfo import ZoneInfo; print(datetime.now(ZoneInfo("Australia/Sydney")).date())')
           fi
-          args=(--product "$product")
-          if [ "$REQUEST_REFRESH" = "true" ]; then args+=(--refresh); fi
-          if [ "$CHECK_ONLY" = "true" ]; then args+=(--check-only); fi
-          if [ -n "$REQUEST_DATE" ]; then args+=(--date "$REQUEST_DATE"); fi
-          if [ -n "$REQUEST_SIGN" ]; then args+=(--sign "$REQUEST_SIGN"); fi
+          common_args=()
+          if [ "$REQUEST_REFRESH" = "true" ]; then common_args+=(--refresh); fi
+          if [ "$CHECK_ONLY" = "true" ]; then common_args+=(--check-only); fi
+          if [ -n "$REQUEST_DATE" ]; then common_args+=(--date "$REQUEST_DATE"); fi
+          if [ -n "$REQUEST_SIGN" ]; then common_args+=(--sign "$REQUEST_SIGN"); fi
           result=0
-          python scripts/generate_plain_readings.py "${args[@]}" || result=$?
-          if [ "$EVENT_NAME" = "schedule" ] && [ "$product" = "weekly" ] && [ "$result" -ne 2 ]; then
-            studio_result=0
-            python scripts/generate_plain_readings.py --product studio || studio_result=$?
-            if [ "$studio_result" -gt "$result" ]; then result=$studio_result; fi
+
+          run_product() {
+            local stage_result=0
+            python scripts/generate_plain_readings.py --product "$1" "${common_args[@]}" || stage_result=$?
+            if [ "$stage_result" -gt "$result" ]; then result=$stage_result; fi
+          }
+
+          pause_one_hour() {
+            if [ "$CHECK_ONLY" != "true" ]; then
+              echo "Pausing one hour before the next product to protect the provider limit."
+              sleep 3600
+            fi
+          }
+
+          if [ "$product" = "all" ]; then
+            run_product daily
+            pause_one_hour
+            run_product weekly
+            pause_one_hour
+            run_product monthly
+            pause_one_hour
+            run_product studio
+          else
+            run_product "$product"
+          fi
+
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$product" = "weekly" ]; then
+            pause_one_hour
+            run_product studio
           fi
           exit "$result"
       - name: Save completed signs even if another sign failed
