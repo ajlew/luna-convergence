@@ -296,6 +296,33 @@
       "writing_revision": "chronology-only-1",
       "voice_body": "SENSE the week’s pulse and let it guide your choices.  \nOn Monday, a gentle tug between Mercury and Jupiter invites you to widen your shared‑money conversations—think joint budgeting or a team‑budget review. By Tuesday, that same partnership turns into a real opportunity: a new collaborative project or a joint investment that could ease tax or debt concerns. Wednesday’s Equinox shifts the focus to shared finances, encouraging you to re‑balance obligations and trust in your collective resources.  \n\nThursday’s Moon‑Node alignment signals closure of hidden patterns—use the 12:39 pm moment to write a brief reflective note about past financial habits. Friday’s Sun‑Neptune opposition warns against over‑optimism in income decisions; pause before signing any new contracts. Saturday’s Sun‑Pluto trine offers a chance to transform lingering financial doubts into clear action—consider revising your budget or renegotiating a debt plan.  \n\nSunday’s Full Moon in Aries lights the income side of your life—celebrate any gains, but also review your self‑worth by setting a small, attainable goal for the coming week.  \nTake a minute now to draft a one‑sentence financial goal that blends shared responsibility and personal growth.",
       "status": "published"
+    },
+    "Libra": {
+      "product": "weekly",
+      "period": "2026-09-21",
+      "sign": "Libra",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Monday · Mercury sextile Jupiter · applying · 0.48° orb at closest approach",
+        "Tuesday · Mercury sextile Jupiter · major sky event",
+        "Wednesday · September Equinox · Sun enters Libra · major sky event",
+        "Thursday · Moon conjunct True Node · exact today · approximately 12:39 pm AEST",
+        "Friday · Sun opposite Neptune · applying · 0.49° orb at closest approach",
+        "Saturday · Sun trine Pluto · major sky event",
+        "Also active · Sun opposite Neptune",
+        "Sunday · Full Moon in Aries · major sky event"
+      ],
+      "life_areas": [
+        "identity, energy and personal direction",
+        "creativity, romance, pleasure and entrepreneurship",
+        "relationships, clients, contracts and competitors",
+        "networks, audiences, alliances and long-term goals"
+      ],
+      "facts_hash": "07edc36a3bea2e54a46d44746fe70e326e48b95490d0b2602de0d6400e50cedb",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "SET YOUR SCHEDULE ON THE MAP.  \nMonday’s quiet Mercury‑Jupiter sextile nudges your personal drive toward the networks you’re building—think of a friendly email that opens a door. Tuesday’s full‑blown opportunity lets you step through that door; pitch a collaboration that feels both authentic and expansive. Wednesday’s Sun enters Libra marks a fresh anchor: reset your identity with a clear intention, like drafting a mission statement that balances self‑interest and community.  \n\nThursday’s Moon‑Node conjunction is the exact moment to let your creative spark guide you. Write a short story, sketch a design, or simply journal the feelings that arise at 12:39 pm AEST—those are the seeds of future projects. Friday’s Sun‑Neptune opposition warns of illusion; keep contracts grounded by reviewing terms before signing. Saturday’s Sun‑Pluto trine turns that groundedness into transformation—revamp a routine or release a habit that no longer serves you.  \n\nSunday’s Full Moon in Aries caps the week with a call to action: announce a new initiative or share your latest creation with your audience.  \nTake a photo of your workspace today and share it on Instagram.",
+      "status": "published"
     }
   },
   "jobs": {
@@ -305,7 +332,7 @@
     "Cancer": "published",
     "Leo": "published",
     "Virgo": "published",
-    "Libra": "failed",
+    "Libra": "published",
     "Scorpio": "published",
     "Sagittarius": "published",
     "Capricorn": "published",
