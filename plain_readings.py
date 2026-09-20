@@ -12,7 +12,8 @@ from pathlib import Path
 from html import escape
 
 ROOT = Path(__file__).parent / "generated" / "readings"
-WORD_RANGES = {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380), "studio_weekly": (85, 110), "studio_daily": (18, 30), "studio_meaning": (55, 90)}
+# Prompt targets only. They are deliberately not used as publication gates.
+WORD_RANGES = {"daily": (55, 85), "weekly": (105, 150), "monthly": (230, 320), "studio_weekly": (70, 95), "studio_daily": (15, 25), "studio_meaning": (40, 70)}
 PARAGRAPHS = {"daily": "one or two", "weekly": "three", "monthly": "four to six", "studio_weekly": "one or two", "studio_daily": "one", "studio_meaning": "one or two"}
 VOICE_VERSION = "plain-text-1"
 
@@ -44,11 +45,11 @@ def prompt_for(packet: dict) -> str:
     from reading_quality import grounded_brief
     brief = grounded_brief(packet)
     guidance = {
-        "studio_weekly": "Give a complete collective weekly overview: opening mood, midweek shift, weekend resolution and one useful move. Name the key supporting and challenging aspects. This is also the master voiceover. ",
-        "studio_meaning": "Explain this day’s collective meaning and energy. Name the main aspect and explain how active supporting aspects colour it. Distinguish slow background changes from brief emotional triggers. Offer a concrete response without personal houses or birth-chart claims. ",
-        "daily": "Explain the strongest aspect, then how the supporting influences change the practical picture today. ",
-        "weekly": "Trace the early-week, midweek and weekend progression. Connect support and pressure, rather than describing only the easiest aspects. ",
-        "monthly": "Build a beginning, middle and end for the month. Explain the turning points, including supplied eclipses and seasonal gates. Group related events into human themes instead of reciting every transit. ",
+        "studio_weekly": "Give a concise collective weekly overview: opening mood, midweek shift, weekend resolution and one useful move. Name only the key supporting and challenging aspects. This is also the master voiceover. ",
+        "studio_meaning": "Explain this day’s collective meaning and energy concisely. Name the main aspect and explain how active supporting aspects colour it. Distinguish slow background changes from brief emotional triggers. Offer one concrete response without personal houses or birth-chart claims. ",
+        "daily": "Explain the strongest aspect, then briefly show how the supporting influences change the practical picture today. ",
+        "weekly": "Trace the early-week, midweek and weekend progression succinctly. Connect support and pressure, rather than describing only the easiest aspects. ",
+        "monthly": "Build a concise beginning, middle and end for the month. Explain the turning points, including supplied eclipses and seasonal gates. Group related events into human themes instead of reciting every transit. ",
     }.get(product, "Explain the collective pattern clearly for a spoken video. ")
     if product in ('weekly', 'studio_weekly'):
         guidance += ("Follow chronological_day_map in Monday-to-Sunday order. Never jump backwards. "
@@ -81,8 +82,11 @@ def prompt_for(packet: dict) -> str:
         "Never turn a closest-approach label into an exact time, or imply a guaranteed effect. "
         + guidance +
         "No dreary advice template, generic flattery, cosmic filler, guarantees or magical promises. "
-        "Do not repeat the calculation list.\n\n"
-        f"Aim for roughly {low}-{high} words in {PARAGRAPHS[product]} short paragraphs. Prioritise a complete, useful reading over an exact count. "
+        "Do not repeat the calculation list. Prefer the shortest complete version. Say each idea once; "
+        "remove throat-clearing, repeated interpretations and duplicate advice. Use one concrete action, "
+        "not several versions of the same instruction.\n\n"
+        f"Aim for roughly {low}-{high} words in {PARAGRAPHS[product]} short paragraphs. This is editorial guidance, not a validation requirement. "
+        "Never pad, abruptly truncate or omit essential calculated evidence to hit the target. Prioritise a complete, useful reading over an exact count. "
         "No Markdown emphasis marks, JSON, headings, lists, citations or separate fields. Weave affirmation naturally "
         "into the prose. End with one clear imperative action sentence, ending in a full stop. "
         "Make that action specific to the supplied pattern: a concrete verb and task someone could do today. Avoid vague closings such as embrace the fluctuations, make space, trust the process, or notice what arises. "
@@ -92,16 +96,20 @@ def prompt_for(packet: dict) -> str:
 
 
 def make_reading(packet: dict, body: str) -> dict:
-    from reading_quality import content_errors, writing_revision
+    from reading_quality import content_errors, editorial_warnings, writing_revision
     body = clean_prose(body)
     errors = text_errors(packet["product"], body) + content_errors(packet, body)
     if errors:
         raise ValueError("; ".join(errors))
-    return {**{key: packet[key] for key in
+    reading = {**{key: packet[key] for key in
                ("product", "period", "sign", "timezone", "calculation_header", "life_areas")},
             "facts_hash": packet_hash(packet), "voice_version": VOICE_VERSION,
             "writing_revision": writing_revision(packet["product"]),
             "voice_body": body.strip(), "status": "published"}
+    warnings = editorial_warnings(packet, body)
+    if warnings:
+        reading["editorial_warnings"] = warnings
+    return reading
 
 
 def read_document(path: Path) -> dict:

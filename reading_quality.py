@@ -113,6 +113,34 @@ def content_errors(packet, body):
     return chronology_errors(packet, body)
 
 
+def editorial_warnings(packet, body):
+    """Return internal quality notes that never block or unpublish a reading."""
+    if not isinstance(body, str) or not body.strip():
+        return []  # Hard validity checks handle unusable output.
+    from plain_readings import WORD_RANGES
+    product = packet.get('product')
+    target = WORD_RANGES.get(product)
+    warnings = []
+    word_count = len(re.findall(r"\b[\w’'-]+\b", body))
+    if target:
+        low, high = target
+        if word_count > high:
+            warnings.append(f'above soft word target: {word_count} words (aim {low}-{high})')
+        elif word_count < low:
+            warnings.append(f'below soft word target: {word_count} words (aim {low}-{high})')
+
+    sentences = [re.sub(r'\s+', ' ', sentence).strip().casefold()
+                 for sentence in re.split(r'(?<=[.!?])\s+', body) if sentence.strip()]
+    if len(sentences) != len(set(sentences)):
+        warnings.append('repeated sentence; tighten before the next editorial pass')
+
+    for verb in ('write', 'jot', 'draft', 'list', 'notice'):
+        uses = len(re.findall(rf'\b{verb}(?:s|d|ing)?\b', body, re.I))
+        if uses > 1:
+            warnings.append(f"repeated action verb '{verb}' ({uses} uses)")
+    return warnings
+
+
 def grounded_brief(packet):
     from astrology_engine import HOUSE_NAMES
     brief = {k: v for k, v in packet.items() if k not in ('calculation_header', 'life_areas')}

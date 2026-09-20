@@ -2,7 +2,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 from unittest.mock import patch
-from plain_readings import split_move, reading_html, prompt_for, text_errors
+from plain_readings import make_reading, split_move, reading_html, prompt_for, text_errors
 from test_plain_workflow import packet
 
 class ClarityTests(unittest.TestCase):
@@ -27,6 +27,8 @@ class ClarityTests(unittest.TestCase):
         self.assertIn('Do not write first area',prompt)
         self.assertNotIn('strictly',prompt)
         self.assertIn('no invented windfalls',prompt)
+        self.assertIn('Prefer the shortest complete version',prompt)
+        self.assertIn('editorial guidance, not a validation requirement',prompt)
 
     def test_editorial_preferences_do_not_reject_valid_prose(self):
         self.assertFalse(text_errors('monthly','The first area awakens. Write one invoice before lunch.'))
@@ -35,10 +37,23 @@ class ClarityTests(unittest.TestCase):
         self.assertEqual(text_errors('daily','```json\n{}\n```'),['plain prose required'])
 
     def test_monthly_wording_is_prompt_guidance_not_a_hard_gate(self):
-        from reading_quality import content_errors
+        from reading_quality import content_errors, editorial_warnings
         p=packet(product='monthly')
         body='A week later, the first area opens. Write one dated list before lunch.'
         self.assertFalse(content_errors(p,body))
+        self.assertTrue(editorial_warnings(p,body))
+        reading=make_reading(p,body)
+        self.assertEqual(reading['status'],'published')
+        self.assertTrue(reading['editorial_warnings'])
+
+    def test_repetition_warning_is_non_blocking(self):
+        from reading_quality import editorial_warnings
+        p=packet(product='daily')
+        body='Write one line. Write one line. Write one useful line before lunch.'
+        warnings=editorial_warnings(p,body)
+        self.assertTrue(any('repeated sentence' in warning for warning in warnings))
+        self.assertTrue(any("repeated action verb 'write'" in warning for warning in warnings))
+        self.assertEqual(make_reading(p,body)['status'],'published')
 
     def test_all_normalizes_dates_and_stops_on_quota(self):
         from scripts.generate_plain_readings import main
