@@ -83,6 +83,19 @@ class PlainWorkflowTests(unittest.TestCase):
             self.assertIsNotNone(load_reading(packet(), root))
             self.assertIsNotNone(load_reading(packet("Aries"), root))
 
+    def test_editorial_warning_is_reported_without_failing_github_job(self):
+        brief = "Write one line. Write one line. Write one useful line before lunch."
+        with tempfile.TemporaryDirectory() as root, tempfile.NamedTemporaryFile() as summary:
+            with patch.dict("os.environ", {"GITHUB_STEP_SUMMARY": summary.name}):
+                code = run_signs("daily", date(2026, 9, 15), "Australia/Sydney", ["Virgo"],
+                    build=lambda product, target, sign, tz: packet(sign),
+                    generate=lambda p: brief, root=root, pause=0)
+            reading = load_reading(packet(), root)
+            self.assertEqual(code, 0)
+            self.assertEqual(reading["status"], "published")
+            self.assertTrue(reading["editorial_warnings"])
+            self.assertIn("editorial warning", Path(summary.name).read_text())
+
     def test_provider_no_model_schema(self):
         class Response:
             status_code = 200
@@ -117,7 +130,7 @@ class PlainWorkflowTests(unittest.TestCase):
         self.assertNotIn("def _calculated_luna_copy", source)
 
     def test_word_ranges(self):
-        self.assertEqual({k: WORD_RANGES[k] for k in ("daily", "weekly", "monthly")}, {"daily": (65, 100), "weekly": (130, 180), "monthly": (280, 380)})
+        self.assertEqual({k: WORD_RANGES[k] for k in ("daily", "weekly", "monthly")}, {"daily": (55, 85), "weekly": (105, 150), "monthly": (230, 320)})
         self.assertIn("End with one clear imperative action", prompt_for(packet()))
 
 class GlobalRecoveryTests(unittest.TestCase):
