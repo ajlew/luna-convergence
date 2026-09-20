@@ -46,6 +46,9 @@ def run_signs(product, target, timezone, signs, *, build, generate=generate_text
             ready += 1
             statuses[sign] = "published"
             print(f"{product} {period} {sign}: published", flush=True)
+            warnings = copies[sign].get("editorial_warnings", [])
+            if warnings:
+                report_editorial_warnings(product, period, sign, warnings)
         except Exception as exc:
             failures += 1
             stop_batch = isinstance(exc, RateLimitError)
@@ -72,6 +75,17 @@ def report_coverage(product, period, ready, total):
     if summary:
         with open(summary, 'a', encoding='utf-8') as stream:
             stream.write(f"- {line}\n")
+
+
+def report_editorial_warnings(product, period, sign, warnings):
+    """Surface concise QA notes without changing a successful job's status."""
+    detail = '; '.join(warnings)
+    line = f"{product} {period} {sign}: editorial warning — {detail}"
+    print(line, file=sys.stderr, flush=True)
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a', encoding='utf-8') as stream:
+            stream.write(f"- ⚠️ {line}\n")
 
 
 def main(argv=None):
