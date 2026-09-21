@@ -134,6 +134,7 @@ class NatalSnapshot:
     aspects: tuple[NatalAspect, ...]
     ascendant: NatalPosition | None
     midheaven: NatalPosition | None
+    sun_uncertain: tuple[str, ...]
     moon_uncertain: tuple[str, ...]
     themes: tuple[NatalTheme, ...]
     signatures: tuple[NatalSignature, ...]
@@ -526,14 +527,22 @@ def _dominance(positions: list[NatalPosition]) -> tuple[str, str]:
     return max(elements, key=elements.get), max(modalities, key=modalities.get)
 
 
-def _moon_uncertainty(birth_date: date) -> tuple[str, ...]:
-    early = _planet_positions(_jd_utc(birth_date, 0.0))
-    late = _planet_positions(_jd_utc(birth_date, 23.999))
-    early_moon = next(item for item in early if item.planet == "Moon")
-    late_moon = next(item for item in late if item.planet == "Moon")
-    if early_moon.sign == late_moon.sign:
-        return (early_moon.sign,)
-    return (early_moon.sign, late_moon.sign)
+def _planet_sign_uncertainty(
+    birth_date: date,
+    timezone_name: str,
+    planet: str,
+) -> tuple[str, ...]:
+    early = _planet_positions(_jd_from_local(birth_date, time(0, 0), timezone_name))
+    late = _planet_positions(_jd_from_local(birth_date, time(23, 59, 59), timezone_name))
+    early_value = next(item for item in early if item.planet == planet)
+    late_value = next(item for item in late if item.planet == planet)
+    if early_value.sign == late_value.sign:
+        return (early_value.sign,)
+    return (early_value.sign, late_value.sign)
+
+
+def _moon_uncertainty(birth_date: date, timezone_name: str = "UTC") -> tuple[str, ...]:
+    return _planet_sign_uncertainty(birth_date, timezone_name, "Moon")
 
 
 def build_natal_snapshot(
@@ -575,7 +584,8 @@ def build_natal_snapshot(
         ]
 
     aspects = detect_natal_aspects(positions)
-    moon_uncertain = () if birth_time_known else _moon_uncertainty(birth_date)
+    sun_uncertain = () if birth_time_known else _planet_sign_uncertainty(birth_date, timezone_name, "Sun")
+    moon_uncertain = () if birth_time_known else _moon_uncertainty(birth_date, timezone_name)
     themes = _build_themes(positions, aspects, moon_uncertain=moon_uncertain)
     signatures = _build_signatures(aspects)
     concentration_theme = build_natal_concentration_theme(positions)
@@ -590,6 +600,7 @@ def build_natal_snapshot(
         aspects=tuple(aspects),
         ascendant=ascendant,
         midheaven=midheaven,
+        sun_uncertain=sun_uncertain,
         moon_uncertain=moon_uncertain,
         themes=themes,
         signatures=signatures,

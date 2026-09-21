@@ -72,6 +72,12 @@ from natal_snapshot import (
     encode_natal_profile,
     natal_profile_summary,
 )
+from birthday_card import (
+    birthday_card_filename,
+    build_birthday_card,
+    render_birthday_card_pdf,
+    render_birthday_card_png,
+)
 from monthly_natal_overlay import build_monthly_natal_overlay
 from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
@@ -2516,6 +2522,7 @@ def top_navigation(current_path: str) -> None:
     items = [
         ("", "Daily Horoscope"),
         ("weekly-view", "Weekly View"),
+        ("birthday-card", "Birthday Card"),
         (monthly_path, "This Month"),
         ("timing-map", "Your Year Ahead"),
         ("house-guide", "House Guide"),
@@ -7998,6 +8005,146 @@ def make_monthly_page(sign: str):
     return page
 
 
+def birthday_card_page() -> None:
+    set_page_metadata(
+        "Personalised Astrology Birthday Card | Luna Convergence",
+        "Create a personalised Luna birthday card from the recipient's calculated Sun and Moon signs, then download it for Instagram or print.",
+        "/birthday-card",
+    )
+    st.markdown('<section class="natal-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Luna birthday sky · one design</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">Give them<br>their sky.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="natal-intro">Enter the recipient’s full birth date so Luna can calculate the card accurately. '
+        'The birth year remains private: only the day and month appear on the finished card.</div>',
+        unsafe_allow_html=True,
+    )
+
+    with st.container(border=True):
+        name = st.text_input(
+            "Recipient’s first name",
+            placeholder="Fiona",
+            max_chars=40,
+        )
+        birth_date_value = st.date_input(
+            "Full date of birth",
+            value=None,
+            min_value=date(1900, 1, 1),
+            max_value=browser_local_date(),
+            help="The year is used for the astrology calculation but is never printed on the card.",
+        )
+        birth_timezone = st.selectbox(
+            "Birth timezone",
+            TIMEZONES,
+            index=timezone_select_index(),
+            help="This lets Luna check the Moon across the correct local birth date.",
+        )
+        time_known = st.checkbox(
+            "I know the birth time",
+            value=False,
+            help="A known time makes the Moon position more precise. It is not printed on the card.",
+        )
+        birth_time_value = None
+        if time_known:
+            birth_time_value = st.time_input(
+                "Birth time",
+                value=datetime.strptime("12:00", "%H:%M").time(),
+            )
+        custom_poem = st.text_area(
+            "Optional message",
+            placeholder="Leave blank and Luna will create a short Sun–Moon poem.",
+            help="Long messages are automatically resized to fit; they do not stop the card from being generated.",
+        )
+        submitted = st.button(
+            "Create birthday card",
+            use_container_width=True,
+            key="birthday-card-submit-v1",
+        )
+
+    if submitted:
+        if not str(name or "").strip():
+            st.error("Enter the recipient’s first name.")
+        elif birth_date_value is None:
+            st.error("Choose the recipient’s full date of birth.")
+        else:
+            try:
+                snapshot = build_natal_snapshot(
+                    birth_date=birth_date_value,
+                    birth_time_known=time_known,
+                    birth_time=birth_time_value,
+                    timezone_name=birth_timezone,
+                )
+                card = build_birthday_card(
+                    recipient_name=name,
+                    birth_date=birth_date_value,
+                    snapshot=snapshot,
+                    poem=custom_poem,
+                )
+                st.session_state["birthday-card-result-v1"] = {
+                    "card": card,
+                    "png": render_birthday_card_png(card),
+                    "pdf": render_birthday_card_pdf(card),
+                }
+                track_event(
+                    "birthday_card_generated",
+                    {
+                        "birth_time_known": bool(time_known),
+                        "birth_year_hidden": True,
+                    },
+                )
+            except Exception as exc:
+                st.error("Luna could not create this card. Check the birth details and try again.")
+                if EDITOR_PREVIEW_ENABLED:
+                    st.exception(exc)
+
+    result = st.session_state.get("birthday-card-result-v1")
+    if not result:
+        st.caption("One 4:5 card. The same design becomes an Instagram PNG and an 8 × 10 inch PDF.")
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
+    card = result["card"]
+    st.markdown("## Your Luna Birthday Card")
+    st.image(result["png"], use_container_width=True)
+    if len(card.poem) > 240:
+        st.warning(
+            "The message fits, but it is long for an Instagram card. Shortening it will make the type larger and easier to read. The download remains available."
+        )
+    if not card.birth_time_known and "/" in card.sun_sign:
+        st.info(
+            f"The Sun changed signs on this birth date. With no birth time supplied, Luna has shown both possible Sun signs: {card.sun_sign}."
+        )
+    if not card.birth_time_known and "/" in card.moon_label:
+        st.info(
+            f"The Moon changed signs on this birth date. With no birth time supplied, Luna has shown both possible Moon signs: {card.moon_label}."
+        )
+    elif not card.birth_time_known:
+        st.caption("Birth time was not supplied. The Moon remained in the same sign across this date, so the card can name it safely.")
+
+    download_columns = st.columns(2, gap="medium")
+    with download_columns[0]:
+        st.download_button(
+            "Download Instagram PNG",
+            data=result["png"],
+            file_name=birthday_card_filename(card, "png"),
+            mime="image/png",
+            use_container_width=True,
+        )
+    with download_columns[1]:
+        st.download_button(
+            "Download printable PDF",
+            data=result["pdf"],
+            file_name=birthday_card_filename(card, "pdf"),
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    st.caption(
+        "PNG · 1080 × 1350 px for Instagram. PDF · one 8 × 10 inch page using the identical 4:5 design. "
+        "On Instagram Stories, place the PNG on a plain background; no redesign is required."
+    )
+    st.markdown('</section>', unsafe_allow_html=True)
+
+
 def natal_snapshot_page() -> None:
     set_page_metadata(
         "Free Natal Snapshot | Luna Convergence",
@@ -10513,6 +10660,11 @@ WEEKLY_STUDIO_REF = st.Page(
     url_path="weekly-studio",
     visibility="hidden",
 )
+BIRTHDAY_CARD_REF = st.Page(
+    birthday_card_page,
+    title="Birthday Card",
+    url_path="birthday-card",
+)
 MONTHLY_INDEX_REF = st.Page(
     monthly_index_page,
     title="Monthly",
@@ -10612,6 +10764,7 @@ ALL_PAGES = [
     DAILY_PAGE_REF,
     WEEKLY_PAGE_REF,
     WEEKLY_STUDIO_REF,
+    BIRTHDAY_CARD_REF,
     MONTHLY_INDEX_REF,
     LEGACY_MONTHLY_INDEX_REF,
     MONTHLY_PREVIEW_REF,
