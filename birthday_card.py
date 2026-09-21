@@ -25,38 +25,15 @@ WHITE = "#FFFFFF"
 BLACK = "#050505"
 MUTED = "#5D5D58"
 GOLD = "#C59A32"
+ASPECT_ANGLES = {
+    "conjunction": 0.0,
+    "sextile": 60.0,
+    "square": 90.0,
+    "trine": 120.0,
+    "opposition": 180.0,
+}
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets"
-
-SUN_WORD = {
-    "Aries": "Courage",
-    "Taurus": "Devotion",
-    "Gemini": "Curiosity",
-    "Cancer": "Belonging",
-    "Leo": "Radiance",
-    "Virgo": "Purpose",
-    "Libra": "Balance",
-    "Scorpio": "Truth",
-    "Sagittarius": "Wonder",
-    "Capricorn": "Resolve",
-    "Aquarius": "Freedom",
-    "Pisces": "Imagination",
-}
-
-MOON_ENDING = {
-    "Aries": "brave beginning waiting to move",
-    "Taurus": "quiet strength waiting to take root",
-    "Gemini": "bright idea waiting to be spoken",
-    "Cancer": "tender place waiting to feel at home",
-    "Leo": "warm light waiting to be seen",
-    "Virgo": "useful gift waiting to take shape",
-    "Libra": "harmony waiting to be chosen",
-    "Scorpio": "deeper truth waiting to surface",
-    "Sagittarius": "wider horizon waiting to open",
-    "Capricorn": "steady promise waiting to become real",
-    "Aquarius": "wild freedom waiting to break open",
-    "Pisces": "private dream waiting to find form",
-}
 
 @dataclass(frozen=True)
 class BirthdayCard:
@@ -65,22 +42,59 @@ class BirthdayCard:
     date_label: str
     sun_sign: str
     moon_label: str
+    sun_calculation: str | None
+    moon_calculation: str | None
     poem: str
     birth_time_known: bool
 
 
-def suggested_poem(sun_sign: str, moon_sign: str | None) -> str:
-    opening = SUN_WORD.get(sun_sign, "The sky")
-    ending = MOON_ENDING.get(moon_sign or "", "inner light waiting to unfold")
-    return f"{opening} only reveals the {ending}."
+def _aspect_phase(aspect, by_planet: dict[str, object]) -> str:
+    """Describe whether a natal aspect is tightening or releasing at birth."""
+    first = by_planet[aspect.planet1]
+    second = by_planet[aspect.planet2]
+    target = ASPECT_ANGLES[aspect.name]
 
+    def separation(first_longitude: float, second_longitude: float) -> float:
+        raw = abs(first_longitude - second_longitude) % 360.0
+        return min(raw, 360.0 - raw)
+
+    current_orb = abs(separation(first.longitude, second.longitude) - target)
+    # Project one hour using the Swiss Ephemeris daily speeds retained on each
+    # natal position. This mirrors Weekly Studio's applying/separating logic
+    # without pretending a natal aspect has a day-wide "closest approach".
+    future_first = (float(first.longitude) + float(first.speed) / 24.0) % 360.0
+    future_second = (float(second.longitude) + float(second.speed) / 24.0) % 360.0
+    future_orb = abs(separation(future_first, future_second) - target)
+    if current_orb <= 0.03:
+        return "exact"
+    return "applying" if future_orb < current_orb else "separating"
+
+
+def _luminary_calculation(snapshot: "NatalSnapshot", luminary: str) -> str | None:
+    if not snapshot.birth_time_known:
+        return None
+    relevant = [
+        item
+        for item in snapshot.aspects
+        if luminary in {item.planet1, item.planet2}
+    ]
+    if not relevant:
+        return None
+    aspect = sorted(
+        relevant,
+        key=lambda item: (-float(getattr(item, "strength", 0.0)), float(item.orb)),
+    )[0]
+    other = aspect.planet2 if aspect.planet1 == luminary else aspect.planet1
+    by_planet = {item.planet: item for item in snapshot.positions}
+    phase = _aspect_phase(aspect, by_planet)
+    return f"{luminary} {aspect.name} {other} · {phase} · {aspect.orb:.2f}° orb at birth"
 
 def build_birthday_card(
     *,
     recipient_name: str,
     birth_date: date,
     snapshot: "NatalSnapshot",
-    poem: str = "",
+    poem: str,
 ) -> BirthdayCard:
     name = " ".join(str(recipient_name or "").split()).strip()
     if not name:
@@ -92,19 +106,17 @@ def build_birthday_card(
     sun_uncertain = tuple(getattr(snapshot, "sun_uncertain", ()))
     if not snapshot.birth_time_known and len(sun_uncertain) > 1:
         sun_label = " / ".join(sun_uncertain)
-        poem_sun = ""
     else:
         sun_label = sun_sign
-        poem_sun = sun_sign
     if not snapshot.birth_time_known and len(snapshot.moon_uncertain) > 1:
         moon_label = " / ".join(snapshot.moon_uncertain)
-        poem_moon = None
     else:
         moon_label = moon_sign
-        poem_moon = moon_sign
 
     date_label = birth_date.strftime("%d %B").lstrip("0").upper()
     clean_poem = " ".join(str(poem or "").split()).strip()
+    if not clean_poem:
+        raise ValueError("A validated or customer-supplied birthday poem is required.")
 
     return BirthdayCard(
         recipient_name=name,
@@ -112,7 +124,9 @@ def build_birthday_card(
         date_label=date_label,
         sun_sign=sun_label,
         moon_label=moon_label,
-        poem=clean_poem or suggested_poem(poem_sun, poem_moon),
+        sun_calculation=_luminary_calculation(snapshot, "Sun"),
+        moon_calculation=_luminary_calculation(snapshot, "Moon"),
+        poem=clean_poem,
         birth_time_known=snapshot.birth_time_known,
     )
 
@@ -196,14 +210,28 @@ def _wrapped_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFo
 
 
 def _poem_layout(draw: ImageDraw.ImageDraw, text: str, max_width: int) -> tuple[ImageFont.ImageFont, list[str], int]:
-    for size in range(136, 39, -2):
-        font = _font("display", size)
+    for size in range(92, 35, -2):
+        font = _font("mono", size)
         lines = _wrapped_lines(draw, text, font, max_width)
-        line_height = int(size * 1.34)
+        line_height = int(size * 1.48)
         if len(lines) <= 12 and len(lines) * line_height <= 740:
             return font, lines, line_height
-    font = _font("display", 22)
-    return font, _wrapped_lines(draw, text, font, max_width), 30
+    font = _font("mono", 22)
+    return font, _wrapped_lines(draw, text, font, max_width), 34
+
+
+def _draw_calculation(
+    draw: ImageDraw.ImageDraw,
+    text: str | None,
+    x: int,
+    y: int,
+    max_width: int,
+) -> None:
+    if not text:
+        return
+    font = _font("sans", 32)
+    for index, line in enumerate(_wrapped_lines(draw, text.upper(), font, max_width)[:2]):
+        draw.text((x, y + index * 46), line, font=font, fill=MUTED)
 
 
 def render_birthday_card_master(card: BirthdayCard) -> Image.Image:
@@ -253,6 +281,8 @@ def render_birthday_card_master(card: BirthdayCard) -> Image.Image:
     draw.text((right_x, 1445), "MOON", font=label_font, fill=MUTED)
     moon_font = _fit_font(draw, f"IN {card.moon_label.upper()}", "sans", 96, 930, 52)
     draw.text((right_x, 1535), f"IN {card.moon_label.upper()}", font=moon_font, fill=BLACK)
+    _draw_calculation(draw, card.sun_calculation, left_x, 1665, 900)
+    _draw_calculation(draw, card.moon_calculation, right_x, 1665, 870)
 
     poem_font, poem_lines, line_height = _poem_layout(draw, card.poem, 1740)
     poem_top = 2290

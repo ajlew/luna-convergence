@@ -78,6 +78,11 @@ from birthday_card import (
     render_birthday_card_pdf,
     render_birthday_card_png,
 )
+from birthday_card_voice import (
+    BirthdayPoemError,
+    build_birthday_poem_facts,
+    generate_birthday_poem,
+)
 from monthly_natal_overlay import build_monthly_natal_overlay
 from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
@@ -286,6 +291,21 @@ def _cached_guided_luna_collection(
 ) -> dict:
     return generate_guided_collection_copy(
         product,
+        json.loads(facts_json),
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+    )
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_birthday_poem(
+    facts_json: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+) -> str:
+    return generate_birthday_poem(
         json.loads(facts_json),
         base_url=base_url,
         model=model,
@@ -8302,9 +8322,9 @@ def birthday_card_page() -> None:
                 value=datetime.strptime("12:00", "%H:%M").time(),
             )
         custom_poem = st.text_area(
-            "Optional message",
-            placeholder="Leave blank and Luna will create a short Sun–Moon poem.",
-            help="Long messages are automatically resized to fit; they do not stop the card from being generated.",
+            "Optional personal message",
+            placeholder="Leave blank and Luna will write a unique poem from the calculated birth sky.",
+            help="If supplied, this message replaces Luna’s generated poem. Long messages are automatically resized to fit.",
         )
         submitted = st.button(
             "Create birthday card",
@@ -8313,6 +8333,7 @@ def birthday_card_page() -> None:
         )
 
     if submitted:
+        st.session_state.pop("birthday-card-result-v1", None)
         if not str(name or "").strip():
             st.error("Enter the recipient’s first name.")
         elif birth_date_value is None:
@@ -8325,11 +8346,30 @@ def birthday_card_page() -> None:
                     birth_time=birth_time_value,
                     timezone_name=birth_timezone,
                 )
+                clean_custom_poem = " ".join(str(custom_poem or "").split()).strip()
+                if clean_custom_poem:
+                    poem = clean_custom_poem
+                else:
+                    if not _luna_voice_ready():
+                        raise BirthdayPoemError(
+                            "Luna's voice provider is not configured for live Birthday Card generation."
+                        )
+                    poem_facts = build_birthday_poem_facts(
+                        snapshot=snapshot,
+                        variation_key=secrets.token_hex(8),
+                    )
+                    with st.spinner("Luna is writing from the calculated birth sky. Keep this page open…"):
+                        poem = _cached_birthday_poem(
+                            json.dumps(poem_facts, ensure_ascii=False, sort_keys=True),
+                            LUNA_VOICE_BASE_URL,
+                            LUNA_VOICE_MODEL,
+                            LUNA_VOICE_API_KEY,
+                        )
                 card = build_birthday_card(
                     recipient_name=name,
                     birth_date=birth_date_value,
                     snapshot=snapshot,
-                    poem=custom_poem,
+                    poem=poem,
                 )
                 st.session_state["birthday-card-result-v1"] = {
                     "card": card,
@@ -8342,6 +8382,11 @@ def birthday_card_page() -> None:
                         "birth_time_known": bool(time_known),
                         "birth_year_hidden": True,
                     },
+                )
+            except BirthdayPoemError as exc:
+                _record_voice_error("birthday_card", exc)
+                st.error(
+                    "Luna could not write a verified birthday poem, so no card was created. Please try again shortly."
                 )
             except Exception as exc:
                 st.error("Luna could not create this card. Check the birth details and try again.")
