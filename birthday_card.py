@@ -28,36 +28,6 @@ GOLD = "#C59A32"
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets"
 
-SUN_WORD = {
-    "Aries": "Courage",
-    "Taurus": "Devotion",
-    "Gemini": "Curiosity",
-    "Cancer": "Belonging",
-    "Leo": "Radiance",
-    "Virgo": "Purpose",
-    "Libra": "Balance",
-    "Scorpio": "Truth",
-    "Sagittarius": "Wonder",
-    "Capricorn": "Resolve",
-    "Aquarius": "Freedom",
-    "Pisces": "Imagination",
-}
-
-MOON_ENDING = {
-    "Aries": "brave beginning waiting to move",
-    "Taurus": "quiet strength waiting to take root",
-    "Gemini": "bright idea waiting to be spoken",
-    "Cancer": "tender place waiting to feel at home",
-    "Leo": "warm light waiting to be seen",
-    "Virgo": "useful gift waiting to take shape",
-    "Libra": "harmony waiting to be chosen",
-    "Scorpio": "deeper truth waiting to surface",
-    "Sagittarius": "wider horizon waiting to open",
-    "Capricorn": "steady promise waiting to become real",
-    "Aquarius": "wild freedom waiting to break open",
-    "Pisces": "private dream waiting to find form",
-}
-
 @dataclass(frozen=True)
 class BirthdayCard:
     recipient_name: str
@@ -68,19 +38,12 @@ class BirthdayCard:
     poem: str
     birth_time_known: bool
 
-
-def suggested_poem(sun_sign: str, moon_sign: str | None) -> str:
-    opening = SUN_WORD.get(sun_sign, "The sky")
-    ending = MOON_ENDING.get(moon_sign or "", "inner light waiting to unfold")
-    return f"{opening} only reveals the {ending}."
-
-
 def build_birthday_card(
     *,
     recipient_name: str,
     birth_date: date,
     snapshot: "NatalSnapshot",
-    poem: str = "",
+    poem: str,
 ) -> BirthdayCard:
     name = " ".join(str(recipient_name or "").split()).strip()
     if not name:
@@ -92,19 +55,17 @@ def build_birthday_card(
     sun_uncertain = tuple(getattr(snapshot, "sun_uncertain", ()))
     if not snapshot.birth_time_known and len(sun_uncertain) > 1:
         sun_label = " / ".join(sun_uncertain)
-        poem_sun = ""
     else:
         sun_label = sun_sign
-        poem_sun = sun_sign
     if not snapshot.birth_time_known and len(snapshot.moon_uncertain) > 1:
         moon_label = " / ".join(snapshot.moon_uncertain)
-        poem_moon = None
     else:
         moon_label = moon_sign
-        poem_moon = moon_sign
 
     date_label = birth_date.strftime("%d %B").lstrip("0").upper()
     clean_poem = " ".join(str(poem or "").split()).strip()
+    if not clean_poem:
+        raise ValueError("A validated or customer-supplied birthday poem is required.")
 
     return BirthdayCard(
         recipient_name=name,
@@ -112,7 +73,7 @@ def build_birthday_card(
         date_label=date_label,
         sun_sign=sun_label,
         moon_label=moon_label,
-        poem=clean_poem or suggested_poem(poem_sun, poem_moon),
+        poem=clean_poem,
         birth_time_known=snapshot.birth_time_known,
     )
 

@@ -16,3 +16,11 @@ def test_birthday_card_offers_both_matching_downloads():
     assert '"Download printable PDF"' in APP
     assert "render_birthday_card_png(card)" in APP
     assert "render_birthday_card_pdf(card)" in APP
+
+
+def test_birthday_card_uses_live_validated_voice_without_canned_fallback():
+    assert "build_birthday_poem_facts" in APP
+    assert "_cached_birthday_poem" in APP
+    assert "secrets.token_hex(8)" in APP
+    assert "Luna could not write a verified birthday poem" in APP
+    assert "suggested_poem" not in APP
