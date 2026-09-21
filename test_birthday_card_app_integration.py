@@ -37,3 +37,13 @@ def test_customer_can_choose_one_of_two_keepsake_backgrounds():
     assert '"Midnight Painted": "painted_blue"' in APP
     assert '"Ivory Letter": "ivory_paper"' in APP
     assert "theme=card_theme" in APP
+
+
+def test_customer_sees_matching_finished_card_samples_before_choosing():
+    root = Path(__file__).parent
+    assert 'st.markdown("**Choose the finished look**")' in APP
+    assert '"lara-midnight-painted.png"' in APP
+    assert '"lara-ivory-letter.png"' in APP
+    assert '"Style samples only.' in APP
+    assert (root / "assets" / "birthday-previews" / "lara-midnight-painted.png").is_file()
+    assert (root / "assets" / "birthday-previews" / "lara-ivory-letter.png").is_file()
