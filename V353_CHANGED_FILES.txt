@@ -1,0 +1,6 @@
+app.py
+test_birthday_card_app_integration.py
+BIRTHDAY_CARD_V353_STYLE_PREVIEWS.md
+V353_CHANGED_FILES.txt
+assets/birthday-previews/lara-midnight-painted.png
+assets/birthday-previews/lara-ivory-letter.png

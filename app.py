@@ -8311,6 +8311,24 @@ def birthday_card_page() -> None:
             index=timezone_select_index(),
             help="This lets Luna check the Moon across the correct local birth date.",
         )
+        st.markdown("**Choose the finished look**")
+        preview_dir = Path(__file__).resolve().parent / "assets" / "birthday-previews"
+        preview_columns = st.columns(2, gap="small")
+        with preview_columns[0]:
+            st.image(
+                str(preview_dir / "lara-midnight-painted.png"),
+                caption="Midnight Painted",
+                use_container_width=True,
+            )
+        with preview_columns[1]:
+            st.image(
+                str(preview_dir / "lara-ivory-letter.png"),
+                caption="Ivory Letter",
+                use_container_width=True,
+            )
+        st.caption(
+            "Style samples only. Your finished card uses the recipient’s calculated birth sky and Luna’s unique poem."
+        )
         card_style = st.radio(
             "Card style",
             ("Midnight Painted", "Ivory Letter"),
