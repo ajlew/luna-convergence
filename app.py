@@ -176,8 +176,57 @@ LUNA_VOICE_MODE = secret("LUNA_VOICE_MODE", "published").strip().lower()
 LUNA_VOICE_BASE_URL = secret("LUNA_VOICE_BASE_URL")
 LUNA_VOICE_MODEL = secret("LUNA_VOICE_MODEL")
 LUNA_VOICE_API_KEY = secret("LUNA_VOICE_API_KEY")
+LUNA_ADMIN_KEY = secret("LUNA_ADMIN_KEY")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 _VOICE_ERRORS: dict[str, str] = {}
+
+ADMIN_SESSION_KEY = "luna-admin-authenticated-v1"
+
+
+def _admin_access_unlocked() -> bool:
+    return bool(st.session_state.get(ADMIN_SESSION_KEY, False))
+
+
+def _admin_access_panel(context: str) -> bool:
+    """Unlock owner output on the current customer page without exposing the secret."""
+    key_context = re.sub(r"[^a-z0-9]+", "-", str(context).lower()).strip("-") or "page"
+    if _admin_access_unlocked():
+        with st.container(border=True):
+            columns = st.columns([4, 1], gap="small")
+            with columns[0]:
+                st.success("Luna owner access is unlocked for this browser session.")
+            with columns[1]:
+                if st.button(
+                    "Lock",
+                    key=f"{key_context}-admin-lock",
+                    use_container_width=True,
+                ):
+                    st.session_state.pop(ADMIN_SESSION_KEY, None)
+                    st.rerun()
+        return True
+
+    with st.expander("Luna owner access", expanded=False):
+        st.caption("Enter the private admin key to generate owner copies without payment.")
+        with st.form(f"{key_context}-admin-form", clear_on_submit=True):
+            candidate = st.text_input(
+                "Admin key",
+                type="password",
+                key=f"{key_context}-admin-key",
+                autocomplete="off",
+            )
+            submitted = st.form_submit_button(
+                "Unlock owner access",
+                use_container_width=True,
+            )
+        if submitted:
+            if not LUNA_ADMIN_KEY:
+                st.error("LUNA_ADMIN_KEY is not configured in Streamlit secrets.")
+            elif secrets.compare_digest(candidate, LUNA_ADMIN_KEY):
+                st.session_state[ADMIN_SESSION_KEY] = True
+                st.rerun()
+            else:
+                st.error("That admin key is not valid.")
+    return False
 
 _VOICE_LOADING_LABELS = {
     "daily": "Luna is reading today's calculated sky. Keep this page open…",
@@ -3291,6 +3340,120 @@ def _build_monthly_checkout_natal(values: dict):
         precision = "Exact birth time supplied · birthplace coordinates unavailable, so angles and houses omitted"
     return snapshot, precision
 
+
+def _owner_report_output(order: dict) -> dict:
+    """Build the same paid output after session-scoped owner authentication."""
+    product_code = str(order.get("product_code") or "").upper()
+    period_code = str(order.get("period_code") or "")
+    sign = str(order.get("sign") or "")
+    timezone_name = str(order.get("timezone") or DEFAULT_TIMEZONE)
+    nearest_city = str(order.get("nearest_city") or "")
+    main_focus = str(order.get("main_focus") or "General overview")
+    personal_question = str(order.get("personal_question") or "")
+    order_reference = str(order.get("reference") or "OWNER-PREVIEW")
+
+    if product_code == "MONTHLY":
+        year_text, month_text = period_code.split("-", 1)
+        narrative, result = build_production_monthly_report(
+            sign=sign,
+            year=int(year_text),
+            month=int(month_text),
+            timezone_name=timezone_name,
+            nearest_city=nearest_city,
+            main_focus=main_focus,
+            personal_question=personal_question,
+        )
+        natal_profile_value = str(order.get("natal_profile") or "")
+        if natal_profile_value:
+            result["natal_overlay"] = build_monthly_natal_overlay(natal_profile_value, result)
+            result["natal_summary"] = str(order.get("natal_summary") or "")
+            result["natal_precision"] = str(order.get("natal_precision") or "")
+        pdf_bytes = build_report_pdf(
+            result,
+            main_focus=main_focus,
+            personal_question=personal_question,
+            order_reference=order_reference,
+        )
+        return {
+            "product_code": product_code,
+            "narrative": narrative,
+            "result": result,
+            "pdf": pdf_bytes,
+            "pdf_name": report_filename(result),
+        }
+
+    if product_code in {"YEAR", "YEARLY"}:
+        year = int(period_code)
+        result = period_report(
+            sign,
+            date(year, 1, 1),
+            date(year, 12, 31),
+            timezone_name,
+            str(year),
+            transition_count=9,
+            nearest_city=nearest_city,
+            main_focus=main_focus,
+        )
+        pdf_bytes = build_report_pdf(
+            result,
+            main_focus=main_focus,
+            personal_question=personal_question,
+            order_reference=order_reference,
+        )
+        return {
+            "product_code": product_code,
+            "result": result,
+            "pdf": pdf_bytes,
+            "pdf_name": report_filename(result),
+        }
+
+    raise ValueError("Owner access received an unrecognised report type.")
+
+
+def _render_owner_report(order: dict, key_context: str) -> None:
+    output_key = f"owner-report-output::{key_context}::{str(order.get('product_code') or '').lower()}"
+    if st.button(
+        "Generate owner report — no payment",
+        type="primary",
+        use_container_width=True,
+        key=f"{key_context}-owner-report-generate-{str(order.get('product_code') or '').lower()}",
+    ):
+        try:
+            with st.spinner("Building the complete owner report..."):
+                st.session_state[output_key] = _owner_report_output(order)
+        except Exception as exc:
+            st.error("Luna could not generate the owner report on this run.")
+            if EDITOR_PREVIEW_ENABLED:
+                st.exception(exc)
+            return
+
+    output = st.session_state.get(output_key)
+    if not output:
+        return
+
+    st.success("Owner copy generated. No Stripe payment was created.")
+    st.download_button(
+        "Download owner PDF",
+        data=output["pdf"],
+        file_name=output["pdf_name"],
+        mime="application/pdf",
+        use_container_width=True,
+        key=f"{key_context}-owner-pdf-{str(order.get('product_code') or '').lower()}",
+    )
+    if output["product_code"] == "MONTHLY":
+        render_production_monthly_report(
+            output["narrative"],
+            output["result"],
+            show_print=True,
+            order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
+        )
+    else:
+        render_yearly_experience(
+            output["result"],
+            show_print=True,
+            order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
+        )
+
 def report_cta(
     context: str = "general",
     prefill_sign: str | None = None,
@@ -3302,6 +3465,8 @@ def report_cta(
         character if character.isalnum() else "-"
         for character in context.lower()
     ).strip("-") or "general"
+
+    admin_unlocked = _admin_access_panel(f"{key_context}-paid-reports")
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     monthly_tab, yearly_tab = st.tabs(
@@ -3366,12 +3531,22 @@ def report_cta(
                 help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
             natal_values = _monthly_natal_checkout_fields(key_context)
-            st.caption(
-                "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link. "
-                "Raw birth details are used to calculate the natal chart in this session; Stripe receives only the derived natal geometry needed for fulfilment."
-            )
+            if admin_unlocked:
+                st.caption(
+                    "Owner access: generate the complete report here without Stripe. "
+                    "Raw birth details remain in this app session."
+                )
+            else:
+                st.caption(
+                    "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link. "
+                    "Raw birth details are used to calculate the natal chart in this session; Stripe receives only the derived natal geometry needed for fulfilment."
+                )
             submitted = st.button(
-                f"Prepare monthly checkout — {MONTHLY_PRICE}",
+                (
+                    "Prepare owner monthly report"
+                    if admin_unlocked
+                    else f"Prepare monthly checkout — {MONTHLY_PRICE}"
+                ),
                 type="primary",
                 use_container_width=True,
                 key=f"{key_context}-monthly-submit",
@@ -3379,7 +3554,11 @@ def report_cta(
 
         state_key = f"prepared-order::{key_context}::monthly"
         if submitted:
-            if not valid_email(delivery_email):
+            st.session_state.pop(
+                f"owner-report-output::{key_context}-monthly::monthly",
+                None,
+            )
+            if not admin_unlocked and not valid_email(delivery_email):
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
@@ -3412,7 +3591,7 @@ def report_cta(
                     order = {
                         "product_code": "MONTHLY",
                         "report_name": "Personal Monthly Report",
-                        "email": delivery_email.strip(),
+                        "email": delivery_email.strip() or "Not required for owner access",
                         "sign": sign,
                         "period": month_label,
                         "period_code": period_code,
@@ -3426,15 +3605,11 @@ def report_cta(
                         "natal_summary": natal_profile_summary(natal_snapshot),
                         "natal_precision": natal_precision,
                     }
-                    try:
-                        order["checkout_url"] = _create_instant_checkout(order, "MONTHLY")
-                    except Exception as exc:
-                        st.error(f"Secure checkout is not ready: {exc}")
-                        st.session_state.pop(state_key, None)
-                    else:
+                    if admin_unlocked:
+                        order["admin_preview"] = True
                         st.session_state[state_key] = order
                         track_event(
-                            "monthly_order_prepared",
+                            "monthly_owner_report_prepared",
                             {
                                 "zodiac_sign": sign,
                                 "report_period": period_code,
@@ -3443,8 +3618,29 @@ def report_cta(
                                 "natal_time_known": bool(natal_values.get("time_known")),
                             },
                         )
+                    else:
+                        try:
+                            order["checkout_url"] = _create_instant_checkout(order, "MONTHLY")
+                        except Exception as exc:
+                            st.error(f"Secure checkout is not ready: {exc}")
+                            st.session_state.pop(state_key, None)
+                        else:
+                            st.session_state[state_key] = order
+                            track_event(
+                                "monthly_order_prepared",
+                                {
+                                    "zodiac_sign": sign,
+                                    "report_period": period_code,
+                                    "timezone": timezone_name,
+                                    "main_focus": main_focus,
+                                    "natal_time_known": bool(natal_values.get("time_known")),
+                                },
+                            )
 
         order = st.session_state.get(state_key)
+        if order and bool(order.get("admin_preview")) != admin_unlocked:
+            st.session_state.pop(state_key, None)
+            order = None
         if order:
             _order_summary(
                 order["report_name"],
@@ -3460,25 +3656,28 @@ def report_cta(
                 order.get("natal_summary", ""),
                 order.get("natal_precision", ""),
             )
-            payment_button(
-                f"Continue to secure payment — {MONTHLY_PRICE}",
-                order["checkout_url"],
-                f"{key_context}-monthly-payment-disabled",
-                "monthly_report_click",
-                {
-                    "zodiac_sign": order["sign"],
-                    "report_period": order["period_code"],
-                    "order_reference": order["reference"],
-                },
-            )
-            st.markdown(
-                '<div class="checkout-note">'
-                "Stripe opens in a new tab. After payment, Stripe returns you to Luna's private "
-                "report page. The complete report opens immediately and Luna emails the same "
-                "private return link straight away."
-                "</div>",
-                unsafe_allow_html=True,
-            )
+            if admin_unlocked:
+                _render_owner_report(order, f"{key_context}-monthly")
+            else:
+                payment_button(
+                    f"Continue to secure payment — {MONTHLY_PRICE}",
+                    order["checkout_url"],
+                    f"{key_context}-monthly-payment-disabled",
+                    "monthly_report_click",
+                    {
+                        "zodiac_sign": order["sign"],
+                        "report_period": order["period_code"],
+                        "order_reference": order["reference"],
+                    },
+                )
+                st.markdown(
+                    '<div class="checkout-note">'
+                    "Stripe opens in a new tab. After payment, Stripe returns you to Luna's private "
+                    "report page. The complete report opens immediately and Luna emails the same "
+                    "private return link straight away."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
 
     with yearly_tab:
         years = year_choices()
@@ -3537,21 +3736,36 @@ def report_cta(
                 placeholder="Is there a major decision, relationship or transition to consider?",
                 help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
-            st.caption(
-                "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link."
-            )
+            if admin_unlocked:
+                st.caption("Owner access: generate the complete year-ahead report here without Stripe.")
+            else:
+                st.caption(
+                    "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link."
+                )
             submitted = st.form_submit_button(
-                f"Prepare year-ahead checkout — {YEARLY_PRICE}",
+                (
+                    "Prepare owner year-ahead report"
+                    if admin_unlocked
+                    else f"Prepare year-ahead checkout — {YEARLY_PRICE}"
+                ),
                 type="primary",
                 use_container_width=True,
             )
 
         state_key = f"prepared-order::{key_context}::yearly"
         if submitted:
+            st.session_state.pop(
+                f"owner-report-output::{key_context}-yearly::year",
+                None,
+            )
             if sign not in SIGNS:
-                st.error("Select your star sign before continuing to payment.")
+                st.error(
+                    "Select your star sign before generating the report."
+                    if admin_unlocked
+                    else "Select your star sign before continuing to payment."
+                )
                 st.session_state.pop(state_key, None)
-            elif not valid_email(delivery_email):
+            elif not admin_unlocked and not valid_email(delivery_email):
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
@@ -3573,7 +3787,7 @@ def report_cta(
                 order = {
                     "product_code": "YEAR",
                     "report_name": "Year-Ahead Strategic Report",
-                    "email": delivery_email.strip(),
+                    "email": delivery_email.strip() or "Not required for owner access",
                     "sign": sign,
                     "period": f"Calendar year {selected_year}",
                     "period_code": period_code,
@@ -3584,15 +3798,11 @@ def report_cta(
                     "personal_question": personal_question.strip(),
                     "reference": reference,
                 }
-                try:
-                    order["checkout_url"] = _create_instant_checkout(order, "YEAR")
-                except Exception as exc:
-                    st.error(f"Secure checkout is not ready: {exc}")
-                    st.session_state.pop(state_key, None)
-                else:
+                if admin_unlocked:
+                    order["admin_preview"] = True
                     st.session_state[state_key] = order
                     track_event(
-                        "yearly_order_prepared",
+                        "yearly_owner_report_prepared",
                         {
                             "zodiac_sign": sign,
                             "report_period": period_code,
@@ -3600,8 +3810,28 @@ def report_cta(
                             "main_focus": main_focus,
                         },
                     )
+                else:
+                    try:
+                        order["checkout_url"] = _create_instant_checkout(order, "YEAR")
+                    except Exception as exc:
+                        st.error(f"Secure checkout is not ready: {exc}")
+                        st.session_state.pop(state_key, None)
+                    else:
+                        st.session_state[state_key] = order
+                        track_event(
+                            "yearly_order_prepared",
+                            {
+                                "zodiac_sign": sign,
+                                "report_period": period_code,
+                                "timezone": timezone_name,
+                                "main_focus": main_focus,
+                            },
+                        )
 
         order = st.session_state.get(state_key)
+        if order and bool(order.get("admin_preview")) != admin_unlocked:
+            st.session_state.pop(state_key, None)
+            order = None
         if order:
             _order_summary(
                 order["report_name"],
@@ -3615,24 +3845,27 @@ def report_cta(
                 order["personal_question"],
                 order["reference"],
             )
-            payment_button(
-                f"Continue to secure payment — {YEARLY_PRICE}",
-                order["checkout_url"],
-                f"{key_context}-yearly-payment-disabled",
-                "yearly_report_click",
-                {
-                    "zodiac_sign": order["sign"],
-                    "report_period": order["period_code"],
-                    "order_reference": order["reference"],
-                },
-            )
-            st.markdown(
-                '<div class="checkout-note">'
-                "Stripe opens in a new tab. After payment, Stripe returns you to Luna's private "
-                "report page and Luna emails the same private return link straight away."
-                "</div>",
-                unsafe_allow_html=True,
-            )
+            if admin_unlocked:
+                _render_owner_report(order, f"{key_context}-yearly")
+            else:
+                payment_button(
+                    f"Continue to secure payment — {YEARLY_PRICE}",
+                    order["checkout_url"],
+                    f"{key_context}-yearly-payment-disabled",
+                    "yearly_report_click",
+                    {
+                        "zodiac_sign": order["sign"],
+                        "report_period": order["period_code"],
+                        "order_reference": order["reference"],
+                    },
+                )
+                st.markdown(
+                    '<div class="checkout-note">'
+                    "Stripe opens in a new tab. After payment, Stripe returns you to Luna's private "
+                    "report page and Luna emails the same private return link straight away."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
 
 
 def daily_controls(prefix: str = "daily") -> tuple[str | None, date, str, str]:
@@ -4543,6 +4776,9 @@ def monthly_preview_page() -> None:
         "Unlisted editorial workspace for generating complete Luna monthly reports without checkout.",
         "/monthly-preview",
     )
+    if not _admin_access_panel("monthly-preview"):
+        st.error("Owner authentication is required for the monthly preview.")
+        return
     st.markdown(
         '<div class="eyebrow">Unlisted editorial workspace</div>',
         unsafe_allow_html=True,
@@ -4871,6 +5107,10 @@ def editorial_preview_page() -> None:
         st.error("Editorial preview is disabled.")
         return
 
+    if not _admin_access_panel("editorial-preview"):
+        st.error("Owner authentication is required for editorial preview.")
+        return
+
     set_page_metadata(
         "Editorial Preview | Luna Convergence",
         "Generate and print complete Luna monthly and year-ahead reports without checkout while the product is being edited.",
@@ -4900,6 +5140,9 @@ def reports_page() -> None:
     # has trouble recognising the separate /monthly-preview route.
     preview_mode = str(st.query_params.get("preview", "")).strip().lower()
     if preview_mode in {"monthly", "month", "monthly-report"}:
+        if not _admin_access_panel("reports-monthly-preview"):
+            st.error("Owner authentication is required for this preview.")
+            return
         st.markdown(
             '<div class="eyebrow">Private monthly preview</div>',
             unsafe_allow_html=True,
@@ -8020,6 +8263,14 @@ def birthday_card_page() -> None:
         unsafe_allow_html=True,
     )
 
+    admin_unlocked = _admin_access_panel("birthday-card")
+    if not admin_unlocked:
+        st.info(
+            "Birthday Card ordering is not open yet. Luna owner access can generate and download test cards on this same page."
+        )
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
     with st.container(border=True):
         name = st.text_input(
             "Recipient’s first name",
@@ -8099,7 +8350,7 @@ def birthday_card_page() -> None:
 
     result = st.session_state.get("birthday-card-result-v1")
     if not result:
-        st.caption("One 4:5 card. The same design becomes an Instagram PNG and an 8 × 10 inch PDF.")
+        st.caption("One 9:16 card. The same design becomes an Instagram Reel/Story PNG and a matching PDF.")
         st.markdown('</section>', unsafe_allow_html=True)
         return
 
@@ -8124,7 +8375,7 @@ def birthday_card_page() -> None:
     download_columns = st.columns(2, gap="medium")
     with download_columns[0]:
         st.download_button(
-            "Download Instagram PNG",
+            "Download Instagram Reel/Story PNG",
             data=result["png"],
             file_name=birthday_card_filename(card, "png"),
             mime="image/png",
@@ -8139,8 +8390,8 @@ def birthday_card_page() -> None:
             use_container_width=True,
         )
     st.caption(
-        "PNG · 1080 × 1350 px for Instagram. PDF · one 8 × 10 inch page using the identical 4:5 design. "
-        "On Instagram Stories, place the PNG on a plain background; no redesign is required."
+        "PNG · 1080 × 1920 px for Instagram Reels and Stories. PDF · one matching 9:16 page. "
+        "Both downloads use the identical narrow Luna composition."
     )
     st.markdown('</section>', unsafe_allow_html=True)
 

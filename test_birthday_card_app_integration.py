@@ -12,7 +12,7 @@ def test_birthday_card_has_public_route_and_navigation():
 
 
 def test_birthday_card_offers_both_matching_downloads():
-    assert '"Download Instagram PNG"' in APP
+    assert '"Download Instagram Reel/Story PNG"' in APP
     assert '"Download printable PDF"' in APP
     assert "render_birthday_card_png(card)" in APP
     assert "render_birthday_card_pdf(card)" in APP

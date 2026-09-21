@@ -49,7 +49,7 @@ def test_card_uses_private_year_but_hides_it_from_design():
     assert card.poem.endswith(".")
 
 
-def test_png_is_exact_instagram_portrait_size():
+def test_png_is_exact_instagram_reel_size():
     card = build_birthday_card(
         recipient_name="Fiona",
         birth_date=date(1995, 9, 23),
@@ -77,7 +77,7 @@ def test_unknown_cusp_time_does_not_guess_a_sun_or_moon_sign():
     assert card.poem.startswith("The sky only reveals")
 
 
-def test_pdf_is_one_eight_by_ten_page():
+def test_pdf_matches_the_nine_by_sixteen_card():
     card = build_birthday_card(
         recipient_name="Fiona",
         birth_date=date(1995, 9, 23),
@@ -86,6 +86,6 @@ def test_pdf_is_one_eight_by_ten_page():
     reader = PdfReader(BytesIO(render_birthday_card_pdf(card)))
     assert len(reader.pages) == 1
     page = reader.pages[0]
-    assert round(float(page.mediabox.width)) == 576
+    assert round(float(page.mediabox.width)) == 405
     assert round(float(page.mediabox.height)) == 720
     assert birthday_card_filename(card, "png") == "luna-birthday-card-fiona.png"

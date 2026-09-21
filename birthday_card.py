@@ -16,9 +16,11 @@ if TYPE_CHECKING:
     from natal_snapshot import NatalSnapshot
 
 
-SOCIAL_SIZE = (1080, 1350)
-MASTER_SIZE = (2400, 3000)
-PDF_SIZE = (8 * inch, 10 * inch)
+SOCIAL_SIZE = (1080, 1920)
+# Render above social resolution so the matching PDF remains crisp. The canvas
+# keeps the same 9:16 composition as Instagram Reels and Stories.
+MASTER_SIZE = (2400, 4267)
+PDF_SIZE = (5.625 * inch, 10 * inch)
 WHITE = "#FFFFFF"
 BLACK = "#050505"
 MUTED = "#5D5D58"
@@ -194,7 +196,7 @@ def _wrapped_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFo
 
 
 def _poem_layout(draw: ImageDraw.ImageDraw, text: str, max_width: int) -> tuple[ImageFont.ImageFont, list[str], int]:
-    for size in range(82, 23, -2):
+    for size in range(136, 39, -2):
         font = _font("display", size)
         lines = _wrapped_lines(draw, text, font, max_width)
         line_height = int(size * 1.34)
@@ -209,50 +211,62 @@ def render_birthday_card_master(card: BirthdayCard) -> Image.Image:
     image = Image.new("RGB", MASTER_SIZE, WHITE)
     draw = ImageDraw.Draw(image)
 
-    # Gold Sun: the only colour in the card, kept clear of all typography.
-    sun_x, sun_y, sun_r = 1990, 360, 156
-    draw.ellipse((sun_x - sun_r, sun_y - sun_r, sun_x + sun_r, sun_y + sun_r), fill=GOLD)
-    symbol_r = 57
-    draw.ellipse(
-        (sun_x - symbol_r, sun_y - symbol_r, sun_x + symbol_r, sun_y + symbol_r),
-        outline=BLACK,
-        width=9,
-    )
-    draw.ellipse((sun_x - 13, sun_y - 13, sun_x + 13, sun_y + 13), fill=BLACK)
-
-    mono = _font("mono", 42)
+    mono = _font("mono", 80)
     draw.text((190, 260), card.date_label, font=mono, fill=BLACK)
-    draw.text((190, 335), "A BIRTHDAY SKY", font=_font("mono", 25), fill=MUTED)
+    draw.text((190, 375), "A BIRTHDAY SKY", font=_font("mono", 46), fill=MUTED)
 
-    _draw_tracked_center(draw, "HAPPY BIRTHDAY", 690, _font("sans", 47), tracking=18)
+    # The recipient is the visual event: this complete title field occupies the
+    # upper third of the tall card, as in the approved Luna mockup.
+    _draw_tracked_center(draw, "HAPPY BIRTHDAY", 700, _font("sans", 92), tracking=25)
     display_name = card.recipient_name.upper()
-    name_font = _fit_font(draw, display_name, "display", 188, 2020, 88)
-    draw.text((width / 2, 900), display_name, font=name_font, fill=BLACK, anchor="mm")
+    name_font = _fit_font(draw, display_name, "display", 330, 2020, 140)
+    draw.text((width / 2, 1010), display_name, font=name_font, fill=BLACK, anchor="mm")
 
-    draw.line((190, 1110, width - 190, 1110), fill=BLACK, width=3)
-    label_font = _font("mono", 25)
-    value_font = _font("sans", 54)
-    left_x, right_x = 260, 1260
-    draw.text((left_x, 1205), "SUN", font=label_font, fill=MUTED)
-    sun_font = _fit_font(draw, f"IN {card.sun_sign.upper()}", "sans", 54, 930, 34)
-    draw.text((left_x, 1265), f"IN {card.sun_sign.upper()}", font=sun_font, fill=BLACK)
-    draw.text((right_x, 1205), "MOON", font=label_font, fill=MUTED)
-    moon_font = _fit_font(draw, f"IN {card.moon_label.upper()}", "sans", 54, 930, 34)
-    draw.text((right_x, 1265), f"IN {card.moon_label.upper()}", font=moon_font, fill=BLACK)
+    draw.line((190, 1370, width - 190, 1370), fill=BLACK, width=3)
+    label_font = _font("mono", 50)
+    left_icon_x, right_icon_x, icon_y = 260, 1260, 1590
+    icon_r = 40
+    # Keep celestial symbols with their calculated positions. A decorative Sun
+    # in the top corner made the whole composition visually top-heavy.
+    draw.ellipse(
+        (left_icon_x - icon_r, icon_y - icon_r, left_icon_x + icon_r, icon_y + icon_r),
+        outline=GOLD,
+        width=8,
+    )
+    draw.ellipse(
+        (left_icon_x - 7, icon_y - 7, left_icon_x + 7, icon_y + 7),
+        fill=GOLD,
+    )
+    draw.ellipse(
+        (right_icon_x - icon_r, icon_y - icon_r, right_icon_x + icon_r, icon_y + icon_r),
+        fill=BLACK,
+    )
+    draw.ellipse(
+        (right_icon_x - 5, icon_y - icon_r - 2, right_icon_x + icon_r + 9, icon_y + icon_r + 2),
+        fill=WHITE,
+    )
+
+    left_x, right_x = 340, 1340
+    draw.text((left_x, 1445), "SUN", font=label_font, fill=MUTED)
+    sun_font = _fit_font(draw, f"IN {card.sun_sign.upper()}", "sans", 96, 930, 52)
+    draw.text((left_x, 1535), f"IN {card.sun_sign.upper()}", font=sun_font, fill=BLACK)
+    draw.text((right_x, 1445), "MOON", font=label_font, fill=MUTED)
+    moon_font = _fit_font(draw, f"IN {card.moon_label.upper()}", "sans", 96, 930, 52)
+    draw.text((right_x, 1535), f"IN {card.moon_label.upper()}", font=moon_font, fill=BLACK)
 
     poem_font, poem_lines, line_height = _poem_layout(draw, card.poem, 1740)
-    poem_top = 1630
+    poem_top = 2290
     for index, line in enumerate(poem_lines):
         draw.text((width / 2, poem_top + index * line_height), line, font=poem_font, fill=BLACK, anchor="ma")
 
     # A restrained Luna cube, drawn as vector shapes so the export remains crisp.
-    cx, cy, cube = 260, 2700, 82
+    cx, cy, cube = 260, 3920, 82
     draw.polygon([(cx, cy - cube), (cx + cube, cy - cube // 2), (cx, cy), (cx - cube, cy - cube // 2)], fill="#202020")
     draw.polygon([(cx - cube, cy - cube // 2), (cx, cy), (cx, cy + cube), (cx - cube, cy + cube // 2)], fill="#050505")
     draw.polygon([(cx, cy), (cx + cube, cy - cube // 2), (cx + cube, cy + cube // 2), (cx, cy + cube)], fill="#0D0D0D")
     brand_font = _font("sans", 37)
-    draw.text((420, 2664), "L U N A   C O N V E R G E N C E", font=brand_font, fill=BLACK)
-    draw.text((420, 2736), "THE UNIVERSE SHIFTS. YOU'VE GOT THIS.", font=_font("mono", 22), fill=MUTED)
+    draw.text((420, 3884), "L U N A   C O N V E R G E N C E", font=brand_font, fill=BLACK)
+    draw.text((420, 3956), "THE UNIVERSE SHIFTS. YOU'VE GOT THIS.", font=_font("mono", 30), fill=MUTED)
 
     return image
 
