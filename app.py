@@ -118,6 +118,7 @@ from stripe_checkout import (
     create_checkout_session,
     resolve_price_id,
     retrieve_checkout_session,
+    verify_one_time_price,
 )
 from email_delivery import send_report_email
 from report_pdf import build_report_pdf, report_filename
@@ -129,6 +130,7 @@ from site_config import (
     SUBTITLE,
     MONTHLY_PRICE,
     YEARLY_PRICE,
+    BIRTHDAY_PRICE,
     DEFAULT_SIGN,
     DEFAULT_TIMEZONE,
     TIMEZONES,
@@ -162,6 +164,7 @@ YEARLY_PAYMENT_URL = secret("STRIPE_YEARLY_URL")
 STRIPE_SECRET_KEY = secret("STRIPE_SECRET_KEY")
 STRIPE_MONTHLY_PRICE_ID = secret("STRIPE_MONTHLY_PRICE_ID")
 STRIPE_YEARLY_PRICE_ID = secret("STRIPE_YEARLY_PRICE_ID")
+STRIPE_BIRTHDAY_PRICE_ID = secret("STRIPE_BIRTHDAY_PRICE_ID")
 RESEND_API_KEY = secret("RESEND_API_KEY")
 RESEND_FROM = secret("RESEND_FROM")
 SMTP_USER = secret("SMTP_USER")
@@ -2895,6 +2898,19 @@ def _stripe_price_id(product_code: str) -> str:
             explicit_price_id=STRIPE_YEARLY_PRICE_ID,
             payment_link_url=YEARLY_PAYMENT_URL,
         )
+    if code == "BIRTHDAY":
+        price_id = resolve_price_id(
+            STRIPE_SECRET_KEY,
+            explicit_price_id=STRIPE_BIRTHDAY_PRICE_ID,
+        )
+        if price_id:
+            verify_one_time_price(
+                STRIPE_SECRET_KEY,
+                price_id,
+                expected_unit_amount=240,
+                expected_currency="aud",
+            )
+        return price_id
     return ""
 
 
@@ -2907,8 +2923,9 @@ def _create_instant_checkout(order: dict, product_code: str) -> str:
     price_id = _stripe_price_id(product_code)
     if not price_id:
         raise StripeCheckoutError(
-            "Luna could not resolve the Stripe Price ID. Add STRIPE_MONTHLY_PRICE_ID "
-            "or STRIPE_YEARLY_PRICE_ID to Streamlit Secrets."
+            "Luna could not resolve the Stripe Price ID for this product. Add the "
+            "matching STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID or "
+            "STRIPE_BIRTHDAY_PRICE_ID to Streamlit Secrets."
         )
     order = dict(order)
     order["product_code"] = product_code
@@ -2917,6 +2934,7 @@ def _create_instant_checkout(order: dict, product_code: str) -> str:
         price_id=price_id,
         order=order,
         public_site_url=PUBLIC_SITE_URL,
+        cancel_path=("/birthday-card" if str(product_code).upper() == "BIRTHDAY" else "/reports"),
     )
     url = str(session.get("url") or "")
     if not url.startswith("https://"):
@@ -3016,6 +3034,74 @@ def _email_paid_report(
         )
 
 
+def _render_paid_birthday_card(session: dict, metadata: dict[str, str]) -> None:
+    """Rebuild and deliver the exact Birthday Card prepared before checkout."""
+    session_id = str(session.get("id") or "")
+    recipient_name = str(metadata.get("birthday_name") or "").strip()
+    birth_date_text = str(metadata.get("birthday_date") or "").strip()
+    timezone_name = str(metadata.get("timezone") or DEFAULT_TIMEZONE)
+    time_known = str(metadata.get("birthday_time_known") or "").lower() == "true"
+    birth_time_text = str(metadata.get("birthday_time") or "").strip()
+    theme = str(metadata.get("birthday_theme") or "painted_blue")
+    poem = str(metadata.get("birthday_poem") or "").strip()
+
+    if not recipient_name or not birth_date_text or not poem:
+        raise ValueError("The paid Birthday Card is missing required fulfilment details.")
+
+    birth_date_value = date.fromisoformat(birth_date_text)
+    birth_time_value = None
+    if time_known:
+        birth_time_value = datetime.strptime(birth_time_text, "%H:%M").time()
+
+    snapshot = build_natal_snapshot(
+        birth_date=birth_date_value,
+        birth_time_known=time_known,
+        birth_time=birth_time_value,
+        timezone_name=timezone_name,
+    )
+    card = build_birthday_card(
+        recipient_name=recipient_name,
+        birth_date=birth_date_value,
+        snapshot=snapshot,
+        poem=poem,
+        date_only_calculations=(
+            birth_date_luminary_calculations(birth_date_value, timezone_name)
+            if not time_known else None
+        ),
+        theme=theme,
+    )
+    png_bytes = render_birthday_card_png(card)
+    pdf_bytes = render_birthday_card_pdf(card)
+    png_name = birthday_card_filename(card, "png")
+    pdf_name = birthday_card_filename(card, "pdf")
+
+    st.image(png_bytes, use_container_width=True)
+    download_columns = st.columns(2, gap="medium")
+    with download_columns[0]:
+        st.download_button(
+            "Download Instagram Reel/Story PNG",
+            data=png_bytes,
+            file_name=png_name,
+            mime="image/png",
+            use_container_width=True,
+            key=f"paid-birthday-png-{session_id}",
+        )
+    with download_columns[1]:
+        st.download_button(
+            "Download printable PDF",
+            data=pdf_bytes,
+            file_name=pdf_name,
+            mime="application/pdf",
+            use_container_width=True,
+            key=f"paid-birthday-pdf-{session_id}",
+        )
+    _email_paid_report(
+        session,
+        attachment_bytes=pdf_bytes,
+        attachment_filename=pdf_name,
+    )
+
+
 def payment_success_page() -> None:
     set_page_metadata(
         "Your Luna Report Is Ready | Luna Convergence",
@@ -3023,7 +3109,6 @@ def payment_success_page() -> None:
         "/payment-success",
     )
     st.markdown('<div class="eyebrow">Payment confirmed</div>', unsafe_allow_html=True)
-    st.markdown("# Your Luna report is ready")
 
     session_id = str(st.query_params.get("session_id", "")).strip()
     if not session_id:
@@ -3054,10 +3139,18 @@ def payment_success_page() -> None:
         "order_reference", str(session.get("client_reference_id") or "")
     )
 
-    st.markdown(
-        f"**{escape(sign)} · {escape(metadata.get('period', period_code))}**  "
-        f"  \nOrder reference: `{escape(order_reference)}`"
-    )
+    if product_code == "BIRTHDAY":
+        st.markdown("# Your Luna Birthday Card is ready")
+        st.markdown(
+            f"**For {escape(metadata.get('birthday_name', 'your recipient'))}**  "
+            f"  \nOrder reference: `{escape(order_reference)}`"
+        )
+    else:
+        st.markdown("# Your Luna report is ready")
+        st.markdown(
+            f"**{escape(sign)} · {escape(metadata.get('period', period_code))}**  "
+            f"  \nOrder reference: `{escape(order_reference)}`"
+        )
     _send_purchase_events(session)
     st.caption(
         "This is a private paid-report link. Keep the email or bookmark this page; "
@@ -3065,7 +3158,9 @@ def payment_success_page() -> None:
     )
 
     try:
-        if product_code == "MONTHLY":
+        if product_code == "BIRTHDAY":
+            _render_paid_birthday_card(session, metadata)
+        elif product_code == "MONTHLY":
             year_text, month_text = period_code.split("-", 1)
             narrative, result = build_production_monthly_report(
                 sign=sign,
@@ -8286,13 +8381,20 @@ def birthday_card_page() -> None:
 
     admin_unlocked = _admin_access_panel("birthday-card")
     if not admin_unlocked:
-        st.info(
-            "Birthday Card ordering is not open yet. Luna owner access can generate and download test cards on this same page."
-        )
-        st.markdown('</section>', unsafe_allow_html=True)
-        return
+        # Never let an owner preview survive after the private session is
+        # locked; public downloads must come only from verified payment.
+        st.session_state.pop("birthday-card-result-v1", None)
+        st.markdown(f"### Personalised Birthday Card · {BIRTHDAY_PRICE}")
+        st.caption("One payment includes the finished 1080 × 1920 PNG and matching printable PDF.")
 
     with st.container(border=True):
+        delivery_email = ""
+        if not admin_unlocked:
+            delivery_email = st.text_input(
+                "Delivery email",
+                placeholder="you@example.com",
+                help="Stripe uses this email for your receipt. Luna also emails your private return link and PDF.",
+            )
         name = st.text_input(
             "Recipient’s first name",
             placeholder="Fiona",
@@ -8355,19 +8457,28 @@ def birthday_card_page() -> None:
             "Optional personal message",
             placeholder="Leave blank and Luna will write a unique poem from the calculated birth sky.",
             help="If supplied, this message replaces Luna’s generated poem. Long messages are automatically resized to fit.",
+            max_chars=240,
         )
         submitted = st.button(
-            "Create birthday card",
+            (
+                "Create owner birthday card — no payment"
+                if admin_unlocked
+                else f"Prepare secure checkout — {BIRTHDAY_PRICE}"
+            ),
             use_container_width=True,
             key="birthday-card-submit-v1",
+            type="primary",
         )
 
     if submitted:
         st.session_state.pop("birthday-card-result-v1", None)
+        st.session_state.pop("birthday-card-order-v1", None)
         if not str(name or "").strip():
             st.error("Enter the recipient’s first name.")
         elif birth_date_value is None:
             st.error("Choose the recipient’s full date of birth.")
+        elif not admin_unlocked and not valid_email(delivery_email):
+            st.error("Enter a valid delivery email before continuing to payment.")
         else:
             try:
                 snapshot = build_natal_snapshot(
@@ -8406,19 +8517,59 @@ def birthday_card_page() -> None:
                     ),
                     theme=card_theme,
                 )
-                st.session_state["birthday-card-result-v1"] = {
-                    "card": card,
-                    "png": render_birthday_card_png(card),
-                    "pdf": render_birthday_card_pdf(card),
-                }
-                track_event(
-                    "birthday_card_generated",
-                    {
-                        "birth_time_known": bool(time_known),
-                        "birth_year_hidden": True,
-                        "card_theme": card_theme,
-                    },
-                )
+                if admin_unlocked:
+                    st.session_state["birthday-card-result-v1"] = {
+                        "card": card,
+                        "png": render_birthday_card_png(card),
+                        "pdf": render_birthday_card_pdf(card),
+                    }
+                    track_event(
+                        "birthday_card_owner_generated",
+                        {
+                            "birth_time_known": bool(time_known),
+                            "birth_year_hidden": True,
+                            "card_theme": card_theme,
+                        },
+                    )
+                else:
+                    reference = build_order_reference(
+                        "BIRTHDAY",
+                        card.sun_sign,
+                        birth_date_value.isoformat(),
+                        birth_timezone,
+                        _order_token("birthday-card", "BIRTHDAY"),
+                    )
+                    order = {
+                        "product_code": "BIRTHDAY",
+                        "report_name": "Personalised Astrology Birthday Card",
+                        "email": delivery_email.strip(),
+                        "sign": card.sun_sign,
+                        "period": card.date_label.title(),
+                        "period_code": birth_date_value.isoformat(),
+                        "timezone": birth_timezone,
+                        "reference": reference,
+                        "birthday_name": card.recipient_name,
+                        "birthday_date": birth_date_value.isoformat(),
+                        "birthday_time_known": "true" if time_known else "false",
+                        "birthday_time": (
+                            birth_time_value.strftime("%H:%M")
+                            if time_known and birth_time_value else ""
+                        ),
+                        "birthday_theme": card_theme,
+                        "birthday_poem": card.poem,
+                    }
+                    order["checkout_url"] = _create_instant_checkout(order, "BIRTHDAY")
+                    st.session_state["birthday-card-order-v1"] = order
+                    track_event(
+                        "birthday_card_order_prepared",
+                        {
+                            "birth_time_known": bool(time_known),
+                            "card_theme": card_theme,
+                            "order_reference": reference,
+                            "value": 2.40,
+                            "currency": "AUD",
+                        },
+                    )
             except BirthdayPoemError as exc:
                 _record_voice_error("birthday_card", exc)
                 st.error(
@@ -8428,6 +8579,31 @@ def birthday_card_page() -> None:
                 st.error("Luna could not create this card. Check the birth details and try again.")
                 if EDITOR_PREVIEW_ENABLED:
                     st.exception(exc)
+
+    prepared_order = st.session_state.get("birthday-card-order-v1")
+    if prepared_order and not admin_unlocked:
+        st.success("Your personalised card is prepared. Complete payment to unlock both files.")
+        st.markdown(
+            f"**For {escape(prepared_order['birthday_name'])} · {escape(prepared_order['period'])}**  "
+            f"  \n{escape(card_style)} · Order `{escape(prepared_order['reference'])}`"
+        )
+        payment_button(
+            f"Continue to secure payment — {BIRTHDAY_PRICE}",
+            prepared_order["checkout_url"],
+            "birthday-card-payment-disabled",
+            "birthday_card_checkout_click",
+            {
+                "order_reference": prepared_order["reference"],
+                "value": 2.40,
+                "currency": "AUD",
+            },
+        )
+        st.markdown(
+            '<div class="checkout-note">Stripe opens securely in a new tab. After payment, '
+            "Luna returns you to the finished card with both downloads and emails the PDF plus "
+            "your private return link.</div>",
+            unsafe_allow_html=True,
+        )
 
     result = st.session_state.get("birthday-card-result-v1")
     if not result:

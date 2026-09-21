@@ -31,6 +31,8 @@ def test_public_paid_report_flow_still_uses_stripe():
     assert 'f"Continue to secure payment — {YEARLY_PRICE}"' in APP
 
 
-def test_birthday_card_is_admin_only_until_checkout_exists():
-    assert "Birthday Card ordering is not open yet." in APP
-    assert "if not admin_unlocked:" in APP
+def test_birthday_card_has_public_paid_checkout_and_owner_bypass():
+    assert '_create_instant_checkout(order, "BIRTHDAY")' in APP
+    assert 'f"Continue to secure payment — {BIRTHDAY_PRICE}"' in APP
+    assert '"Create owner birthday card — no payment"' in APP
+    assert "Birthday Card ordering is not open yet." not in APP

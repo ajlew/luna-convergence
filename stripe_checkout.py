@@ -109,6 +109,29 @@ def resolve_price_id(
     return ""
 
 
+def verify_one_time_price(
+    secret_key: str,
+    price_id: str,
+    *,
+    expected_unit_amount: int,
+    expected_currency: str,
+) -> None:
+    """Fail closed when a configured Stripe Price does not match Luna's offer."""
+    price_id = str(price_id or "").strip()
+    if not price_id.startswith("price_"):
+        raise StripeCheckoutError("Stripe price is not configured.")
+    price = _request("GET", f"/prices/{price_id}", secret_key)
+    actual_amount = int(price.get("unit_amount") or 0)
+    actual_currency = str(price.get("currency") or "").lower()
+    recurring = price.get("recurring")
+    if recurring:
+        raise StripeCheckoutError("The Birthday Card Stripe Price must be a one-time payment.")
+    if actual_amount != int(expected_unit_amount) or actual_currency != expected_currency.lower():
+        raise StripeCheckoutError(
+            "The Birthday Card Stripe Price must be exactly AUD 2.40 (240 cents)."
+        )
+
+
 def order_metadata(order: dict[str, Any]) -> dict[str, str]:
     """Return exact fulfilment inputs safe for Stripe Session metadata."""
     fields = {
@@ -128,6 +151,16 @@ def order_metadata(order: dict[str, Any]) -> dict[str, str]:
         "natal_profile": order.get("natal_profile", ""),
         "natal_summary": order.get("natal_summary", ""),
         "natal_precision": order.get("natal_precision", ""),
+        # Birthday Card fulfilment. These values rebuild the exact paid card
+        # after Stripe returns the customer to Luna. The generated poem is
+        # prepared before checkout and stored so reopening the paid link never
+        # produces different wording.
+        "birthday_name": order.get("birthday_name", ""),
+        "birthday_date": order.get("birthday_date", ""),
+        "birthday_time_known": order.get("birthday_time_known", ""),
+        "birthday_time": order.get("birthday_time", ""),
+        "birthday_theme": order.get("birthday_theme", ""),
+        "birthday_poem": order.get("birthday_poem", ""),
         "fulfilment_version": "3.25",
     }
     # Stripe metadata values are strings. Keep each comfortably below the

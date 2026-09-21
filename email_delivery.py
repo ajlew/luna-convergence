@@ -76,7 +76,10 @@ def send_report_email(
     if not recipient or "@" not in recipient:
         return EmailResult(False, "none", error="No customer email was available.")
 
-    subject = f"Your {sign} Luna report is ready"
+    if "birthday card" in str(report_name or "").lower():
+        subject = "Your Luna Birthday Card is ready"
+    else:
+        subject = f"Your {sign} Luna report is ready"
     html = build_report_email_html(
         report_name=report_name,
         sign=sign,
