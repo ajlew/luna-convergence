@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Iterable
 import json
 import math
@@ -106,6 +106,27 @@ class NatalAspect:
 
     def label(self) -> str:
         return f"{self.planet1} {self.name} {self.planet2} · {self.orb:.1f}° orb"
+
+
+@dataclass(frozen=True)
+class DateWindowAspect:
+    luminary: str
+    other_planet: str
+    name: str
+    minimum_orb: float
+    phase: str
+    exact_time_label: str | None = None
+
+    def label(self) -> str:
+        if self.exact_time_label:
+            return (
+                f"{self.luminary} {self.name} {self.other_planet} · "
+                f"exact on birth date · ~{self.exact_time_label} local"
+            )
+        return (
+            f"{self.luminary} {self.name} {self.other_planet} · {self.phase} · "
+            f"{self.minimum_orb:.2f}° orb at closest approach"
+        )
 
 
 @dataclass(frozen=True)
@@ -221,6 +242,79 @@ def detect_natal_aspects(positions: Iterable[NatalPosition]) -> list[NatalAspect
                     result.append(NatalAspect(first.planet, second.planet, name, orb, strength))
                     break
     return sorted(result, key=lambda item: (-item.strength, item.orb))
+
+
+def birth_date_luminary_calculations(
+    birth_date: date,
+    timezone_name: str,
+) -> dict[str, str]:
+    """Return safe Sun/Moon aspect evidence across an unknown-time birth date.
+
+    This is a date-window calculation, like Weekly Studio. It never presents a
+    noon placeholder as the person's exact natal moment.
+    """
+    start_jd = _jd_from_local(birth_date, time(0, 0), timezone_name)
+    end_jd = _jd_from_local(birth_date, time(23, 59, 59), timezone_name)
+    step_count = 96  # 15-minute local-date sampling, including both endpoints.
+    samples: list[tuple[int, dict[str, NatalPosition]]] = []
+    for step in range(step_count + 1):
+        fraction = step / step_count
+        jd = start_jd + (end_jd - start_jd) * fraction
+        samples.append((step, {item.planet: item for item in _planet_positions(jd)}))
+
+    result: dict[str, str] = {}
+    for luminary in ("Sun", "Moon"):
+        candidates: list[tuple[float, float, str, str, int, float, float]] = []
+        others = [
+            name for name in NATAL_PLANETS
+            if name not in {luminary, "True Node"}
+        ]
+        for other in others:
+            for aspect_name, (target, allowed_orb) in ASPECTS.items():
+                orbit = [
+                    abs(angular_distance(by_planet[luminary].longitude, by_planet[other].longitude) - target)
+                    for _step, by_planet in samples
+                ]
+                minimum_orb = min(orbit)
+                if minimum_orb > allowed_orb:
+                    continue
+                closest_index = orbit.index(minimum_orb)
+                closeness = max(0.0, 1.0 - minimum_orb / allowed_orb)
+                strength = closeness * (
+                    PLANET_WEIGHTS.get(luminary, 1.0) + PLANET_WEIGHTS.get(other, 1.0)
+                ) / 2.0
+                if aspect_name in {"conjunction", "opposition"}:
+                    strength *= 1.12
+                candidates.append(
+                    (-strength, minimum_orb, other, aspect_name, closest_index, orbit[0], orbit[-1])
+                )
+
+        if not candidates:
+            result[luminary] = f"No major {luminary} aspect within Luna orb on birth date"
+            continue
+
+        _rank, minimum_orb, other, aspect_name, closest_index, start_orb, end_orb = min(candidates)
+        if minimum_orb <= 0.03:
+            closest_jd = start_jd + (end_jd - start_jd) * (closest_index / step_count)
+            utc_year, utc_month, utc_day, utc_hour = swe.revjul(closest_jd, swe.GREG_CAL)
+            utc_value = datetime(
+                int(utc_year), int(utc_month), int(utc_day), tzinfo=timezone.utc
+            ) + timedelta(hours=float(utc_hour))
+            local_value = utc_value.astimezone(ZoneInfo(timezone_name))
+            exact_time_label = local_value.strftime("%I:%M %p").lstrip("0")
+            phase = "exact"
+        else:
+            exact_time_label = None
+            phase = "applying" if end_orb < start_orb else "separating"
+        result[luminary] = DateWindowAspect(
+            luminary=luminary,
+            other_planet=other,
+            name=aspect_name,
+            minimum_orb=minimum_orb,
+            phase=phase,
+            exact_time_label=exact_time_label,
+        ).label()
+    return result
 
 
 def _aspect_sentence(aspect: NatalAspect) -> tuple[str, str]:

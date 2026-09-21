@@ -95,6 +95,7 @@ def build_birthday_card(
     birth_date: date,
     snapshot: "NatalSnapshot",
     poem: str,
+    date_only_calculations: dict[str, str] | None = None,
 ) -> BirthdayCard:
     name = " ".join(str(recipient_name or "").split()).strip()
     if not name:
@@ -118,14 +119,26 @@ def build_birthday_card(
     if not clean_poem:
         raise ValueError("A validated or customer-supplied birthday poem is required.")
 
+    if snapshot.birth_time_known:
+        sun_calculation = _luminary_calculation(snapshot, "Sun")
+        moon_calculation = _luminary_calculation(snapshot, "Moon")
+    else:
+        safe_calculations = date_only_calculations or {}
+        sun_calculation = safe_calculations.get(
+            "Sun", "Birth time unknown · exact Sun aspect unavailable"
+        )
+        moon_calculation = safe_calculations.get(
+            "Moon", "Birth time unknown · exact Moon aspect unavailable"
+        )
+
     return BirthdayCard(
         recipient_name=name,
         birth_date=birth_date,
         date_label=date_label,
         sun_sign=sun_label,
         moon_label=moon_label,
-        sun_calculation=_luminary_calculation(snapshot, "Sun"),
-        moon_calculation=_luminary_calculation(snapshot, "Moon"),
+        sun_calculation=sun_calculation,
+        moon_calculation=moon_calculation,
         poem=clean_poem,
         birth_time_known=snapshot.birth_time_known,
     )

@@ -67,6 +67,7 @@ from solar_cycle import (
     solar_gate_label,
 )
 from natal_snapshot import (
+    birth_date_luminary_calculations,
     build_natal_snapshot,
     natal_wheel_svg,
     encode_natal_profile,
@@ -8370,6 +8371,10 @@ def birthday_card_page() -> None:
                     birth_date=birth_date_value,
                     snapshot=snapshot,
                     poem=poem,
+                    date_only_calculations=(
+                        birth_date_luminary_calculations(birth_date_value, birth_timezone)
+                        if not time_known else None
+                    ),
                 )
                 st.session_state["birthday-card-result-v1"] = {
                     "card": card,
