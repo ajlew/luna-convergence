@@ -1,0 +1,14 @@
+.gitignore
+BIRTHDAY_CARD_V347_UPDATE.md
+app.py
+assets/fonts/BodoniModa-SemiBold.ttf
+assets/fonts/IBMPlexMono-Regular.ttf
+assets/fonts/JosefinSans-Regular.ttf
+assets/fonts/LICENSE-Bodoni-Moda.txt
+assets/fonts/LICENSE-IBM-Plex-Mono.txt
+assets/fonts/LICENSE-Josefin-Sans.txt
+birthday_card.py
+natal_snapshot.py
+site_config.py
+test_birthday_card.py
+test_birthday_card_app_integration.py
