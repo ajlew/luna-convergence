@@ -29,3 +29,11 @@ def test_birthday_card_uses_live_validated_voice_without_canned_fallback():
 def test_unknown_birth_time_uses_date_window_luminary_calculations():
     assert "birth_date_luminary_calculations" in APP
     assert "if not time_known else None" in APP
+
+
+def test_customer_can_choose_one_of_two_keepsake_backgrounds():
+    assert '"Card style"' in APP
+    assert '("Midnight Painted", "Ivory Letter")' in APP
+    assert '"Midnight Painted": "painted_blue"' in APP
+    assert '"Ivory Letter": "ivory_paper"' in APP
+    assert "theme=card_theme" in APP

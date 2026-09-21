@@ -8276,7 +8276,7 @@ def birthday_card_page() -> None:
         "/birthday-card",
     )
     st.markdown('<section class="natal-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Luna birthday sky · one design</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Luna birthday sky · two keepsake designs</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Give them<br>their sky.</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="natal-intro">Enter the recipient’s full birth date so Luna can calculate the card accurately. '
@@ -8311,6 +8311,17 @@ def birthday_card_page() -> None:
             index=timezone_select_index(),
             help="This lets Luna check the Moon across the correct local birth date.",
         )
+        card_style = st.radio(
+            "Card style",
+            ("Midnight Painted", "Ivory Letter"),
+            horizontal=True,
+            help="Midnight Painted uses warm-white type over hand-painted blue paper. Ivory Letter uses dark type over tactile ivory paper.",
+            key="birthday-card-style-v1",
+        )
+        card_theme = {
+            "Midnight Painted": "painted_blue",
+            "Ivory Letter": "ivory_paper",
+        }[card_style]
         time_known = st.checkbox(
             "I know the birth time",
             value=False,
@@ -8375,6 +8386,7 @@ def birthday_card_page() -> None:
                         birth_date_luminary_calculations(birth_date_value, birth_timezone)
                         if not time_known else None
                     ),
+                    theme=card_theme,
                 )
                 st.session_state["birthday-card-result-v1"] = {
                     "card": card,
@@ -8386,6 +8398,7 @@ def birthday_card_page() -> None:
                     {
                         "birth_time_known": bool(time_known),
                         "birth_year_hidden": True,
+                        "card_theme": card_theme,
                     },
                 )
             except BirthdayPoemError as exc:
@@ -8400,7 +8413,7 @@ def birthday_card_page() -> None:
 
     result = st.session_state.get("birthday-card-result-v1")
     if not result:
-        st.caption("One 9:16 card. The same design becomes an Instagram Reel/Story PNG and a matching PDF.")
+        st.caption("Choose a keepsake style. The selected 9:16 design becomes an Instagram Reel/Story PNG and a matching PDF.")
         st.markdown('</section>', unsafe_allow_html=True)
         return
 

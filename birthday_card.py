@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import hashlib
 from io import BytesIO
+import math
 from pathlib import Path
+import random
 import re
 from typing import TYPE_CHECKING
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from reportlab.lib.pagesizes import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -21,10 +24,15 @@ SOCIAL_SIZE = (1080, 1920)
 # keeps the same 9:16 composition as Instagram Reels and Stories.
 MASTER_SIZE = (2400, 4267)
 PDF_SIZE = (5.625 * inch, 10 * inch)
-WHITE = "#FFFFFF"
-BLACK = "#050505"
-MUTED = "#5D5D58"
-GOLD = "#C59A32"
+BACKGROUND = "#101827"
+TEXT = "#F5F0E6"
+MUTED = "#CBC8C1"
+GOLD = "#A88A4A"
+SUN_CORE = "#E7B94F"
+SUN_EDGE = "#9D6F20"
+MOON_LIGHT = "#D9DCE2"
+MOON_MID = "#AEB4BE"
+MOON_DARK = "#757D89"
 ASPECT_ANGLES = {
     "conjunction": 0.0,
     "sextile": 60.0,
@@ -34,6 +42,26 @@ ASPECT_ANGLES = {
 }
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets"
+CELESTIAL_DIR = ASSET_DIR / "celestial"
+BACKGROUND_DIR = ASSET_DIR / "backgrounds"
+THEMES = {
+    "painted_blue": {
+        "asset": "painted-blue.png",
+        "text": "#F7F0E4",
+        "muted": "#DED5C8",
+        "accent": "#E0B654",
+        "overlay": (7, 18, 38, 74),
+        "stars": True,
+    },
+    "ivory_paper": {
+        "asset": "ivory-paper.png",
+        "text": "#17140F",
+        "muted": "#5D5143",
+        "accent": "#8A5E28",
+        "overlay": (255, 248, 232, 15),
+        "stars": False,
+    },
+}
 
 @dataclass(frozen=True)
 class BirthdayCard:
@@ -46,6 +74,7 @@ class BirthdayCard:
     moon_calculation: str | None
     poem: str
     birth_time_known: bool
+    theme: str = "painted_blue"
 
 
 def _aspect_phase(aspect, by_planet: dict[str, object]) -> str:
@@ -96,6 +125,7 @@ def build_birthday_card(
     snapshot: "NatalSnapshot",
     poem: str,
     date_only_calculations: dict[str, str] | None = None,
+    theme: str = "painted_blue",
 ) -> BirthdayCard:
     name = " ".join(str(recipient_name or "").split()).strip()
     if not name:
@@ -141,6 +171,7 @@ def build_birthday_card(
         moon_calculation=moon_calculation,
         poem=clean_poem,
         birth_time_known=snapshot.birth_time_known,
+        theme=theme if theme in THEMES else "painted_blue",
     )
 
 
@@ -195,7 +226,7 @@ def _draw_tracked_center(
     font: ImageFont.ImageFont,
     *,
     tracking: int,
-    fill: str = BLACK,
+    fill: str = TEXT,
     width: int = MASTER_SIZE[0],
 ) -> None:
     glyph_widths = [draw.textlength(char, font=font) for char in text]
@@ -239,77 +270,202 @@ def _draw_calculation(
     x: int,
     y: int,
     max_width: int,
+    fill: str = MUTED,
 ) -> None:
     if not text:
         return
     font = _font("sans", 32)
     for index, line in enumerate(_wrapped_lines(draw, text.upper(), font, max_width)[:2]):
-        draw.text((x, y + index * 46), line, font=font, fill=MUTED)
+        draw.text((x, y + index * 46), line, font=font, fill=fill)
+
+
+def _draw_solar_disc(image: Image.Image, x: int, y: int, radius: int) -> None:
+    """Draw a luminous solar sphere with a soft corona and mottled surface."""
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    glow = ImageDraw.Draw(layer)
+    for extra, alpha in ((42, 12), (28, 22), (16, 38)):
+        glow.ellipse(
+            (x - radius - extra, y - radius - extra, x + radius + extra, y + radius + extra),
+            fill=(231, 185, 79, alpha),
+        )
+    image.paste(Image.alpha_composite(image.convert("RGBA"), layer).convert("RGB"))
+    draw = ImageDraw.Draw(image)
+    for current in range(radius, 0, -1):
+        ratio = current / radius
+        red = int(231 + (255 - 231) * (1 - ratio))
+        green = int(145 + (210 - 145) * (1 - ratio))
+        blue = int(34 + (92 - 34) * (1 - ratio))
+        draw.ellipse((x - current, y - current, x + current, y + current), fill=(red, green, blue))
+    for angle, distance, spot_r in ((0.5, 0.47, 8), (2.5, 0.33, 6), (4.2, 0.52, 5), (5.4, 0.25, 4)):
+        spot_x = x + int(math.cos(angle) * radius * distance)
+        spot_y = y + int(math.sin(angle) * radius * distance)
+        draw.ellipse((spot_x - spot_r, spot_y - spot_r, spot_x + spot_r, spot_y + spot_r), fill="#8B5319")
+    draw.arc((x - radius + 18, y - radius + 28, x + radius - 12, y + radius - 34), 205, 340, fill="#FFD878", width=5)
+
+
+def _draw_lunar_disc(image: Image.Image, x: int, y: int, radius: int) -> None:
+    """Draw a shaded lunar sphere with visible maria and crater rims."""
+    diameter = radius * 2 + 1
+    sphere = Image.new("RGBA", (diameter, diameter), (0, 0, 0, 0))
+    pixels = sphere.load()
+    for py in range(diameter):
+        for px in range(diameter):
+            nx = (px - radius) / radius
+            ny = (py - radius) / radius
+            distance_sq = nx * nx + ny * ny
+            if distance_sq > 1.0:
+                continue
+            nz = math.sqrt(1.0 - distance_sq)
+            light = max(0.0, nx * -0.38 + ny * -0.28 + nz * 0.88)
+            shade = int(82 + light * 158)
+            pixels[px, py] = (shade, shade + 2, min(255, shade + 8), 255)
+    moon_draw = ImageDraw.Draw(sphere, "RGBA")
+    craters = (
+        (0.29, 0.30, 0.16),
+        (0.66, 0.59, 0.19),
+        (0.31, 0.70, 0.10),
+        (0.71, 0.27, 0.08),
+        (0.50, 0.48, 0.07),
+    )
+    for cx, cy, scale in craters:
+        crater_r = max(4, int(radius * scale))
+        crater_x = int(diameter * cx)
+        crater_y = int(diameter * cy)
+        moon_draw.ellipse(
+            (crater_x - crater_r, crater_y - crater_r, crater_x + crater_r, crater_y + crater_r),
+            fill=(72, 78, 90, 72),
+            outline=(229, 232, 237, 105),
+            width=max(2, radius // 28),
+        )
+    image.paste(sphere, (x - radius, y - radius), sphere)
+
+
+def _paste_celestial_asset(
+    image: Image.Image,
+    filename: str,
+    x: int,
+    y: int,
+    diameter: int,
+) -> bool:
+    """Composite a photographic celestial cutout, returning False for fallback."""
+    path = CELESTIAL_DIR / filename
+    if not path.is_file():
+        return False
+    try:
+        asset = Image.open(path).convert("RGBA")
+        alpha_box = asset.getchannel("A").getbbox()
+        if alpha_box:
+            asset = asset.crop(alpha_box)
+        asset.thumbnail((diameter, diameter), Image.Resampling.LANCZOS)
+        image.paste(asset, (x - asset.width // 2, y - asset.height // 2), asset)
+        return True
+    except OSError:
+        return False
+
+
+def _background_for(card: BirthdayCard) -> tuple[Image.Image, dict[str, object]]:
+    theme = THEMES.get(card.theme, THEMES["painted_blue"])
+    path = BACKGROUND_DIR / str(theme["asset"])
+    if path.is_file():
+        with Image.open(path) as source:
+            image = ImageOps.fit(source.convert("RGB"), MASTER_SIZE, method=Image.Resampling.LANCZOS)
+    else:
+        image = Image.new("RGB", MASTER_SIZE, BACKGROUND)
+    overlay = Image.new("RGBA", MASTER_SIZE, tuple(theme["overlay"]))
+    image.paste(Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB"))
+    return image, theme
+
+
+def _draw_sparse_stars(image: Image.Image, card: BirthdayCard) -> None:
+    """Add a deterministic sparse star field without competing with copy."""
+    width, height = image.size
+    seed_material = f"{card.recipient_name}|{card.birth_date.isoformat()}".encode("utf-8")
+    seed = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], "big")
+    rng = random.Random(seed)
+    draw = ImageDraw.Draw(image, "RGBA")
+
+    protected = (
+        (130, 200, 1250, 500),
+        (180, 620, 2220, 1240),
+        (120, 1320, 2280, 2090),
+        (210, 2150, 2190, 3170),
+        (120, 3750, 1780, 4100),
+    )
+
+    def protected_point(px: int, py: int) -> bool:
+        return any(left <= px <= right and top <= py <= bottom for left, top, right, bottom in protected)
+
+    for _ in range(105):
+        sx = rng.randint(70, width - 70)
+        sy = rng.randint(80, height - 80)
+        if protected_point(sx, sy):
+            continue
+        star_r = rng.choices((2, 3, 4, 6, 9), weights=(48, 29, 15, 6, 2))[0]
+        if rng.random() < 0.16:
+            colour = (225, 193, 140, rng.randint(95, 175))
+        else:
+            colour = (237, 241, 247, rng.randint(90, 205))
+        draw.ellipse((sx - star_r, sy - star_r, sx + star_r, sy + star_r), fill=colour)
+        if star_r >= 6:
+            draw.line((sx - star_r * 2, sy, sx + star_r * 2, sy), fill=colour, width=2)
+            draw.line((sx, sy - star_r * 2, sx, sy + star_r * 2), fill=colour, width=2)
 
 
 def render_birthday_card_master(card: BirthdayCard) -> Image.Image:
     width, height = MASTER_SIZE
-    image = Image.new("RGB", MASTER_SIZE, WHITE)
+    image, theme = _background_for(card)
+    if bool(theme["stars"]):
+        _draw_sparse_stars(image, card)
     draw = ImageDraw.Draw(image)
+    text_colour = str(theme["text"])
+    muted_colour = str(theme["muted"])
+    accent_colour = str(theme["accent"])
 
     mono = _font("mono", 80)
-    draw.text((190, 260), card.date_label, font=mono, fill=BLACK)
-    draw.text((190, 375), "A BIRTHDAY SKY", font=_font("mono", 46), fill=MUTED)
+    draw.text((190, 260), card.date_label, font=mono, fill=text_colour)
+    draw.text((190, 375), "A BIRTHDAY SKY", font=_font("mono", 46), fill=muted_colour)
 
     # The recipient is the visual event: this complete title field occupies the
     # upper third of the tall card, as in the approved Luna mockup.
-    _draw_tracked_center(draw, "HAPPY BIRTHDAY", 700, _font("sans", 92), tracking=25)
+    _draw_tracked_center(draw, "HAPPY BIRTHDAY", 700, _font("sans", 92), tracking=25, fill=text_colour)
     display_name = card.recipient_name.upper()
     name_font = _fit_font(draw, display_name, "display", 330, 2020, 140)
-    draw.text((width / 2, 1010), display_name, font=name_font, fill=BLACK, anchor="mm")
+    draw.text((width / 2, 1010), display_name, font=name_font, fill=text_colour, anchor="mm")
 
-    draw.line((190, 1370, width - 190, 1370), fill=BLACK, width=3)
+    draw.line((930, 1370, 1470, 1370), fill=accent_colour, width=3)
     label_font = _font("mono", 50)
-    left_icon_x, right_icon_x, icon_y = 260, 1260, 1590
-    icon_r = 40
-    # Keep celestial symbols with their calculated positions. A decorative Sun
-    # in the top corner made the whole composition visually top-heavy.
-    draw.ellipse(
-        (left_icon_x - icon_r, icon_y - icon_r, left_icon_x + icon_r, icon_y + icon_r),
-        outline=GOLD,
-        width=8,
-    )
-    draw.ellipse(
-        (left_icon_x - 7, icon_y - 7, left_icon_x + 7, icon_y + 7),
-        fill=GOLD,
-    )
-    draw.ellipse(
-        (right_icon_x - icon_r, icon_y - icon_r, right_icon_x + icon_r, icon_y + icon_r),
-        fill=BLACK,
-    )
-    draw.ellipse(
-        (right_icon_x - 5, icon_y - icon_r - 2, right_icon_x + icon_r + 9, icon_y + icon_r + 2),
-        fill=WHITE,
-    )
+    left_icon_x, right_icon_x, icon_y = 650, 1750, 1540
+    icon_r = 108
+    # Keep recognisable celestial bodies beside their calculated positions.
+    if not _paste_celestial_asset(image, "sun-photographic.png", left_icon_x, icon_y, 310):
+        _draw_solar_disc(image, left_icon_x, icon_y, icon_r)
+    if not _paste_celestial_asset(image, "moon-photographic.png", right_icon_x, icon_y, 270):
+        _draw_lunar_disc(image, right_icon_x, icon_y, icon_r)
+    draw = ImageDraw.Draw(image)
 
-    left_x, right_x = 340, 1340
-    draw.text((left_x, 1445), "SUN", font=label_font, fill=MUTED)
+    left_x, right_x = 280, 1380
+    draw.text((left_x, 1705), "SUN", font=label_font, fill=muted_colour)
     sun_font = _fit_font(draw, f"IN {card.sun_sign.upper()}", "sans", 96, 930, 52)
-    draw.text((left_x, 1535), f"IN {card.sun_sign.upper()}", font=sun_font, fill=BLACK)
-    draw.text((right_x, 1445), "MOON", font=label_font, fill=MUTED)
+    draw.text((left_x, 1790), f"IN {card.sun_sign.upper()}", font=sun_font, fill=text_colour)
+    draw.text((right_x, 1705), "MOON", font=label_font, fill=muted_colour)
     moon_font = _fit_font(draw, f"IN {card.moon_label.upper()}", "sans", 96, 930, 52)
-    draw.text((right_x, 1535), f"IN {card.moon_label.upper()}", font=moon_font, fill=BLACK)
-    _draw_calculation(draw, card.sun_calculation, left_x, 1665, 900)
-    _draw_calculation(draw, card.moon_calculation, right_x, 1665, 870)
+    draw.text((right_x, 1790), f"IN {card.moon_label.upper()}", font=moon_font, fill=text_colour)
+    _draw_calculation(draw, card.sun_calculation, left_x, 1915, 800, muted_colour)
+    _draw_calculation(draw, card.moon_calculation, right_x, 1915, 800, muted_colour)
 
     poem_font, poem_lines, line_height = _poem_layout(draw, card.poem, 1740)
     poem_top = 2290
     for index, line in enumerate(poem_lines):
-        draw.text((width / 2, poem_top + index * line_height), line, font=poem_font, fill=BLACK, anchor="ma")
+        draw.text((width / 2, poem_top + index * line_height), line, font=poem_font, fill=text_colour, anchor="ma")
 
     # A restrained Luna cube, drawn as vector shapes so the export remains crisp.
     cx, cy, cube = 260, 3920, 82
-    draw.polygon([(cx, cy - cube), (cx + cube, cy - cube // 2), (cx, cy), (cx - cube, cy - cube // 2)], fill="#202020")
-    draw.polygon([(cx - cube, cy - cube // 2), (cx, cy), (cx, cy + cube), (cx - cube, cy + cube // 2)], fill="#050505")
-    draw.polygon([(cx, cy), (cx + cube, cy - cube // 2), (cx + cube, cy + cube // 2), (cx, cy + cube)], fill="#0D0D0D")
+    draw.polygon([(cx, cy - cube), (cx + cube, cy - cube // 2), (cx, cy), (cx - cube, cy - cube // 2)], fill=text_colour)
+    draw.polygon([(cx - cube, cy - cube // 2), (cx, cy), (cx, cy + cube), (cx - cube, cy + cube // 2)], fill=accent_colour)
+    draw.polygon([(cx, cy), (cx + cube, cy - cube // 2), (cx + cube, cy + cube // 2), (cx, cy + cube)], fill=muted_colour)
     brand_font = _font("sans", 37)
-    draw.text((420, 3884), "L U N A   C O N V E R G E N C E", font=brand_font, fill=BLACK)
-    draw.text((420, 3956), "THE UNIVERSE SHIFTS. YOU'VE GOT THIS.", font=_font("mono", 30), fill=MUTED)
+    draw.text((420, 3884), "L U N A   C O N V E R G E N C E", font=brand_font, fill=text_colour)
+    draw.text((420, 3956), "THE UNIVERSE SHIFTS. YOU'VE GOT THIS.", font=_font("mono", 30), fill=muted_colour)
 
     return image
 
