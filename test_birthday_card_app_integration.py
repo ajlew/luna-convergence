@@ -24,3 +24,8 @@ def test_birthday_card_uses_live_validated_voice_without_canned_fallback():
     assert "secrets.token_hex(8)" in APP
     assert "Luna could not write a verified birthday poem" in APP
     assert "suggested_poem" not in APP
+
+
+def test_unknown_birth_time_uses_date_window_luminary_calculations():
+    assert "birth_date_luminary_calculations" in APP
+    assert "if not time_known else None" in APP

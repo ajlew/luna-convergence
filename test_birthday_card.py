@@ -141,9 +141,13 @@ def test_unknown_time_card_does_not_claim_exact_aspect_timing():
         birth_date=date(1995, 9, 23),
         snapshot=_snapshot(False),
         poem="Words only reveal the wider possibilities waiting to be spoken.",
+        date_only_calculations={
+            "Sun": "Sun trine Jupiter · applying · 0.44° orb at closest approach",
+            "Moon": "Moon sextile Venus · exact on birth date · ~3:15 PM local",
+        },
     )
-    assert card.sun_calculation is None
-    assert card.moon_calculation is None
+    assert card.sun_calculation == "Sun trine Jupiter · applying · 0.44° orb at closest approach"
+    assert card.moon_calculation == "Moon sextile Venus · exact on birth date · ~3:15 PM local"
 
 
 def test_card_requires_generated_or_customer_supplied_poem():
