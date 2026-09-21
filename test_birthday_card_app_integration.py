@@ -47,3 +47,21 @@ def test_customer_sees_matching_finished_card_samples_before_choosing():
     assert '"Style samples only.' in APP
     assert (root / "assets" / "birthday-previews" / "lara-midnight-painted.png").is_file()
     assert (root / "assets" / "birthday-previews" / "lara-ivory-letter.png").is_file()
+
+
+def test_public_birthday_checkout_is_fixed_at_aud_240():
+    config = (Path(__file__).parent / "site_config.py").read_text(encoding="utf-8")
+    assert 'BIRTHDAY_PRICE = "A$2.40"' in config
+    assert 'STRIPE_BIRTHDAY_PRICE_ID = secret("STRIPE_BIRTHDAY_PRICE_ID")' in APP
+    assert '_create_instant_checkout(order, "BIRTHDAY")' in APP
+    assert '"value": 2.40' in APP
+    assert '"currency": "AUD"' in APP
+
+
+def test_paid_birthday_fulfilment_rebuilds_exact_prepared_card():
+    assert 'if product_code == "BIRTHDAY":' in APP
+    assert "_render_paid_birthday_card(session, metadata)" in APP
+    assert 'metadata.get("birthday_poem")' in APP
+    assert 'metadata.get("birthday_theme")' in APP
+    assert 'key=f"paid-birthday-png-{session_id}"' in APP
+    assert 'key=f"paid-birthday-pdf-{session_id}"' in APP

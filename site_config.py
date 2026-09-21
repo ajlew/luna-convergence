@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BRAND_NAME = "Luna Convergence"
-BUILD_LABEL = "Luna v3.48 — Owner Access"
+BUILD_LABEL = "Luna v3.54 — Paid Birthday Card"
 EDITOR_PREVIEW_ENABLED = False  # Public paid launch: no editorial/Stripe bypass.
 TAGLINE = "The universe shifts. You’ve got this."
 SUBTITLE = (
@@ -11,6 +11,7 @@ SUBTITLE = (
 
 MONTHLY_PRICE = "A$3.30"
 YEARLY_PRICE = "A$14.95"
+BIRTHDAY_PRICE = "A$2.40"
 
 # Public sign selectors start neutral.  A sign must come from the visitor,
 # a verified birth date, or an explicit route/query value; the app must never
