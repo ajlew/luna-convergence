@@ -84,6 +84,7 @@ class NatalPosition:
     degree: float
     retrograde: bool
     house: int | None = None
+    speed: float = 0.0
 
     def label(self) -> str:
         degree = int(self.degree)
@@ -174,6 +175,7 @@ def _planet_positions(jd: float) -> list[NatalPosition]:
                 sign=SIGNS[idx],
                 degree=longitude % 30.0,
                 retrograde=values[3] < 0,
+                speed=values[3],
             )
         )
     return result
@@ -579,6 +581,7 @@ def build_natal_snapshot(
                 degree=item.degree,
                 retrograde=item.retrograde,
                 house=_whole_sign_house(item.longitude, ascendant.longitude),
+                speed=item.speed,
             )
             for item in positions
         ]
