@@ -6,6 +6,8 @@ from PIL import Image
 from pypdf import PdfReader
 
 from birthday_card import (
+    BACKGROUND_DIR,
+    CELESTIAL_DIR,
     SOCIAL_SIZE,
     birthday_card_filename,
     build_birthday_card,
@@ -162,3 +164,39 @@ def test_card_requires_generated_or_customer_supplied_poem():
         assert "poem" in str(exc).lower()
     else:
         raise AssertionError("An empty poem must never produce a canned birthday card.")
+
+
+def test_both_customer_themes_render_distinct_cards():
+    common = dict(
+        recipient_name="Fiona",
+        birth_date=date(1995, 9, 23),
+        snapshot=_snapshot(True),
+        poem="Words only reveal the wider possibilities waiting to be spoken.",
+    )
+    midnight = build_birthday_card(**common, theme="painted_blue")
+    ivory = build_birthday_card(**common, theme="ivory_paper")
+    midnight_png = render_birthday_card_png(midnight)
+    ivory_png = render_birthday_card_png(ivory)
+    assert midnight.theme == "painted_blue"
+    assert ivory.theme == "ivory_paper"
+    assert midnight_png != ivory_png
+    assert Image.open(BytesIO(midnight_png)).size == SOCIAL_SIZE
+    assert Image.open(BytesIO(ivory_png)).size == SOCIAL_SIZE
+
+
+def test_unknown_theme_falls_back_to_midnight_painted():
+    card = build_birthday_card(
+        recipient_name="Fiona",
+        birth_date=date(1995, 9, 23),
+        snapshot=_snapshot(True),
+        poem="Words only reveal the wider possibilities waiting to be spoken.",
+        theme="not-a-real-theme",
+    )
+    assert card.theme == "painted_blue"
+
+
+def test_customer_theme_and_celestial_assets_are_packaged():
+    assert (BACKGROUND_DIR / "painted-blue.png").is_file()
+    assert (BACKGROUND_DIR / "ivory-paper.png").is_file()
+    assert (CELESTIAL_DIR / "sun-photographic.png").is_file()
+    assert (CELESTIAL_DIR / "moon-photographic.png").is_file()
