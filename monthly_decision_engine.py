@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Mapping, Sequence
 
 from scenario_engine import SIGN_RULERS, event_importance_score
+from event_identity import event_identity
 from luna_first_principles import (
     CORRESPONDENCE_NOTE,
     LUNA_FIRST_PRINCIPLES_VERSION,
@@ -190,11 +191,17 @@ def _climate_components(
     ruler_pressure = 0.0
 
     tagged_events = [(event, 1.0) for event in events] + [(event, 0.65) for event in inherited_events]
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     for event, carry_factor in tagged_events:
         event_date = str(_value(event, "event_date", ""))
         title = str(_value(event, "title", ""))
-        fingerprint = (event_date, title)
+
+        # Canonical event identity defines sameness. Serialized events carry
+        # event_id; raw calculated Event objects use the same identity authority.
+        fingerprint = str(_value(event, "event_id", "")).strip()
+        if not fingerprint:
+            fingerprint = event_identity(event)
+
         if fingerprint in seen:
             continue
         seen.add(fingerprint)

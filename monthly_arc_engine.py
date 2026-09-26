@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from typing import Iterable, Mapping, Sequence
 
 from date_display import human_date, human_date_range
+from event_identity import event_identity
 from scenario_engine import SIGN_RULERS, ScenarioResult, event_importance_score, rank_scenarios
 
 
@@ -72,6 +73,7 @@ class ArcBeat:
     start_date: str
     end_date: str
     title: str
+    event_id: str
     summary: str
     response: str
     score: float
@@ -91,6 +93,7 @@ class ArcBeat:
             "start_date": self.start_date,
             "end_date": self.end_date,
             "title": self.title,
+            "event_id": self.event_id,
             "summary": self.summary,
             "response": self.response,
             "score": round(self.score, 2),
@@ -142,6 +145,7 @@ class MonthlyArc:
     beats: tuple[ArcBeat, ...]
     ranked_scenarios: tuple[ScenarioResult, ...]
     inherited_events: tuple[dict, ...]
+    protected_evidence: tuple[dict, ...]
     equation: str
 
     def to_dict(self) -> dict:
@@ -180,6 +184,7 @@ class MonthlyArc:
             "beats": [item.to_dict() for item in self.beats],
             "ranked_scenarios": [item.to_dict() for item in self.ranked_scenarios],
             "inherited_events": list(self.inherited_events),
+            "protected_evidence": list(self.protected_evidence),
             "equation": self.equation,
         }
 
@@ -198,8 +203,13 @@ def _date_value(event: object) -> date:
 
 
 def _event_dict(event: object) -> dict:
+    source_event_id = str(_value(event, "event_id", "") or "").strip()
+    if not source_event_id:
+        source_event_id = event_identity(event)
+
     return {
         "event_date": _date_value(event).isoformat(),
+        "event_id": source_event_id,
         "kind": str(_value(event, "kind", "")),
         "title": str(_value(event, "title", "Transition")),
         "detail": str(_value(event, "detail", "")),
@@ -282,7 +292,7 @@ def _clusters(
         fingerprint = (
             item["start"],
             item["end"],
-            tuple(sorted(str(_value(event, "title", "")) for event in item["events"])),
+            tuple(sorted(event_identity(event) for event in item["events"])),
         )
         previous = unique.get(fingerprint)
         if previous is None or item["score"] > previous["score"]:
@@ -887,12 +897,16 @@ def _beat(
         else:
             strongest = max(events, key=lambda item: _event_weight(item, sign))
         title = str(_value(strongest, "title", role.title()))
+        source_event_id = str(_value(strongest, "event_id", "") or "").strip()
+        if not source_event_id:
+            source_event_id = event_identity(strongest)
         evidence = tuple(_event_label(item) for item in sorted(cluster["events"], key=_date_value))
         return ArcBeat(
             role=role,
             start_date=cluster["start"].isoformat(),
             end_date=cluster["end"].isoformat(),
             title=title,
+            event_id=source_event_id,
             summary=summary,
             response=response,
             score=float(cluster["score"]),
@@ -928,6 +942,7 @@ def _beat(
         start_date=fallback_date.isoformat(),
         end_date=fallback_date.isoformat(),
         title=role.title(),
+        event_id="",
         summary=summary,
         response=response,
         score=0.0,
@@ -1581,8 +1596,14 @@ def build_monthly_arc(
     retrograde_cycles: Sequence[object] = (),
     main_focus: str = "General overview",
     house_weights: Mapping[int, float] | None = None,
+    protected_events: Sequence[object] = (),
 ) -> MonthlyArc:
     monthly_events = _meaningful(events)
+    protected_monthly_events = tuple(
+        event
+        for event in protected_events
+        if start <= _date_value(event) <= end
+    )
     carryover = [
         event
         for event in _meaningful(inherited_events)
@@ -2086,6 +2107,9 @@ def build_monthly_arc(
         beats=beats,
         ranked_scenarios=all_scenarios,
         inherited_events=tuple(_event_dict(item) for item in carryover),
+        protected_evidence=tuple(
+            _event_dict(item) for item in protected_monthly_events
+        ),
         equation=(
             "Normalized event importance + sign-ruler relevance + house evidence + "
             "event clustering + convergent 1-3 house narrative roles + deterministic scenario provenance + temporal roles = monthly narrative graph"

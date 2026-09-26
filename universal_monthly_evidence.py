@@ -7,6 +7,7 @@ import math
 import re
 from typing import Iterable, Mapping, Sequence
 
+from event_identity import event_identity
 from scenario_engine import (
     FOCUS_HOUSES,
     SCENARIO_DEFINITIONS,
@@ -330,6 +331,18 @@ def cluster_score(
     return raw * (1.0 + min(0.18, kind_diversity * 0.035 + house_diversity * 0.02))
 
 
+def _event_identity_value(event: object) -> str:
+    """Return canonical calculated identity; never infer it from date/title."""
+    supplied = str(_value(event, "event_id", "") or "").strip()
+    if supplied:
+        return supplied
+    if isinstance(event, Mapping):
+        raise ValueError(
+            "Serialized universal monthly evidence events must carry canonical event_id."
+        )
+    return event_identity(event)
+
+
 def rank_house_path(
     sign: str,
     start: date,
@@ -348,13 +361,12 @@ def rank_house_path(
 
     def unique(events: Sequence[object]) -> list[object]:
         selected: list[object] = []
-        seen: set[tuple[str, str]] = set()
+        seen: set[str] = set()
         for event in events:
-            d = _event_date(event)
-            fingerprint = (d.isoformat() if d else "", str(_value(event, "title", "")))
-            if fingerprint in seen:
+            source_event_id = _event_identity_value(event)
+            if source_event_id in seen:
                 continue
-            seen.add(fingerprint)
+            seen.add(source_event_id)
             selected.append(event)
         return selected
 
@@ -365,7 +377,7 @@ def rank_house_path(
         result: Counter[int] = Counter()
         titles_by_house: dict[int, set[str]] = defaultdict(set)
         kinds_by_house: dict[int, set[str]] = defaultdict(set)
-        support_count = len({str(_value(item, "title", "")) for item in events})
+        support_count = len({_event_identity_value(item) for item in events})
         for event in events:
             score = event_evidence_score(
                 event,
