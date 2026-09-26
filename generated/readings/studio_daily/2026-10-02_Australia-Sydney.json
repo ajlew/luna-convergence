@@ -1,0 +1,25 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-02",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-02 · Mars opposite Pluto · applying · 0.50° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "d77fbd13be4ab2ca49ad81fc269e85bfd829c684ab845abdc858a53005c52284",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "SIT UP, STAND OUT, and let the fierce spark of Mars and the deep, transformative pulse of Pluto mingle in your day. This rare opposition nudges you toward confronting buried power struggles—whether in a heated meeting or a quiet moment of self‑doubt. The Mars energy urges bold moves, while Pluto’s undercurrent pushes you to dig beneath surface motives and uncover hidden truths. Together they form a call to assert yourself with integrity, to confront any resistance head‑on, and to transform tension into growth. When you feel the urge to argue or act impulsively, pause, breathe, and ask: “What deeper intention lies behind this urge?” Use that question to channel the clash into constructive change. Today, take a single bold step—perhaps challenge a long‑held belief or initiate a conversation that forces both sides to confront their real needs. This concrete act will harness the planet’s dynamic energy and turn potential conflict into a catalyst for personal and collective evolution.",
+      "status": "published",
+      "editorial_warnings": [
+        "above soft word target: 163 words (aim 15-25)"
+      ]
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

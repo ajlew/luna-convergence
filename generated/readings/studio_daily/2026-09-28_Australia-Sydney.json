@@ -1,0 +1,25 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-28",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-28 · Sun trine Uranus · applying · 0.10° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "ddfc9eabf21f6bef4062a566be73943149b2bd84118aca22d2b58f72351b0581",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "EMBRACE the spark of change that today’s Sun trine Uranus brings—creative breakthroughs, sudden fresh ideas, and a lightness that lifts routine. This celestial harmony whispers that innovation is your ally; trust the urge to experiment, whether it’s a new recipe, a fresh route home, or a bold comment in a meeting. Let that urge guide you—today, try a different way to solve a problem, and watch the ordinary become extraordinary.",
+      "status": "published",
+      "editorial_warnings": [
+        "above soft word target: 72 words (aim 15-25)"
+      ]
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

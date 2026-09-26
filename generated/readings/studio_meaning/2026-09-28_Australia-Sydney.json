@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_meaning",
+      "period": "2026-09-28",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-28 · Sun trine Uranus · applying · 0.10° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "6ab480f6fe3fd8e13acc414c13b2819d21705f7ada514146da4b8c4ba324cf18",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Stand up and feel the spark of fresh ideas. The Sun trine Uranus today signals a burst of creative freedom, urging you to break routine patterns. Symbolically, the Sun’s glow brightens your personal drive, while Uranus’ electric edge invites experimentation. Let curiosity lead you to prototype a new hobby or draft an unconventional plan. Try sketching one bold idea now.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

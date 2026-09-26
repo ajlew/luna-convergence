@@ -1,0 +1,26 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-04",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-04 · Venus stations retrograde · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "7899e2edc25510c66dab326b1c7d410339659e1d6f037a23f1d713282505d56c",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK CLOSELY—today’s celestial drama is a cosmic tug‑of‑war that will ripple through your everyday choices. Venus, the planet of love, beauty and pleasure, is turning back on itself, signaling a pause in the flow of attraction and a chance to reassess what truly delights you. At the same time, the Sun, your core energy, is facing Saturn, the stern taskmaster, warning that ambition must be tempered with responsibility. Together, these forces ask you to slow down, reflect, and decide whether your desires align with your long‑term goals. If you’ve been chasing a fleeting romance or a shiny new gadget, consider whether it truly supports your values or simply satisfies a temporary craving. On the flip side, if you’ve felt stuck in a routine that feels safe but unfulfilling, this is a moment to gently push against the status quo, but with a plan that won’t jeopardise stability. A practical illustration: instead of impulsively buying a luxury item, pause and write down how that purchase would serve your future aspirations; if it doesn’t, let that realization guide you toward a more meaningful investment of time or resources. In the workplace, resist the urge to overcommit to a project that promises glamour but lacks clear structure; align your efforts with clear milestones that honour both creativity and discipline. The key is to balance the urge to indulge with the wisdom to build sustainably. So today, take a single step: write down one desire you’ve been holding, and next to it, one concrete goal that will keep you grounded—then decide if the desire can realistically support that goal.",
+      "status": "published",
+      "editorial_warnings": [
+        "above soft word target: 270 words (aim 15-25)",
+        "repeated action verb 'write' (2 uses)"
+      ]
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

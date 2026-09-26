@@ -1,0 +1,25 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_meaning",
+      "period": "2026-09-30",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-30 · Mercury trine True Node · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "254000b0e25c20872163a5345e0c04382e14c6563af37b4fe390bc882dc859f1",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "STAND UP, LISTEN, and let this clear‑skied alignment guide you. Mercury trine the True Node means your thoughts and communication are in sync with your destined path—every question you pose nudges you toward a broader purpose. Use this spark to draft a concise plan that aligns your daily actions with that larger vision. Draft that plan today.",
+      "status": "published",
+      "editorial_warnings": [
+        "repeated action verb 'draft' (2 uses)"
+      ]
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

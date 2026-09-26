@@ -1,0 +1,25 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-01",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-01 · Moon conjunct Uranus · exact today · approximately 12:43 pm AEST"
+      ],
+      "life_areas": [],
+      "facts_hash": "dc46bf8f17b1c4a8a3c72525912582f75a8c08318bcb98933729d7b2aca4ca20",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "OPEN YOUR MIND TO THE SHARP SHIFT AT 12:43 pm AEST: the Moon meets Uranus, while Mercury dives into Scorpio—tune into sudden insight, question routine, and write a bold, unfiltered idea that you’ll act on today.",
+      "status": "published",
+      "editorial_warnings": [
+        "above soft word target: 38 words (aim 15-25)"
+      ]
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

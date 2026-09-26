@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-09-29",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-09-29 · Sun trine Uranus · major sky event"
+      ],
+      "life_areas": [],
+      "facts_hash": "a4e0fb03beee28a7ddce354f13756a81994ae5c57459892bed43d3f11cc1b5c5",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "SING your own anthem today, for the Sun trine Uranus invites fresh ideas—let Mars in Leo spark bold, playful moves. Write a daring plan.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}
