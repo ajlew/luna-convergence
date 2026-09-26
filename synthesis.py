@@ -27,7 +27,8 @@ from monthly_strategy_alignment import align_monthly_arc_with_decision
 from monthly_trajectory_engine import build_monthly_trajectory
 from luna_first_principles import methodology_metadata
 from yearly_game_engine import build_yearly_game_map
-from major_event_registry import major_sky_events, period_priority_signals
+from major_event_registry import major_sky_events, period_priority_signals, event_presentation_group
+from event_identity import event_identity
 
 
 HOUSE_LABELS = {
@@ -650,7 +651,7 @@ def _yearly_strategic_chapters(
     )
     pluto_extra = f" The strongest dated Pluto trigger is {pluto_event.title} on {pluto_event.event_date.strftime('%B %d')}." if pluto_event else ""
     chapters.append({
-        "title": "Pluto’s long-term transformation",
+        "title": "Plutoâ€™s long-term transformation",
         "meaning": (
             f"Pluto occupies house {pluto_house}: {HOUSE_NAMES[pluto_house]}. "
             f"Name what can no longer stay superficial. Change the condition that keeps the old power structure alive.{pluto_extra}"
@@ -785,6 +786,63 @@ def period_report(
     convergences = convergence_points(events, maximum=9)
     houses = dominant_houses(start, end, sign, timezone_name, step_days=1 if (end-start).days < 50 else 4)
 
+    # Establish shared event authority before Monthly or Yearly interpretation.
+    # Protection determines survival; classification determines presentation.
+    product_type = "monthly" if (end - start).days < 50 else "yearly"
+    major_registry = major_sky_events(start, end, sign, timezone_name)
+    priority_signals = period_priority_signals(
+        major_registry,
+        product_type,
+        limit=8 if product_type == "monthly" else 18,
+        opportunity_slots=2,
+    )
+
+    mandatory_signals = [
+        signal for signal in major_registry
+        if signal.must_surface_in(product_type)
+    ]
+    opportunity_signals = sorted(
+        (
+            signal for signal in major_registry
+            if signal.visible_in(product_type) and signal.opportunity
+        ),
+        key=lambda item: (-item.sky_score, item.event_date),
+    )[:2]
+
+    protected_signals = []
+    for signal in mandatory_signals + opportunity_signals:
+        if signal not in protected_signals:
+            protected_signals.append(signal)
+
+    # Reconnect registry signals to their underlying calculated events
+    # exclusively through canonical source identity. Presentation labels,
+    # classification names and ranking treatment must never define identity.
+    event_lookup = {
+        event_identity(event): event
+        for event in events
+    }
+
+    protected_events = []
+    for signal in protected_signals:
+        matched = event_lookup.get(signal.source_event_id)
+
+        if matched is not None and matched not in protected_events:
+            protected_events.append(matched)
+
+    # True survival authority contains only must_surface events.
+    # Opportunity signals may receive ranking priority, but they are not
+    # protected merely because they are opportunities.
+    mandatory_source_ids = {
+        signal.source_event_id
+        for signal in mandatory_signals
+    }
+
+    mandatory_events = [
+        event
+        for event in protected_events
+        if event_identity(event) in mandatory_source_ids
+    ]
+
     strategic_chapter_markdown = ""
     strategic_chapters = []
     solar_convergence = None
@@ -795,6 +853,7 @@ def period_report(
     monthly_decision = None
     monthly_decision_qa = None
     monthly_trajectory = None
+    yearly_protected_evidence = []
     yearly_game_map = None
     inherited_events = []
 
@@ -821,6 +880,7 @@ def period_report(
             events=events,
             inherited_events=inherited_events,
             retrograde_cycles=cycles,
+            protected_events=mandatory_events,
             main_focus=main_focus,
             house_weights={house: weight for house, weight in houses},
         ).to_dict()
@@ -872,6 +932,12 @@ def period_report(
         strategic_chapter_markdown, strategic_chapters = _yearly_strategic_chapters(
             sign, start, end, timezone_name, events, cycles, convergences
         )
+
+        # Survival authority is separate from strategic prominence.
+        # must_surface events remain available even when the nine strategic
+        # chapters compress the year's narrative.
+        yearly_protected_evidence = list(mandatory_events)
+
         yearly_game_map = build_yearly_game_map(
             sign=sign,
             year=start.year,
@@ -881,39 +947,9 @@ def period_report(
             annual_events=events,
         ).to_dict()
 
-    product_type = "monthly" if (end - start).days < 50 else "yearly"
-    # The Sun supplies Luna's foundational calendar.  Build the shared-sky
-    # registry through the global layer so equinoxes/solstices cannot disappear
-    # merely because the lower-level event list treats them as ordinary ingresses.
-    major_registry = major_sky_events(start, end, sign, timezone_name)
-    priority_signals = period_priority_signals(
-        major_registry,
-        product_type,
-        limit=8 if product_type == "monthly" else 18,
-        opportunity_slots=2,
-    )
-
-    # Major events and high-value opportunities are selected before the normal
-    # transition ranking. This prevents an eclipse, station, ingress, exact
-    # structural alignment or useful Jupiter opening from being crowded out by
-    # ordinary aspects.
-    mandatory_signals = [
-        signal for signal in major_registry if signal.must_surface_in(product_type)
-    ]
-    opportunity_signals = sorted(
-        (signal for signal in major_registry if signal.visible_in(product_type) and signal.opportunity),
-        key=lambda item: (-item.sky_score, item.event_date),
-    )[:2]
-    protected_signals = []
-    for signal in mandatory_signals + opportunity_signals:
-        if signal not in protected_signals:
-            protected_signals.append(signal)
-    protected_keys = [
-        (signal.event_date, signal.source_title)
-        for signal in protected_signals
-    ]
-    event_lookup = {(event.event_date, event.title): event for event in events}
-    selected_events = [event_lookup[key] for key in protected_keys if key in event_lookup]
+    # Protected events were established before Monthly/Yearly interpretation.
+    # Begin transition selection from that same authoritative collection.
+    selected_events = list(protected_events)
 
     ranked_events = sorted(events, key=lambda event: (-_transition_priority(event), event.event_date))
     desired_count = max(int(transition_count), len(selected_events))
@@ -962,11 +998,11 @@ def period_report(
 
     major_sky_lines = []
     for signal in priority_signals:
-        label = "Opportunity" if signal.opportunity else ("Major sky event" if signal.must_surface_in(product_type) else signal.tier)
+        label = event_presentation_group(signal, product_type).title()
         major_sky_lines.append(
             f"- {signal.event_date.strftime('%d %B %Y').lstrip('0')} — **{signal.display_label}** — {label}. {signal.action}"
         )
-    major_sky_section = "\n".join(major_sky_lines) or "No major sky event met the visibility threshold."
+    major_sky_section = "\n".join(major_sky_lines) or "No key sky event met the visibility threshold."
 
     markdown = f"""# {sign} — {period_name}
 
@@ -989,7 +1025,7 @@ The selected sign becomes house 1 under the whole-sign method. The dominant and 
 
 {chr(10).join(house_rows)}
 
-# Major sky events
+# Key sky events
 
 {major_sky_section}
 
@@ -1050,8 +1086,12 @@ The winning sequence is:
         "monthly_decision_qa": monthly_decision_qa,
         "luna_first_principles": methodology_metadata(),
         "yearly_game_map": yearly_game_map,
+        "yearly_protected_evidence": serialize(yearly_protected_evidence),
         "inherited_events": serialize(inherited_events),
         "nearest_city": nearest_city,
         "timezone_name": timezone_name,
         "main_focus": main_focus,
     }
+
+
+

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from event_identity import canonical_event_identity, event_identity
 
 """Global major-sky event registry for Luna Convergence.
 
@@ -37,6 +38,7 @@ SHORT_PRODUCTS = frozenset({"daily", "weekly", "monthly"})
 @dataclass(frozen=True)
 class MajorEventSignal:
     event_date: date
+    source_event_id: str
     source_kind: str
     event_class: str
     tier: str
@@ -76,6 +78,7 @@ class PersonalEventActivation:
     """A shared-sky event that also makes a close contact to a natal point."""
 
     event_date: date
+    source_event_id: str
     display_label: str
     event_class: str
     tier: str
@@ -314,6 +317,12 @@ def _solar_anchor_signal(
     display_label = f"{gate_name} · Sun enters {ingress_sign}"
     return MajorEventSignal(
         event_date=gate_day,
+        source_event_id=canonical_event_identity(
+            gate_day,
+            "ingress",
+            f"Sun enters {ingress_sign}",
+            ("Sun",),
+        ),
         source_kind="solar_anchor",
         event_class="solar_anchor",
         tier="FOUNDATION",
@@ -641,6 +650,7 @@ def _signal_from_event(event: Event, same_day: tuple[Event, ...]) -> MajorEventS
     )
     return MajorEventSignal(
         event_date=event.event_date,
+        source_event_id=event_identity(event),
         source_kind=event.kind,
         event_class=event_class,
         tier=tier,
@@ -738,10 +748,12 @@ def classify_major_events(events: Iterable[Event]) -> tuple[MajorEventSignal, ..
         if signal is not None:
             signals.append(signal)
 
-    # Same source event should not appear twice. Highest sky score wins.
-    unique: dict[tuple[date, str], MajorEventSignal] = {}
+    # Same calculated source event should not appear twice.
+    # Canonical source identity, never presentation text, defines sameness.
+    # If competing classifications exist, the highest sky score wins.
+    unique: dict[str, MajorEventSignal] = {}
     for signal in signals:
-        key = (signal.event_date, signal.source_title)
+        key = signal.source_event_id
         if key not in unique or signal.sky_score > unique[key].sky_score:
             unique[key] = signal
 
@@ -774,9 +786,11 @@ def major_sky_events(
             _solar_anchor_signal(gate_day, gate_name, ingress_sign, question, native_sign)
         )
 
-    unique: dict[tuple[date, str], MajorEventSignal] = {}
+    # Final registry deduplication follows canonical calculated identity.
+    # Classification and presentation labels must not create duplicate sky events.
+    unique: dict[str, MajorEventSignal] = {}
     for signal in signals:
-        key = (signal.event_date, signal.source_title)
+        key = signal.source_event_id
         if key not in unique or signal.sky_score > unique[key].sky_score:
             unique[key] = signal
     return tuple(sorted(unique.values(), key=lambda item: (item.event_date, -item.sky_score, item.display_label)))
@@ -1256,6 +1270,7 @@ def personalize_major_signals(
             values.append(
                 PersonalEventActivation(
                     event_date=signal.event_date,
+                    source_event_id=signal.source_event_id,
                     display_label=signal.display_label,
                     event_class=signal.event_class,
                     tier=signal.tier,
@@ -1276,7 +1291,7 @@ def personalize_major_signals(
     selected: list[PersonalEventActivation] = []
     per_event = {}
     for item in values:
-        key = (item.event_date, item.display_label)
+        key = item.source_event_id
         count = per_event.get(key, 0)
         if count >= 4:
             continue
@@ -1355,9 +1370,9 @@ def group_personal_activations(
     values: Iterable[PersonalEventActivation],
 ) -> tuple[tuple[PersonalEventActivation, ...], ...]:
     """One shared event, many natal contacts. Never make one eclipse look like several events."""
-    groups: dict[tuple[date, str], list[PersonalEventActivation]] = {}
+    groups: dict[str, list[PersonalEventActivation]] = {}
     for item in values or ():
-        groups.setdefault((item.event_date, item.display_label), []).append(item)
+        groups.setdefault(item.source_event_id, []).append(item)
     ordered = []
     for key, items in groups.items():
         items.sort(key=lambda item: (-item.combined_score, item.orb, item.natal_target))
@@ -1368,11 +1383,15 @@ def group_personal_activations(
 
 def group_serialized_personal_activations(values: Iterable[dict]) -> tuple[tuple[dict, ...], ...]:
     """Serialized equivalent used by report objects and renderers."""
-    groups: dict[tuple[str, str], list[dict]] = {}
+    groups: dict[str, list[dict]] = {}
     for raw in values or ():
         item = dict(raw or {})
-        key = (str(item.get("event_date") or ""), str(item.get("display_label") or ""))
-        groups.setdefault(key, []).append(item)
+        source_event_id = str(item.get("source_event_id") or "").strip()
+        if not source_event_id:
+            raise ValueError(
+                "Serialized personal activations must carry canonical source_event_id."
+            )
+        groups.setdefault(source_event_id, []).append(item)
     ordered = []
     for key, items in groups.items():
         items.sort(key=lambda item: (
@@ -1388,16 +1407,40 @@ def group_serialized_personal_activations(values: Iterable[dict]) -> tuple[tuple
 def parse_serialized_signal(value: dict) -> MajorEventSignal | None:
     try:
         event_date = date.fromisoformat(str(value.get("event_date") or ""))
+        source_kind = str(value.get("source_kind") or "")
+        technical_label = str(value.get("technical_label") or "")
+        source_title = str(value.get("source_title") or "")
+        planets = tuple(value.get("planets") or ())
+
+        source_event_id = str(value.get("source_event_id") or "").strip()
+
+        if not source_event_id:
+            identity_kind = source_kind
+            identity_label = technical_label or source_title
+
+            # Solar anchors are presentation/classification records for
+            # an underlying calculated Sun ingress.
+            if source_kind == "solar_anchor":
+                identity_kind = "ingress"
+
+            source_event_id = canonical_event_identity(
+                event_date,
+                identity_kind,
+                identity_label,
+                planets,
+            )
+
         return MajorEventSignal(
             event_date=event_date,
-            source_kind=str(value.get("source_kind") or ""),
+            source_event_id=source_event_id,
+            source_kind=source_kind,
             event_class=str(value.get("event_class") or ""),
             tier=str(value.get("tier") or ""),
             sky_score=float(value.get("sky_score") or 0.0),
-            technical_label=str(value.get("technical_label") or ""),
+            technical_label=technical_label,
             display_label=str(value.get("display_label") or ""),
-            source_title=str(value.get("source_title") or ""),
-            planets=tuple(value.get("planets") or ()),
+            source_title=source_title,
+            planets=planets,
             houses=tuple(int(item) for item in (value.get("houses") or ())),
             polarity=str(value.get("polarity") or ""),
             importance=float(value.get("importance") or 0.0),
