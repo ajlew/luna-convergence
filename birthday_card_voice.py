@@ -100,17 +100,29 @@ Return exactly one JSON object:
   "poem": "..."
 }}
 
-POEM CONTRACT:
-- One sentence of 10 to 18 words, ending with a period.
-- Use this sentence architecture, not these words: [concrete subject] only [active verb] [abstract possibility] [movement toward emergence].
-- Translate the supplied Sun into identity/direction and the supplied Moon into emotional need/instinct.
-- When exact luminary aspects are supplied, let the strongest relevant aspect refine the connection.
-- When either sign has two options, do not choose between them; use imagery valid for both.
-- Use concrete imagery and elegant plain English.
-- Do not name planets, signs, astrology, the recipient, the birth date or birth year.
-- Do not predict an event, promise an outcome, use a quotation, or add a second sentence.
+POEM VOICE AND STRUCTURE:
+- Write one very short original poem, approximately 10 to 22 words.
+- Use 2 to 4 short lines with a spare, haiku-like cadence.
+- Begin with a concrete image drawn from the meaning of the calculated sky.
+- Turn that image inward: the outer image should reveal something about identity, instinct, desire, tension, growth, or possibility.
+- Let the final line create movement, release, emergence, recognition, or unresolved possibility.
+- Prefer image and implication over explanation.
+- Keep the language simple, vivid and emotionally resonant.
+- Vary the syntax, verbs, nouns, imagery and line structure between generations.
+- Do not imitate or reproduce any existing poem.
+- Use the general poetic movement: outer or cosmic image -> inner human meaning -> final movement.
+
+ASTROLOGICAL GROUNDING:
+- The supplied calculated facts are authoritative. Never recalculate or contradict them.
+- Translate the supplied Sun into identity, vitality or direction.
+- Translate the supplied Moon into emotional need, instinct or inner response.
+- When exact luminary aspects are supplied, let the strongest relevant aspect alter the imagery, tension or resolution.
+- When either sign has two options, do not choose between them; use imagery compatible with both.
+- The astrology must determine the poem's meaning, but the finished poem must not explain the astrology.
+- Do not name planets, signs, astrology, zodiac, horoscope, the recipient, the birth date or birth year.
+- Do not predict an event, promise an outcome, or use a quotation.
 - Do not reuse a stock horoscope line. The poem must be newly written from this evidence packet.
-- Use variation_key only to vary wording; it is not astrology evidence and must never appear in the poem.
+- Use variation_key only to vary wording, imagery and cadence; it is not astrology evidence and must never appear in the poem.
 - The evidence arrays and facts_hash must be copied exactly from the supplied values.
 """
 
@@ -125,14 +137,17 @@ def validate_birthday_poem(payload: dict[str, Any], facts: dict[str, Any]) -> st
     if payload.get("moon_evidence") != facts["moon_sign_options"]:
         raise BirthdayPoemError("Birthday voice response changed the Moon evidence.")
 
-    poem = " ".join(str(payload.get("poem", "") or "").split()).strip()
-    words = re.findall(r"[A-Za-z]+(?:['’-][A-Za-z]+)?", poem)
-    if not 10 <= len(words) <= 18:
-        raise BirthdayPoemError("Birthday poem must contain 10 to 18 words.")
-    if not poem.endswith(".") or any(mark in poem[:-1] for mark in ".!?;:\n"):
-        raise BirthdayPoemError("Birthday poem must be exactly one sentence ending with a period.")
-    if " only " not in poem.lower():
-        raise BirthdayPoemError("Birthday poem did not follow Luna's approved sentence architecture.")
+    poem = str(payload.get("poem", "") or "").strip()
+    if not poem:
+        raise BirthdayPoemError("Birthday voice response did not contain poem text.")
+
+    words = re.findall(r"[A-Za-z]+(?:['\u2019-][A-Za-z]+)?", poem)
+    if not 10 <= len(words) <= 22:
+        raise BirthdayPoemError("Birthday poem must contain 10 to 22 words.")
+
+    lines = [line.strip() for line in poem.splitlines() if line.strip()]
+    if not 2 <= len(lines) <= 4:
+        raise BirthdayPoemError("Birthday poem must contain 2 to 4 short lines.")
 
     forbidden = {
         "aries", "taurus", "gemini", "cancer", "leo", "virgo", "libra",
@@ -140,11 +155,20 @@ def validate_birthday_poem(payload: dict[str, Any], facts: dict[str, Any]) -> st
         "sun", "moon", "planet", "astrology", "zodiac", "horoscope",
         "guarantee", "destiny", "fated",
     }
-    lowered_words = {word.lower().replace("’", "'") for word in words}
+    lowered_words = {
+        word.lower().replace("\u2019", "'")
+        for word in words
+    }
     if forbidden & lowered_words:
-        raise BirthdayPoemError("Birthday poem exposed astrology jargon or an unsupported promise.")
+        raise BirthdayPoemError(
+            "Birthday poem exposed astrology jargon or an unsupported promise."
+        )
+
     if str(facts["variation_key"]).lower() in poem.lower():
-        raise BirthdayPoemError("Birthday poem exposed an internal variation key.")
+        raise BirthdayPoemError(
+            "Birthday poem exposed an internal variation key."
+        )
+
     return poem
 
 

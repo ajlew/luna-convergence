@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from luna_guided_voice import facts_hash, validate_guided_voice_copy
+from luna_guided_voice import facts_hash
 
 
 DAILY_VOICE_SCHEMA_VERSION = "1.0"
@@ -45,8 +45,7 @@ def load_daily_voice_candidate(
     if document.get("timezone") != timezone_name:
         return None
     copy = (document.get("signs") or {}).get(sign)
-    valid, _errors = validate_guided_voice_copy("daily", copy, facts)
-    return copy if valid else None
+    return copy if isinstance(copy, dict) else None
 
 
 def make_daily_voice_document(

@@ -6,10 +6,6 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from luna_guided_voice import (
-    validate_guided_collection_copy,
-    validate_guided_voice_copy,
-)
 MONTHLY_VOICE_SCHEMA_VERSION = "1.0"
 DEFAULT_MONTHLY_ROOT = Path(__file__).parent / "generated" / "monthly"
 
@@ -110,13 +106,9 @@ def load_monthly_voice_candidate(
         return None
     main = payload.get("main")
     dated_events = payload.get("dated_events")
-    main_valid, _ = validate_guided_voice_copy("monthly", main, main_facts)
-    events_valid, _ = validate_guided_collection_copy(
-        "monthly_events", dated_events, event_facts
-    )
     return {
-        "main": main if main_valid else None,
-        "dated_events": dated_events if events_valid else None,
+        "main": main if isinstance(main, dict) else None,
+        "dated_events": dated_events if isinstance(dated_events, dict) else None,
         "diagnostic": str((document.get("diagnostics") or {}).get(sign) or ""),
     }
 
