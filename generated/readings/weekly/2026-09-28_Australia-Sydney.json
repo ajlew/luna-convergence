@@ -376,12 +376,47 @@
       "editorial_warnings": [
         "above soft word target: 175 words (aim 105-150)"
       ]
+    },
+    "Gemini": {
+      "product": "weekly",
+      "period": "2026-09-28",
+      "sign": "Gemini",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "Monday · Sun trine Uranus · applying · 0.10° orb at closest approach",
+        "Tuesday · Sun trine Uranus · major sky event",
+        "Also active · Mars enters Leo",
+        "Wednesday · Mercury trine True Node · major sky event",
+        "Thursday · Moon conjunct Uranus · exact today · approximately 12:43 pm AEST",
+        "Also active · Mercury enters Scorpio",
+        "Friday · Mars opposite Pluto · applying · 0.50° orb at closest approach",
+        "Saturday · Mars trine Neptune · major sky event",
+        "Also active · Mars opposite Pluto",
+        "Also active · Mercury square Pluto",
+        "Sunday · Venus stations retrograde · major sky event",
+        "Also active · Sun opposite Saturn"
+      ],
+      "life_areas": [
+        "creativity, romance, pleasure and entrepreneurship",
+        "identity, energy and personal direction",
+        "travel, publishing, law, education and foreign markets",
+        "communication, sales, learning and local movement"
+      ],
+      "facts_hash": "40f204b55d5b93188c8e8700741ddd692399e96c89c58aba9fa078153ffa85e3",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK OUT—your week is a creative sprint in Gemini, so grab a sketchbook or draft a quick pitch. Monday’s Sun‑Uranus trine nudges your artistic side (creativity, romance, pleasure) while sparking fresh identity energy; think of a new brand angle or a playful partnership. On Tuesday the trine peaks—use that burst to launch a social media teaser or a playful ad campaign that feels authentic.  \n\nWednesday’s Mercury‑Node contact invites you to publish or travel with purpose; consider writing a blog post about a recent trip or pitching a book idea to an editor. Thursday’s Moon‑Uranus conjunction flips your personal direction—plan a spontaneous solo retreat or a solo workshop to reset your energy. Friday’s Mars‑Pluto tension tests your communication; channel the heat into a focused sales call or a concise LinkedIn update. Saturday’s Mars‑Neptune opportunity lets you weave imagination into outreach—draft a heartfelt email to a potential collaborator. Sunday’s Venus retrograde signals a pause in work routines; review last week’s projects and fine‑tune your health schedule.  \n\nTAKE ACTION—draft that pitch or blog post today, and let the week’s energetic currents guide you.",
+      "status": "published",
+      "editorial_warnings": [
+        "above soft word target: 191 words (aim 105-150)",
+        "repeated action verb 'draft' (3 uses)"
+      ]
     }
   },
   "jobs": {
     "Aries": "published",
     "Taurus": "published",
-    "Gemini": "failed",
+    "Gemini": "published",
     "Cancer": "published",
     "Leo": "published",
     "Virgo": "published",
