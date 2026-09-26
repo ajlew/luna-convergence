@@ -19,7 +19,11 @@ from astrology_engine import (
     whole_sign_house,
 )
 from luna_voice import finalize_customer_prose
-from major_event_registry import day_signal_bundle, major_sky_events
+from major_event_registry import (
+    day_signal_bundle,
+    event_presentation_group,
+    major_sky_events,
+)
 
 
 FAST_PLANETS = {"Sun", "Moon", "Mercury", "Venus", "Mars"}
@@ -368,12 +372,12 @@ def default_week_start(today: date) -> date:
 
 def week_label(monday: date) -> str:
     sunday = monday + timedelta(days=6)
+    dash = "\u2013"
     if monday.year == sunday.year:
         if monday.month == sunday.month:
-            return f"{monday.day}–{sunday.day} {monday.strftime('%B %Y')}"
-        return f"{monday.day} {monday.strftime('%B')}–{sunday.day} {sunday.strftime('%B %Y')}"
-    return f"{monday.day} {monday.strftime('%B %Y')}–{sunday.day} {sunday.strftime('%B %Y')}"
-
+            return f"{monday.day}{dash}{sunday.day} {monday.strftime('%B %Y')}"
+        return f"{monday.day} {monday.strftime('%B')}{dash}{sunday.day} {sunday.strftime('%B %Y')}"
+    return f"{monday.day} {monday.strftime('%B %Y')}{dash}{sunday.day} {sunday.strftime('%B %Y')}"
 
 @dataclass(frozen=True)
 class DailyAspectTiming:
@@ -692,7 +696,8 @@ def _day_from_major_signal(reading_date: date, signal, supporting) -> WeeklyDay:
         planets = ("Sun", "Moon")
     elif len(planets) == 1:
         planets = (planets[0], planets[0])
-    evidence = f"{signal.display_label} · major sky event"
+    presentation_group = event_presentation_group(signal, "weekly")
+    evidence = f"{signal.display_label} · {presentation_group.lower()}"
     line_one = signal.line_one
     line_two = signal.line_two
     action = signal.action
@@ -704,7 +709,7 @@ def _day_from_major_signal(reading_date: date, signal, supporting) -> WeeklyDay:
     )
     if primary_pair == frozenset({"Jupiter", "Saturn"}) and mars_saturn_support:
         line_two = (
-            "The opening can last, but the Mars–Saturn pressure warns that "
+            "The opening can last, but the Mars-Saturn pressure warns that "
             "force and bad timing will waste it."
         )
         action = "Choose one expansion. Give it a boundary, budget and next step."
@@ -718,7 +723,7 @@ def _day_from_major_signal(reading_date: date, signal, supporting) -> WeeklyDay:
         planets=(str(planets[0]), str(planets[1])),
         aspect_name=signal.event_class,
         orb=0.0,
-        phase="major event",
+        phase=presentation_group.lower(),
         major_event_label=signal.display_label,
         event_tier=signal.tier,
         supporting_events=tuple(item.display_label for item in supporting),
@@ -1179,3 +1184,7 @@ def all_video_copy(days: tuple[WeeklyDay, ...]) -> str:
     return "\n\n------------------------------\n\n".join(
         item.video_copy() for item in days
     )
+
+
+
+
