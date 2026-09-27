@@ -404,13 +404,23 @@ def _build_monthly_arcs(
     year: int,
     timezone_name: str,
     main_focus: str,
+    annual_events: Sequence[object],
 ) -> tuple[dict, ...]:
+    """Build each month from the single authoritative annual event calculation."""
     arcs: list[dict] = []
+    annual = tuple(annual_events)
     for month in range(1, 13):
         start = date(year, month, 1)
         end = date(year, 12, 31) if month == 12 else date(year, month + 1, 1) - timedelta(days=1)
-        events = period_events(start, end, sign, timezone_name)
-        inherited = period_events(start - timedelta(days=7), start - timedelta(days=1), sign, timezone_name)
+        events = tuple(event for event in annual if start <= _event_date(event) <= end)
+        if month == 1:
+            # The only additional event query is the previous year’s carry-in.
+            inherited = period_events(start - timedelta(days=7), start - timedelta(days=1), sign, timezone_name)
+        else:
+            inherited = tuple(
+                event for event in annual
+                if start - timedelta(days=7) <= _event_date(event) < start
+            )
         cycles = retrograde_cycles(start, end, sign, timezone_name)
         arc = build_monthly_arc(
             sign=sign,
@@ -612,10 +622,12 @@ def build_yearly_game_map(
     timezone_name: str,
     nearest_city: str = "",
     main_focus: str = "General year ahead",
-    annual_events: Sequence[object] = (),
+    annual_events: Sequence[object] | None = None,
 ) -> YearlyGameMap:
-    events = tuple(annual_events) or tuple(period_events(date(year, 1, 1), date(year, 12, 31), sign, timezone_name))
-    monthly_arcs = _build_monthly_arcs(sign, year, timezone_name, main_focus)
+    # None requests a calculation; an explicitly empty sequence remains authoritative.
+    events = (tuple(period_events(date(year, 1, 1), date(year, 12, 31), sign, timezone_name))
+              if annual_events is None else tuple(annual_events))
+    monthly_arcs = _build_monthly_arcs(sign, year, timezone_name, main_focus, events)
     games = _game_scores(events, sign, monthly_arcs)
     rounds = _build_rounds(monthly_arcs, games)
     rule_changes = _rule_change_candidates(events, sign, year)
