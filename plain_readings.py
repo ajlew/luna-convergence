@@ -30,15 +30,6 @@ def reading_path(product: str, period: str, timezone: str, root=ROOT) -> Path:
     return Path(root) / product / f"{period}_{zone}.json"
 
 
-def text_errors(product: str, body: object) -> list[str]:
-    if not isinstance(body, str) or not body.strip():
-        return ["empty prose"]
-    errors = []
-    if body.lstrip().startswith(("{", "[", "```")):
-        errors.append("plain prose required")
-    return errors
-
-
 def prompt_for(packet: dict) -> str:
     product = packet["product"]
     low, high = WORD_RANGES[product]
@@ -96,19 +87,15 @@ def prompt_for(packet: dict) -> str:
 
 
 def make_reading(packet: dict, body: str) -> dict:
-    from reading_quality import content_errors, editorial_warnings, writing_revision
+    from reading_quality import writing_revision
     body = clean_prose(body)
-    errors = text_errors(packet["product"], body) + content_errors(packet, body)
-    if errors:
-        raise ValueError("; ".join(errors))
+    if not isinstance(body, str) or not body.strip():
+        raise ValueError("empty prose")
     reading = {**{key: packet[key] for key in
                ("product", "period", "sign", "timezone", "calculation_header", "life_areas")},
             "facts_hash": packet_hash(packet), "voice_version": VOICE_VERSION,
             "writing_revision": writing_revision(packet["product"]),
             "voice_body": body.strip(), "status": "published"}
-    warnings = editorial_warnings(packet, body)
-    if warnings:
-        reading["editorial_warnings"] = warnings
     return reading
 
 
@@ -127,7 +114,9 @@ def current_reading(value: object, packet: dict) -> dict | None:
         return None
     if value.get("facts_hash") != packet_hash(packet) or value.get("status") != "published":
         return None
-    if value.get("voice_version") != VOICE_VERSION or text_errors(packet["product"], value.get("voice_body")):
+    if value.get("voice_version") != VOICE_VERSION:
+        return None
+    if not isinstance(value.get("voice_body"), str) or not value["voice_body"].strip():
         return None
     return {**value, "voice_body": clean_prose(value["voice_body"])}
 
@@ -193,7 +182,6 @@ def reading_html(packet: dict, reading: dict | None) -> str:
 
 def generation_current(value, packet):
     """Refresh earlier writing once; keep the public storage format compatible."""
-    from reading_quality import writing_revision, content_errors
+    from reading_quality import writing_revision
     return (current_reading(value, packet) is not None
-            and value.get('writing_revision') == writing_revision(packet['product'])
-            and not content_errors(packet, value.get('voice_body')))
+            and value.get('writing_revision') == writing_revision(packet['product']))

@@ -10,6 +10,8 @@ from zoneinfo import ZoneInfo
 
 import swisseph as swe
 
+from event_identity import event_identity
+
 
 SIGNS = [
     "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -526,9 +528,11 @@ def period_events(
     result.extend(_aspect_events(start, end, native_sign, timezone_name))
     result.extend(eclipse_events(start, end, native_sign, timezone_name))
 
-    unique: dict[tuple[date, str], Event] = {}
+    # Canonical calculated identity defines event sameness.
+    # Titles are presentation/technical labels, not identity keys.
+    unique: dict[str, Event] = {}
     for event in result:
-        key = (event.event_date, event.title)
+        key = event_identity(event)
         if key not in unique or event.importance > unique[key].importance:
             unique[key] = event
 
@@ -684,7 +688,10 @@ def convergence_points(
             if abs((event.event_date - anchor.event_date).days) <= window_days
             and event.importance >= 5.7
         ]
-        unique_members = {(event.event_date, event.title): event for event in members}
+        unique_members = {
+            event_identity(event): event
+            for event in members
+        }
         members = list(unique_members.values())
         if len(members) < 3:
             continue
@@ -736,7 +743,10 @@ def convergence_points(
     selected = []
     fingerprints = set()
     for candidate in candidates:
-        fingerprint = tuple((event.event_date, event.title) for event in candidate.events)
+        fingerprint = tuple(
+            event_identity(event)
+            for event in candidate.events
+        )
         if fingerprint in fingerprints:
             continue
         if any(
@@ -780,10 +790,23 @@ def serialize(value):
     if isinstance(value, date):
         return value.isoformat()
     if hasattr(value, "__dataclass_fields__"):
-        payload = asdict(value)
-        return {key: serialize(item) for key, item in payload.items()}
+        # Serialize original dataclass fields individually so nested Event
+        # objects reach serialize(Event) before becoming dictionaries.
+        payload = {
+            key: serialize(getattr(value, key))
+            for key in value.__dataclass_fields__
+        }
+
+        # Preserve canonical calculated identity whenever an Event crosses
+        # from authoritative object form into serialized downstream data.
+        # This also applies to Events nested inside other dataclasses.
+        if isinstance(value, Event):
+            payload["event_id"] = event_identity(value)
+
+        return payload
     if isinstance(value, dict):
         return {key: serialize(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [serialize(item) for item in value]
     return value
+

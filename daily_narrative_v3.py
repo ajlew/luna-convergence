@@ -25,7 +25,7 @@ from luna_editorial_system import (
     luna_do_dont,
 )
 from luna_voice import finalize_customer_prose, imperative_for, life_scene, narrator_cue
-from major_event_registry import signals_for_day
+from major_event_registry import signals_for_day, event_presentation_group
 from solar_cycle import solar_gate_label
 from strategic_horizon import describe_slow_planet_horizon
 
@@ -879,6 +879,7 @@ class DailyNarrative:
     moon_house: int
     evidence: EvidenceSnapshot
     major_event_label: str = ""
+    major_event_group: str = ""
     major_event_tier: str = ""
     supporting_events: tuple[str, ...] = ()
 
@@ -1566,6 +1567,7 @@ def build_daily_narrative(
         product="daily",
     )
     major_event_label = ""
+    major_event_group = ""
     major_event_tier = ""
     supporting_labels = tuple(item.display_label for item in supporting_signals)
 
@@ -1579,6 +1581,7 @@ def build_daily_narrative(
     )
     if use_major and primary_signal is not None:
         major_event_label = primary_signal.display_label
+        major_event_group = event_presentation_group(primary_signal, "daily")
         major_event_tier = primary_signal.tier
         hook_headline = primary_signal.headline
         interpretive_headline = primary_signal.display_label
@@ -1613,7 +1616,7 @@ def build_daily_narrative(
 
     why_today = list(_why_today_points(reading, evidence))
     if major_event_label:
-        why_today[0] = f"Major sky event: {major_event_label}."
+        why_today[0] = f"{major_event_group}: {major_event_label}."
     elif supporting_labels:
         why_today[0] = f"Also active: {supporting_labels[0]}."
 
@@ -1655,6 +1658,7 @@ def build_daily_narrative(
         moon_house=reading.moon_house,
         evidence=evidence,
         major_event_label=major_event_label,
+        major_event_group=major_event_group,
         major_event_tier=major_event_tier,
         supporting_events=tuple(dict.fromkeys(supporting_labels)),
     )
@@ -2075,7 +2079,7 @@ def render_daily_narrative_v3(
       <strong>{escape(narrative.hook_subline)}</strong>
     </div>
     <div class="daily-date">{narrative.reading_date.strftime('%A, %B %d, %Y')}</div>
-    {f'<div class="daily-major-event"><span>Major sky event</span><strong>{escape(narrative.major_event_label)}</strong></div>' if narrative.major_event_label else ''}
+    {f'<div class="daily-major-event"><span>{escape(narrative.major_event_group)}</span><strong>{escape(narrative.major_event_label)}</strong></div>' if narrative.major_event_label else ''}
     {f'<div class="daily-supporting-event">Also active · {escape(" · ".join(narrative.supporting_events))}</div>' if narrative.supporting_events else ''}
   </div>
 
@@ -2203,7 +2207,7 @@ def render_daily_narrative_v3(
 
     with st.expander("More context — relationships, work and money"):
         if remaining_story:
-            st.markdown("### Continue today’s story")
+            st.markdown("### Continue todayâ€™s story")
             for paragraph in remaining_story:
                 st.markdown(finalize_customer_prose(paragraph, product='daily'))
 
@@ -2297,3 +2301,14 @@ def render_daily_narrative_v3(
 
         st.markdown("### The 12-house reference matrix")
         st.markdown(narrative.house_matrix)
+
+
+
+
+
+
+
+
+
+
+

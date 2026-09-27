@@ -18,6 +18,7 @@ from datetime import date
 import re
 from typing import Mapping, Sequence
 
+from event_identity import event_identity
 from monthly_decision_engine import calculate_climate_components, choose_posture
 from scenario_engine import event_importance_score
 
@@ -144,6 +145,18 @@ def _aspect_label(event: object) -> str:
     return f"{title} ({orb})" if orb else title
 
 
+def _event_identity_value(event: object) -> str:
+    """Return canonical calculated identity; never infer it from display text."""
+    supplied = str(_value(event, "event_id", "") or "").strip()
+    if supplied:
+        return supplied
+    if isinstance(event, Mapping):
+        raise ValueError(
+            "Serialized monthly trajectory events must carry canonical event_id."
+        )
+    return event_identity(event)
+
+
 def _is_pressure_aspect(event: object) -> bool:
     title = str(_value(event, "title", "")).lower()
     return (
@@ -174,12 +187,12 @@ def _top_aspects(events: Sequence[object], sign: str, house_weights: Mapping[int
         key=lambda event: (-_importance(event, sign, house_weights), str(_value(event, "event_date", ""))),
     )
     values: list[str] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     for event in selected:
-        key = str(_value(event, "title", "")).strip().lower()
-        if key in seen:
+        source_event_id = _event_identity_value(event)
+        if source_event_id in seen:
             continue
-        seen.add(key)
+        seen.add(source_event_id)
         values.append(_aspect_label(event))
         if len(values) >= maximum:
             break
@@ -195,10 +208,14 @@ def _major_primary_movements(events: Sequence[object], primary_house: int, sign:
     ]
     selected.sort(key=lambda event: (str(_value(event, "event_date", "")), -_importance(event, sign, house_weights)))
     values: list[str] = []
+    seen: set[str] = set()
     for event in selected:
+        source_event_id = _event_identity_value(event)
+        if source_event_id in seen:
+            continue
+        seen.add(source_event_id)
         text = f"{_value(event, 'title', 'Event')} on {int(_event_day(event))} {month_name[int(str(_value(event, 'event_date'))[5:7])]}"
-        if text not in values:
-            values.append(text)
+        values.append(text)
         if len(values) >= maximum:
             break
     return values

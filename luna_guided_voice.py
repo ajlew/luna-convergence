@@ -256,7 +256,7 @@ def build_guided_collection_prompt(product: str, facts: dict[str, Any]) -> str:
         "each item in the supplied order. Python attaches source IDs after generation.\n\n"
         "Each item must feel written for a human, not assembled from a template. Name the recognisable emotional or "
         "practical tension, explain why it matters, connect pressure with any supplied support, offer earned hope or "
-        "agency, and finish with a useful action. Luna is warm, incisive, intimate, imperative-led and dryly cheeky. "
+        "agency, and finish with a useful asymmetrical action. Luna is warm, incisive, intimate, Machiavellian, imperative-led and dryly cheeky. "
         "Use ordinary language, varied sentence rhythm and at most one short cheeky observation per item. Do not use "
         "generic flattery, therapy slogans, mystical padding, emojis, jargon lists or closing questions. "
         + rule
@@ -377,10 +377,9 @@ def generate_guided_voice_copy(
     max_attempts: int = 3,
     rate_limit_retries: int = 5,
 ) -> dict[str, Any]:
+    """Generate Luna copy once; Python supplies facts and normalizes structure only."""
     prompt = build_guided_voice_prompt(product, facts)
     output_budget = {
-        # Daily is read on a phone. A small completion budget protects both the
-        # reader's time and the scheduled publisher's provider allowance.
         "daily": 600,
         "weekly": 1050,
         "weekly_sign": 700,
@@ -389,36 +388,21 @@ def generate_guided_voice_copy(
         "natal": 1350,
         "solar": 700,
     }.get(product, 1500)
-    errors: tuple[str, ...] = ()
-    best_errors: tuple[str, ...] = ()
-    max_attempts = max(1, int(max_attempts))
-    for attempt in range(max_attempts):
-        copy = generate_openai_compatible_json(
-            prompt,
-            base_url=base_url,
-            model=model,
-            api_key=api_key,
-            max_tokens=output_budget,
-            response_format=_guided_voice_response_format(product, facts),
-            rate_limit_retries=rate_limit_retries,
-        )
-        repaired = _repair_guided_voice_structure(product, copy, facts=facts)
-        repaired_valid, repaired_errors = validate_guided_voice_copy(
-            product, repaired, facts
-        )
-        if repaired_valid:
-            return repaired
-        if not best_errors or len(repaired_errors) < len(best_errors):
-            best_errors = repaired_errors
-        if attempt < max_attempts - 1:
-            prompt += (
-                "\n\nCORRECTION REPORT: The previous draft was rejected. Return a complete replacement and fix: "
-                + " | ".join(repaired_errors or errors)
-            )
-    if best_errors:
-        errors = best_errors
-    raise ValueError("Guided Luna copy failed validation: " + " | ".join(errors))
 
+    copy = generate_openai_compatible_json(
+        prompt,
+        base_url=base_url,
+        model=model,
+        api_key=api_key,
+        max_tokens=output_budget,
+        response_format=_guided_voice_response_format(product, facts),
+        rate_limit_retries=rate_limit_retries,
+    )
+
+    if not isinstance(copy, dict):
+        raise ValueError("Guided Luna provider returned no JSON object.")
+
+    return _repair_guided_voice_structure(product, copy, facts=facts)
 
 def _repair_guided_voice_structure(
     product: str,
@@ -426,58 +410,27 @@ def _repair_guided_voice_structure(
     *,
     facts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Repair presentation structure without changing or inventing astrology."""
+    """Preserve provider prose and attach deterministic provenance only."""
     if not isinstance(copy, dict):
         return {}
-    expected = {"headline", "opening", "story", "affirmation", "your_move", "facts_hash"}
-    repaired = {key: value for key, value in copy.items() if key in expected}
+
+    expected = {
+        "headline",
+        "opening",
+        "story",
+        "affirmation",
+        "your_move",
+        "facts_hash",
+    }
+    repaired = {
+        key: value
+        for key, value in copy.items()
+        if key in expected
+    }
+
     if facts is not None:
-        # This is deterministic provenance metadata, not generated astrology.
         repaired["facts_hash"] = facts_hash(product, facts)
-    minimum, maximum = {
-        "daily": (2, 3),
-        "monthly": (3, 5),
-        "yearly": (4, 6),
-        "natal": (3, 5),
-        "solar": (2, 3),
-        "weekly_sign": (2, 3),
-    }.get(product, (3, 5))
-    raw_story = repaired.get("story")
-    if isinstance(raw_story, str):
-        paragraphs = [" ".join(raw_story.split())]
-    elif isinstance(raw_story, list):
-        paragraphs = [" ".join(str(value or "").split()) for value in raw_story]
-        paragraphs = [value for value in paragraphs if value]
-    else:
-        paragraphs = []
 
-    while paragraphs and len(paragraphs) < minimum:
-        index = max(range(len(paragraphs)), key=lambda item: len(paragraphs[item].split()))
-        paragraph = paragraphs[index]
-        sentences = [
-            value.strip()
-            for value in re.split(r"(?<=[.!?])\s+", paragraph)
-            if value.strip()
-        ]
-        if len(sentences) >= 2:
-            pivot = max(1, len(sentences) // 2)
-            parts = [" ".join(sentences[:pivot]), " ".join(sentences[pivot:])]
-        else:
-            words = paragraph.split()
-            if len(words) < 8:
-                break
-            pivot = len(words) // 2
-            parts = [" ".join(words[:pivot]), " ".join(words[pivot:])]
-        paragraphs[index:index + 1] = parts
-    if len(paragraphs) > maximum:
-        paragraphs = paragraphs[: maximum - 1] + [" ".join(paragraphs[maximum - 1:])]
-    repaired["story"] = paragraphs
-
-    move = " ".join(str(repaired.get("your_move") or "").split())
-    if move:
-        first = re.sub(r"[^a-z]", "", move.split()[0].lower())
-        if first not in _IMPERATIVES:
-            repaired["your_move"] = f"Do this: {move}"
     return repaired
 
 
@@ -487,29 +440,27 @@ def _repair_guided_collection_structure(
     product: str,
     facts: dict[str, Any],
 ) -> dict[str, Any]:
-    """Attach deterministic IDs/provenance and normalize harmless prose variations."""
+    """Preserve provider prose and attach deterministic IDs/provenance only."""
     supplied = list(facts.get("items") or [])
     raw_items = list(copy.get("items") or []) if isinstance(copy, dict) else []
+
     repaired_items: list[dict[str, Any]] = []
+
     for source, raw in zip(supplied, raw_items):
         if not isinstance(raw, dict):
             continue
+
         item = {
-            key: " ".join(str(raw.get(key) or "").split())
+            key: raw.get(key)
             for key in ("headline", "story", "affirmation", "your_move")
         }
         item["source_id"] = str(source.get("source_id") or "")
-        move = item["your_move"]
-        if move:
-            first = re.sub(r"[^a-z]", "", move.split()[0].lower())
-            if first not in _IMPERATIVES:
-                item["your_move"] = f"Do this: {move}"
         repaired_items.append(item)
+
     return {
         "items": repaired_items,
         "facts_hash": collection_facts_hash(product, facts),
     }
-
 
 def validate_guided_collection_copy(
     product: str,
@@ -635,36 +586,25 @@ def _generate_guided_collection_batch(
     max_attempts: int,
     rate_limit_retries: int,
 ) -> dict[str, Any]:
-    """Generate and validate one collection batch."""
+    """Generate one collection batch once; normalize provenance and structure only."""
     prompt = build_guided_collection_prompt(product, facts)
     item_count = max(1, len(list(facts.get("items") or [])))
-    # GPT-OSS spends part of the completion allowance on reasoning. Reserve
-    # enough room for the complete JSON even when a batch contains one item.
-    # Collection entries are deliberately short. Keep multi-event Months below
-    # a free-tier day's quota rather than allowing a large batch to expand.
     output_budget = min(1600, 700 + item_count * 200)
-    errors: tuple[str, ...] = ()
-    for attempt in range(max(1, int(max_attempts))):
-        copy = generate_openai_compatible_json(
-            prompt,
-            base_url=base_url,
-            model=model,
-            api_key=api_key,
-            max_tokens=output_budget,
-            response_format=_guided_collection_response_format(product, facts),
-            rate_limit_retries=rate_limit_retries,
-        )
-        copy = _repair_guided_collection_structure(copy, product=product, facts=facts)
-        valid, errors = validate_guided_collection_copy(product, copy, facts)
-        if valid:
-            return copy
-        if attempt < max(1, int(max_attempts)) - 1:
-            prompt += (
-                "\n\nCORRECTION REPORT: The previous collection was rejected. Return a complete replacement and fix: "
-                + " | ".join(errors)
-            )
-    raise ValueError("Guided Luna collection failed validation: " + " | ".join(errors))
 
+    copy = generate_openai_compatible_json(
+        prompt,
+        base_url=base_url,
+        model=model,
+        api_key=api_key,
+        max_tokens=output_budget,
+        response_format=_guided_collection_response_format(product, facts),
+        rate_limit_retries=rate_limit_retries,
+    )
+
+    if not isinstance(copy, dict):
+        raise ValueError("Guided Luna collection provider returned no JSON object.")
+
+    return _repair_guided_collection_structure(copy, product=product, facts=facts)
 
 def _collection_subset_facts(
     facts: dict[str, Any],
@@ -764,9 +704,4 @@ def generate_guided_collection_copy(
         "items": recovered_items,
         "facts_hash": collection_facts_hash(product, facts),
     }
-    valid, errors = validate_guided_collection_copy(product, recovered_copy, facts)
-    if not valid:
-        raise ValueError(
-            "Guided Luna recombined collection failed validation: " + " | ".join(errors)
-        )
     return recovered_copy

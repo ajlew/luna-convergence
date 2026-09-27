@@ -1,4 +1,4 @@
-"""Scheduled plain-prose client with paced transport and draft-aware revisions."""
+"""Scheduled plain-prose client with paced provider transport."""
 from __future__ import annotations
 import math
 import os
@@ -6,8 +6,7 @@ import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from plain_readings import prompt_for, text_errors, clean_prose
-from reading_quality import content_errors
+from plain_readings import prompt_for, clean_prose
 
 class GenerationError(RuntimeError):
     """Credential-free job diagnostic."""
@@ -63,54 +62,46 @@ def generate_text(packet: dict, *, post=None, sleep=time.sleep) -> str:
     messages = [
         {'role': 'system', 'content': "Write Luna's interpretation from the supplied calculations. Return plain prose only."},
         {'role': 'user', 'content': prompt_for(packet)}]
-    errors = []
-    for revision in range(2):
-        payload = {'model': model, 'messages': messages, 'temperature': .72,
-                   'max_completion_tokens': int(os.environ.get('LUNA_VOICE_MAX_TOKENS', '4000'))}
-        if model.startswith('openai/gpt-oss'):
-            payload.update(reasoning_effort='low', include_reasoning=False)
-        for transport in range(4):
-            try:
-                response = post(base.rstrip('/') + '/chat/completions',
-                    headers={'Authorization': 'Bearer ' + key}, json=payload,
-                    timeout=float(os.environ.get('LUNA_VOICE_TIMEOUT', '120')))
-            except Exception:
-                if transport == 3:
-                    raise GenerationError('provider connection failed') from None
-                _wait(30 * (transport + 1), sleep)
-                continue
-            status = response.status_code
-            if status == 429:
-                if transport == 3:
-                    raise RateLimitError('provider rate limit persists; rerun later to resume incomplete readings')
-                _wait(retry_delay(response.headers, transport), sleep)
-                continue
-            if status >= 500 and transport < 3:
-                _wait(retry_delay(response.headers, transport), sleep)
-                continue
-            if status >= 400:
-                raise GenerationError(f'provider HTTP {status}')
-            break
-        body = None
+    payload = {'model': model, 'messages': messages, 'temperature': .72,
+               'max_completion_tokens': int(os.environ.get('LUNA_VOICE_MAX_TOKENS', '4000'))}
+    if model.startswith('openai/gpt-oss'):
+        payload.update(reasoning_effort='low', include_reasoning=False)
+
+    for transport in range(4):
         try:
-            choice = response.json()['choices'][0]
-            body = choice['message']['content']
-            if isinstance(body, str):
-                body = clean_prose(body)
-            errors = text_errors(packet['product'], body) + content_errors(packet, body)
-            if choice.get('finish_reason') == 'length':
-                errors.append('response truncated')
-        except (KeyError, IndexError, TypeError, ValueError):
-            errors = ['missing response text']
-        if not errors:
-            return body.strip()
-        if revision < 1:
-            # Edit the rejected draft. The old loop asked for a brand-new draft each time.
-            messages = messages[:2] + ([{'role': 'assistant', 'content': body}] if isinstance(body, str) else [])
-            messages.append({'role': 'user', 'content':
-                'Revise the draft above to resolve the listed issues. '
-                'Preserve the meaning, Luna voice and required paragraph format. '
-                'Keep the writing concise and complete. '
-                'Return only the revised prose, with no labels. Issues: ' + '; '.join(errors)})
-            _wait(float(os.environ.get('LUNA_VOICE_REQUEST_PAUSE', '30')), sleep)
-    raise GenerationError('text check failed after draft revisions: ' + '; '.join(errors))
+            response = post(base.rstrip('/') + '/chat/completions',
+                            headers={'Authorization': f'Bearer {key}',
+                                     'Content-Type': 'application/json'},
+                            json=payload, timeout=120)
+        except Exception:
+            if transport == 3:
+                raise GenerationError('provider connection failed') from None
+            _wait(30 * (transport + 1), sleep)
+            continue
+
+        status = response.status_code
+        if status == 429:
+            if transport == 3:
+                raise RateLimitError('provider rate limit persists; rerun later to resume incomplete readings')
+            _wait(retry_delay(response.headers, transport), sleep)
+            continue
+        if status >= 500 and transport < 3:
+            _wait(retry_delay(response.headers, transport), sleep)
+            continue
+        if status >= 400:
+            raise GenerationError(f'provider HTTP {status}')
+        break
+
+    try:
+        choice = response.json()['choices'][0]
+        body = choice['message']['content']
+    except (KeyError, IndexError, TypeError, ValueError):
+        raise GenerationError('missing response text') from None
+
+    if not isinstance(body, str) or not body.strip():
+        raise GenerationError('missing response text')
+
+    if choice.get('finish_reason') == 'length':
+        raise GenerationError('response truncated')
+
+    return clean_prose(body)

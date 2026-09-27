@@ -16,7 +16,7 @@ def test_week_helpers_are_monday_first():
     assert monday_for(date(2026, 8, 19)) == date(2026, 8, 17)
     assert default_week_start(date(2026, 8, 16)) == date(2026, 8, 17)
     assert default_week_start(date(2026, 8, 19)) == date(2026, 8, 17)
-    assert week_label(date(2026, 8, 31)) == "31 August–6 September 2026"
+    assert week_label(date(2026, 8, 31)) == "31 August\u20136 September 2026"
 
 
 def test_weekly_view_builds_seven_evidenced_canva_scripts():
@@ -30,10 +30,21 @@ def test_weekly_view_builds_seven_evidenced_canva_scripts():
     assert days[0].weekday == "Monday"
     assert days[-1].weekday == "Sunday"
     assert all(item.headline and item.evidence and item.action for item in days)
+    registry_groups = (
+        "solar anchor",
+        "turning point",
+        "clarity point",
+        "opening",
+        "pivot",
+        "trigger",
+        "structural shift",
+        "lunation",
+        "sky event",
+    )
     assert all(
         ("° orb" in item.evidence)
         or ("exact today" in item.evidence.lower())
-        or ("major sky event" in item.evidence.lower())
+        or any(group in item.evidence.lower() for group in registry_groups)
         for item in days
     )
     assert all("YOUR MOVE" in item.video_copy() for item in days)
@@ -67,3 +78,4 @@ def test_weekly_view_rejects_non_monday_start():
         assert "Monday" in str(exc)
     else:
         raise AssertionError("A Tuesday start must be rejected.")
+

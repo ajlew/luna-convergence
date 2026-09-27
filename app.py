@@ -238,21 +238,21 @@ def _admin_access_panel(context: str) -> bool:
     return False
 
 _VOICE_LOADING_LABELS = {
-    "daily": "Luna is reading today's calculated sky. Keep this page open…",
-    "monthly": "Luna is connecting your month. Keep this page open…",
-    "monthly_events": "Luna is writing the dated turning points. Keep this page open…",
-    "personal_events": "Luna is connecting the transits to the natal chart. Keep this page open…",
-    "yearly": "Luna is building the strategic year. Keep this page open…",
-    "yearly_transits": "Luna is writing the major transit chapters. Keep this page open…",
-    "weekly_signs": "Luna is translating the week for all 12 signs. Keep this page open…",
-    "weekly_days": "Luna is connecting Monday through Sunday. Keep this page open…",
+    "daily": "Luna is reading today's calculated sky. Keep this page openâ€¦",
+    "monthly": "Luna is connecting your month. Keep this page openâ€¦",
+    "monthly_events": "Luna is writing the dated turning points. Keep this page openâ€¦",
+    "personal_events": "Luna is connecting the transits to the natal chart. Keep this page openâ€¦",
+    "yearly": "Luna is building the strategic year. Keep this page openâ€¦",
+    "yearly_transits": "Luna is writing the major transit chapters. Keep this page openâ€¦",
+    "weekly_signs": "Luna is translating the week for all 12 signs. Keep this page openâ€¦",
+    "weekly_days": "Luna is connecting Monday through Sunday. Keep this page openâ€¦",
 }
 
 
 def _voice_loading_label(product: str) -> str:
     return _VOICE_LOADING_LABELS.get(
         product,
-        "Luna is connecting the calculated evidence. Keep this page open…",
+        "Luna is connecting the calculated evidence. Keep this page openâ€¦",
     )
 
 
@@ -1037,7 +1037,7 @@ a {
     font-size:1rem;
 }
 .mobile-nav[open] summary::after {
-    content:"−";
+    content:"âˆ’";
 }
 .mobile-nav-grid {
     display:grid;
@@ -2541,7 +2541,7 @@ def complete_report_print_button(
   const button = document.getElementById("luna-complete-print-{safe_id}");
   const status = document.getElementById("luna-complete-print-status-{safe_id}");
   button.addEventListener("click", () => {{
-    status.textContent = "Preparing complete report…";
+    status.textContent = "Preparing complete reportâ€¦";
     try {{
       if (window.parent.__lunaPrintCompleteReport) {{
         window.parent.__lunaPrintCompleteReport();
@@ -4357,7 +4357,7 @@ def weekly_page() -> None:
 
 def weekly_studio_page() -> None:
     """Production tools reuse scheduled prose; opening this page never calls the LLM."""
-    from studio_readings import studio_packet, COLLECTIVE, publishing_copy, sign_card
+    from studio_readings import studio_packet, COLLECTIVE, publishing_copy, sign_card, deduplicated_caption
     set_page_metadata("Weekly Video Studio | Luna Convergence",
                       "Weekly video, twelve sign cards and seven daily clips.", "/weekly-studio")
     st.markdown("## Weekly video studio")
@@ -4389,6 +4389,32 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
             st.markdown(f"**{row['date']} · {row['event']}**")
             for support in row["supporting_events"]:
                 st.write(f"Also active · {support}")
+    st.markdown("### This Week in Seven Sky Cards")
+    st.caption("Monday–Sunday · protected event first, otherwise the strongest calculated event.")
+
+    for card in master_packet.get("sky_cards", []):
+        day = date.fromisoformat(card["date"])
+        st.markdown(f"**{day:%A · %d %B}**")
+
+        if card.get("has_event"):
+            st.markdown(f"**{card['event']}**")
+
+            timing_parts = []
+            if card.get("timing"):
+                timing_parts.append(str(card["timing"]))
+            if card.get("timezone_label"):
+                timing_parts.append(str(card["timezone_label"]))
+            elif card.get("timezone"):
+                timing_parts.append(str(card["timezone"]))
+
+            if timing_parts:
+                st.caption(" · ".join(timing_parts))
+
+            if card.get("technical"):
+                st.caption(str(card["technical"]))
+        else:
+            st.caption("No separate card event selected from the calculated sky for this day.")
+
     from luna_reading_style import meaning_html
     st.markdown("### Day-by-day astrological breakdown")
     meanings = []
@@ -4448,7 +4474,13 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
                 st.markdown("**Title**")
                 st.code(f"{day:%A %d %B} | {packet['events'][0]['event']}", language=None)
                 st.markdown("**Caption**")
-                st.code(f"{text}\n\n{PUBLIC_SITE_URL}/weekly-view\n#astrology #horoscope #LunaConvergence", language=None)
+                caption = deduplicated_caption(
+                    text,
+                    packet["events"][0]["event"],
+                    day.strftime("%A %d %B"),
+                    f"{PUBLIC_SITE_URL}/weekly-view",
+                )
+                st.code(f"{caption}\n\n#astrology #horoscope #LunaConvergence", language=None)
                 scripts.append(f"{day:%A %d %B}\n\n{text}")
     if scripts:
         st.download_button(f"Download daily scripts ({len(scripts)}/7)", "\n\n---\n\n".join(scripts),
@@ -5031,8 +5063,8 @@ def render_report_generator_workspace() -> None:
         return
 
     st.caption(
-        f"{result.get('sign')} / {result.get('label')} • "
-        f"{BUILD_LABEL} • Checkout bypassed"
+        f"{result.get('sign')} / {result.get('label')} â€¢ "
+        f"{BUILD_LABEL} â€¢ Checkout bypassed"
     )
 
     if result.get("period") == "monthly":
@@ -6403,8 +6435,8 @@ def _monthly_candidate_from_container(value, path=()):
             influence.append((txt, path_text))
             continue
 
-        if low.startswith(("luna's move:", "luna’s move:")):
-            moves.append((re.sub(r"^luna['’]s move:\s*", "", txt, flags=re.I), path_text))
+        if low.startswith(("luna's move:", "lunaâ€™s move:")):
+            moves.append((re.sub(r"^luna['â€™]s move:\s*", "", txt, flags=re.I), path_text))
             continue
 
         if any(k in low_path for k in ("move", "action", "recommend", "best_move", "luna_move")):
@@ -7646,7 +7678,7 @@ def _render_major_sky_events(
     values,
     product: str,
     *,
-    heading: str = "Major sky events",
+    heading: str = "Key sky events",
     limit: int = 8,
     compact: bool = False,
 ) -> None:
@@ -8208,7 +8240,7 @@ def _render_monthly_result_actions(sign: str, year: int, month: int) -> None:
           }} catch (e) {{}}
 
           printBtn.addEventListener("click", () => {{
-            status.textContent = "Opening print dialog…";
+            status.textContent = "Opening print dialogâ€¦";
             openExpandersForPrint();
             setTimeout(() => {{
               try {{ parentWindow().print(); }}
@@ -8312,7 +8344,7 @@ def monthly_sign_page() -> None:
     )
 
     try:
-        with st.spinner(f"Opening {sign}'s {month_name[forecast_month]} forecast…"):
+        with st.spinner(f"Opening {sign}'s {month_name[forecast_month]} forecastâ€¦"):
             narrative, result = _cached_public_monthly_report(
                 sign,
                 forecast_year,
@@ -8374,7 +8406,7 @@ def birthday_card_page() -> None:
     st.markdown('<div class="eyebrow">Luna birthday sky · two keepsake designs</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Give them<br>their sky.</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="natal-intro">Enter the recipient’s full birth date so Luna can calculate the card accurately. '
+        '<div class="natal-intro">Enter the recipientâ€™s full birth date so Luna can calculate the card accurately. '
         'The birth year remains private: only the day and month appear on the finished card.</div>',
         unsafe_allow_html=True,
     )
@@ -8396,7 +8428,7 @@ def birthday_card_page() -> None:
                 help="Stripe uses this email for your receipt. Luna also emails your private return link and PDF.",
             )
         name = st.text_input(
-            "Recipient’s first name",
+            "Recipientâ€™s first name",
             placeholder="Fiona",
             max_chars=40,
         )
@@ -8429,7 +8461,7 @@ def birthday_card_page() -> None:
                 use_container_width=True,
             )
         st.caption(
-            "Style samples only. Your finished card uses the recipient’s calculated birth sky and Luna’s unique poem."
+            "Style samples only. Your finished card uses the recipientâ€™s calculated birth sky and Lunaâ€™s unique poem."
         )
         card_style = st.radio(
             "Card style",
@@ -8456,7 +8488,7 @@ def birthday_card_page() -> None:
         custom_poem = st.text_area(
             "Optional personal message",
             placeholder="Leave blank and Luna will write a unique poem from the calculated birth sky.",
-            help="If supplied, this message replaces Luna’s generated poem. Long messages are automatically resized to fit.",
+            help="If supplied, this message replaces Lunaâ€™s generated poem. Long messages are automatically resized to fit.",
             max_chars=240,
         )
         submitted = st.button(
@@ -8474,9 +8506,9 @@ def birthday_card_page() -> None:
         st.session_state.pop("birthday-card-result-v1", None)
         st.session_state.pop("birthday-card-order-v1", None)
         if not str(name or "").strip():
-            st.error("Enter the recipient’s first name.")
+            st.error("Enter the recipientâ€™s first name.")
         elif birth_date_value is None:
-            st.error("Choose the recipient’s full date of birth.")
+            st.error("Choose the recipientâ€™s full date of birth.")
         elif not admin_unlocked and not valid_email(delivery_email):
             st.error("Enter a valid delivery email before continuing to payment.")
         else:
@@ -8499,7 +8531,7 @@ def birthday_card_page() -> None:
                         snapshot=snapshot,
                         variation_key=secrets.token_hex(8),
                     )
-                    with st.spinner("Luna is writing from the calculated birth sky. Keep this page open…"):
+                    with st.spinner("Luna is writing from the calculated birth sky. Keep this page openâ€¦"):
                         poem = _cached_birthday_poem(
                             json.dumps(poem_facts, ensure_ascii=False, sort_keys=True),
                             LUNA_VOICE_BASE_URL,
@@ -10434,7 +10466,7 @@ def _render_timing_result_actions() -> None:
           }} catch (e) {{}}
 
           printBtn.addEventListener("click", () => {{
-            status.textContent = "Opening print dialog…";
+            status.textContent = "Opening print dialogâ€¦";
             openExpandersForPrint();
             setTimeout(() => {{
               try {{ parentWindow().print(); }}
@@ -10553,7 +10585,7 @@ def timing_map_page() -> None:
     st.markdown('<div class="eyebrow">Personal timing</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Your Year Ahead</div><div class="timing-product-subtitle">Personal Transits &amp; Timing</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal chart with Jupiter, Saturn, Uranus, Neptune and Pluto, then overlays eclipses, stations and major sky events inside your year. It shows when the strongest personal contacts start, peak and ease, where they become visible in ordinary life, and what decision they ask from you.</div>',
+        '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal chart with Jupiter, Saturn, Uranus, Neptune and Pluto, then overlays eclipses, stations and key sky events inside your year. It shows when the strongest personal contacts start, peak and ease, where they become visible in ordinary life, and what decision they ask from you.</div>',
         unsafe_allow_html=True,
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
@@ -10593,7 +10625,7 @@ def timing_map_page() -> None:
             else:
                 st.session_state["luna_natal_checkout_prefill"] = prefill_out or {}
                 st.session_state["timing-calculated-sun-sign-v336"] = calculated_sign
-                with st.spinner("Luna is ranking the strongest 12-month contacts…"):
+                with st.spinner("Luna is ranking the strongest 12-month contactsâ€¦"):
                     report = build_timing_map(
                         snapshot,
                         start_date=start_date,
@@ -11304,3 +11336,7 @@ install_statcounter()
 
 current_page.run()
 footer()
+
+
+
+

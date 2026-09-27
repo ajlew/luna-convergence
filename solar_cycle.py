@@ -9,6 +9,7 @@ from typing import Iterable, Mapping
 
 from astrology_engine import SIGNS, positions_for_date, whole_sign_house
 from date_display import human_date
+from event_identity import event_identity
 
 
 @dataclass(frozen=True)
@@ -202,6 +203,18 @@ def _event_importance_value(event: object) -> float:
         return 0.0
 
 
+def _event_identity_value(event: object) -> str:
+    """Return canonical calculated identity without using presentation text."""
+    supplied = str(_event_value(event, "event_id", "") or "").strip()
+    if supplied:
+        return supplied
+    if isinstance(event, Mapping):
+        raise ValueError(
+            "Serialized solar-cycle events must carry canonical event_id."
+        )
+    return event_identity(event)
+
+
 def monthly_solar_gate_convergence(
     *,
     solar: Mapping[str, object] | dict,
@@ -251,7 +264,7 @@ def monthly_solar_gate_convergence(
         matched_role = "background"
         role_weight = 0
 
-    nearby: list[tuple[float, date, str]] = []
+    nearby: list[tuple[float, date, str, str]] = []
     for event in events:
         event_date = _event_date_value(event)
         if event_date is None or abs((event_date - gate_date).days) > SOLAR_GATE_CONVERGENCE_WINDOW_DAYS:
@@ -262,16 +275,16 @@ def monthly_solar_gate_convergence(
         if importance < 5.0:
             continue
         title = str(_event_value(event, "title", "astronomical event") or "astronomical event")
-        nearby.append((importance, event_date, title))
+        source_event_id = _event_identity_value(event)
+        nearby.append((importance, event_date, title, source_event_id))
 
     nearby.sort(key=lambda item: (abs((item[1] - gate_date).days), -item[0], item[1]))
     evidence: list[str] = []
-    seen: set[tuple[str, str]] = set()
-    for _importance, event_date, title in nearby:
-        key = (event_date.isoformat(), title.lower())
-        if key in seen:
+    seen: set[str] = set()
+    for _importance, event_date, title, source_event_id in nearby:
+        if source_event_id in seen:
             continue
-        seen.add(key)
+        seen.add(source_event_id)
         evidence.append(f"{title} on {human_date(event_date)}")
         if len(evidence) >= 4:
             break

@@ -382,10 +382,16 @@ def _sky_evidence_for_chapter(narrative: MonthlyNarrative, result: dict, chapter
         )
 
     def _unique_aspects(values: list[dict]) -> list[dict]:
-        seen = set()
+        seen: set[str] = set()
         unique = []
         for event in values:
-            key = str(event.get("title") or "").strip().lower()
+            # Calculated events arrive serialized with canonical identity.
+            # Presentation titles must not define astronomical sameness.
+            key = str(event.get("event_id") or "").strip()
+            if not key:
+                raise ValueError(
+                    "Monthly experience received a calculated aspect without event_id."
+                )
             if key in seen:
                 continue
             seen.add(key)
@@ -984,7 +990,7 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
             "sky_evidence": sky_evidence,
             "strategy": strategy,
             "solar_note": _solar_gate_note_for_context(result, context),
-            "event_key": (str(display_event.get("event_date") or ""), display_title),
+            "event_key": str(display_event.get("event_id") or "").strip(),
         })
 
     # If the bridge and resolution genuinely use the same astronomical event,
@@ -993,7 +999,7 @@ def _chapter_cards(narrative: MonthlyNarrative, result: dict) -> str:
     for item in prepared:
         can_merge = (
             merged
-            and item["event_key"] != ("", "")
+            and bool(item["event_key"])
             and item["event_key"] == merged[-1]["event_key"]
             and not item["context"].get("trajectory_window")
             and not merged[-1]["context"].get("trajectory_window")
@@ -1149,16 +1155,18 @@ def build_monthly_reader_chronology(narrative: MonthlyNarrative, result: dict) -
         context = _chapter_context(result, index, total)
         event = _direct_story_event(result, context)
         if not event.get("event_date"):
-            start_date = str(context.get("start_date") or "")
-            end_date = str(context.get("end_date") or start_date)
-            title_matches = [
-                dict(candidate)
-                for candidate in (result.get("events") or [])
-                if str(candidate.get("title") or "") == str(chapter.title or "")
-                and start_date <= str(candidate.get("event_date") or "") <= end_date
-            ]
-            if title_matches:
-                event = max(title_matches, key=lambda candidate: float(candidate.get("importance", 0.0) or 0.0))
+            beat_event_id = str(context.get("event_id") or "").strip()
+            if beat_event_id:
+                identity_matches = [
+                    dict(candidate)
+                    for candidate in (result.get("events") or [])
+                    if str(candidate.get("event_id") or "").strip() == beat_event_id
+                ]
+                if identity_matches:
+                    event = max(
+                        identity_matches,
+                        key=lambda candidate: float(candidate.get("importance", 0.0) or 0.0),
+                    )
         date_iso = str(event.get("event_date") or context.get("start_date") or "")
         if not date_iso:
             continue
@@ -1170,6 +1178,7 @@ def build_monthly_reader_chronology(narrative: MonthlyNarrative, result: dict) -
             "move": _clean_calendar_move(chapter.action),
             "influence": str(chapter.date_range or ""),
             "source_title": str(event.get("title") or chapter.title),
+            "event_id": str(event.get("event_id") or context.get("event_id") or "").strip(),
         }
         existing = slot(date_iso).get("story")
         if existing:
@@ -1199,6 +1208,7 @@ def build_monthly_reader_chronology(narrative: MonthlyNarrative, result: dict) -
                 "move": _clean_calendar_move(rel.get("response") or ""),
                 "influence": str(rel.get("date_range") or ""),
                 "source_title": str(rel.get("title") or ""),
+                "event_id": str(rel.get("event_id") or "").strip(),
             }
 
     # 3) Keep the small set of sky events that must remain visible. This list is
@@ -1252,11 +1262,12 @@ def build_monthly_reader_chronology(narrative: MonthlyNarrative, result: dict) -
 
         dominant = signals[0] if signals else None
         dominant_group = event_presentation_group(dominant, "monthly") if dominant else ""
+        story_event_id = str((story or {}).get("event_id") or "").strip()
         story_matches_dominant = bool(
-            story and dominant and (
-                str(story.get("source_title") or "").lower() in str(dominant.display_label).lower()
-                or str(dominant.source_title or "").lower() in str(story.get("source_title") or "").lower()
-            )
+            story
+            and dominant
+            and story_event_id
+            and story_event_id == str(dominant.source_event_id or "").strip()
         )
         force_signal_primary = bool(
             dominant
@@ -1509,14 +1520,18 @@ def _relationship_test_evidence(result: dict) -> dict:
     title = str(beat.get("title") or "")
     start_date = str(beat.get("start_date") or "")
     end_date = str(beat.get("end_date") or start_date)
-    matching = []
-    for event in result.get("events") or []:
-        if str(event.get("title") or "") != title:
-            continue
-        event_date = str(event.get("event_date") or "")
-        if start_date and end_date and start_date <= event_date <= end_date:
-            matching.append(event)
-    event = max(matching, key=lambda item: float(item.get("importance", 0.0) or 0.0), default={})
+    beat_event_id = str(beat.get("event_id") or "").strip()
+    matching = [
+        event
+        for event in (result.get("events") or [])
+        if beat_event_id
+        and str(event.get("event_id") or "").strip() == beat_event_id
+    ]
+    event = max(
+        matching,
+        key=lambda item: float(item.get("importance", 0.0) or 0.0),
+        default={},
+    )
     direct = _plain_area_list(beat.get("direct_houses") or event.get("houses") or [])
     narrative_house = beat.get("narrative_house")
     story_area = _plain_life_area(narrative_house) if narrative_house not in (None, "") else ""
@@ -1531,6 +1546,7 @@ def _relationship_test_evidence(result: dict) -> dict:
         evidence += f" Connected areas include {connected}."
     return {
         "title": title,
+        "event_id": beat_event_id,
         "event_date": str(event.get("event_date") or start_date),
         "date_range": human_date_range(start_date, end_date),
         "signal": aspect,

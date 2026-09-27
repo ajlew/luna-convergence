@@ -427,7 +427,7 @@ def _chapter_events(result: dict, start_day: int, end_day: int) -> list[dict]:
     for convergence in _convergences(result):
         candidates.extend(convergence.get("events") or [])
 
-    unique: dict[tuple[str, str], dict] = {}
+    unique: dict[str, dict] = {}
     for event in candidates:
         event_date = _parse_date(event["event_date"])
         if not (start_day <= event_date.day <= end_day):
@@ -437,7 +437,15 @@ def _chapter_events(result: dict, start_day: int, end_day: int) -> list[dict]:
             continue
         if float(event.get("importance", 0.0)) < 5.5:
             continue
-        key = (event.get("event_date", ""), event.get("title", ""))
+
+        # Serialized calculated events must carry canonical identity.
+        # Presentation titles are never event-sameness keys.
+        key = str(event.get("event_id", "")).strip()
+        if not key:
+            raise ValueError(
+                "Monthly narrative received a calculated event without event_id."
+            )
+
         previous = unique.get(key)
         if previous is None or float(event.get("importance", 0.0)) > float(previous.get("importance", 0.0)):
             unique[key] = event

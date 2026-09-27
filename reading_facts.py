@@ -9,6 +9,7 @@ from functools import lru_cache
 from astrology_engine import HOUSE_NAMES, SIGNS, dominant_houses, period_events
 from major_event_registry import major_sky_events
 from weekly_view import build_weekly_view, monday_for, _event_houses
+from unified_period_system import packet_timeline
 
 
 @lru_cache(maxsize=48)
@@ -99,7 +100,11 @@ def build_packet(product: str, period_date: date, sign: str, timezone: str) -> d
         line = f"{event['date']} · {event['event']}"
         if not any(event["event"] in existing for existing in header):
             header.append(line)
-    return {"product": product, "period": start.strftime("%Y-%m") if product == "monthly" else start.isoformat(),
-            "sign": sign, "timezone": timezone, "calculation_header": header,
-            "life_areas": [HOUSE_NAMES[h] for h in ranked_houses],
-            "events": rows, "major_events": major}
+    packet = {"product": product, "period": start.strftime("%Y-%m") if product == "monthly" else start.isoformat(),
+              "sign": sign, "timezone": timezone, "calculation_header": header,
+              "life_areas": [HOUSE_NAMES[h] for h in ranked_houses],
+              "events": rows, "major_events": major}
+    packet["timeline"] = packet_timeline(packet, timezone)
+    return packet
+
+

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
+from event_identity import event_identity
 
 
 SIGN_RULERS: dict[str, tuple[str, ...]] = {
@@ -72,6 +73,7 @@ class ScenarioDefinition:
 @dataclass(frozen=True)
 class ScenarioSupport:
     event_date: str
+    event_id: str
     title: str
     houses: tuple[int, ...]
     planets: tuple[str, ...]
@@ -106,6 +108,7 @@ class ScenarioResult:
             "supporting_events": [
                 {
                     "event_date": item.event_date,
+                    "event_id": item.event_id,
                     "title": item.title,
                     "houses": list(item.houses),
                     "planets": list(item.planets),
@@ -450,6 +453,10 @@ def rank_scenarios(
             supports.append(
                 ScenarioSupport(
                     event_date=str(_value(event, "event_date", "")),
+                    event_id=(
+                        str(_value(event, "event_id", "") or "").strip()
+                        or event_identity(event)
+                    ),
                     title=str(_value(event, "title", "Transition")),
                     houses=tuple(int(item) for item in (_value(event, "houses", ()) or ())),
                     planets=tuple(str(item) for item in (_value(event, "planets", ()) or ())),
