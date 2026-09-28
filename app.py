@@ -3202,13 +3202,13 @@ def payment_success_page() -> None:
                 order_reference=order_reference,
             )
         elif product_code in {"YEAR", "YEARLY"}:
-            year = int(period_code)
+            start_date, end_date = _paid_yearly_window(period_code)
             result = period_report(
                 sign,
-                date(year, 1, 1),
-                date(year, 12, 31),
+                start_date,
+                end_date,
                 timezone_name,
-                str(year),
+                f"{start_date.isoformat()} to {end_date.isoformat()}",
                 transition_count=9,
                 nearest_city=nearest_city,
                 main_focus=main_focus,
@@ -3457,6 +3457,26 @@ def _build_monthly_checkout_natal(values: dict):
     return snapshot, precision
 
 
+def _paid_yearly_window(period_code: str) -> tuple[date, date]:
+    """Resolve a paid Year Ahead period to a rolling 12-month window.
+
+    New orders store an ISO start date. Legacy orders that stored only a
+    four-digit calendar year keep their original Jan-Dec period.
+    """
+    value = str(period_code or "").strip()
+    if re.fullmatch(r"\d{4}", value):
+        year = int(value)
+        return date(year, 1, 1), date(year, 12, 31)
+
+    start_date = date.fromisoformat(value)
+    try:
+        anniversary = start_date.replace(year=start_date.year + 1)
+    except ValueError:
+        # A 29 February start ends on 28 February of the following year.
+        anniversary = date(start_date.year + 1, 3, 1)
+    return start_date, anniversary - timedelta(days=1)
+
+
 def _owner_report_output(order: dict) -> dict:
     """Build the same paid output after session-scoped owner authentication."""
     product_code = str(order.get("product_code") or "").upper()
@@ -3499,13 +3519,13 @@ def _owner_report_output(order: dict) -> dict:
         }
 
     if product_code in {"YEAR", "YEARLY"}:
-        year = int(period_code)
+        start_date, end_date = _paid_yearly_window(period_code)
         result = period_report(
             sign,
-            date(year, 1, 1),
-            date(year, 12, 31),
+            start_date,
+            end_date,
             timezone_name,
-            str(year),
+            f"{start_date.isoformat()} to {end_date.isoformat()}",
             transition_count=9,
             nearest_city=nearest_city,
             main_focus=main_focus,
@@ -3796,11 +3816,13 @@ def report_cta(
                 )
 
     with yearly_tab:
-        years = year_choices()
-        chosen_default_year = (
-            prefill_year if prefill_year in years else default_year()
-        )
         chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
+        default_year_start = browser_local_date()
+        if prefill_year:
+            try:
+                default_year_start = default_year_start.replace(year=int(prefill_year))
+            except (TypeError, ValueError):
+                pass
 
         with st.form(f"{key_context}-yearly-checkout"):
             st.markdown("### Choose your year-ahead report")
@@ -3820,11 +3842,13 @@ def report_cta(
                     placeholder="name@example.com",
                 )
             with y2:
-                selected_year = st.selectbox(
-                    "Calendar year",
-                    years,
-                    index=years.index(chosen_default_year),
+                selected_start_date = st.date_input(
+                    "Start the 12 months on",
+                    value=default_year_start,
+                    min_value=date(1950, 1, 1),
+                    max_value=date(2100, 12, 31),
                     key=f"{key_context}-yearly-period",
+                    help="This defaults to today in your browser timezone. Choose another start date if you want a different 12-month window.",
                 )
                 timezone_name = st.selectbox(
                     "Timezone",
@@ -3885,7 +3909,8 @@ def report_cta(
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
-                period_code = str(selected_year)
+                period_code = selected_start_date.isoformat()
+                _, yearly_end_date = _paid_yearly_window(period_code)
                 reference = build_order_reference(
                     "YEAR",
                     sign,
@@ -3905,7 +3930,7 @@ def report_cta(
                     "report_name": "Year-Ahead Strategic Report",
                     "email": delivery_email.strip() or "Not required for owner access",
                     "sign": sign,
-                    "period": f"Calendar year {selected_year}",
+                    "period": f"{human_date(selected_start_date)} to {human_date(yearly_end_date)}",
                     "period_code": period_code,
                     "timezone": timezone_name,
                     "nearest_city": location.name,
