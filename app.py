@@ -390,21 +390,65 @@ def _render_voice_unavailable(*, facts_label: str = "calculated evidence below")
 
 
 def _render_guided_luna_story(copy: dict, kicker: str) -> None:
+    """Render Luna copy without assuming every product has identical fields."""
+    if not isinstance(copy, dict):
+        return
+
+    headline = str(copy.get("headline") or "").strip()
+    opening = str(copy.get("opening") or "").strip()
+    affirmation = str(copy.get("affirmation") or "").strip()
+    your_move = str(copy.get("your_move") or "").strip()
+
+    story = copy.get("story") or []
+
+    if isinstance(story, str):
+        story = [story]
+    elif not isinstance(story, (list, tuple)):
+        story = [str(story)] if story else []
+
     paragraphs = "".join(
-        f"<p>{escape(str(paragraph).strip())}</p>" for paragraph in copy["story"]
+        f"<p>{escape(str(paragraph).strip())}</p>"
+        for paragraph in story
+        if str(paragraph).strip()
     )
+
+    headline_html = (
+        f'<div class="weekly-sign-heading" role="heading" aria-level="2">'
+        f'{escape(headline)}</div>'
+        if headline
+        else ""
+    )
+
+    opening_html = (
+        f"<p><strong>{escape(opening)}</strong></p>"
+        if opening
+        else ""
+    )
+
+    affirmation_html = (
+        f'<p class="weekly-synthesis-rule">'
+        f'<strong>REMEMBER ·</strong> {escape(affirmation)}</p>'
+        if affirmation
+        else ""
+    )
+
+    move_html = (
+        f"<p><strong>YOUR MOVE · {escape(your_move)}</strong></p>"
+        if your_move
+        else ""
+    )
+
     st.markdown(
         f"""<section class="weekly-synthesis luna-guided-story">
 <div class="weekly-kicker">{escape(kicker)}</div>
-<div class="weekly-sign-heading" role="heading" aria-level="2">{escape(str(copy['headline']).strip())}</div>
-<p><strong>{escape(str(copy['opening']).strip())}</strong></p>
+{headline_html}
+{opening_html}
 {paragraphs}
-<p class="weekly-synthesis-rule"><strong>REMEMBER ·</strong> {escape(str(copy['affirmation']).strip())}</p>
-<p><strong>YOUR MOVE · {escape(str(copy['your_move']).strip())}</strong></p>
+{affirmation_html}
+{move_html}
 </section>""",
         unsafe_allow_html=True,
     )
-
 LUNA_TRUST_STATEMENT = (
     "The astrology is calculated, not guessed. Ephemeris data and programmed rules determine "
     "what is happening in your chart; Luna turns those signals into interpretation."
@@ -3202,13 +3246,13 @@ def payment_success_page() -> None:
                 order_reference=order_reference,
             )
         elif product_code in {"YEAR", "YEARLY"}:
-            start_date, end_date = _paid_yearly_window(period_code)
+            year = int(period_code)
             result = period_report(
                 sign,
-                start_date,
-                end_date,
+                date(year, 1, 1),
+                date(year, 12, 31),
                 timezone_name,
-                f"{start_date.isoformat()} to {end_date.isoformat()}",
+                str(year),
                 transition_count=9,
                 nearest_city=nearest_city,
                 main_focus=main_focus,
@@ -3457,26 +3501,6 @@ def _build_monthly_checkout_natal(values: dict):
     return snapshot, precision
 
 
-def _paid_yearly_window(period_code: str) -> tuple[date, date]:
-    """Resolve a paid Year Ahead period to a rolling 12-month window.
-
-    New orders store an ISO start date. Legacy orders that stored only a
-    four-digit calendar year keep their original Jan-Dec period.
-    """
-    value = str(period_code or "").strip()
-    if re.fullmatch(r"\d{4}", value):
-        year = int(value)
-        return date(year, 1, 1), date(year, 12, 31)
-
-    start_date = date.fromisoformat(value)
-    try:
-        anniversary = start_date.replace(year=start_date.year + 1)
-    except ValueError:
-        # A 29 February start ends on 28 February of the following year.
-        anniversary = date(start_date.year + 1, 3, 1)
-    return start_date, anniversary - timedelta(days=1)
-
-
 def _owner_report_output(order: dict) -> dict:
     """Build the same paid output after session-scoped owner authentication."""
     product_code = str(order.get("product_code") or "").upper()
@@ -3519,13 +3543,13 @@ def _owner_report_output(order: dict) -> dict:
         }
 
     if product_code in {"YEAR", "YEARLY"}:
-        start_date, end_date = _paid_yearly_window(period_code)
+        year = int(period_code)
         result = period_report(
             sign,
-            start_date,
-            end_date,
+            date(year, 1, 1),
+            date(year, 12, 31),
             timezone_name,
-            f"{start_date.isoformat()} to {end_date.isoformat()}",
+            str(year),
             transition_count=9,
             nearest_city=nearest_city,
             main_focus=main_focus,
@@ -3816,13 +3840,11 @@ def report_cta(
                 )
 
     with yearly_tab:
+        years = year_choices()
+        chosen_default_year = (
+            prefill_year if prefill_year in years else default_year()
+        )
         chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
-        default_year_start = browser_local_date()
-        if prefill_year:
-            try:
-                default_year_start = default_year_start.replace(year=int(prefill_year))
-            except (TypeError, ValueError):
-                pass
 
         with st.form(f"{key_context}-yearly-checkout"):
             st.markdown("### Choose your year-ahead report")
@@ -3842,13 +3864,11 @@ def report_cta(
                     placeholder="name@example.com",
                 )
             with y2:
-                selected_start_date = st.date_input(
-                    "Start the 12 months on",
-                    value=default_year_start,
-                    min_value=date(1950, 1, 1),
-                    max_value=date(2100, 12, 31),
+                selected_year = st.selectbox(
+                    "Calendar year",
+                    years,
+                    index=years.index(chosen_default_year),
                     key=f"{key_context}-yearly-period",
-                    help="This defaults to today in your browser timezone. Choose another start date if you want a different 12-month window.",
                 )
                 timezone_name = st.selectbox(
                     "Timezone",
@@ -3909,8 +3929,7 @@ def report_cta(
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
-                period_code = selected_start_date.isoformat()
-                _, yearly_end_date = _paid_yearly_window(period_code)
+                period_code = str(selected_year)
                 reference = build_order_reference(
                     "YEAR",
                     sign,
@@ -3930,7 +3949,7 @@ def report_cta(
                     "report_name": "Year-Ahead Strategic Report",
                     "email": delivery_email.strip() or "Not required for owner access",
                     "sign": sign,
-                    "period": f"{human_date(selected_start_date)} to {human_date(yearly_end_date)}",
+                    "period": f"Calendar year {selected_year}",
                     "period_code": period_code,
                     "timezone": timezone_name,
                     "nearest_city": location.name,
