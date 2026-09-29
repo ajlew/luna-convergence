@@ -482,6 +482,50 @@ def browser_local_date() -> date:
     return browser_local_now().date()
 
 
+def _rolling_year_end(start_date: date) -> date:
+    """Return the inclusive final day of a rolling 12-month window."""
+    try:
+        anniversary = start_date.replace(year=start_date.year + 1)
+    except ValueError:
+        # 29 February has no direct anniversary in a non-leap year.
+        anniversary = date(start_date.year + 1, 3, 1)
+    return anniversary - timedelta(days=1)
+
+
+def _yearly_period_code(start_date: date, end_date: date | None = None) -> str:
+    """Encode a rolling yearly window compactly for Stripe/order metadata."""
+    resolved_end = end_date or _rolling_year_end(start_date)
+    return f"{start_date.isoformat()}|{resolved_end.isoformat()}"
+
+
+def _yearly_period_window(period_code: str) -> tuple[date, date, str]:
+    """Decode rolling yearly periods while preserving legacy YYYY orders."""
+    code = str(period_code or "").strip()
+    if re.fullmatch(r"\d{4}", code):
+        year = int(code)
+        start_date = date(year, 1, 1)
+        end_date = date(year, 12, 31)
+        return start_date, end_date, str(year)
+
+    if "|" in code:
+        start_text, end_text = code.split("|", 1)
+        start_date = date.fromisoformat(start_text.strip())
+        end_date = date.fromisoformat(end_text.strip())
+    else:
+        # Tolerate a start-date-only code if one was ever persisted manually.
+        start_date = date.fromisoformat(code)
+        end_date = _rolling_year_end(start_date)
+
+    if end_date < start_date:
+        raise ValueError("Year-ahead report end date cannot precede its start date.")
+    return start_date, end_date, f"{start_date.isoformat()} to {end_date.isoformat()}"
+
+
+def _yearly_period_label(start_date: date, end_date: date) -> str:
+    """Customer-facing label for a rolling 12-month report window."""
+    return f"{human_date(start_date)} – {human_date(end_date)}"
+
+
 def timezone_select_index() -> int:
     """Select the browser timezone when Luna offers it, otherwise use the default."""
     timezone_name = browser_timezone_name()
@@ -3246,13 +3290,13 @@ def payment_success_page() -> None:
                 order_reference=order_reference,
             )
         elif product_code in {"YEAR", "YEARLY"}:
-            year = int(period_code)
+            start_date, end_date, period_key = _yearly_period_window(period_code)
             result = period_report(
                 sign,
-                date(year, 1, 1),
-                date(year, 12, 31),
+                start_date,
+                end_date,
                 timezone_name,
-                str(year),
+                period_key,
                 transition_count=9,
                 nearest_city=nearest_city,
                 main_focus=main_focus,
@@ -3543,13 +3587,13 @@ def _owner_report_output(order: dict) -> dict:
         }
 
     if product_code in {"YEAR", "YEARLY"}:
-        year = int(period_code)
+        start_date, end_date, period_key = _yearly_period_window(period_code)
         result = period_report(
             sign,
-            date(year, 1, 1),
-            date(year, 12, 31),
+            start_date,
+            end_date,
             timezone_name,
-            str(year),
+            period_key,
             transition_count=9,
             nearest_city=nearest_city,
             main_focus=main_focus,
@@ -3840,11 +3884,8 @@ def report_cta(
                 )
 
     with yearly_tab:
-        years = year_choices()
-        chosen_default_year = (
-            prefill_year if prefill_year in years else default_year()
-        )
         chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
+        default_start_date = browser_local_date()
 
         with st.form(f"{key_context}-yearly-checkout"):
             st.markdown("### Choose your year-ahead report")
@@ -3864,11 +3905,15 @@ def report_cta(
                     placeholder="name@example.com",
                 )
             with y2:
-                selected_year = st.selectbox(
-                    "Calendar year",
-                    years,
-                    index=years.index(chosen_default_year),
+                selected_start_date = st.date_input(
+                    "Start date",
+                    value=default_start_date,
                     key=f"{key_context}-yearly-period",
+                    help="Your Year Ahead runs for 12 rolling months from this date.",
+                )
+                selected_end_date = _rolling_year_end(selected_start_date)
+                st.caption(
+                    f"12-month window: {_yearly_period_label(selected_start_date, selected_end_date)}"
                 )
                 timezone_name = st.selectbox(
                     "Timezone",
@@ -3929,7 +3974,8 @@ def report_cta(
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
-                period_code = str(selected_year)
+                selected_end_date = _rolling_year_end(selected_start_date)
+                period_code = _yearly_period_code(selected_start_date, selected_end_date)
                 reference = build_order_reference(
                     "YEAR",
                     sign,
@@ -3949,7 +3995,7 @@ def report_cta(
                     "report_name": "Year-Ahead Strategic Report",
                     "email": delivery_email.strip() or "Not required for owner access",
                     "sign": sign,
-                    "period": f"Calendar year {selected_year}",
+                    "period": _yearly_period_label(selected_start_date, selected_end_date),
                     "period_code": period_code,
                     "timezone": timezone_name,
                     "nearest_city": location.name,
