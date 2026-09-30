@@ -9668,41 +9668,6 @@ def _monthly_required_story_anchors(narrative, result: dict) -> list[dict]:
     return anchors[:4]
 
 
-def _monthly_copy_with_required_anchors(copy: dict, narrative, result: dict) -> dict:
-    """Guarantee defining stations/eclipses are named in the top Monthly story."""
-    if not isinstance(copy, dict):
-        copy = {}
-    merged = dict(copy)
-    story = merged.get("story") or []
-    if isinstance(story, str):
-        story = [story]
-    elif not isinstance(story, (list, tuple)):
-        story = [str(story)] if story else []
-    story = [" ".join(str(item or "").split()) for item in story if str(item or "").strip()]
-
-    combined = " ".join(
-        [str(merged.get("headline") or ""), str(merged.get("opening") or ""), *story]
-    ).lower()
-    additions: list[str] = []
-    for anchor in _monthly_required_story_anchors(narrative, result):
-        title = anchor["title"]
-        tokens = [token for token in re.findall(r"[a-z]+", title.lower()) if len(token) > 3]
-        # Require the defining planet/event words to appear, not merely a vague synonym.
-        present = bool(tokens) and all(token in combined for token in tokens[:3])
-        if present:
-            continue
-        date_label = anchor.get("date_label") or ""
-        paragraph = anchor.get("paragraph") or ""
-        lead = title + (f" · {date_label}" if date_label else "")
-        additions.append(lead + (f". {paragraph}" if paragraph else "."))
-        combined += " " + title.lower()
-
-    if additions:
-        story = additions + story
-    merged["story"] = story
-    return merged
-
-
 def _paid_monthly_voice_facts(narrative, result: dict) -> dict:
     """Closed evidence packet for the one voiced strategic Monthly reading."""
     overlay = dict(result.get("natal_overlay") or {})
@@ -9776,6 +9741,226 @@ def _compact_monthly_paragraphs(chapter, maximum: int = 2) -> list[str]:
     return [values[0], values[-1]]
 
 
+def _monthly_day_from_value(value: object) -> int | None:
+    """Extract a calendar day from an ISO date or Luna's human date labels."""
+    text = " ".join(str(value or "").split()).strip()
+    if not text:
+        return None
+    iso = re.search(r"\b\d{4}-\d{2}-(\d{2})\b", text)
+    if iso:
+        try:
+            return int(iso.group(1))
+        except ValueError:
+            return None
+    match = re.match(r"^\s*(\d{1,2})(?:\s*[–-]\s*\d{1,2})?\b", text)
+    if match:
+        day = int(match.group(1))
+        return day if 1 <= day <= 31 else None
+    return None
+
+
+def _monthly_phase_index(day: int | None) -> int:
+    if day is None or day <= 10:
+        return 0
+    if day <= 20:
+        return 1
+    return 2
+
+
+def _monthly_short_key_title(consequence: object) -> str:
+    """Turn a long key-date sentence into a restrained editorial title."""
+    text = " ".join(str(consequence or "").split()).strip()
+    if not text:
+        return "Decision point"
+    text = re.sub(
+        r"^(?:Around|By|On)\s+(?:late\s+month|\d{1,2}(?:[–-]\d{1,2})?\s+[A-Za-z]+\s+\d{4}),?\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    first = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)[0].strip(" .")
+    words = first.split()
+    if len(words) > 13:
+        first = " ".join(words[:13]).rstrip(",;:") + "…"
+    return first or "Decision point"
+
+
+def _monthly_support_entries(narrative, result: dict) -> list[dict]:
+    """Merge sky, natal contacts and decision dates into one chronological stream."""
+    entries: list[dict] = []
+
+    for item in list(result.get("major_sky_events") or []):
+        if not isinstance(item, dict):
+            continue
+        label = " ".join(str(item.get("display_label") or item.get("technical_label") or item.get("source_title") or "").split())
+        event_class = str(item.get("event_class") or item.get("source_kind") or "").lower()
+        lowered = label.lower()
+        if not (
+            "station" in event_class
+            or "eclipse" in event_class
+            or "retrograde" in lowered
+            or "stations" in lowered
+            or "eclipse" in lowered
+        ):
+            continue
+        date_value = str(item.get("event_date") or "")
+        body_parts = [
+            " ".join(str(item.get(key) or "").split())
+            for key in ("line_one", "line_two")
+            if str(item.get(key) or "").strip()
+        ]
+        entries.append({
+            "day": _monthly_day_from_value(date_value),
+            "date_label": human_date(date_value) if date_value else "",
+            "kind": "Sky",
+            "title": label or "Structural sky change",
+            "body": body_parts,
+            "signal": "",
+        })
+
+    overlay = dict(result.get("natal_overlay") or {})
+    for item in list(overlay.get("activations") or [])[:3]:
+        if not isinstance(item, dict):
+            continue
+        date_label = str(item.get("date_label") or item.get("date") or "")
+        entries.append({
+            "day": _monthly_day_from_value(item.get("date") or date_label),
+            "date_label": date_label,
+            "kind": "Your chart",
+            "title": " ".join(str(item.get("title") or "Personal activation").split()),
+            "body": [" ".join(str(item.get("text") or "").split())] if str(item.get("text") or "").strip() else [],
+            "signal": " ".join(str(item.get("signal") or "").split()),
+        })
+
+    for item in list(getattr(narrative, "key_dates", ()) or ())[:6]:
+        date_label = str(getattr(item, "date_label", "") or "")
+        consequence = " ".join(str(getattr(item, "consequence", "") or "").split())
+        response = " ".join(str(getattr(item, "response", "") or "").split())
+        entries.append({
+            "day": _monthly_day_from_value(date_label),
+            "date_label": date_label,
+            "kind": "Decision",
+            "title": _monthly_short_key_title(consequence),
+            "body": [value for value in (consequence, response) if value],
+            "signal": "",
+        })
+
+    entries.sort(key=lambda item: (item.get("day") or 99, str(item.get("kind") or ""), str(item.get("title") or "")))
+    selected: list[dict] = []
+    seen_titles: set[str] = set()
+    seen_bodies: list[str] = []
+    for item in entries:
+        title_key = re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()
+        body_text = " ".join(str(value or "") for value in (item.get("body") or []))
+        if title_key and title_key in seen_titles:
+            continue
+        if body_text and any(_move_token_overlap(body_text, prior) >= 0.88 for prior in seen_bodies):
+            continue
+        if title_key:
+            seen_titles.add(title_key)
+        if body_text:
+            seen_bodies.append(body_text)
+        selected.append(item)
+    return selected
+
+
+def _render_monthly_timeline_item(*, evidence: str, title: str, paragraphs: list[str]) -> None:
+    body = "".join(
+        f"<p>{escape(' '.join(str(paragraph or '').split()))}</p>"
+        for paragraph in paragraphs
+        if str(paragraph or "").strip()
+    )
+    st.markdown(
+        f"""<div class="natal-signature-reading monthly-timeline-reading">
+  <div class="natal-evidence">{escape(evidence)}</div>
+  <h3>{escape(title)}</h3>
+  {body}
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_monthly_editorial_package(narrative, result: dict) -> None:
+    """One coherent paid-month package: synthesis, chronology, personal contacts and dates."""
+    st.markdown("## Read the month")
+    st.caption("One chronology. Sky changes, personal contacts and decision dates appear once, in the order they happen.")
+
+    monthly_voice = _guided_luna_copy("monthly", _paid_monthly_voice_facts(narrative, result))
+    monthly_story = monthly_voice or _snapshot_monthly_story(narrative)
+
+    headline = " ".join(str(monthly_story.get("headline") or getattr(narrative, "headline", "") or "Your month in motion").split())
+    opening = " ".join(str(monthly_story.get("opening") or getattr(narrative, "central_storyline", "") or "").split())
+    story_values = monthly_story.get("story") or []
+    if isinstance(story_values, str):
+        story_values = [story_values]
+    summary_paragraphs = []
+    if opening:
+        summary_paragraphs.append(opening)
+    for paragraph in story_values:
+        clean = " ".join(str(paragraph or "").split())
+        if clean and not any(_move_token_overlap(clean, prior) >= 0.80 for prior in summary_paragraphs):
+            summary_paragraphs.append(clean)
+            break
+    _render_monthly_timeline_item(
+        evidence="Luna reads the month",
+        title=headline,
+        paragraphs=summary_paragraphs,
+    )
+
+    chapters = _select_three_monthly_chapters(getattr(narrative, "chapters", ()) or ())
+    supports = _monthly_support_entries(narrative, result)
+    stage_labels = ("Opening", "Middle", "Closing")
+
+    for index, chapter in enumerate(chapters):
+        stage = stage_labels[min(index, len(stage_labels) - 1)]
+        date_range = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
+        phase_title = " ".join(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase").split())
+        phase_paragraphs = _compact_monthly_paragraphs(chapter, maximum=2)
+        _render_monthly_timeline_item(
+            evidence=f"{stage} · {date_range}" if date_range else stage,
+            title=phase_title,
+            paragraphs=phase_paragraphs,
+        )
+
+        phase_title_key = re.sub(r"[^a-z0-9]+", " ", phase_title.lower()).strip()
+        for item in supports:
+            if _monthly_phase_index(item.get("day")) != index:
+                continue
+            item_title = str(item.get("title") or "").strip()
+            item_title_key = re.sub(r"[^a-z0-9]+", " ", item_title.lower()).strip()
+            if phase_title_key and item_title_key and (
+                phase_title_key == item_title_key
+                or _move_token_overlap(phase_title_key, item_title_key) >= 0.90
+            ):
+                continue
+            evidence_bits = [str(item.get("date_label") or "").strip(), str(item.get("kind") or "").strip()]
+            signal = str(item.get("signal") or "").strip()
+            if signal:
+                evidence_bits.append(signal)
+            evidence = " · ".join(bit for bit in evidence_bits if bit)
+            _render_monthly_timeline_item(
+                evidence=evidence,
+                title=item_title or "Turning point",
+                paragraphs=list(item.get("body") or []),
+            )
+
+    affirmation = " ".join(str(monthly_story.get("affirmation") or "").split())
+    your_move = " ".join(str(monthly_story.get("your_move") or "").split())
+    if affirmation or your_move:
+        meta_parts = []
+        if affirmation:
+            meta_parts.append(f'<div><span>Remember</span>{escape(affirmation)}</div>')
+        if your_move:
+            meta_parts.append(f'<div><span>Your move</span>{escape(your_move)}</div>')
+        st.markdown(
+            f"""<div class="natal-signature-reading monthly-strategy-close">
+  <div class="natal-evidence">Luna's strategy</div>
+  <h3>The position to carry forward</h3>
+  <div class="natal-signature-meta">{"".join(meta_parts)}</div>
+</div>""",
+            unsafe_allow_html=True,
+        )
+
 def _render_snapshot_monthly_report(
     narrative,
     result: dict,
@@ -9803,70 +9988,10 @@ def _render_snapshot_monthly_report(
         )
 
     st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Personal Monthly</div>', unsafe_allow_html=True)
-    st.markdown("## Read the month")
-    monthly_voice = _guided_luna_copy("monthly", _paid_monthly_voice_facts(narrative, result))
-    monthly_story = _monthly_copy_with_required_anchors(
-        monthly_voice or _snapshot_monthly_story(narrative),
-        narrative,
-        result,
-    )
-    _render_signature_style_story(monthly_story, "Luna reads the month")
+    _render_monthly_editorial_package(narrative, result)
 
     overlay = dict(result.get("natal_overlay") or {})
     activations = list(overlay.get("activations") or [])[:3]
-    if activations:
-        st.markdown("## Where this month touches your chart")
-        st.caption("Three calculated contacts show where the month becomes personally concentrated. The full calculation stays in the evidence panel.")
-        for item in activations:
-            date_label = str(item.get("date_label") or "")
-            signal = str(item.get("signal") or "")
-            st.markdown(
-                f"""<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(date_label)} · {escape(signal)}</div>
-  <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
-  <p>{escape(str(item.get("text") or ""))}</p>
-</div>""",
-                unsafe_allow_html=True,
-            )
-
-    chapters = _select_three_monthly_chapters(getattr(narrative, "chapters", ()) or ())
-    if chapters:
-        stage_labels = ("Opening", "Middle", "Closing")
-        st.markdown("## How the month unfolds")
-        st.caption("Three phases only: what opens, what develops, and what the month asks you to decide by the end.")
-        for index, chapter in enumerate(chapters):
-            paragraphs = _compact_monthly_paragraphs(chapter, maximum=2)
-            body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in paragraphs)
-            stage = stage_labels[min(index, len(stage_labels) - 1)]
-            date_range = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
-            st.markdown(
-                f"""<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(stage)} · {escape(date_range)}</div>
-  <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase"))}</h3>
-  {body}
-</div>""",
-                unsafe_allow_html=True,
-            )
-
-    key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
-    if key_dates:
-        st.markdown("## Key dates")
-        st.caption("Keep these dates. The interpretation stays brief so the calendar remains usable.")
-        for item in key_dates:
-            date_label = str(getattr(item, "date_label", "") or "")
-            consequence = str(getattr(item, "consequence", "") or "Key date")
-            response = str(getattr(item, "response", "") or "")
-            st.markdown(
-                f"""<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(date_label)}</div>
-  <h3>{escape(consequence)}</h3>
-  <p>{escape(response)}</p>
-</div>""",
-                unsafe_allow_html=True,
-            )
-
-    # One voiced strategic Your Move already closes Read the month. Do not
-    # repeat deterministic action-plan bullets at the end of the report.
 
     with _luna_evidence_panel("Why Luna sees this · chart evidence"):
         if overlay:
