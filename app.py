@@ -3325,6 +3325,7 @@ def payment_success_page() -> None:
                 result["natal_profile"] = natal_profile_value
                 result["natal_summary"] = natal_summary_value
                 result["natal_precision"] = natal_precision_value
+                _prepare_paid_yearly_personal_layer(result)
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -3708,6 +3709,7 @@ def _owner_report_output(order: dict) -> dict:
             result["natal_profile"] = str(order.get("natal_profile") or "")
             result["natal_summary"] = str(order.get("natal_summary") or "")
             result["natal_precision"] = str(order.get("natal_precision") or "")
+            _prepare_paid_yearly_personal_layer(result)
         pdf_bytes = build_report_pdf(
             result,
             main_focus=main_focus,
@@ -3745,6 +3747,7 @@ def _render_owner_report(order: dict, key_context: str) -> None:
     if not output:
         return
 
+    st.session_state["reports-generated-result-visible"] = True
     st.success("Owner copy generated. No Stripe payment was created.")
     st.download_button(
         "Download owner PDF",
@@ -5567,7 +5570,12 @@ def reports_page() -> None:
             label="Open the full printable editorial preview",
             use_container_width=True,
         )
+    st.session_state["reports-generated-result-visible"] = False
     report_cta(context="reports")
+
+    if st.session_state.get("reports-generated-result-visible"):
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## How ordering works")
@@ -9209,29 +9217,46 @@ def _snapshot_monthly_story(narrative) -> dict:
     }
 
 
+def _select_three_monthly_chapters(chapters) -> list:
+    """Compress the paid month to an opening, middle and closing phase."""
+    values = list(chapters or ())
+    if len(values) <= 3:
+        return values
+    indices = (0, len(values) // 2, len(values) - 1)
+    selected = []
+    for index in indices:
+        item = values[index]
+        if item not in selected:
+            selected.append(item)
+    return selected[:3]
+
+
+def _compact_monthly_paragraphs(chapter, maximum: int = 2) -> list[str]:
+    values = [
+        " ".join(str(item or "").split())
+        for item in (getattr(chapter, "paragraphs", ()) or ())
+        if str(item or "").strip()
+    ]
+    if len(values) <= maximum:
+        return values
+    return [values[0], values[-1]]
+
+
 def _render_snapshot_monthly_report(
     narrative,
     result: dict,
     *,
     order_reference: str = "",
 ) -> None:
-    """Render paid Monthly through the Natal Snapshot presentation hierarchy."""
+    """Render a disciplined paid Monthly: Snapshot baseline first, then one month story."""
     st.markdown('<section class="natal-shell paid-monthly-shell">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Paid · Personal Monthly</div>', unsafe_allow_html=True)
     title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
-    st.markdown(
-        f'<div class="editorial-title">{escape(title)}</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown(f'<div class="editorial-title">{escape(title)}</div>', unsafe_allow_html=True)
     label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
     intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
-    intro_bits = [label]
-    if intro:
-        intro_bits.append(intro)
-    st.markdown(
-        f'<div class="natal-intro">{escape(" · ".join(intro_bits))}</div>',
-        unsafe_allow_html=True,
-    )
+    intro_text = label + (f" · {intro}" if intro else "")
+    st.markdown(f'<div class="natal-intro">{escape(intro_text)}</div>', unsafe_allow_html=True)
 
     paid_snapshot = _snapshot_from_encoded_natal_profile(
         str(result.get("natal_profile") or ""),
@@ -9248,64 +9273,61 @@ def _render_snapshot_monthly_report(
     _render_guided_luna_story(_snapshot_monthly_story(narrative), "Luna reads the month")
 
     overlay = dict(result.get("natal_overlay") or {})
-    activations = list(overlay.get("activations") or [])
+    activations = list(overlay.get("activations") or [])[:3]
     if activations:
-        st.markdown("## Your strongest monthly activations")
-        st.caption(
-            "The month-wide story stays intact; these are the calculated places where it lands most directly on your natal chart."
-        )
-        shared_remember = str(getattr(narrative, "validation_rule", "") or getattr(narrative, "agency_rule", "") or "")
+        st.markdown("## Where this month touches your chart")
+        st.caption("Three calculated contacts show where the month becomes personally concentrated. The full calculation stays in the evidence panel.")
         for item in activations:
-            remember = str(item.get("signature") or shared_remember or "").strip()
+            date_label = str(item.get("date_label") or "")
+            signal = str(item.get("signal") or "")
             st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(str(item.get("date_label") or ""))} · {escape(str(item.get("signal") or ""))}</div>
+                f"""<div class="natal-signature-reading monthly-activation-reading">
+  <div class="natal-evidence">{escape(date_label)} · {escape(signal)}</div>
   <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
   <p>{escape(str(item.get("text") or ""))}</p>
-  <div class="natal-signature-meta">
-    <div><span>Remember</span>{escape(remember)}</div>
-    <div><span>Your move</span>{escape(str(item.get("move") or ""))}</div>
-  </div>
-</div>''',
+  <p><strong>Your move ·</strong> {escape(str(item.get("move") or ""))}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    chapters = list(getattr(narrative, "chapters", ()) or ())
+    chapters = _select_three_monthly_chapters(getattr(narrative, "chapters", ()) or ())
     if chapters:
+        stage_labels = ("Opening", "Middle", "Closing")
         st.markdown("## How the month unfolds")
-        for chapter in chapters:
-            paragraphs = "".join(
-                f"<p>{escape(str(paragraph))}</p>"
-                for paragraph in (getattr(chapter, "paragraphs", ()) or ())
-                if str(paragraph).strip()
-            )
+        st.caption("Three phases only: what opens, what develops, and what the month asks you to decide by the end.")
+        for index, chapter in enumerate(chapters):
+            paragraphs = _compact_monthly_paragraphs(chapter, maximum=2)
+            body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in paragraphs)
+            stage = stage_labels[min(index, len(stage_labels) - 1)]
+            date_range = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
             st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "")))}</div>
-  <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly turning point"))}</h3>
-  {paragraphs}
-  <div class="natal-signature-meta">
-    <div><span>Remember</span>{escape(str(getattr(chapter, "hook", "") or ""))}</div>
-    <div><span>Your move</span>{escape(str(getattr(chapter, "action", "") or ""))}</div>
-  </div>
-</div>''',
+                f"""<div class="natal-signature-reading monthly-phase-reading">
+  <div class="natal-evidence">{escape(stage)} · {escape(date_range)}</div>
+  <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase"))}</h3>
+  {body}
+  <p><strong>Your move ·</strong> {escape(str(getattr(chapter, "action", "") or ""))}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    key_dates = list(getattr(narrative, "key_dates", ()) or ())
+    key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
     if key_dates:
         st.markdown("## Key dates")
+        st.caption("Keep these dates. The interpretation stays brief so the calendar remains usable.")
         for item in key_dates:
+            date_label = str(getattr(item, "date_label", "") or "")
+            consequence = str(getattr(item, "consequence", "") or "Key date")
+            response = str(getattr(item, "response", "") or "")
             st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(str(getattr(item, "date_label", "") or ""))}</div>
-  <h3>{escape(str(getattr(item, "consequence", "") or "Key date"))}</h3>
-  <p>{escape(str(getattr(item, "response", "") or ""))}</p>
-</div>''',
+                f"""<div class="natal-signature-reading monthly-key-date-reading">
+  <div class="natal-evidence">{escape(date_label)}</div>
+  <h3>{escape(consequence)}</h3>
+  <p>{escape(response)}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    action_plan = [str(item).strip() for item in (getattr(narrative, "action_plan", ()) or ()) if str(item).strip()]
+    action_plan = [str(item).strip() for item in (getattr(narrative, "action_plan", ()) or ()) if str(item).strip()][:3]
     if action_plan:
         st.markdown("## Your move")
         for item in action_plan:
@@ -9323,16 +9345,12 @@ def _render_snapshot_monthly_report(
         if transitions:
             st.markdown("**Major monthly transitions**")
             for item in transitions[:12]:
-                st.markdown(
-                    f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}"
-                )
+                st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}")
         dominant = list(result.get("dominant_houses") or [])
         if dominant:
             st.markdown("**Dominant calculated life areas**")
             for item in dominant[:6]:
-                st.markdown(
-                    f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
-                )
+                st.markdown(f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}")
         st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
         st.caption(LUNA_TRUST_DISCLOSURE)
 
@@ -9341,109 +9359,350 @@ def _render_snapshot_monthly_report(
     st.markdown('</section>', unsafe_allow_html=True)
 
 
+def _paid_yearly_timing_facts(report) -> dict:
+    return {
+        "start_date": report.start_date.isoformat(),
+        "end_date": report.end_date.isoformat(),
+        "timezone": report.timezone_name,
+        "recurring_themes": report.major_games,
+        "exact_dates": report.turning_points,
+        "major_shifts": report.rule_changes,
+        "transits": [
+            {
+                "transiting_planet": story.transit_planet,
+                "natal_target": story.natal_target,
+                "aspect": story.aspect,
+                "natal_house": story.natal_house,
+                "score": round(story.score, 3),
+                "polarity": story.polarity,
+                "active_periods": [{"start": period.start_date.isoformat(), "end": period.end_date.isoformat()} for period in story.periods],
+                "exact_hits": [{"date": hit.exact_date.isoformat(), "orb": round(hit.orb, 3), "retrograde": hit.retrograde} for hit in story.hits],
+            }
+            for story in report.stories
+        ],
+        "major_sky_events": [
+            {key: item.get(key) for key in ("event_date", "display_label", "technical_label", "tier", "planets", "aspect", "phase") if item.get(key) is not None}
+            for item in (getattr(report, "major_sky_events", ()) or ()) if isinstance(item, dict)
+        ],
+        "personal_major_contacts": [
+            {key: item.get(key) for key in ("event_date", "display_label", "natal_target", "aspect", "orb", "house") if item.get(key) is not None}
+            for item in (getattr(report, "personal_major_events", ()) or ()) if isinstance(item, dict)
+        ],
+    }
+
+
+def _add_calendar_months(value: date, months: int) -> date:
+    month_index = value.month - 1 + int(months)
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def _rolling_year_windows(start_date: date, end_date: date) -> list[tuple[date, date]]:
+    windows = []
+    cursor = start_date
+    for index in range(12):
+        if index == 11:
+            window_end = end_date
+        else:
+            next_start = _add_calendar_months(start_date, index + 1)
+            window_end = min(end_date, next_start - timedelta(days=1))
+        windows.append((cursor, window_end))
+        cursor = window_end + timedelta(days=1)
+        if cursor > end_date:
+            break
+    return windows
+
+
+def _story_overlaps_window(story, start_date: date, end_date: date) -> bool:
+    return any(period.start_date <= end_date and period.end_date >= start_date for period in story.periods)
+
+
+def _story_hits_in_window(story, start_date: date, end_date: date) -> list:
+    return [hit for hit in story.hits if start_date <= hit.exact_date <= end_date]
+
+
+def _paid_yearly_roadmap(report, display_end: date | None = None) -> list[dict]:
+    """Build twelve rolling, stateful stages from the personal timing map."""
+    stage_names = (
+        "Opening", "Development", "Pressure", "Adjustment", "Decision", "Consequence",
+        "Expansion", "Reassessment", "Turning point", "Consolidation", "Release", "Carry forward",
+    )
+    stage_headlines = (
+        "Set the starting conditions",
+        "See what keeps returning",
+        "Name what is becoming harder to avoid",
+        "Change the method before you change the goal",
+        "Choose what earns another month",
+        "Live with the result and read the evidence",
+        "Use what now has room to grow",
+        "Check the cost of the current direction",
+        "Make the change visible",
+        "Turn the useful pattern into structure",
+        "Drop what no longer improves the position",
+        "Carry cleaner terms into the next cycle",
+    )
+    end_date = display_end or report.end_date
+    rows = []
+    windows = _rolling_year_windows(report.start_date, end_date)
+    previous_signal = ""
+    for index, (window_start, window_end) in enumerate(windows):
+        active = [story for story in report.stories if _story_overlaps_window(story, window_start, window_end)]
+        active.sort(key=lambda story: (-float(story.score), story.first_date))
+        primary = active[0] if active else None
+        hits = []
+        for story in active:
+            hits.extend((hit, story) for hit in _story_hits_in_window(story, window_start, window_end))
+        hits.sort(key=lambda pair: (pair[0].exact_date, -float(pair[1].score)))
+
+        stage = stage_names[min(index, len(stage_names) - 1)]
+        headline = stage_headlines[min(index, len(stage_headlines) - 1)]
+        if primary is not None:
+            signal = f"{primary.transit_planet} {primary.aspect} natal {primary.natal_target}"
+            if signal == previous_signal:
+                summary = f"{signal} remains active. This stage is about applying the same pressure or opening at a later point in the sequence rather than inventing a new story."
+            else:
+                summary = str(primary.summary or "")
+            move = str(primary.move or "")
+        else:
+            signal = "Integration window"
+            summary = "No top-ranked personal transit dominates this window. Use it to test what the previous stage actually changed."
+            move = "Keep what is working; do not create a new problem simply because the sky is quieter."
+
+        exact_label = ""
+        if hits:
+            exact_label = " · strongest " + human_date(hits[0][0].exact_date)
+        rows.append({
+            "stage": stage,
+            "start": window_start,
+            "end": window_end,
+            "signal": signal,
+            "headline": headline,
+            "summary": summary,
+            "move": move,
+            "exact_label": exact_label,
+        })
+        previous_signal = signal
+    return rows
+
+
+def _build_paid_yearly_pdf_markdown(result: dict, timing_report, display_end: date) -> str:
+    """Replace the calendar-year PDF story with the rolling personal map shown online."""
+    rows = _paid_yearly_roadmap(timing_report, display_end=display_end)
+    top = sorted(list(timing_report.stories), key=lambda story: (-float(story.score), story.first_date))[:6]
+    lines = [
+        "# Your Year Ahead", "",
+        f"**Rolling window:** {human_date(timing_report.start_date)} - {human_date(display_end)}", "",
+        "This report is built from the natal chart supplied at checkout and the strongest personal transits inside this rolling twelve-month window.", "",
+        "## Strongest personal transits", "",
+    ]
+    for story in top:
+        periods = "; ".join(f"{human_date(period.start_date)}-{human_date(period.end_date)}" for period in story.periods)
+        lines.extend([
+            f"### {story.headline}",
+            f"**Calculation:** {story.transit_planet} {story.aspect} natal {story.natal_target}",
+            f"**Active:** {periods}",
+            story.summary,
+            f"**Your move:** {story.move}", "",
+        ])
+    lines.extend(["## The year in twelve moves", ""])
+    for row in rows:
+        lines.extend([
+            f"### {row['stage']} - {human_date(row['start'])} to {human_date(row['end'])}",
+            f"**Main signal:** {row['signal']}{row['exact_label']}",
+            row['summary'],
+            f"**Your move:** {row['move']}", "",
+        ])
+    lines.extend([
+        "## Method note", "",
+        "The personal timing map ranks exact natal contacts from Jupiter, Saturn, Uranus, Neptune and Pluto, then overlays major sky events. These are symbolic timing signals, not probabilities or guarantees.",
+    ])
+    return "\n".join(lines)
+
+
+def _prepare_paid_yearly_personal_layer(result: dict):
+    """Attach the personal rolling timing map used by both online and PDF paid Year Ahead."""
+    snapshot = _snapshot_from_encoded_natal_profile(
+        str(result.get("natal_profile") or ""),
+        timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+    )
+    if snapshot is None:
+        return None, None
+    try:
+        start_date = date.fromisoformat(str(result.get("start") or ""))
+        display_end = date.fromisoformat(str(result.get("end") or ""))
+    except ValueError:
+        return snapshot, None
+    timing_report = build_timing_map(
+        snapshot,
+        start_date=start_date,
+        timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+        max_stories=8,
+    )
+    result["paid_timing_report"] = timing_report
+    result["paid_timing_end_date"] = display_end.isoformat()
+    result["markdown"] = _build_paid_yearly_pdf_markdown(result, timing_report, display_end)
+    return snapshot, timing_report
+
+
 def _render_snapshot_yearly_report(
     result: dict,
     *,
     order_reference: str = "",
 ) -> None:
-    """Render paid Year Ahead through the same Snapshot presentation system."""
+    """Render paid Year Ahead from the Snapshot baseline plus personal rolling transits."""
     st.markdown('<section class="natal-shell paid-yearly-shell">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Paid · Your Year Ahead</div>', unsafe_allow_html=True)
-    game_map = dict(result.get("yearly_game_map") or {})
-    headline = str(game_map.get("headline") or "Your Year Ahead")
-    st.markdown(f'<div class="editorial-title">{escape(headline)}</div>', unsafe_allow_html=True)
-    label = str(result.get("label") or "Rolling 12 months")
-    central = str(game_map.get("central_storyline") or "The long game becomes visible.")
-    st.markdown(
-        f'<div class="natal-intro">{escape(label)} · {escape(central)}</div>',
-        unsafe_allow_html=True,
-    )
 
     paid_snapshot = _snapshot_from_encoded_natal_profile(
         str(result.get("natal_profile") or ""),
         timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
     )
+    timing_report = result.get("paid_timing_report")
+    if paid_snapshot is not None and timing_report is None:
+        paid_snapshot, timing_report = _prepare_paid_yearly_personal_layer(result)
+
+    label = str(result.get("label") or "Rolling 12 months")
+    st.markdown('<div class="editorial-title">Your year, in the order it actually happens</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="natal-intro">{escape(label)} · Start with the natal baseline, then follow the personal contacts in chronological order.</div>',
+        unsafe_allow_html=True,
+    )
+
     if paid_snapshot is not None:
-        _render_snapshot_natal_core(
-            paid_snapshot,
-            precision_note=str(result.get("natal_precision") or ""),
-        )
+        _render_snapshot_natal_core(paid_snapshot, precision_note=str(result.get("natal_precision") or ""))
+
+    if timing_report is None:
+        st.error("Luna could not build the personal 12-month timing layer for this report.")
+        if order_reference:
+            st.caption(f"Order reference · {order_reference}")
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
+    try:
+        display_end = date.fromisoformat(str(result.get("end") or ""))
+    except ValueError:
+        display_end = timing_report.end_date
 
     st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Your Year Ahead</div>', unsafe_allow_html=True)
     st.markdown("### Read the year")
-    paragraphs = [
-        str(item).strip()
-        for item in (game_map.get("narrator_paragraphs") or ())
-        if str(item).strip()
-    ]
-    if not paragraphs:
-        paragraphs = [central]
-    for paragraph in paragraphs:
-        st.markdown(f'<div class="luna-prose"><p>{escape(paragraph)}</p></div>', unsafe_allow_html=True)
+    year_facts = _paid_yearly_timing_facts(timing_report)
+    guided_year = _guided_luna_copy("yearly", year_facts)
+    if guided_year:
+        _render_guided_luna_story(guided_year, "Luna's strategic map")
+    else:
+        _render_voice_unavailable(facts_label="personal year-ahead calculation")
 
-    games = list(game_map.get("games") or [])[:3]
-    if games:
-        st.markdown("## Your strongest yearly themes")
-        for item in games:
-            remember = str(item.get("advantage") or item.get("do_line") or "")
-            move = str(item.get("do_line") or item.get("question") or "")
+    ranked = sorted(list(timing_report.stories), key=lambda story: (-float(story.score), story.first_date))
+    themes = ranked[:3]
+    if themes:
+        st.markdown("## Three themes organise the year")
+        st.caption("These are the highest-ranked personal patterns. They are themes, not three extra forecasts.")
+        for story in themes:
+            area = _timing_story_life_area(story)
             st.markdown(
-                '<div class="natal-signature-reading">'
-                '<div class="natal-evidence">Annual theme</div>'
-                f'<h3>{escape(str(item.get("title") or "Yearly theme"))}</h3>'
-                f'<p>{escape(str(item.get("question") or ""))}</p>'
-                '<div class="natal-signature-meta">'
-                f'<div><span>Remember</span>{escape(remember)}</div>'
-                f'<div><span>Your move</span>{escape(move)}</div>'
-                '</div></div>',
+                f"""<div class="natal-signature-reading yearly-theme-reading">
+  <div class="natal-evidence">{escape(_timing_signal_type(story))} · {escape(story.polarity)}</div>
+  <h3>{escape(str(story.headline))}</h3>
+  <p>{escape(area)}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    rounds = list(game_map.get("rounds") or [])
-    if rounds:
-        st.markdown("## How the year unfolds")
-        st.caption("Each month changes the options available next.")
-        for item in rounds:
-            meta = " · ".join(
-                bit for bit in (str(item.get("month") or ""), str(item.get("role") or "")) if bit
+    strongest = ranked[:6]
+    if strongest:
+        st.markdown("## Your strongest personal transits")
+        st.caption("Six contacts only. Timing and action stay visible; raw calculation detail stays collapsed.")
+        transit_facts = {
+            "start_date": timing_report.start_date.isoformat(),
+            "end_date": display_end.isoformat(),
+            "timezone": timing_report.timezone_name,
+            "items": [
+                {
+                    "source_id": f"paid-year-transit:{index}",
+                    "transiting_planet": story.transit_planet,
+                    "aspect": story.aspect,
+                    "natal_target": story.natal_target,
+                    "natal_house": story.natal_house,
+                    "polarity": story.polarity,
+                    "score": round(story.score, 3),
+                    "active_periods": [{"start": period.start_date.isoformat(), "end": period.end_date.isoformat()} for period in story.periods],
+                    "exact_hits": [{"date": hit.exact_date.isoformat(), "orb": round(hit.orb, 3), "retrograde": hit.retrograde} for hit in story.hits],
+                }
+                for index, story in enumerate(strongest)
+            ],
+        }
+        generated = _guided_luna_collection("yearly_transits", transit_facts)
+        voices = {str(item.get("source_id") or ""): item for item in (generated or {}).get("items", []) if isinstance(item, dict)}
+        for story in sorted(strongest, key=lambda item: item.first_date):
+            ranked_index = strongest.index(story)
+            voice = voices.get(f"paid-year-transit:{ranked_index}")
+            periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
+            starts = _timing_story_start(story)
+            ends = _timing_story_end(story)
+            timing_line = (
+                f"Starts {_timing_date_label(starts) if starts else '—'} · "
+                f"Strongest {_timing_story_peak_label(story)} · "
+                f"Eases {_timing_date_label(ends) if ends else '—'}"
             )
+            headline = str(voice.get("headline") if voice else story.headline)
+            body = str(voice.get("story") if voice else story.summary)
+            move = str(voice.get("your_move") if voice else story.move)
             st.markdown(
-                '<div class="natal-signature-reading">'
-                f'<div class="natal-evidence">{escape(meta)}</div>'
-                f'<h3>{escape(str(item.get("headline") or "Monthly turning point"))}</h3>'
-                f'<p>{escape(str(item.get("central_storyline") or ""))}</p>'
-                '<div class="natal-signature-meta">'
-                f'<div><span>Remember</span>{escape(str(item.get("dominant_game") or ""))}</div>'
-                f'<div><span>Your move</span>{escape(str(item.get("key_window") or ""))}</div>'
-                '</div></div>',
+                f"""<div class="natal-signature-reading yearly-transit-reading">
+  <div class="natal-evidence">{escape(story.transit_planet)} {escape(story.aspect)} natal {escape(story.natal_target)} · active {escape(periods_label)}</div>
+  <h3>{escape(headline)}</h3>
+  <p>{escape(body)}</p>
+  <p><strong>Timing ·</strong> {escape(timing_line)}</p>
+  <p><strong>Your move ·</strong> {escape(move)}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    moves = []
-    if games:
-        first_move = str(games[0].get("do_line") or "").strip()
-        if first_move:
-            moves.append(first_move)
-    if list(game_map.get("acts") or []):
-        moves.append("When the rules change, revise the plan. Do not drag the old position forward.")
-    moves.append("End the year with fewer options and cleaner terms.")
-    st.markdown("## Your move")
-    for item in dict.fromkeys(move for move in moves if move):
-        st.markdown(f"- {item}")
+    roadmap = _paid_yearly_roadmap(timing_report, display_end=display_end)
+    if roadmap:
+        st.markdown("## The year in twelve moves")
+        st.caption("This is a rolling roadmap from the selected start date—not a January-to-December calendar year. Each stage carries the previous stage forward.")
+        previous_signal = ""
+        for row in roadmap:
+            carry = f"<p><strong>Carry forward ·</strong> {escape(previous_signal)}</p>" if previous_signal else ""
+            st.markdown(
+                f"""<div class="natal-signature-reading yearly-roadmap-reading">
+  <div class="natal-evidence">{escape(row['stage'])} · {escape(human_date(row['start']))} – {escape(human_date(row['end']))}</div>
+  <h3>{escape(row['headline'])}</h3>
+  <p><strong>Main signal ·</strong> {escape(row['signal'] + row['exact_label'])}</p>
+  <p>{escape(row['summary'])}</p>
+  {carry}
+  <p><strong>Your move ·</strong> {escape(row['move'])}</p>
+</div>""",
+                unsafe_allow_html=True,
+            )
+            previous_signal = str(row["signal"])
+
+    final_moves = []
+    if guided_year and str(guided_year.get("your_move") or "").strip():
+        final_moves.append(str(guided_year["your_move"]).strip())
+    for story in strongest[:2]:
+        move = str(story.move or "").strip()
+        if move and move not in final_moves:
+            final_moves.append(move)
+    if final_moves:
+        st.markdown("## Your move")
+        for move in final_moves[:3]:
+            st.markdown(f"- {move}")
 
     with _luna_evidence_panel("Why Luna sees this · yearly calculations"):
-        transitions = list(result.get("major_transitions") or [])
-        if transitions:
-            st.markdown("**Major yearly transitions**")
-            for item in transitions[:12]:
-                st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}")
-        dominant = list(result.get("dominant_houses") or [])
-        if dominant:
-            st.markdown("**Dominant calculated life areas**")
-            for item in dominant[:8]:
-                st.markdown(
-                    f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
-                )
+        st.markdown("**Calculated personal transits**")
+        for story in timing_report.stories:
+            periods = "; ".join(f"{human_date(period.start_date)}–{human_date(period.end_date)}" for period in story.periods)
+            st.markdown(f"- {story.transit_planet} {story.aspect} natal {story.natal_target} · {story.polarity} · {periods}")
+        shared = list(getattr(timing_report, "major_sky_events", ()) or ())
+        if shared:
+            st.markdown("**Shared-sky milestones inside your year**")
+            for item in shared[:12]:
+                if isinstance(item, dict):
+                    st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('display_label', item.get('technical_label', 'Sky event'))}")
         st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
         st.caption(LUNA_TRUST_DISCLOSURE)
 
