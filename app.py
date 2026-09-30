@@ -1717,6 +1717,28 @@ a {
     max-width:720px;
 }
 
+/* One quiet sans-serif treatment for secondary paid-report rows.
+   Activation titles, phase titles, key-date consequences and their body copy
+   deliberately share one size and one light weight. Hierarchy comes from the
+   Bodoni section heading and mono evidence line, not extra bold text. */
+.report-flat-reading h3,
+.report-flat-reading p {
+    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif !important;
+    font-size:1.02rem !important;
+    line-height:1.65 !important;
+    font-weight:300 !important;
+    letter-spacing:0 !important;
+}
+.report-flat-reading h3 {
+    margin:.28rem 0 .55rem !important;
+}
+.report-flat-reading p {
+    margin:.35rem 0 .7rem !important;
+}
+.report-flat-reading p strong {
+    font-weight:inherit !important;
+}
+
 .luna-guidance-line {
     max-width:700px;
     margin:1.15rem 0 0;
@@ -9808,7 +9830,7 @@ def _render_snapshot_monthly_report(
             date_label = str(item.get("date_label") or "")
             signal = str(item.get("signal") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading">
+                f"""<div class="natal-signature-reading report-flat-reading">
   <div class="natal-evidence">{escape(date_label)} · {escape(signal)}</div>
   <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
   <p>{escape(str(item.get("text") or ""))}</p>
@@ -9827,7 +9849,7 @@ def _render_snapshot_monthly_report(
             stage = stage_labels[min(index, len(stage_labels) - 1)]
             date_range = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading">
+                f"""<div class="natal-signature-reading report-flat-reading">
   <div class="natal-evidence">{escape(stage)} · {escape(date_range)}</div>
   <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase"))}</h3>
   {body}
@@ -9844,7 +9866,7 @@ def _render_snapshot_monthly_report(
             consequence = str(getattr(item, "consequence", "") or "Key date")
             response = str(getattr(item, "response", "") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading">
+                f"""<div class="natal-signature-reading report-flat-reading">
   <div class="natal-evidence">{escape(date_label)}</div>
   <h3>{escape(consequence)}</h3>
   <p>{escape(response)}</p>
@@ -10122,7 +10144,7 @@ def _render_snapshot_yearly_report(
         for story in themes:
             area = _timing_story_life_area(story)
             st.markdown(
-                f"""<div class="natal-signature-reading yearly-theme-reading">
+                f"""<div class="natal-signature-reading report-flat-reading yearly-theme-reading">
   <div class="natal-evidence">{escape(_timing_signal_type(story))} · {escape(story.polarity)}</div>
   <h3>{escape(str(story.headline))}</h3>
   <p>{escape(area)}</p>
@@ -10168,7 +10190,7 @@ def _render_snapshot_yearly_report(
             headline = str(story.headline)
             body = str(story.summary)
             st.markdown(
-                f"""<div class="natal-signature-reading yearly-transit-reading">
+                f"""<div class="natal-signature-reading report-flat-reading yearly-transit-reading">
   <div class="natal-evidence">{escape(story.transit_planet)} {escape(story.aspect)} natal {escape(story.natal_target)} · active {escape(periods_label)}</div>
   <h3>{escape(headline)}</h3>
   <p>{escape(body)}</p>
@@ -10185,7 +10207,7 @@ def _render_snapshot_yearly_report(
         for row in roadmap:
             carry = f"<p><strong>Carry forward ·</strong> {escape(previous_signal)}</p>" if previous_signal else ""
             st.markdown(
-                f"""<div class="natal-signature-reading yearly-roadmap-reading">
+                f"""<div class="natal-signature-reading report-flat-reading yearly-roadmap-reading">
   <div class="natal-evidence">{escape(row['stage'])} · {escape(human_date(row['start']))} – {escape(human_date(row['end']))}</div>
   <h3>{escape(row['headline'])}</h3>
   <p><strong>Main signal ·</strong> {escape(row['signal'] + row['exact_label'])}</p>
