@@ -3265,6 +3265,7 @@ def payment_success_page() -> None:
                 personal_question=personal_question,
             )
             if natal_profile_value:
+                result["natal_profile"] = natal_profile_value
                 result["natal_overlay"] = build_monthly_natal_overlay(natal_profile_value, result)
                 result["natal_summary"] = natal_summary_value
                 result["natal_precision"] = natal_precision_value
@@ -3288,10 +3289,9 @@ def payment_success_page() -> None:
                 attachment_bytes=pdf_bytes,
                 attachment_filename=pdf_name,
             )
-            render_production_monthly_report(
+            _render_snapshot_monthly_report(
                 narrative,
                 result,
-                show_print=True,
                 order_reference=order_reference,
             )
         elif product_code in {"YEAR", "YEARLY"}:
@@ -3660,6 +3660,7 @@ def _owner_report_output(order: dict) -> dict:
         )
         natal_profile_value = str(order.get("natal_profile") or "")
         if natal_profile_value:
+            result["natal_profile"] = natal_profile_value
             result["natal_overlay"] = build_monthly_natal_overlay(natal_profile_value, result)
             result["natal_summary"] = str(order.get("natal_summary") or "")
             result["natal_precision"] = str(order.get("natal_precision") or "")
@@ -3740,10 +3741,9 @@ def _render_owner_report(order: dict, key_context: str) -> None:
         key=f"{key_context}-owner-pdf-{str(order.get('product_code') or '').lower()}",
     )
     if output["product_code"] == "MONTHLY":
-        render_production_monthly_report(
+        _render_snapshot_monthly_report(
             output["narrative"],
             output["result"],
-            show_print=True,
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
         )
     else:
@@ -8919,6 +8919,174 @@ def _render_natal_signature_grid(snapshot, heading: str = "Your natal signature"
     )
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
 
+
+
+def _render_paid_natal_signature_summary(result: dict) -> None:
+    """Reuse the Snapshot signature-grid treatment for paid personal reports."""
+    summary = str(result.get("natal_summary") or "").strip()
+    precision = str(result.get("natal_precision") or "").strip()
+    items: list[tuple[str, str]] = []
+    for bit in (part.strip() for part in summary.split("·") if part.strip()):
+        if " " not in bit:
+            continue
+        label, value = bit.split(" ", 1)
+        label = label.strip()
+        value = value.strip()
+        if label and value:
+            items.append((label, value))
+    if precision:
+        items.append(("Precision", precision))
+    if not items:
+        return
+    st.markdown("## Your natal signature")
+    signature_html = "".join(
+        f'<div><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
+        for label, value in items
+    )
+    st.markdown(
+        f'<div class="natal-signature">{signature_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _snapshot_monthly_story(narrative) -> dict:
+    """Translate the existing Monthly narrative into the shared Luna story renderer."""
+    story = [str(item).strip() for item in (getattr(narrative, "luna_says", ()) or ()) if str(item).strip()]
+    if not story:
+        central = str(getattr(narrative, "central_storyline", "") or "").strip()
+        if central:
+            story = [central]
+    action_plan = [str(item).strip() for item in (getattr(narrative, "action_plan", ()) or ()) if str(item).strip()]
+    return {
+        "headline": str(getattr(narrative, "headline", "") or getattr(narrative, "hook_headline", "") or "Your month in motion"),
+        "opening": str(getattr(narrative, "subtitle", "") or getattr(narrative, "central_storyline", "") or ""),
+        "story": story,
+        "affirmation": str(getattr(narrative, "validation_rule", "") or getattr(narrative, "agency_rule", "") or ""),
+        "your_move": action_plan[0] if action_plan else str(getattr(narrative, "do_line", "") or ""),
+    }
+
+
+def _render_snapshot_monthly_report(
+    narrative,
+    result: dict,
+    *,
+    order_reference: str = "",
+) -> None:
+    """Render paid Monthly through the Natal Snapshot presentation hierarchy."""
+    st.markdown('<section class="natal-shell paid-monthly-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Paid · Personal Monthly</div>', unsafe_allow_html=True)
+    title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
+    st.markdown(
+        f'<div class="editorial-title">{escape(title)}</div>',
+        unsafe_allow_html=True,
+    )
+    label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
+    intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
+    intro_bits = [label]
+    if intro:
+        intro_bits.append(intro)
+    st.markdown(
+        f'<div class="natal-intro">{escape(" · ".join(intro_bits))}</div>',
+        unsafe_allow_html=True,
+    )
+
+    _render_paid_natal_signature_summary(result)
+
+    st.markdown("### Read the month")
+    _render_guided_luna_story(_snapshot_monthly_story(narrative), "Luna reads the month")
+
+    overlay = dict(result.get("natal_overlay") or {})
+    activations = list(overlay.get("activations") or [])
+    if activations:
+        st.markdown("## Your strongest monthly activations")
+        st.caption(
+            "The month-wide story stays intact; these are the calculated places where it lands most directly on your natal chart."
+        )
+        shared_remember = str(getattr(narrative, "validation_rule", "") or getattr(narrative, "agency_rule", "") or "")
+        for item in activations:
+            remember = str(item.get("signature") or shared_remember or "").strip()
+            st.markdown(
+                f'''<div class="natal-signature-reading">
+  <div class="natal-evidence">{escape(str(item.get("date_label") or ""))} · {escape(str(item.get("signal") or ""))}</div>
+  <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
+  <p>{escape(str(item.get("text") or ""))}</p>
+  <div class="natal-signature-meta">
+    <div><span>Remember</span>{escape(remember)}</div>
+    <div><span>Your move</span>{escape(str(item.get("move") or ""))}</div>
+  </div>
+</div>''',
+                unsafe_allow_html=True,
+            )
+
+    chapters = list(getattr(narrative, "chapters", ()) or ())
+    if chapters:
+        st.markdown("## How the month unfolds")
+        for chapter in chapters:
+            paragraphs = "".join(
+                f"<p>{escape(str(paragraph))}</p>"
+                for paragraph in (getattr(chapter, "paragraphs", ()) or ())
+                if str(paragraph).strip()
+            )
+            st.markdown(
+                f'''<div class="natal-signature-reading">
+  <div class="natal-evidence">{escape(str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "")))}</div>
+  <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly turning point"))}</h3>
+  {paragraphs}
+  <div class="natal-signature-meta">
+    <div><span>Remember</span>{escape(str(getattr(chapter, "hook", "") or ""))}</div>
+    <div><span>Your move</span>{escape(str(getattr(chapter, "action", "") or ""))}</div>
+  </div>
+</div>''',
+                unsafe_allow_html=True,
+            )
+
+    key_dates = list(getattr(narrative, "key_dates", ()) or ())
+    if key_dates:
+        st.markdown("## Key dates")
+        for item in key_dates:
+            st.markdown(
+                f'''<div class="natal-signature-reading">
+  <div class="natal-evidence">{escape(str(getattr(item, "date_label", "") or ""))}</div>
+  <h3>{escape(str(getattr(item, "consequence", "") or "Key date"))}</h3>
+  <p>{escape(str(getattr(item, "response", "") or ""))}</p>
+</div>''',
+                unsafe_allow_html=True,
+            )
+
+    action_plan = [str(item).strip() for item in (getattr(narrative, "action_plan", ()) or ()) if str(item).strip()]
+    if action_plan:
+        st.markdown("## Your move")
+        for item in action_plan:
+            st.markdown(f"- {item}")
+
+    with _luna_evidence_panel("Why Luna sees this · chart evidence"):
+        if overlay:
+            st.markdown("**Personal natal contacts**")
+            if activations:
+                for item in activations:
+                    st.markdown(f"- {item.get('signal', '')}")
+            else:
+                st.caption(str(overlay.get("summary") or "No tight personal contact dominates this month."))
+        transitions = list(result.get("major_transitions") or [])
+        if transitions:
+            st.markdown("**Major monthly transitions**")
+            for item in transitions[:12]:
+                st.markdown(
+                    f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}"
+                )
+        dominant = list(result.get("dominant_houses") or [])
+        if dominant:
+            st.markdown("**Dominant calculated life areas**")
+            for item in dominant[:6]:
+                st.markdown(
+                    f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
+                )
+        st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
+        st.caption(LUNA_TRUST_DISCLOSURE)
+
+    if order_reference:
+        st.caption(f"Order reference · {order_reference}")
+    st.markdown('</section>', unsafe_allow_html=True)
 
 def natal_snapshot_page() -> None:
     set_page_metadata(
