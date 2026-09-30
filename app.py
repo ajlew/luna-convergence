@@ -389,6 +389,11 @@ def _render_voice_unavailable(*, facts_label: str = "calculated evidence below")
 
 
 
+def _luna_evidence_panel(label: str = "Why Luna sees this", *, expanded: bool = False):
+    """Global customer-facing home for technical astrology/calculation evidence."""
+    return st.expander(label, expanded=expanded)
+
+
 def _render_guided_luna_story(copy: dict, kicker: str) -> None:
     """Render Luna copy without assuming every product has identical fields."""
     if not isinstance(copy, dict):
@@ -3301,6 +3306,10 @@ def payment_success_page() -> None:
                 nearest_city=nearest_city,
                 main_focus=main_focus,
             )
+            if natal_profile_value:
+                result["natal_profile"] = natal_profile_value
+                result["natal_summary"] = natal_summary_value
+                result["natal_precision"] = natal_precision_value
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -3337,9 +3346,18 @@ def payment_success_page() -> None:
 
 
 
-def _monthly_natal_checkout_fields(key_context: str) -> dict:
-    """Render the paid Monthly natal inputs using the same precision rules as the free snapshot."""
-    prefill = dict(st.session_state.get("luna_natal_checkout_prefill") or {})
+def _natal_input_fields(
+    key_prefix: str,
+    *,
+    prefill: dict | None = None,
+    not_listed_label: str = "Not listed — planetary snapshot only",
+) -> dict:
+    """Render the canonical Natal Snapshot birth-detail controls for personal products."""
+    prefill = dict(
+        st.session_state.get("luna_natal_checkout_prefill") or {}
+        if prefill is None
+        else prefill
+    )
     try:
         prefill_date = date.fromisoformat(str(prefill.get("birth_date") or ""))
     except Exception:
@@ -3350,23 +3368,17 @@ def _monthly_natal_checkout_fields(key_context: str) -> dict:
     except Exception:
         prefill_time = datetime.strptime("12:00", "%H:%M").time()
 
-    st.markdown("### Personalise with your natal chart")
-    st.caption(
-        "The paid Monthly uses your natal geometry as a second layer over the sign forecast. "
-        "If you do not know the exact birth time, leave it unchecked; Luna will not invent the Ascendant or houses."
-    )
-
     birth_date_value = st.date_input(
         "Birth date",
         value=prefill_date,
         min_value=date(1900, 1, 1),
         max_value=browser_local_date(),
-        key=f"{key_context}-monthly-natal-birth-date",
+        key=f"{key_prefix}-birth-date",
     )
     time_known_value = st.checkbox(
         "I know my birth time exactly",
         value=bool(prefill.get("time_known", False)),
-        key=f"{key_context}-monthly-natal-time-known",
+        key=f"{key_prefix}-time-known",
     )
 
     values = {
@@ -3381,17 +3393,24 @@ def _monthly_natal_checkout_fields(key_context: str) -> dict:
         "manual_longitude": None,
         "manual_timezone": "UTC",
         "unlisted_timezone": "UTC",
+        "not_listed_label": not_listed_label,
     }
 
     if not time_known_value:
-        st.caption("Birth time unknown: Luna will use the reliable planetary geometry and omit Ascendant, Midheaven and houses.")
+        st.caption(
+            "Birth time unknown: Luna uses the reliable planetary geometry and leaves "
+            "Ascendant, Midheaven and houses out rather than inventing precision."
+        )
         return values
 
     values["birth_time"] = st.time_input(
         "Birth time",
         value=prefill_time,
-        key=f"{key_context}-monthly-natal-birth-time",
-        help="Normally enter the local clock time at the place of birth. If your source explicitly gives Universal Time, choose UTC below.",
+        key=f"{key_prefix}-birth-time",
+        help=(
+            "Normally enter the local clock time at the place of birth. "
+            "If your source explicitly gives Universal Time, choose UTC below."
+        ),
     )
     basis_options = ["Local time at birthplace", "Universal Time (UTC)"]
     prefill_basis = str(prefill.get("time_basis") or basis_options[0])
@@ -3399,34 +3418,41 @@ def _monthly_natal_checkout_fields(key_context: str) -> dict:
         "Time basis",
         basis_options,
         index=basis_options.index(prefill_basis) if prefill_basis in basis_options else 0,
-        key=f"{key_context}-monthly-natal-time-basis",
+        key=f"{key_prefix}-time-basis",
+        help="Most birth certificates use local time. Some astrology records state UT/UTC directly.",
     )
 
     city_options = sorted(CITY_LOCATIONS) + [
         "Other city — enter manually",
-        "Not listed — planetary snapshot only",
+        not_listed_label,
     ]
     prefill_choice = str(prefill.get("city_choice") or "")
-    if prefill_choice not in city_options and prefill.get("location_name"):
-        # A previous manual location should reopen the manual entry path.
+    if prefill_choice not in city_options and str(prefill.get("location_name") or "").strip():
         prefill_choice = "Other city — enter manually"
     values["city_choice"] = st.selectbox(
         "Birth city",
         city_options,
         index=city_options.index(prefill_choice) if prefill_choice in city_options else None,
         placeholder="Choose your birth city",
-        key=f"{key_context}-monthly-natal-city",
-        help="Use Other city if the place is not listed. Exact coordinates keep the Ascendant and houses precise.",
+        key=f"{key_prefix}-city",
+        help=(
+            "Choose Other city if the birthplace is not listed. "
+            "Coordinates keep the Ascendant and houses precise."
+        ),
     )
 
     if values["city_choice"] == "Other city — enter manually":
-        st.caption("Enter the birthplace directly. These raw birth details are used only to calculate the natal geometry in this app session.")
-        c1, c2 = st.columns(2, gap="medium")
-        with c1:
+        st.caption(
+            "City not listed? Enter it directly. Coordinates keep the Ascendant and houses precise "
+            "without sending the birthplace to an external geocoding service."
+        )
+        manual_cols = st.columns(2, gap="medium")
+        with manual_cols[0]:
+            location_seed = str(prefill.get("manual_city") or prefill.get("location_name") or "")
             values["manual_city"] = st.text_input(
                 "City / town",
-                value=str(prefill.get("manual_city") or prefill.get("location_name") or "").split(",", 1)[0],
-                key=f"{key_context}-monthly-natal-manual-city",
+                value=location_seed.split(",", 1)[0],
+                key=f"{key_prefix}-manual-city",
             )
             values["manual_latitude"] = st.number_input(
                 "Latitude",
@@ -3435,13 +3461,13 @@ def _monthly_natal_checkout_fields(key_context: str) -> dict:
                 value=float(prefill.get("latitude") or 0.0),
                 step=0.0001,
                 format="%.4f",
-                key=f"{key_context}-monthly-natal-manual-lat",
+                key=f"{key_prefix}-manual-lat",
             )
-        with c2:
+        with manual_cols[1]:
             values["manual_country"] = st.text_input(
                 "Country",
                 value=str(prefill.get("manual_country") or ""),
-                key=f"{key_context}-monthly-natal-manual-country",
+                key=f"{key_prefix}-manual-country",
             )
             values["manual_longitude"] = st.number_input(
                 "Longitude",
@@ -3450,27 +3476,33 @@ def _monthly_natal_checkout_fields(key_context: str) -> dict:
                 value=float(prefill.get("longitude") or 0.0),
                 step=0.0001,
                 format="%.4f",
-                key=f"{key_context}-monthly-natal-manual-lon",
+                key=f"{key_prefix}-manual-lon",
             )
         if values["time_basis"] == "Local time at birthplace":
             values["manual_timezone"] = st.text_input(
                 "Birth timezone · IANA name",
                 value=str(prefill.get("timezone_name") or browser_timezone_name()),
-                key=f"{key_context}-monthly-natal-manual-timezone",
+                key=f"{key_prefix}-manual-timezone",
                 help="Examples: Pacific/Port_Moresby, Australia/Sydney, Europe/London, America/New_York.",
             )
         else:
             values["manual_timezone"] = "UTC"
-            st.caption("Universal Time selected: Luna uses the entered time directly as UTC while retaining the birth coordinates for Ascendant and houses.")
-    elif values["city_choice"] == "Not listed — planetary snapshot only":
+            st.caption(
+                "Universal Time selected: Luna uses the entered time directly as UTC while retaining "
+                "the birth coordinates for Ascendant and houses."
+            )
+    elif values["city_choice"] == not_listed_label:
         if values["time_basis"] == "Local time at birthplace":
             prefill_tz = str(prefill.get("timezone_name") or DEFAULT_TIMEZONE)
             values["unlisted_timezone"] = st.selectbox(
                 "Birth timezone",
                 TIMEZONES,
                 index=TIMEZONES.index(prefill_tz) if prefill_tz in TIMEZONES else timezone_select_index(),
-                key=f"{key_context}-monthly-natal-unlisted-timezone",
-                help="This places the planets at the correct moment, but without coordinates Luna will not calculate the Ascendant or houses.",
+                key=f"{key_prefix}-unlisted-timezone",
+                help=(
+                    "This places the planets at the correct moment, but without coordinates "
+                    "Luna will not calculate the Ascendant or houses."
+                ),
             )
         else:
             values["unlisted_timezone"] = "UTC"
@@ -3478,11 +3510,12 @@ def _monthly_natal_checkout_fields(key_context: str) -> dict:
     return values
 
 
-def _build_monthly_checkout_natal(values: dict):
-    """Validate paid Monthly natal inputs and return a derived snapshot plus precision label."""
+def _build_natal_from_values(values: dict):
+    """Build one canonical Natal Player from the shared Snapshot-style controls."""
     birth_date_value = values.get("birth_date")
     if birth_date_value is None:
         raise ValueError("Choose your birth date.")
+
     time_known = bool(values.get("time_known"))
     if not time_known:
         snapshot = build_natal_snapshot(
@@ -3490,19 +3523,36 @@ def _build_monthly_checkout_natal(values: dict):
             birth_time_known=False,
             timezone_name="UTC",
         )
-        return snapshot, "Birth time unknown · angles and houses omitted"
+        prefill_out = {
+            "birth_date": birth_date_value.isoformat(),
+            "time_known": False,
+            "birth_time": "",
+            "time_basis": "Local time at birthplace",
+            "city_choice": "",
+            "location_name": "",
+            "timezone_name": "UTC",
+            "latitude": None,
+            "longitude": None,
+            "manual_city": "",
+            "manual_country": "",
+        }
+        return snapshot, "Birth time unknown · angles and houses omitted", prefill_out
 
     birth_time_value = values.get("birth_time")
     if birth_time_value is None:
         raise ValueError("Enter the exact birth time or untick 'I know my birth time exactly'.")
 
     city_choice = str(values.get("city_choice") or "")
+    not_listed_label = str(values.get("not_listed_label") or "Not listed — planetary snapshot only")
     if not city_choice:
-        raise ValueError("Choose the birth city, enter another city, or choose planetary snapshot only.")
+        raise ValueError("Choose the birth city, enter another city, or choose the planetary-only option.")
 
     latitude = longitude = None
     location_name = None
     time_basis = str(values.get("time_basis") or "Local time at birthplace")
+    timezone_name = "UTC"
+    manual_city = str(values.get("manual_city") or "").strip()
+    manual_country = str(values.get("manual_country") or "").strip()
 
     if city_choice in CITY_LOCATIONS:
         location = CITY_LOCATIONS[city_choice]
@@ -3511,23 +3561,34 @@ def _build_monthly_checkout_natal(values: dict):
         longitude = location.longitude
         location_name = f"{location.name}, {location.country}"
     elif city_choice == "Other city — enter manually":
-        manual_city = str(values.get("manual_city") or "").strip()
         if not manual_city:
             raise ValueError("Enter the birth city or town name.")
-        timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else str(values.get("manual_timezone") or "").strip()
+        timezone_name = (
+            "UTC"
+            if time_basis == "Universal Time (UTC)"
+            else str(values.get("manual_timezone") or "").strip()
+        )
         if time_basis == "Local time at birthplace":
             try:
                 ZoneInfo(timezone_name)
             except Exception as exc:
-                raise ValueError("That birth timezone is not recognised. Use an IANA name such as Pacific/Port_Moresby or Australia/Sydney.") from exc
+                raise ValueError(
+                    "That birth timezone is not recognised. Use an IANA name such as "
+                    "Pacific/Port_Moresby or Australia/Sydney."
+                ) from exc
         latitude = float(values.get("manual_latitude") or 0.0)
         longitude = float(values.get("manual_longitude") or 0.0)
         location_name = manual_city
-        manual_country = str(values.get("manual_country") or "").strip()
         if manual_country:
             location_name += f", {manual_country}"
+    elif city_choice == not_listed_label or city_choice.startswith("Not listed"):
+        timezone_name = (
+            "UTC"
+            if time_basis == "Universal Time (UTC)"
+            else str(values.get("unlisted_timezone") or DEFAULT_TIMEZONE)
+        )
     else:
-        timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else str(values.get("unlisted_timezone") or DEFAULT_TIMEZONE)
+        raise ValueError("Choose a birth city, use Other city, or choose the planetary-only option.")
 
     snapshot = build_natal_snapshot(
         birth_date=birth_date_value,
@@ -3541,9 +3602,39 @@ def _build_monthly_checkout_natal(values: dict):
     if snapshot.ascendant:
         precision = "Exact birth time supplied · Ascendant and houses calculated"
     else:
-        precision = "Exact birth time supplied · birthplace coordinates unavailable, so angles and houses omitted"
-    return snapshot, precision
+        precision = (
+            "Exact birth time supplied · birthplace coordinates unavailable, "
+            "so angles and houses omitted"
+        )
 
+    prefill_out = {
+        "birth_date": birth_date_value.isoformat(),
+        "time_known": True,
+        "birth_time": birth_time_value.strftime("%H:%M"),
+        "time_basis": time_basis,
+        "city_choice": city_choice,
+        "location_name": location_name or "",
+        "timezone_name": timezone_name,
+        "latitude": latitude,
+        "longitude": longitude,
+        "manual_city": manual_city,
+        "manual_country": manual_country,
+    }
+    return snapshot, precision, prefill_out
+
+
+def _monthly_natal_checkout_fields(key_context: str) -> dict:
+    """Compatibility wrapper: Paid Monthly reuses the canonical Snapshot birth controls."""
+    return _natal_input_fields(
+        f"{key_context}-monthly-natal",
+        not_listed_label="Not listed — planetary snapshot only",
+    )
+
+
+def _build_monthly_checkout_natal(values: dict):
+    """Compatibility wrapper around the one canonical Natal Player builder."""
+    snapshot, precision, _ = _build_natal_from_values(values)
+    return snapshot, precision
 
 def _owner_report_output(order: dict) -> dict:
     """Build the same paid output after session-scoped owner authentication."""
@@ -3598,6 +3689,10 @@ def _owner_report_output(order: dict) -> dict:
             nearest_city=nearest_city,
             main_focus=main_focus,
         )
+        if str(order.get("natal_profile") or ""):
+            result["natal_profile"] = str(order.get("natal_profile") or "")
+            result["natal_summary"] = str(order.get("natal_summary") or "")
+            result["natal_precision"] = str(order.get("natal_precision") or "")
         pdf_bytes = build_report_pdf(
             result,
             main_focus=main_focus,
@@ -3689,13 +3784,12 @@ def report_cta(
             if prefill_month in month_labels
             else default_month_label()
         )
-        chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
-
         with st.container(border=True):
             st.markdown("### Build your Personal Monthly")
+            st.caption("Start with the same natal baseline used by Luna's Snapshot, then add the month you want mapped.")
+            natal_values = _monthly_natal_checkout_fields(key_context)
             m1, m2 = st.columns(2)
             with m1:
-                sign = chosen_default_sign
                 delivery_email = st.text_input(
                     "Delivery email",
                     key=f"{key_context}-monthly-email",
@@ -3708,19 +3802,23 @@ def report_cta(
                     index=month_labels.index(chosen_default_month),
                     key=f"{key_context}-monthly-period",
                 )
+
+            m3, m4 = st.columns(2)
+            with m3:
                 timezone_name = st.selectbox(
                     "Timezone",
                     TIMEZONES,
                     index=timezone_select_index(),
                     key=f"{key_context}-monthly-timezone",
                 )
-            nearest_city = st.text_input(
-                "Nearest city for local light",
-                value=prefill_city or "",
-                key=f"{key_context}-monthly-city",
-                placeholder=representative_city_name(timezone_name),
-                help=city_input_help(timezone_name),
-            )
+            with m4:
+                nearest_city = st.text_input(
+                    "Nearest city for local light",
+                    value=prefill_city or "",
+                    key=f"{key_context}-monthly-city",
+                    placeholder=representative_city_name(timezone_name),
+                    help=city_input_help(timezone_name),
+                )
             main_focus = st.selectbox(
                 "Main focus",
                 MONTHLY_FOCUS_CHOICES,
@@ -3734,7 +3832,6 @@ def report_cta(
                 placeholder="What would you most like clarity about this month?",
                 help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
-            natal_values = _monthly_natal_checkout_fields(key_context)
             if admin_unlocked:
                 st.caption(
                     "Owner access: generate the complete report here without Stripe. "
@@ -3884,21 +3981,20 @@ def report_cta(
                 )
 
     with yearly_tab:
-        chosen_default_sign = prefill_sign if prefill_sign in SIGNS else None
         default_start_date = browser_local_date()
 
-        with st.form(f"{key_context}-yearly-checkout"):
-            st.markdown("### Choose your year-ahead report")
+        with st.container(border=True):
+            st.markdown("### Build your Year Ahead")
+            st.caption(
+                "Start with the same natal baseline used by Luna's Snapshot, then add the rolling 12-month window you want mapped."
+            )
+            yearly_natal_values = _natal_input_fields(
+                f"{key_context}-yearly-natal",
+                not_listed_label="Not listed — planetary snapshot only",
+            )
+
             y1, y2 = st.columns(2)
             with y1:
-                sign = st.selectbox(
-                    "What is your Sun sign (star sign)?",
-                    SIGNS,
-                    index=sign_select_index(chosen_default_sign),
-                    placeholder="Select your star sign",
-                    key=f"{key_context}-yearly-sign",
-                    help="Luna starts with your Sun sign as whole-sign House 1. The rest of the forecast is mapped from that reference.",
-                )
                 delivery_email = st.text_input(
                     "Delivery email",
                     key=f"{key_context}-yearly-email",
@@ -3915,24 +4011,29 @@ def report_cta(
                 st.caption(
                     f"12-month window: {_yearly_period_label(selected_start_date, selected_end_date)}"
                 )
+
+            y3, y4 = st.columns(2)
+            with y3:
                 timezone_name = st.selectbox(
                     "Timezone",
                     TIMEZONES,
                     index=timezone_select_index(),
                     key=f"{key_context}-yearly-timezone",
                 )
-            nearest_city = st.text_input(
-                "Nearest city for local light",
-                value=prefill_city or "",
-                key=f"{key_context}-yearly-city",
-                placeholder=representative_city_name(timezone_name),
-                help=city_input_help(timezone_name),
-            )
+            with y4:
+                nearest_city = st.text_input(
+                    "Nearest city for local light",
+                    value=prefill_city or "",
+                    key=f"{key_context}-yearly-city",
+                    placeholder=representative_city_name(timezone_name),
+                    help=city_input_help(timezone_name),
+                )
+
             main_focus = st.selectbox(
                 "Main priority for the year",
                 YEARLY_FOCUS_CHOICES,
                 key=f"{key_context}-yearly-focus",
-                help="This guides which themes receive extra emphasis in the personalised PDF.",
+                help="This guides which themes receive extra emphasis in the personalised report.",
             )
             personal_question = st.text_area(
                 "Optional decision or transition",
@@ -3942,12 +4043,16 @@ def report_cta(
                 help=f"Optional. Maximum {QUESTION_MAX_CHARS} characters. It is stored with your secure Stripe checkout so Luna can personalise the report after payment.",
             )
             if admin_unlocked:
-                st.caption("Owner access: generate the complete year-ahead report here without Stripe.")
+                st.caption(
+                    "Owner access: generate the complete year-ahead report here without Stripe. "
+                    "Raw birth details remain in this app session."
+                )
             else:
                 st.caption(
-                    "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link."
+                    "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link. "
+                    "Raw birth details are used to calculate the natal chart in this session; Stripe receives only the derived natal geometry needed for fulfilment."
                 )
-            submitted = st.form_submit_button(
+            submitted = st.button(
                 (
                     "Prepare owner year-ahead report"
                     if admin_unlocked
@@ -3955,6 +4060,7 @@ def report_cta(
                 ),
                 type="primary",
                 use_container_width=True,
+                key=f"{key_context}-yearly-submit",
             )
 
         state_key = f"prepared-order::{key_context}::yearly"
@@ -3963,76 +4069,86 @@ def report_cta(
                 f"owner-report-output::{key_context}-yearly::year",
                 None,
             )
-            if sign not in SIGNS:
-                st.error(
-                    "Select your star sign before generating the report."
-                    if admin_unlocked
-                    else "Select your star sign before continuing to payment."
-                )
-                st.session_state.pop(state_key, None)
-            elif not admin_unlocked and not valid_email(delivery_email):
+            if not admin_unlocked and not valid_email(delivery_email):
                 st.error("Enter a valid delivery email before continuing to payment.")
                 st.session_state.pop(state_key, None)
             else:
-                selected_end_date = _rolling_year_end(selected_start_date)
-                period_code = _yearly_period_code(selected_start_date, selected_end_date)
-                reference = build_order_reference(
-                    "YEAR",
-                    sign,
-                    period_code,
-                    timezone_name,
-                    _order_token(key_context, "YEAR"),
-                    main_focus=main_focus,
-                    personal_question=personal_question,
-                    nearest_city=nearest_city,
-                )
-                location, location_basis = resolve_location(
-                    nearest_city,
-                    timezone_name,
-                )
-                order = {
-                    "product_code": "YEAR",
-                    "report_name": "Year-Ahead Strategic Report",
-                    "email": delivery_email.strip() or "Not required for owner access",
-                    "sign": sign,
-                    "period": _yearly_period_label(selected_start_date, selected_end_date),
-                    "period_code": period_code,
-                    "timezone": timezone_name,
-                    "nearest_city": location.name,
-                    "location_basis": location_basis,
-                    "main_focus": main_focus,
-                    "personal_question": personal_question.strip(),
-                    "reference": reference,
-                }
-                if admin_unlocked:
-                    order["admin_preview"] = True
-                    st.session_state[state_key] = order
-                    track_event(
-                        "yearly_owner_report_prepared",
-                        {
-                            "zodiac_sign": sign,
-                            "report_period": period_code,
-                            "timezone": timezone_name,
-                            "main_focus": main_focus,
-                        },
-                    )
+                try:
+                    natal_snapshot, natal_precision, natal_prefill = _build_natal_from_values(yearly_natal_values)
+                except Exception as exc:
+                    st.error(f"Natal details need attention: {exc}")
+                    st.session_state.pop(state_key, None)
                 else:
-                    try:
-                        order["checkout_url"] = _create_instant_checkout(order, "YEAR")
-                    except Exception as exc:
-                        st.error(f"Secure checkout is not ready: {exc}")
+                    sign = _monthly_sun_sign_from_snapshot(natal_snapshot)
+                    if sign not in SIGNS:
+                        st.error("Luna could not calculate your Sun sign from the natal details supplied.")
                         st.session_state.pop(state_key, None)
                     else:
-                        st.session_state[state_key] = order
-                        track_event(
-                            "yearly_order_prepared",
-                            {
-                                "zodiac_sign": sign,
-                                "report_period": period_code,
-                                "timezone": timezone_name,
-                                "main_focus": main_focus,
-                            },
+                        st.session_state["luna_natal_checkout_prefill"] = natal_prefill
+                        selected_end_date = _rolling_year_end(selected_start_date)
+                        period_code = _yearly_period_code(selected_start_date, selected_end_date)
+                        reference = build_order_reference(
+                            "YEAR",
+                            sign,
+                            period_code,
+                            timezone_name,
+                            _order_token(key_context, "YEAR"),
+                            main_focus=main_focus,
+                            personal_question=personal_question,
+                            nearest_city=nearest_city,
                         )
+                        location, location_basis = resolve_location(
+                            nearest_city,
+                            timezone_name,
+                        )
+                        order = {
+                            "product_code": "YEAR",
+                            "report_name": "Year-Ahead Strategic Report",
+                            "email": delivery_email.strip() or "Not required for owner access",
+                            "sign": sign,
+                            "period": _yearly_period_label(selected_start_date, selected_end_date),
+                            "period_code": period_code,
+                            "timezone": timezone_name,
+                            "nearest_city": location.name,
+                            "location_basis": location_basis,
+                            "main_focus": main_focus,
+                            "personal_question": personal_question.strip(),
+                            "reference": reference,
+                            "natal_profile": encode_natal_profile(natal_snapshot),
+                            "natal_summary": natal_profile_summary(natal_snapshot),
+                            "natal_precision": natal_precision,
+                        }
+                        if admin_unlocked:
+                            order["admin_preview"] = True
+                            st.session_state[state_key] = order
+                            track_event(
+                                "yearly_owner_report_prepared",
+                                {
+                                    "zodiac_sign": sign,
+                                    "report_period": period_code,
+                                    "timezone": timezone_name,
+                                    "main_focus": main_focus,
+                                    "natal_time_known": bool(yearly_natal_values.get("time_known")),
+                                },
+                            )
+                        else:
+                            try:
+                                order["checkout_url"] = _create_instant_checkout(order, "YEAR")
+                            except Exception as exc:
+                                st.error(f"Secure checkout is not ready: {exc}")
+                                st.session_state.pop(state_key, None)
+                            else:
+                                st.session_state[state_key] = order
+                                track_event(
+                                    "yearly_order_prepared",
+                                    {
+                                        "zodiac_sign": sign,
+                                        "report_period": period_code,
+                                        "timezone": timezone_name,
+                                        "main_focus": main_focus,
+                                        "natal_time_known": bool(yearly_natal_values.get("time_known")),
+                                    },
+                                )
 
         order = st.session_state.get(state_key)
         if order and bool(order.get("admin_preview")) != admin_unlocked:
@@ -4050,6 +4166,8 @@ def report_cta(
                 order["main_focus"],
                 order["personal_question"],
                 order["reference"],
+                order.get("natal_summary", ""),
+                order.get("natal_precision", ""),
             )
             if admin_unlocked:
                 _render_owner_report(order, f"{key_context}-yearly")
@@ -5406,11 +5524,14 @@ def reports_page() -> None:
         render_report_generator_workspace()
         return
 
+    st.markdown('<section class="natal-shell">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Paid reports</div>', unsafe_allow_html=True)
-    st.markdown("# Choose the depth you need")
+    st.markdown('<div class="editorial-title">Choose the depth<br>you need</div>', unsafe_allow_html=True)
     st.markdown(
-        "Personal Monthly calculates your Sun sign and natal geometry from your birth details. "
-        "After payment, Luna verifies the Stripe session and generates the complete report immediately."
+        "<div class=\"natal-intro\">Start with the same natal foundation used by Luna's Snapshot. "
+        "Personal Monthly maps that player against one month; Year Ahead maps the same player across a rolling 12 months. "
+        "Your Sun sign is calculated from the birth details rather than selected separately.</div>",
+        unsafe_allow_html=True,
     )
     if EDITOR_PREVIEW_ENABLED:
         st.warning(
@@ -5430,7 +5551,7 @@ def reports_page() -> None:
     steps = [
         (
             "1. Choose",
-            "Select the report, sign, period, timezone, main focus, optional question and delivery email.",
+            "Select the report, birth details, period, timezone, main focus, optional question and delivery email.",
         ),
         (
             "2. Pay",
@@ -5448,10 +5569,10 @@ def reports_page() -> None:
                 unsafe_allow_html=True,
             )
 
-    with st.expander("Already paid without selecting a star sign or report period?"):
+    with st.expander("Legacy payment recovery"):
         st.markdown(
-            "Use this recovery form for an earlier payment. It prepares an email "
-            "with the missing fulfilment information and your payment reference."
+            "Use this only for an earlier payment made before the natal-based checkout. "
+            "It prepares an email with the legacy fulfilment details and your payment reference."
         )
         with st.form("report-order-details"):
             product = st.selectbox(
@@ -5546,6 +5667,8 @@ def reports_page() -> None:
                 "Use the online order-details form instead",
                 REPORT_REQUEST_URL,
             )
+
+    st.markdown('</section>', unsafe_allow_html=True)
 
 def houses_page() -> None:
     set_page_metadata(
@@ -5892,7 +6015,7 @@ def _render_monthly_past_echo_strip(
             product="monthly",
         )
 
-    with st.expander("Why Luna sees these dates"):
+    with _luna_evidence_panel("Why Luna sees these dates"):
         st.markdown(
             "Luna compares the month's dominant whole-sign houses and major planetary transitions "
             "with earlier months for the same sign. The similarity score stays in the evidence layer."
@@ -6213,7 +6336,7 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
         st.markdown("## Your move")
         st.markdown(final_move)
 
-    with st.expander("Why Luna sees this"):
+    with _luna_evidence_panel():
         st.markdown(
             f"Luna combines the calculated {month_name[forecast_month]} sky, whole-sign house emphasis, major transitions "
             "and the closest earlier monthly precedents. Historical echoes sit beside the current event they help explain."
@@ -8775,6 +8898,28 @@ def birthday_card_page() -> None:
     st.markdown('</section>', unsafe_allow_html=True)
 
 
+def _render_natal_signature_grid(snapshot, heading: str = "Your natal signature") -> None:
+    """Render the clean Snapshot signature grid for every personal Luna product."""
+    by_planet = {item.planet: item for item in snapshot.positions}
+    moon_value = by_planet["Moon"].sign
+    if not bool(getattr(snapshot, "birth_time_known", False)) and len(snapshot.moon_uncertain) > 1:
+        moon_value = " / ".join(snapshot.moon_uncertain)
+    st.markdown(f"## {heading}")
+    signature_items = [
+        ("Sun", by_planet["Sun"].sign),
+        ("Moon", moon_value),
+        ("Rising", snapshot.ascendant.sign if snapshot.ascendant else "Not calculated"),
+        ("Dominant element", snapshot.dominant_element),
+        ("Dominant mode", snapshot.dominant_modality),
+        ("Midheaven", snapshot.midheaven.sign if snapshot.midheaven else "Not calculated"),
+    ]
+    signature_html = "".join(
+        f'<div><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
+        for label, value in signature_items
+    )
+    st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
+
+
 def natal_snapshot_page() -> None:
     set_page_metadata(
         "Free Natal Snapshot | Luna Convergence",
@@ -8791,106 +8936,16 @@ def natal_snapshot_page() -> None:
     )
 
     with st.container(border=True):
-        birth_date = st.date_input(
-            "Birth date",
-            value=None,
-            min_value=date(1900, 1, 1),
-            max_value=browser_local_date(),
-            key="natal-birth-date-v323",
+        natal_values = _natal_input_fields(
+            "natal-v323",
+            prefill={},
+            not_listed_label="Not listed — planetary snapshot only",
         )
-        time_known = st.checkbox(
-            "I know my birth time exactly",
-            value=False,
-            key="natal-time-known-v323",
+        submitted = st.button(
+            "Create my free snapshot",
+            use_container_width=True,
+            key="natal-submit-v323",
         )
-        birth_time_value = None
-        city_choice = None
-        timezone_name = "UTC"
-        manual_city_name = ""
-        manual_country = ""
-        manual_latitude = None
-        manual_longitude = None
-        manual_timezone = "UTC"
-        time_basis = "Local time at birthplace"
-
-        if time_known:
-            birth_time_value = st.time_input(
-                "Birth time",
-                value=datetime.strptime("12:00", "%H:%M").time(),
-                key="natal-birth-time-v323",
-                help="Normally enter the local clock time at the place of birth. If your source explicitly gives Universal Time, choose UTC below.",
-            )
-            time_basis = st.selectbox(
-                "Time basis",
-                ["Local time at birthplace", "Universal Time (UTC)"],
-                index=0,
-                key="natal-time-basis-v323",
-                help="Most birth certificates use local time. Some astrology records state UT/UTC directly.",
-            )
-            city_options = sorted(CITY_LOCATIONS) + [
-                "Other city — enter manually",
-                "Not listed — planetary snapshot only",
-            ]
-            city_choice = st.selectbox(
-                "Birth city",
-                city_options,
-                index=None,
-                placeholder="Choose your birth city",
-                key="natal-city-v323",
-                help=(
-                    "Luna now includes a wider international city list, including Alotau, Papua New Guinea. "
-                    "If your city is still missing, choose Other city and enter coordinates and an IANA timezone."
-                ),
-            )
-
-            if city_choice == "Other city — enter manually":
-                st.caption("City not listed? Enter it directly. Coordinates keep the Ascendant and houses precise without sending your birth place to an external geocoding service.")
-                manual_cols = st.columns(2, gap="medium")
-                with manual_cols[0]:
-                    manual_city_name = st.text_input("City / town", key="natal-manual-city-v323")
-                    manual_latitude = st.number_input(
-                        "Latitude",
-                        min_value=-90.0,
-                        max_value=90.0,
-                        value=0.0,
-                        step=0.0001,
-                        format="%.4f",
-                        key="natal-manual-lat-v323",
-                    )
-                with manual_cols[1]:
-                    manual_country = st.text_input("Country", key="natal-manual-country-v323")
-                    manual_longitude = st.number_input(
-                        "Longitude",
-                        min_value=-180.0,
-                        max_value=180.0,
-                        value=0.0,
-                        step=0.0001,
-                        format="%.4f",
-                        key="natal-manual-lon-v323",
-                    )
-                if time_basis == "Local time at birthplace":
-                    manual_timezone = st.text_input(
-                        "Birth timezone · IANA name",
-                        value=browser_timezone_name(),
-                        key="natal-manual-timezone-v323",
-                        help="Examples: Pacific/Port_Moresby, Australia/Sydney, Europe/London, America/New_York.",
-                    )
-                else:
-                    manual_timezone = "UTC"
-                    st.caption("Universal Time selected: Luna uses the entered time directly as UTC while retaining the birth coordinates for Ascendant and houses.")
-            elif city_choice == "Not listed — planetary snapshot only":
-                if time_basis == "Local time at birthplace":
-                    timezone_name = st.selectbox(
-                        "Birth timezone",
-                        TIMEZONES,
-                        index=timezone_select_index(),
-                        key="natal-unlisted-timezone-v323",
-                        help="This places the planets at the correct moment, but without coordinates Luna will not calculate the Ascendant or houses.",
-                    )
-                else:
-                    timezone_name = "UTC"
-
-        submitted = st.button("Create my free snapshot", use_container_width=True, key="natal-submit-v323")
 
     if not submitted:
         st.markdown(
@@ -8900,54 +8955,25 @@ def natal_snapshot_page() -> None:
         st.markdown('</section>', unsafe_allow_html=True)
         return
 
-    if birth_date is None:
-        st.error("Choose your birth date before creating the snapshot.")
+    try:
+        snapshot, natal_precision, prefill_out = _build_natal_from_values(natal_values)
+    except Exception as exc:
+        st.error(str(exc))
         st.markdown('</section>', unsafe_allow_html=True)
         return
 
-    latitude = longitude = None
-    location_name = None
-    if time_known:
-        if city_choice in CITY_LOCATIONS:
-            location = CITY_LOCATIONS[city_choice]
-            timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else location.timezone
-            latitude = location.latitude
-            longitude = location.longitude
-            location_name = f"{location.name}, {location.country}"
-        elif city_choice == "Other city — enter manually":
-            if time_basis == "Local time at birthplace":
-                try:
-                    ZoneInfo(str(manual_timezone).strip())
-                except Exception:
-                    st.error("That timezone name is not recognised. Use an IANA name such as Pacific/Port_Moresby or Australia/Sydney.")
-                    st.markdown('</section>', unsafe_allow_html=True)
-                    return
-            else:
-                manual_timezone = "UTC"
-            if not str(manual_city_name).strip():
-                st.error("Enter the birth city or town name.")
-                st.markdown('</section>', unsafe_allow_html=True)
-                return
-            timezone_name = str(manual_timezone).strip()
-            latitude = float(manual_latitude)
-            longitude = float(manual_longitude)
-            location_name = str(manual_city_name).strip()
-            if str(manual_country).strip():
-                location_name += f", {str(manual_country).strip()}"
-        elif city_choice != "Not listed — planetary snapshot only":
-            st.error("Choose a birth city, use Other city, or choose planetary snapshot only.")
-            st.markdown('</section>', unsafe_allow_html=True)
-            return
+    birth_date = natal_values.get("birth_date")
+    time_known = bool(natal_values.get("time_known"))
+    birth_time_value = natal_values.get("birth_time")
+    time_basis = str(natal_values.get("time_basis") or "Local time at birthplace")
+    city_choice = str(natal_values.get("city_choice") or "")
+    manual_city_name = str(natal_values.get("manual_city") or "")
+    manual_country = str(natal_values.get("manual_country") or "")
+    timezone_name = str(prefill_out.get("timezone_name") or "UTC")
+    location_name = str(prefill_out.get("location_name") or "") or None
+    latitude = prefill_out.get("latitude")
+    longitude = prefill_out.get("longitude")
 
-    snapshot = build_natal_snapshot(
-        birth_date=birth_date,
-        birth_time_known=time_known,
-        birth_time=birth_time_value,
-        timezone_name=timezone_name,
-        location_name=location_name,
-        latitude=latitude,
-        longitude=longitude,
-    )
     calculated_sign = _monthly_sun_sign_from_snapshot(snapshot)
     if not calculated_sign:
         st.error("Luna could not calculate your Sun sign from the birth information supplied.")
@@ -8976,25 +9002,7 @@ def natal_snapshot_page() -> None:
 
     track_event("free_natal_snapshot_generated", {"birth_time_known": bool(time_known)})
 
-    by_planet = {item.planet: item for item in snapshot.positions}
-    moon_value = by_planet["Moon"].sign
-    if not time_known and len(snapshot.moon_uncertain) > 1:
-        moon_value = " / ".join(snapshot.moon_uncertain)
-
-    st.markdown("## Your natal signature")
-    signature_items = [
-        ("Sun", by_planet["Sun"].sign),
-        ("Moon", moon_value),
-        ("Rising", snapshot.ascendant.sign if snapshot.ascendant else "Not calculated"),
-        ("Dominant element", snapshot.dominant_element),
-        ("Dominant mode", snapshot.dominant_modality),
-        ("Midheaven", snapshot.midheaven.sign if snapshot.midheaven else "Not calculated"),
-    ]
-    signature_html = "".join(
-        f'<div><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
-        for label, value in signature_items
-    )
-    st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
+    _render_natal_signature_grid(snapshot)
 
     natal_facts = {
         "birth_time_precision": "known" if snapshot.birth_time_known else "unknown",
@@ -9113,7 +9121,7 @@ def natal_snapshot_page() -> None:
                 unsafe_allow_html=True,
             )
 
-    with st.expander("Chart evidence"):
+    with _luna_evidence_panel("Why Luna sees this · chart evidence"):
         rows = []
         for item in snapshot.positions:
             rows.append(
@@ -9185,159 +9193,15 @@ def _timing_strip_html(report) -> str:
 
 
 def _timing_birth_snapshot():
-    """Collect birth inputs for the Timing Map without changing existing natal/checkout flows."""
-    prefill = dict(st.session_state.get("luna_natal_checkout_prefill") or {})
-    prefill_date = None
+    """Collect the Year Ahead birth details through the shared Natal Snapshot controls."""
+    values = _natal_input_fields(
+        "timing-v330",
+        not_listed_label="Not listed — planetary timing only",
+    )
     try:
-        if prefill.get("birth_date"):
-            prefill_date = date.fromisoformat(str(prefill["birth_date"]))
-    except Exception:
-        prefill_date = None
-
-    birth_date = st.date_input(
-        "Birth date",
-        value=prefill_date,
-        min_value=date(1900, 1, 1),
-        max_value=browser_local_date(),
-        key="timing-birth-date-v330",
-    )
-    time_known = st.checkbox(
-        "I know my birth time exactly",
-        value=bool(prefill.get("time_known", False)),
-        key="timing-time-known-v330",
-    )
-
-    birth_time_value = None
-    city_choice = None
-    timezone_name = "UTC"
-    manual_city_name = ""
-    manual_country = ""
-    manual_latitude = None
-    manual_longitude = None
-    manual_timezone = "UTC"
-    time_basis = str(prefill.get("time_basis") or "Local time at birthplace")
-
-    if time_known:
-        try:
-            default_time = datetime.strptime(str(prefill.get("birth_time") or "12:00"), "%H:%M").time()
-        except ValueError:
-            default_time = datetime.strptime("12:00", "%H:%M").time()
-        birth_time_value = st.time_input(
-            "Birth time",
-            value=default_time,
-            key="timing-birth-time-v330",
-        )
-        time_basis = st.selectbox(
-            "Time basis",
-            ["Local time at birthplace", "Universal Time (UTC)"],
-            index=0 if time_basis != "Universal Time (UTC)" else 1,
-            key="timing-time-basis-v330",
-        )
-        city_options = sorted(CITY_LOCATIONS) + [
-            "Other city — enter manually",
-            "Not listed — planetary timing only",
-        ]
-        previous_city = str(prefill.get("city_choice") or "")
-        default_index = city_options.index(previous_city) if previous_city in city_options else None
-        city_choice = st.selectbox(
-            "Birth city",
-            city_options,
-            index=default_index,
-            placeholder="Choose your birth city",
-            key="timing-city-v330",
-        )
-
-        if city_choice == "Other city — enter manually":
-            c1, c2 = st.columns(2, gap="medium")
-            with c1:
-                manual_city_name = st.text_input(
-                    "City / town", value=str(prefill.get("manual_city") or ""), key="timing-manual-city-v330"
-                )
-                manual_latitude = st.number_input(
-                    "Latitude", min_value=-90.0, max_value=90.0,
-                    value=float(prefill.get("latitude") or 0.0), step=0.0001, format="%.4f",
-                    key="timing-manual-lat-v330",
-                )
-            with c2:
-                manual_country = st.text_input(
-                    "Country", value=str(prefill.get("manual_country") or ""), key="timing-manual-country-v330"
-                )
-                manual_longitude = st.number_input(
-                    "Longitude", min_value=-180.0, max_value=180.0,
-                    value=float(prefill.get("longitude") or 0.0), step=0.0001, format="%.4f",
-                    key="timing-manual-lon-v330",
-                )
-            if time_basis == "Local time at birthplace":
-                manual_timezone = st.text_input(
-                    "Birth timezone · IANA name",
-                    value=str(prefill.get("timezone_name") or browser_timezone_name()),
-                    key="timing-manual-timezone-v330",
-                )
-            else:
-                manual_timezone = "UTC"
-        elif city_choice == "Not listed — planetary timing only":
-            if time_basis == "Local time at birthplace":
-                default_tz = str(prefill.get("timezone_name") or browser_timezone_name())
-                tz_index = TIMEZONES.index(default_tz) if default_tz in TIMEZONES else timezone_select_index()
-                timezone_name = st.selectbox(
-                    "Birth timezone", TIMEZONES, index=tz_index, key="timing-unlisted-timezone-v330"
-                )
-            else:
-                timezone_name = "UTC"
-
-    if birth_date is None:
-        return None, "Choose your birth date before creating the map.", None
-
-    latitude = longitude = None
-    location_name = None
-    if time_known:
-        if city_choice in CITY_LOCATIONS:
-            location = CITY_LOCATIONS[city_choice]
-            timezone_name = "UTC" if time_basis == "Universal Time (UTC)" else location.timezone
-            latitude = location.latitude
-            longitude = location.longitude
-            location_name = f"{location.name}, {location.country}"
-        elif city_choice == "Other city — enter manually":
-            if not str(manual_city_name).strip():
-                return None, "Enter the birth city or town name.", None
-            if time_basis == "Local time at birthplace":
-                try:
-                    ZoneInfo(str(manual_timezone).strip())
-                except Exception:
-                    return None, "That timezone name is not recognised. Use an IANA name such as Australia/Sydney.", None
-            else:
-                manual_timezone = "UTC"
-            timezone_name = str(manual_timezone).strip()
-            latitude = float(manual_latitude)
-            longitude = float(manual_longitude)
-            location_name = str(manual_city_name).strip()
-            if str(manual_country).strip():
-                location_name += f", {str(manual_country).strip()}"
-        elif city_choice != "Not listed — planetary timing only":
-            return None, "Choose a birth city, use Other city, or choose planetary timing only.", None
-
-    snapshot = build_natal_snapshot(
-        birth_date=birth_date,
-        birth_time_known=time_known,
-        birth_time=birth_time_value,
-        timezone_name=timezone_name,
-        location_name=location_name,
-        latitude=latitude,
-        longitude=longitude,
-    )
-    prefill_out = {
-        "birth_date": birth_date.isoformat(),
-        "time_known": bool(time_known),
-        "birth_time": birth_time_value.strftime("%H:%M") if birth_time_value else "",
-        "time_basis": time_basis,
-        "city_choice": city_choice or "",
-        "location_name": location_name or "",
-        "timezone_name": timezone_name,
-        "latitude": latitude,
-        "longitude": longitude,
-        "manual_city": manual_city_name,
-        "manual_country": manual_country,
-    }
+        snapshot, _, prefill_out = _build_natal_from_values(values)
+    except Exception as exc:
+        return None, str(exc), None
     return snapshot, "", prefill_out
 
 
@@ -10671,7 +10535,7 @@ def timing_map_page() -> None:
         "A personalised 12-month transit map showing when major natal activations strengthen, peak, change and release.",
         "/timing-map",
     )
-    st.markdown('<section class="timing-shell">', unsafe_allow_html=True)
+    st.markdown('<section class="natal-shell timing-shell">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Personal timing</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Your Year Ahead</div><div class="timing-product-subtitle">Personal Transits &amp; Timing</div>', unsafe_allow_html=True)
     st.markdown(
@@ -10680,19 +10544,20 @@ def timing_map_page() -> None:
     )
     st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
 
-    start_date = st.date_input(
-        "Start the 12 months on",
-        value=browser_local_date(),
-        min_value=date(1950, 1, 1),
-        max_value=date(2100, 12, 31),
-        key="timing-start-date-v330",
-        help="This defaults to today in your browser timezone. Choose another start date if you want a different 12-month window.",
-    )
-
     with st.container(border=True):
         st.markdown("### Tell Luna when you were born")
-        st.caption("If the birth time is unknown, Luna leaves Ascendant, Midheaven and houses out rather than inventing precision.")
+        st.caption("Use the same natal baseline as Luna's Snapshot. If the birth time is unknown, Luna leaves Ascendant, Midheaven and houses out rather than inventing precision.")
         snapshot, validation_message, prefill_out = _timing_birth_snapshot()
+        st.markdown("### Choose the 12-month window")
+        start_date = st.date_input(
+            "Start the 12 months on",
+            value=browser_local_date(),
+            min_value=date(1950, 1, 1),
+            max_value=date(2100, 12, 31),
+            key="timing-start-date-v330",
+            help="This defaults to today in your browser timezone. Choose another start date if you want a different 12-month window.",
+        )
+        st.caption(f"12-month window: {_yearly_period_label(start_date, _rolling_year_end(start_date))}")
         generate = st.button("Build my Year Ahead", type="primary", use_container_width=True, key="timing-generate-v330")
 
     if generate:
@@ -10746,28 +10611,16 @@ def timing_map_page() -> None:
         return
 
     profile_summary = str(st.session_state.get("timing-map-summary-v330") or "Personal natal profile")
+    timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
+    if timing_snapshot is not None:
+        _render_natal_signature_grid(timing_snapshot)
+
     st.markdown("## The year at a glance")
     calculated_sign = str(st.session_state.get("timing-calculated-sun-sign-v336") or "")
     sign_prefix = f"Calculated Sun sign: {calculated_sign} · " if calculated_sign else ""
     st.caption(f"{sign_prefix}{profile_summary} · {_timing_date_label(report.start_date)} → {_timing_date_label(report.end_date)}")
 
     _render_timing_result_actions()
-    st.markdown(
-        f'''<div class="timing-summary-grid">
-  <div><span>Recurring themes</span><strong>{report.major_games}</strong></div>
-  <div><span>Exact dates</span><strong>{report.turning_points}</strong></div>
-  <div><span>Major shifts</span><strong>{report.rule_changes}</strong></div>
-</div>''',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### Transit intensity")
-    st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
-    st.caption(
-        "Intensity answers one question: how much significant transit activity is clustering here? "
-        "It does not mean trouble. A high month can be an opening, a decision, a change, support, friction or a mixed period."
-    )
-    st.markdown("### What kind of period is it?")
-    st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
 
     yearly_facts = {
         "start_date": report.start_date.isoformat(),
@@ -10901,23 +10754,16 @@ def timing_map_page() -> None:
     }
 
     if year_bundle["complete"]:
-        st.markdown("## The story of your year")
+        st.markdown("### Read the year")
         _render_guided_luna_story(guided_year, "Luna's strategic map")
     else:
         _render_voice_unavailable(facts_label="complete Year Ahead document")
 
-    _render_major_sky_evidence(
-        getattr(report, "major_sky_events", ()) or (),
-        "timing",
-        heading="Shared-sky milestones inside your year",
-        limit=8,
-    )
-
     if personal_groups and year_bundle["complete"]:
-        st.markdown("### Major events that directly hit your natal chart")
+        st.markdown("### Key sky events that activate your chart")
         st.caption(
-            "Each sky event appears once. Multiple natal contacts are grouped so "
-            "Luna can show the convergence instead of repeating the event."
+            "These are shared-sky events that make a direct contact to your natal chart. "
+            "Luna shows the meaning here; the exact contacts stay inside the calculation dropdown."
         )
         for index, group in enumerate(personal_groups):
             first = group[0]
@@ -10950,15 +10796,23 @@ def timing_map_page() -> None:
 <h3>{escape(headline)}</h3>
 <p>{escape(interpretation)}</p>
 {affirmation_html}
-<ul class="timing-scenarios">{contacts}</ul>
 {action_html}
 </article>""",
                 unsafe_allow_html=True,
             )
+            with _luna_evidence_panel("Why Luna sees this · calculations"):
+                st.markdown("**Exact natal contacts**")
+                for item in group:
+                    st.markdown(f"- {_personal_contact_label(item)}")
 
     if not report.stories:
         st.info("No major exact contacts passed the current threshold in this 12-month window. Try a different start date.")
     elif year_bundle["complete"]:
+        st.markdown("## Your personal transits")
+        st.caption(
+            "These are the strongest moving-planet contacts to your natal chart across this rolling 12-month year. "
+            "Luna translates each one into timing, the life area it touches and the move it asks from you."
+        )
         for number, story in enumerate(report.stories, start=1):
             voice = transit_voices.get(f"year-transit:{number - 1}")
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
@@ -11003,7 +10857,7 @@ def timing_map_page() -> None:
             )
             st.markdown(article_html, unsafe_allow_html=True)
 
-            with st.expander("Why Luna sees this"):
+            with _luna_evidence_panel():
                 confidence = _timing_story_confidence(story)
                 st.markdown(
                     f"**{story.transit_planet} {story.aspect} natal {story.natal_target}**"
@@ -11028,8 +10882,31 @@ def timing_map_page() -> None:
                     "Luna scans the selected 365-day window with Swiss Ephemeris positions, detects exact natal contacts, "
                     "groups repeated direct/retrograde passes, then ranks the result by transit planet, natal target, aspect and angular/house emphasis."
                 )
-    else:
-        with st.expander("Calculated natal transits", expanded=False):
+
+    st.markdown(
+        f'''<div class="timing-summary-grid">
+  <div><span>Recurring themes</span><strong>{report.major_games}</strong></div>
+  <div><span>Exact dates</span><strong>{report.turning_points}</strong></div>
+  <div><span>Major shifts</span><strong>{report.rule_changes}</strong></div>
+</div>''',
+        unsafe_allow_html=True,
+    )
+    st.markdown("### Transit intensity")
+    st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
+    st.markdown("### What kind of period is it?")
+    st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
+
+    # Keep the raw event/transit lists available as evidence, but do not let
+    # them dominate the customer-facing Year Ahead reading.
+    with _luna_evidence_panel("Why Luna sees this · calculations"):
+        _render_major_sky_evidence(
+            getattr(report, "major_sky_events", ()) or (),
+            "timing",
+            heading="Shared-sky milestones inside your year",
+            limit=8,
+        )
+        if report.stories:
+            st.markdown("### Calculated natal transits")
             for story in report.stories:
                 periods_label = " · ".join(
                     _timing_range_label(item.start_date, item.end_date) for item in story.periods
@@ -11040,7 +10917,7 @@ def timing_map_page() -> None:
                     + f" · {periods_label}"
                 )
 
-    timing_snapshot = st.session_state.get("timing-map-snapshot-v401")
+    # The natal/activation chart is part of the customer product, not hidden evidence.
     if timing_snapshot is not None:
         _timing_chart_in_motion(
             report,
