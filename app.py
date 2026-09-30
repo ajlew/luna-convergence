@@ -77,6 +77,7 @@ from natal_snapshot import (
     NatalSnapshot,
     NATAL_PROFILE_ORDER,
     detect_natal_aspects,
+    _build_signatures,
 )
 from birthday_card import (
     birthday_card_filename,
@@ -363,22 +364,25 @@ def _cached_guided_luna_collection(
     model: str,
     _api_key: str,
 ) -> dict:
+    """Generate a collection once at app level.
+
+    The provider helper already retries malformed individual items, and
+    validate_guided_collection_copy already enforces completeness, total word
+    ranges, provenance and imperative moves. Avoid multiplying those calls at
+    the Streamlit layer because large collections can hold a page open.
+    """
     facts = json.loads(facts_json)
-    last_errors: tuple[str, ...] = ()
-    for _attempt in range(2):
-        copy = generate_guided_collection_copy(
-            product,
-            facts,
-            base_url=base_url,
-            model=model,
-            api_key=_api_key,
-        )
-        valid, schema_errors = validate_guided_collection_copy(product, copy, facts)
-        complete, completeness_errors = _guided_collection_complete(copy)
-        if valid and complete:
-            return copy
-        last_errors = tuple(schema_errors) + tuple(completeness_errors)
-    raise ValueError("Luna collection failed validation after two attempts: " + "; ".join(last_errors))
+    copy = generate_guided_collection_copy(
+        product,
+        facts,
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+    )
+    valid, errors = validate_guided_collection_copy(product, copy, facts)
+    if valid:
+        return copy
+    raise ValueError("Luna collection failed validation: " + "; ".join(errors))
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -9263,44 +9267,40 @@ def _render_snapshot_natal_core(
     else:
         st.caption("Birth time or location precision is limited; Luna leaves unavailable angles or houses out rather than inventing them.")
 
-    position_map = {item.planet: item for item in (getattr(snapshot, "positions", ()) or ())}
-    aspect_items = list(getattr(snapshot, "aspects", ()) or ())[:6]
-    signature_facts = {
-        "items": [
-            {
-                "source_id": f"natal-aspect:{index}",
-                "planet_1": aspect.planet1,
-                "planet_1_sign": position_map[aspect.planet1].sign if aspect.planet1 in position_map else None,
-                "planet_1_house": position_map[aspect.planet1].house if aspect.planet1 in position_map else None,
-                "aspect": aspect.name,
-                "planet_2": aspect.planet2,
-                "planet_2_sign": position_map[aspect.planet2].sign if aspect.planet2 in position_map else None,
-                "planet_2_house": position_map[aspect.planet2].house if aspect.planet2 in position_map else None,
-                "orb": round(float(aspect.orb), 2),
-                "strength": round(float(aspect.strength), 3),
-            }
-            for index, aspect in enumerate(aspect_items)
-        ]
-    }
-    generated = _guided_luna_collection("natal_signatures", signature_facts) if signature_facts["items"] else None
-    voices = list((generated or {}).get("items", []))
-    labels = {
-        item["source_id"]: f"{item['planet_1']} {item['aspect']} {item['planet_2']} · {item['orb']:.2f}° orb"
-        for item in signature_facts["items"]
-    }
-    if voices:
+    # The strongest signatures are deterministic natal-engine output. Do not
+    # block the rest of a report on a second multi-item LLM request here.
+    signatures = list(getattr(snapshot, "signatures", ()) or ())
+    if not signatures:
+        signatures = list(_build_signatures(list(getattr(snapshot, "aspects", ()) or ()), limit=6))
+    if signatures:
         st.markdown("## Your strongest signatures")
-        st.caption("Luna translates the strongest calculated aspects into lived behaviour without replacing the chart evidence.")
-        for voice in voices:
-            source_id = str(voice["source_id"])
+        st.caption("The strongest calculated aspects translated into lived behaviour. The chart evidence stays available below.")
+        for signature in signatures[:6]:
+            strength = str(getattr(signature, "strength", "") or "").strip()
+            watch = str(getattr(signature, "watch", "") or "").strip()
+            remember_bits = []
+            if strength:
+                remember_bits.append(strength)
+            if watch:
+                watch_lower = watch[:1].lower() + watch[1:] if len(watch) > 1 else watch.lower()
+                remember_bits.append(f"Watch for {watch_lower}")
+            remember = " ".join(remember_bits)
+            question = str(getattr(signature, "question", "") or "").strip()
+            if question:
+                move = f"Notice what changes when you ask yourself: {question}"
+            elif watch:
+                watch_lower = watch[:1].lower() + watch[1:] if len(watch) > 1 else watch.lower()
+                move = f"Notice when this pattern appears, then choose the response instead of repeating {watch_lower}"
+            else:
+                move = "Name where this pattern appears, then choose one deliberate response before you act."
             html = (
                 '<div class="natal-signature-reading">'
-                f'<div class="natal-evidence">{escape(labels.get(source_id, source_id))}</div>'
-                f'<h3>{escape(str(voice["headline"]))}</h3>'
-                f'<p>{escape(str(voice["story"]))}</p>'
+                f'<div class="natal-evidence">{escape(str(getattr(signature, "evidence", "Calculated natal aspect") or "Calculated natal aspect"))}</div>'
+                f'<h3>{escape(str(getattr(signature, "title", "Natal signature") or "Natal signature"))}</h3>'
+                f'<p>{escape(str(getattr(signature, "text", "") or ""))}</p>'
                 '<div class="natal-signature-meta">'
-                f'<div><span>Remember</span>{escape(str(voice["affirmation"]))}</div>'
-                f'<div><span>Your move</span>{escape(str(voice["your_move"]))}</div>'
+                f'<div><span>Remember</span>{escape(remember)}</div>'
+                f'<div><span>Your move</span>{escape(move)}</div>'
                 '</div></div>'
             )
             st.markdown(html, unsafe_allow_html=True)
@@ -9788,11 +9788,10 @@ def _render_snapshot_yearly_report(
                 for index, story in enumerate(strongest)
             ],
         }
-        generated = _guided_luna_collection("yearly_transits", transit_facts)
-        voices = {str(item.get("source_id") or ""): item for item in (generated or {}).get("items", []) if isinstance(item, dict)}
+        # These chapters already contain calculated timing-map interpretation.
+        # Keep them immediate instead of making six more live voice requests
+        # after the natal chart.
         for story in sorted(strongest, key=lambda item: item.first_date):
-            ranked_index = strongest.index(story)
-            voice = voices.get(f"paid-year-transit:{ranked_index}")
             periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
             starts = _timing_story_start(story)
             ends = _timing_story_end(story)
@@ -9801,9 +9800,9 @@ def _render_snapshot_yearly_report(
                 f"Strongest {_timing_story_peak_label(story)} · "
                 f"Eases {_timing_date_label(ends) if ends else '—'}"
             )
-            headline = str(voice.get("headline") if voice else story.headline)
-            body = str(voice.get("story") if voice else story.summary)
-            move = str(voice.get("your_move") if voice else story.move)
+            headline = str(story.headline)
+            body = str(story.summary)
+            move = str(story.move)
             st.markdown(
                 f"""<div class="natal-signature-reading yearly-transit-reading">
   <div class="natal-evidence">{escape(story.transit_planet)} {escape(story.aspect)} natal {escape(story.natal_target)} · active {escape(periods_label)}</div>
