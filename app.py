@@ -619,6 +619,50 @@ def _render_guided_luna_story(copy: dict, kicker: str) -> None:
 </section>""",
         unsafe_allow_html=True,
     )
+
+
+def _render_signature_style_story(copy: dict, kicker: str) -> None:
+    """Render a Luna narrative with the exact visual grammar of Snapshot signatures."""
+    if not isinstance(copy, dict):
+        return
+    headline = " ".join(str(copy.get("headline") or "").split())
+    opening = " ".join(str(copy.get("opening") or "").split())
+    affirmation = " ".join(str(copy.get("affirmation") or "").split())
+    your_move = " ".join(str(copy.get("your_move") or "").split())
+    story = copy.get("story") or []
+    if isinstance(story, str):
+        story = [story]
+    elif not isinstance(story, (list, tuple)):
+        story = [str(story)] if story else []
+
+    body_parts = []
+    if opening:
+        body_parts.append(f"<p>{escape(opening)}</p>")
+    body_parts.extend(
+        f"<p>{escape(' '.join(str(paragraph).split()))}</p>"
+        for paragraph in story
+        if str(paragraph).strip()
+    )
+
+    meta_parts = []
+    if affirmation:
+        meta_parts.append(f'<div><span>Remember</span>{escape(affirmation)}</div>')
+    if your_move:
+        meta_parts.append(f'<div><span>Your move</span>{escape(your_move)}</div>')
+    meta_html = ""
+    if meta_parts:
+        meta_class = "natal-signature-meta" if len(meta_parts) > 1 else "natal-signature-meta natal-signature-meta-single"
+        meta_html = f'<div class="{meta_class}">{"".join(meta_parts)}</div>'
+
+    st.markdown(
+        f"""<div class="natal-signature-reading report-story-reading">
+  <div class="natal-evidence">{escape(kicker)}</div>
+  {f'<h3>{escape(headline)}</h3>' if headline else ''}
+  {''.join(body_parts)}
+  {meta_html}
+</div>""",
+        unsafe_allow_html=True,
+    )
 LUNA_TRUST_STATEMENT = (
     "The astrology is calculated, not guessed. Ephemeris data and programmed rules determine "
     "what is happening in your chart; Luna turns those signals into interpretation."
@@ -1666,81 +1710,11 @@ a {
     max-width:720px;
 }
 
-/* Paid-report hierarchy: one unmistakable visual job per type level.
-   Snapshot keeps its inherited treatment; report material below it uses these
-   explicit roles instead of relying on generic h2/h3 weight. */
-.report-section-title {
-    max-width:760px;
-    margin:3rem 0 .7rem;
-    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
-    font-size:clamp(1.9rem,2.7vw,2.2rem);
-    line-height:1.04;
-    letter-spacing:-.035em;
-    font-weight:400;
-}
-
-.report-section-note {
+/* Paid personal reports deliberately inherit the Natal Snapshot hierarchy.
+   H2 = section, H3 = reading/card title, paragraph = body, natal-evidence = calculation.
+   Do not introduce a second report-specific font or weight system here. */
+.report-story-reading p {
     max-width:720px;
-    margin:0 0 1.45rem;
-    color:var(--muted);
-    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
-    font-size:.92rem;
-    line-height:1.55;
-    font-weight:300;
-}
-
-.report-item-title {
-    max-width:700px;
-    margin:.35rem 0 .55rem;
-    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
-    font-size:1.08rem;
-    line-height:1.35;
-    font-weight:500;
-    letter-spacing:0;
-}
-
-.report-key-date-title {
-    max-width:700px;
-    margin:.3rem 0 .4rem;
-    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
-    font-size:1.02rem;
-    line-height:1.38;
-    font-weight:500;
-    letter-spacing:0;
-}
-
-.monthly-activation-reading p,
-.monthly-phase-reading p,
-.monthly-key-date-reading p,
-.paid-yearly-shell .natal-signature-reading p {
-    font-size:1.02rem;
-    line-height:1.65;
-    font-weight:300;
-    margin:.35rem 0 .75rem;
-}
-
-.monthly-activation-reading,
-.monthly-phase-reading,
-.monthly-key-date-reading {
-    padding:1.05rem 0 1.15rem;
-}
-
-.paid-monthly-shell .luna-guided-story .weekly-sign-heading,
-.paid-yearly-shell .luna-guided-story .weekly-sign-heading {
-    max-width:700px;
-    margin:.3rem 0 .75rem;
-    font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, serif;
-    font-size:clamp(1.45rem,2vw,1.7rem);
-    line-height:1.12;
-    font-weight:400;
-    letter-spacing:-.025em;
-}
-
-.paid-monthly-shell .luna-guided-story p,
-.paid-yearly-shell .luna-guided-story p {
-    font-size:1.03rem;
-    line-height:1.67;
-    font-weight:300;
 }
 
 .luna-guidance-line {
@@ -9516,7 +9490,7 @@ def _render_snapshot_natal_core(
 
     _render_natal_signature_grid(snapshot)
     guided_natal = _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
-    st.markdown("### Read the pattern")
+    st.markdown("## Read the pattern")
     _render_guided_luna_story(
         guided_natal or _snapshot_natal_fallback_story(snapshot),
         "Luna reads the whole chart",
@@ -9639,6 +9613,83 @@ def _snapshot_monthly_story(narrative) -> dict:
     }
 
 
+def _monthly_required_story_anchors(narrative, result: dict) -> list[dict]:
+    """Return structural monthly events that must be named in Read the month."""
+    anchors: list[dict] = []
+    seen: set[str] = set()
+
+    def add(title: object, date_label: object = "", paragraph: object = "") -> None:
+        clean_title = " ".join(str(title or "").split())
+        if not clean_title:
+            return
+        lowered = clean_title.lower()
+        if not any(token in lowered for token in ("retrograde", "station", "eclipse")):
+            return
+        key = re.sub(r"[^a-z0-9]+", " ", lowered).strip()
+        if not key or key in seen:
+            return
+        seen.add(key)
+        anchors.append({
+            "title": clean_title,
+            "date_label": " ".join(str(date_label or "").split()),
+            "paragraph": " ".join(str(paragraph or "").split()),
+        })
+
+    for chapter in list(getattr(narrative, "chapters", ()) or ()):
+        title = str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "")
+        date_label = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
+        paragraphs = [
+            " ".join(str(item or "").split())
+            for item in (getattr(chapter, "paragraphs", ()) or ())
+            if str(item or "").strip()
+        ]
+        add(title, date_label, paragraphs[0] if paragraphs else "")
+
+    for item in list(result.get("major_sky_events") or []) + list(result.get("major_transitions") or []):
+        if not isinstance(item, dict):
+            continue
+        title = item.get("display_label") or item.get("technical_label") or item.get("title")
+        date_label = item.get("event_date") or item.get("date") or ""
+        add(title, date_label, "")
+
+    return anchors[:4]
+
+
+def _monthly_copy_with_required_anchors(copy: dict, narrative, result: dict) -> dict:
+    """Guarantee defining stations/eclipses are named in the top Monthly story."""
+    if not isinstance(copy, dict):
+        copy = {}
+    merged = dict(copy)
+    story = merged.get("story") or []
+    if isinstance(story, str):
+        story = [story]
+    elif not isinstance(story, (list, tuple)):
+        story = [str(story)] if story else []
+    story = [" ".join(str(item or "").split()) for item in story if str(item or "").strip()]
+
+    combined = " ".join(
+        [str(merged.get("headline") or ""), str(merged.get("opening") or ""), *story]
+    ).lower()
+    additions: list[str] = []
+    for anchor in _monthly_required_story_anchors(narrative, result):
+        title = anchor["title"]
+        tokens = [token for token in re.findall(r"[a-z]+", title.lower()) if len(token) > 3]
+        # Require the defining planet/event words to appear, not merely a vague synonym.
+        present = bool(tokens) and all(token in combined for token in tokens[:3])
+        if present:
+            continue
+        date_label = anchor.get("date_label") or ""
+        paragraph = anchor.get("paragraph") or ""
+        lead = title + (f" · {date_label}" if date_label else "")
+        additions.append(lead + (f". {paragraph}" if paragraph else "."))
+        combined += " " + title.lower()
+
+    if additions:
+        story = additions + story
+    merged["story"] = story
+    return merged
+
+
 def _paid_monthly_voice_facts(narrative, result: dict) -> dict:
     """Closed evidence packet for the one voiced strategic Monthly reading."""
     overlay = dict(result.get("natal_overlay") or {})
@@ -9680,6 +9731,10 @@ def _paid_monthly_voice_facts(narrative, result: dict) -> dict:
         "monthly_decision": result.get("monthly_decision") or {},
         "monthly_trajectory": result.get("monthly_trajectory") or {},
         "personal_activations": activations,
+        "required_story_anchors": [
+            {"title": item["title"], "date_label": item.get("date_label", "")}
+            for item in _monthly_required_story_anchors(narrative, result)
+        ],
     }
 
 
@@ -9735,22 +9790,27 @@ def _render_snapshot_monthly_report(
         )
 
     st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Personal Monthly</div>', unsafe_allow_html=True)
-    st.markdown('<div class="report-section-title" role="heading" aria-level="2">Read the month</div>', unsafe_allow_html=True)
+    st.markdown("## Read the month")
     monthly_voice = _guided_luna_copy("monthly", _paid_monthly_voice_facts(narrative, result))
-    _render_guided_luna_story(monthly_voice or _snapshot_monthly_story(narrative), "Luna reads the month")
+    monthly_story = _monthly_copy_with_required_anchors(
+        monthly_voice or _snapshot_monthly_story(narrative),
+        narrative,
+        result,
+    )
+    _render_signature_style_story(monthly_story, "Luna reads the month")
 
     overlay = dict(result.get("natal_overlay") or {})
     activations = list(overlay.get("activations") or [])[:3]
     if activations:
-        st.markdown('<div class="report-section-title" role="heading" aria-level="2">Where this month touches your chart</div>', unsafe_allow_html=True)
-        st.markdown('<div class="report-section-note">Three calculated contacts show where the month becomes personally concentrated. The full calculation stays in the evidence panel.</div>', unsafe_allow_html=True)
+        st.markdown("## Where this month touches your chart")
+        st.caption("Three calculated contacts show where the month becomes personally concentrated. The full calculation stays in the evidence panel.")
         for item in activations:
             date_label = str(item.get("date_label") or "")
             signal = str(item.get("signal") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading monthly-activation-reading">
+                f"""<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(date_label)} · {escape(signal)}</div>
-  <div class="report-item-title" role="heading" aria-level="3">{escape(str(item.get("title") or "Personal activation"))}</div>
+  <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
   <p>{escape(str(item.get("text") or ""))}</p>
 </div>""",
                 unsafe_allow_html=True,
@@ -9759,17 +9819,17 @@ def _render_snapshot_monthly_report(
     chapters = _select_three_monthly_chapters(getattr(narrative, "chapters", ()) or ())
     if chapters:
         stage_labels = ("Opening", "Middle", "Closing")
-        st.markdown('<div class="report-section-title" role="heading" aria-level="2">How the month unfolds</div>', unsafe_allow_html=True)
-        st.markdown('<div class="report-section-note">Three phases only: what opens, what develops, and what the month asks you to decide by the end.</div>', unsafe_allow_html=True)
+        st.markdown("## How the month unfolds")
+        st.caption("Three phases only: what opens, what develops, and what the month asks you to decide by the end.")
         for index, chapter in enumerate(chapters):
             paragraphs = _compact_monthly_paragraphs(chapter, maximum=2)
             body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in paragraphs)
             stage = stage_labels[min(index, len(stage_labels) - 1)]
             date_range = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading monthly-phase-reading">
+                f"""<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(stage)} · {escape(date_range)}</div>
-  <div class="report-item-title" role="heading" aria-level="3">{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase"))}</div>
+  <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase"))}</h3>
   {body}
 </div>""",
                 unsafe_allow_html=True,
@@ -9777,16 +9837,16 @@ def _render_snapshot_monthly_report(
 
     key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
     if key_dates:
-        st.markdown('<div class="report-section-title" role="heading" aria-level="2">Key dates</div>', unsafe_allow_html=True)
-        st.markdown('<div class="report-section-note">Keep these dates. The interpretation stays brief so the calendar remains usable.</div>', unsafe_allow_html=True)
+        st.markdown("## Key dates")
+        st.caption("Keep these dates. The interpretation stays brief so the calendar remains usable.")
         for item in key_dates:
             date_label = str(getattr(item, "date_label", "") or "")
             consequence = str(getattr(item, "consequence", "") or "Key date")
             response = str(getattr(item, "response", "") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading monthly-key-date-reading">
+                f"""<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(date_label)}</div>
-  <div class="report-key-date-title" role="heading" aria-level="3">{escape(consequence)}</div>
+  <h3>{escape(consequence)}</h3>
   <p>{escape(response)}</p>
 </div>""",
                 unsafe_allow_html=True,
@@ -10046,11 +10106,11 @@ def _render_snapshot_yearly_report(
         display_end = timing_report.end_date
 
     st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Your Year Ahead</div>', unsafe_allow_html=True)
-    st.markdown("### Read the year")
+    st.markdown("## Read the year")
     year_facts = _paid_yearly_timing_facts(timing_report)
     guided_year = _guided_luna_copy("yearly", year_facts)
     if guided_year:
-        _render_guided_luna_story(guided_year, "Luna's strategic map")
+        _render_signature_style_story(guided_year, "Luna's strategic map")
     else:
         _render_voice_unavailable(facts_label="personal year-ahead calculation")
 
