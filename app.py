@@ -71,7 +71,12 @@ from natal_snapshot import (
     build_natal_snapshot,
     natal_wheel_svg,
     encode_natal_profile,
+    decode_natal_profile,
     natal_profile_summary,
+    NatalPosition,
+    NatalSnapshot,
+    NATAL_PROFILE_ORDER,
+    detect_natal_aspects,
 )
 from birthday_card import (
     birthday_card_filename,
@@ -392,6 +397,15 @@ def _render_voice_unavailable(*, facts_label: str = "calculated evidence below")
 def _luna_evidence_panel(label: str = "Why Luna sees this", *, expanded: bool = False):
     """Global customer-facing home for technical astrology/calculation evidence."""
     return st.expander(label, expanded=expanded)
+
+
+def _snapshot_page_heading(eyebrow: str, title: str, intro: str = "") -> None:
+    """One customer-facing page heading system, based on Natal Snapshot."""
+    title_html = escape(str(title or "")).replace("\n", "<br>")
+    st.markdown(f'<div class="eyebrow">{escape(str(eyebrow or ""))}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="editorial-title">{title_html}</div>', unsafe_allow_html=True)
+    if intro:
+        st.markdown(f'<div class="natal-intro">{escape(str(intro))}</div>', unsafe_allow_html=True)
 
 
 def _render_guided_luna_story(copy: dict, kicker: str) -> None:
@@ -2690,6 +2704,7 @@ def top_navigation(current_path: str) -> None:
         ("weekly-view", "Weekly View"),
         ("birthday-card", "Birthday Card"),
         (monthly_path, "This Month"),
+        ("reports", "Reports"),
         ("timing-map", "Your Year Ahead"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
@@ -3330,9 +3345,8 @@ def payment_success_page() -> None:
                 attachment_bytes=pdf_bytes,
                 attachment_filename=pdf_name,
             )
-            render_yearly_experience(
+            _render_snapshot_yearly_report(
                 result,
-                show_print=True,
                 order_reference=order_reference,
             )
         else:
@@ -3747,9 +3761,8 @@ def _render_owner_report(order: dict, key_context: str) -> None:
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
         )
     else:
-        render_yearly_experience(
+        _render_snapshot_yearly_report(
             output["result"],
-            show_print=True,
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
         )
 
@@ -4427,6 +4440,12 @@ def _render_lean_daily(path: str) -> None:
         path,
     )
 
+    _snapshot_page_heading(
+        "Free · Daily Horoscope",
+        "Your Daily Horoscope",
+        "Choose your Sun sign. Luna keeps the reading simple: the calculated sky, one connected interpretation and one practical move.",
+    )
+
     saved_sign = st.session_state.get("landing-daily-sign-v3195") or _query_daily_sign()
     saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
     st.markdown(
@@ -4545,6 +4564,11 @@ def _youtube_playable_url(url: str) -> str:
 def weekly_page() -> None:
     set_page_metadata("Weekly Astrology | Luna Convergence",
                       "Your sign's week ahead, calculated and interpreted by Luna.", "/weekly-view")
+    _snapshot_page_heading(
+        "Free · Week Ahead",
+        "Your Week Ahead",
+        "Choose your Sun sign and week. Luna keeps the same editorial hierarchy used across the site, then adds the calculated weekly story and your move.",
+    )
     today = datetime.now(ZoneInfo(DEFAULT_TIMEZONE)).date()
     sign = st.selectbox("What is your Sun sign (star sign)?", SIGNS, index=None,
                         placeholder="Choose your star sign", key="weekly-sign-v331")
@@ -5676,11 +5700,10 @@ def houses_page() -> None:
         "Learn what the twelve astrological houses mean for identity, income, communication, home, work, relationships, career and long-term goals.",
         "/house-guide",
     )
-    st.markdown('<div class="eyebrow">House guide</div>', unsafe_allow_html=True)
-    st.markdown("# The twelve areas of life")
-    st.markdown(
-        "**Planets** describe what force is operating. **Signs** describe how it behaves. "
-        "**Houses** describe where in life it operates."
+    _snapshot_page_heading(
+        "Free · House Guide",
+        "The twelve areas of life",
+        "Planets describe what force is operating. Signs describe how it behaves. Houses describe where in life it operates.",
     )
     sign = st.selectbox(
         "Show the whole-sign house map for",
@@ -5868,10 +5891,10 @@ def _free_monthly_profile() -> tuple[str | None, str, str, int, int, bool]:
         or _query_daily_sign()
     )
     saved_index = SIGNS.index(saved_sign) if saved_sign in SIGNS else None
-    st.markdown('<div class="eyebrow">FREE · MONTHLY BY SIGN</div>', unsafe_allow_html=True)
-    st.markdown(
-        "Choose your Sun sign for the shared monthly story, key dates and whole-sign life areas. "
-        "Birth details are only requested for the paid Personal Monthly report."
+    _snapshot_page_heading(
+        "Free · Monthly by Sign",
+        "This Month",
+        "Choose your Sun sign for the shared monthly story, key dates and whole-sign life areas. Birth details are only requested for the paid Personal Monthly report.",
     )
     sign = st.selectbox(
         "What is your Sun sign (star sign)?",
@@ -8920,6 +8943,226 @@ def _render_natal_signature_grid(snapshot, heading: str = "Your natal signature"
     st.markdown(f'<div class="natal-signature">{signature_html}</div>', unsafe_allow_html=True)
 
 
+def _snapshot_sign_from_longitude(longitude: float) -> str:
+    return SIGNS[int((float(longitude) % 360.0) // 30.0)]
+
+
+def _snapshot_dominance_from_positions(positions) -> tuple[str, str]:
+    element_by_sign = {
+        "Aries": "Fire", "Leo": "Fire", "Sagittarius": "Fire",
+        "Taurus": "Earth", "Virgo": "Earth", "Capricorn": "Earth",
+        "Gemini": "Air", "Libra": "Air", "Aquarius": "Air",
+        "Cancer": "Water", "Scorpio": "Water", "Pisces": "Water",
+    }
+    mode_by_sign = {
+        "Aries": "Cardinal", "Cancer": "Cardinal", "Libra": "Cardinal", "Capricorn": "Cardinal",
+        "Taurus": "Fixed", "Leo": "Fixed", "Scorpio": "Fixed", "Aquarius": "Fixed",
+        "Gemini": "Mutable", "Virgo": "Mutable", "Sagittarius": "Mutable", "Pisces": "Mutable",
+    }
+    weights = {
+        "Sun": 2.0, "Moon": 2.0, "Mercury": 1.4, "Venus": 1.4, "Mars": 1.4,
+        "Jupiter": 1.0, "Saturn": 1.0, "Uranus": 0.7, "Neptune": 0.7, "Pluto": 0.7,
+    }
+    elements = {key: 0.0 for key in ("Fire", "Earth", "Air", "Water")}
+    modes = {key: 0.0 for key in ("Cardinal", "Fixed", "Mutable")}
+    for item in positions:
+        weight = weights.get(str(item.planet), 1.0)
+        elements[element_by_sign[item.sign]] += weight
+        modes[mode_by_sign[item.sign]] += weight
+    return max(elements, key=elements.get), max(modes, key=modes.get)
+
+
+def _snapshot_from_encoded_natal_profile(profile_value: str, *, timezone_name: str = "UTC"):
+    """Restore the derived natal geometry stored for paid reports."""
+    profile = decode_natal_profile(profile_value)
+    if not profile:
+        return None
+
+    longitudes = list(profile.get("p") or [])
+    houses = list(profile.get("h") or [])
+    positions = []
+    for index, name in enumerate(NATAL_PROFILE_ORDER):
+        longitude = float(longitudes[index]) % 360.0
+        house_value = None
+        if index < len(houses):
+            try:
+                parsed_house = int(houses[index] or 0)
+            except (TypeError, ValueError):
+                parsed_house = 0
+            house_value = parsed_house or None
+        positions.append(
+            NatalPosition(
+                planet=name,
+                longitude=longitude,
+                sign=_snapshot_sign_from_longitude(longitude),
+                degree=longitude % 30.0,
+                retrograde=False,
+                house=house_value,
+                speed=0.0,
+            )
+        )
+
+    angles = list(profile.get("a") or [])
+    ascendant = None
+    midheaven = None
+    if len(angles) >= 1 and angles[0] is not None:
+        longitude = float(angles[0]) % 360.0
+        ascendant = NatalPosition(
+            "Ascendant", longitude, _snapshot_sign_from_longitude(longitude),
+            longitude % 30.0, False, 1, 0.0,
+        )
+    if len(angles) >= 2 and angles[1] is not None:
+        longitude = float(angles[1]) % 360.0
+        midheaven = NatalPosition(
+            "Midheaven", longitude, _snapshot_sign_from_longitude(longitude),
+            longitude % 30.0, False, None, 0.0,
+        )
+
+    aspects = tuple(detect_natal_aspects(positions))
+    dominant_element, dominant_modality = _snapshot_dominance_from_positions(positions)
+    moon = next((item for item in positions if item.planet == "Moon"), None)
+    return NatalSnapshot(
+        birth_date=date(1900, 1, 1),
+        birth_time_known=bool(profile.get("t")),
+        timezone_name=timezone_name,
+        location_name=None,
+        positions=tuple(positions),
+        aspects=aspects,
+        ascendant=ascendant,
+        midheaven=midheaven,
+        sun_uncertain=(),
+        moon_uncertain=(moon.sign,) if moon is not None else (),
+        themes=(),
+        signatures=(),
+        concentration_theme={},
+        dominant_element=dominant_element,
+        dominant_modality=dominant_modality,
+    )
+
+
+def _snapshot_natal_facts(snapshot) -> dict:
+    return {
+        "birth_time_precision": "known" if bool(getattr(snapshot, "birth_time_known", False)) else "unknown",
+        "dominant_element": str(getattr(snapshot, "dominant_element", "")),
+        "dominant_modality": str(getattr(snapshot, "dominant_modality", "")),
+        "moon_uncertain_between": list(getattr(snapshot, "moon_uncertain", ()) or ()),
+        "positions": [
+            {
+                "planet": item.planet,
+                "sign": item.sign,
+                "degree": round(float(item.degree), 2),
+                "house": item.house,
+            }
+            for item in (getattr(snapshot, "positions", ()) or ())
+        ],
+        "ascendant": snapshot.ascendant.sign if getattr(snapshot, "ascendant", None) else None,
+        "midheaven": snapshot.midheaven.sign if getattr(snapshot, "midheaven", None) else None,
+        "aspects": [
+            {
+                "planet_1": item.planet1,
+                "aspect": item.name,
+                "planet_2": item.planet2,
+                "orb": round(float(item.orb), 2),
+                "strength": round(float(item.strength), 3),
+            }
+            for item in list(getattr(snapshot, "aspects", ()) or ())[:12]
+        ],
+    }
+
+
+def _render_snapshot_natal_core(
+    snapshot,
+    *,
+    precision_note: str = "",
+    birth_confirmation_html: str = "",
+    evidence_label: str = "Why Luna sees this · chart evidence",
+) -> None:
+    """Canonical Snapshot body shared by free Natal and both paid personal reports."""
+    if snapshot is None:
+        return
+
+    _render_natal_signature_grid(snapshot)
+    guided_natal = _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
+    st.markdown("### Read the pattern")
+    if guided_natal:
+        _render_guided_luna_story(guided_natal, "Luna reads the whole chart")
+    else:
+        _render_voice_unavailable(facts_label="natal chart calculation")
+
+    if birth_confirmation_html:
+        st.markdown(birth_confirmation_html, unsafe_allow_html=True)
+
+    st.markdown(natal_wheel_svg(snapshot, size=760), unsafe_allow_html=True)
+    if precision_note:
+        st.caption(precision_note)
+    elif bool(getattr(snapshot, "birth_time_known", False)) and getattr(snapshot, "ascendant", None) is not None:
+        st.caption("Tropical geocentric positions · Whole-sign houses · Swiss Ephemeris")
+    else:
+        st.caption("Birth time or location precision is limited; Luna leaves unavailable angles or houses out rather than inventing them.")
+
+    position_map = {item.planet: item for item in (getattr(snapshot, "positions", ()) or ())}
+    aspect_items = list(getattr(snapshot, "aspects", ()) or ())[:6]
+    signature_facts = {
+        "items": [
+            {
+                "source_id": f"natal-aspect:{index}",
+                "planet_1": aspect.planet1,
+                "planet_1_sign": position_map[aspect.planet1].sign if aspect.planet1 in position_map else None,
+                "planet_1_house": position_map[aspect.planet1].house if aspect.planet1 in position_map else None,
+                "aspect": aspect.name,
+                "planet_2": aspect.planet2,
+                "planet_2_sign": position_map[aspect.planet2].sign if aspect.planet2 in position_map else None,
+                "planet_2_house": position_map[aspect.planet2].house if aspect.planet2 in position_map else None,
+                "orb": round(float(aspect.orb), 2),
+                "strength": round(float(aspect.strength), 3),
+            }
+            for index, aspect in enumerate(aspect_items)
+        ]
+    }
+    generated = _guided_luna_collection("natal_signatures", signature_facts) if signature_facts["items"] else None
+    voices = list((generated or {}).get("items", []))
+    labels = {
+        item["source_id"]: f"{item['planet_1']} {item['aspect']} {item['planet_2']} · {item['orb']:.2f}° orb"
+        for item in signature_facts["items"]
+    }
+    if voices:
+        st.markdown("## Your strongest signatures")
+        st.caption("Luna translates the strongest calculated aspects into lived behaviour without replacing the chart evidence.")
+        for voice in voices:
+            source_id = str(voice["source_id"])
+            html = (
+                '<div class="natal-signature-reading">'
+                f'<div class="natal-evidence">{escape(labels.get(source_id, source_id))}</div>'
+                f'<h3>{escape(str(voice["headline"]))}</h3>'
+                f'<p>{escape(str(voice["story"]))}</p>'
+                '<div class="natal-signature-meta">'
+                f'<div><span>Remember</span>{escape(str(voice["affirmation"]))}</div>'
+                f'<div><span>Your move</span>{escape(str(voice["your_move"]))}</div>'
+                '</div></div>'
+            )
+            st.markdown(html, unsafe_allow_html=True)
+
+    with _luna_evidence_panel(evidence_label):
+        reconstructed = getattr(snapshot, "birth_date", None) == date(1900, 1, 1)
+        rows = [
+            {
+                "Point": item.planet,
+                "Position": (
+                    f"{int(item.degree)}°{int(round((float(item.degree) - int(item.degree)) * 60)):02d}′ {item.sign}"
+                    if reconstructed else item.label()
+                ),
+                "House": item.house if item.house is not None else "—",
+            }
+            for item in (getattr(snapshot, "positions", ()) or ())
+        ]
+        if rows:
+            st.dataframe(rows, use_container_width=True, hide_index=True)
+        if getattr(snapshot, "aspects", None):
+            st.markdown("**Strongest aspects**")
+            for aspect in list(snapshot.aspects)[:10]:
+                st.markdown(f"- {aspect.planet1} {aspect.name} {aspect.planet2} · {aspect.orb:.2f}° orb")
+
+
 
 def _render_paid_natal_signature_summary(result: dict) -> None:
     """Reuse the Snapshot signature-grid treatment for paid personal reports."""
@@ -8990,8 +9233,17 @@ def _render_snapshot_monthly_report(
         unsafe_allow_html=True,
     )
 
-    _render_paid_natal_signature_summary(result)
+    paid_snapshot = _snapshot_from_encoded_natal_profile(
+        str(result.get("natal_profile") or ""),
+        timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+    )
+    if paid_snapshot is not None:
+        _render_snapshot_natal_core(
+            paid_snapshot,
+            precision_note=str(result.get("natal_precision") or ""),
+        )
 
+    st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Personal Monthly</div>', unsafe_allow_html=True)
     st.markdown("### Read the month")
     _render_guided_luna_story(_snapshot_monthly_story(narrative), "Luna reads the month")
 
@@ -9088,6 +9340,117 @@ def _render_snapshot_monthly_report(
         st.caption(f"Order reference · {order_reference}")
     st.markdown('</section>', unsafe_allow_html=True)
 
+
+def _render_snapshot_yearly_report(
+    result: dict,
+    *,
+    order_reference: str = "",
+) -> None:
+    """Render paid Year Ahead through the same Snapshot presentation system."""
+    st.markdown('<section class="natal-shell paid-yearly-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Paid · Your Year Ahead</div>', unsafe_allow_html=True)
+    game_map = dict(result.get("yearly_game_map") or {})
+    headline = str(game_map.get("headline") or "Your Year Ahead")
+    st.markdown(f'<div class="editorial-title">{escape(headline)}</div>', unsafe_allow_html=True)
+    label = str(result.get("label") or "Rolling 12 months")
+    central = str(game_map.get("central_storyline") or "The long game becomes visible.")
+    st.markdown(
+        f'<div class="natal-intro">{escape(label)} · {escape(central)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    paid_snapshot = _snapshot_from_encoded_natal_profile(
+        str(result.get("natal_profile") or ""),
+        timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+    )
+    if paid_snapshot is not None:
+        _render_snapshot_natal_core(
+            paid_snapshot,
+            precision_note=str(result.get("natal_precision") or ""),
+        )
+
+    st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Your Year Ahead</div>', unsafe_allow_html=True)
+    st.markdown("### Read the year")
+    paragraphs = [
+        str(item).strip()
+        for item in (game_map.get("narrator_paragraphs") or ())
+        if str(item).strip()
+    ]
+    if not paragraphs:
+        paragraphs = [central]
+    for paragraph in paragraphs:
+        st.markdown(f'<div class="luna-prose"><p>{escape(paragraph)}</p></div>', unsafe_allow_html=True)
+
+    games = list(game_map.get("games") or [])[:3]
+    if games:
+        st.markdown("## Your strongest yearly themes")
+        for item in games:
+            remember = str(item.get("advantage") or item.get("do_line") or "")
+            move = str(item.get("do_line") or item.get("question") or "")
+            st.markdown(
+                '<div class="natal-signature-reading">'
+                '<div class="natal-evidence">Annual theme</div>'
+                f'<h3>{escape(str(item.get("title") or "Yearly theme"))}</h3>'
+                f'<p>{escape(str(item.get("question") or ""))}</p>'
+                '<div class="natal-signature-meta">'
+                f'<div><span>Remember</span>{escape(remember)}</div>'
+                f'<div><span>Your move</span>{escape(move)}</div>'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+
+    rounds = list(game_map.get("rounds") or [])
+    if rounds:
+        st.markdown("## How the year unfolds")
+        st.caption("Each month changes the options available next.")
+        for item in rounds:
+            meta = " · ".join(
+                bit for bit in (str(item.get("month") or ""), str(item.get("role") or "")) if bit
+            )
+            st.markdown(
+                '<div class="natal-signature-reading">'
+                f'<div class="natal-evidence">{escape(meta)}</div>'
+                f'<h3>{escape(str(item.get("headline") or "Monthly turning point"))}</h3>'
+                f'<p>{escape(str(item.get("central_storyline") or ""))}</p>'
+                '<div class="natal-signature-meta">'
+                f'<div><span>Remember</span>{escape(str(item.get("dominant_game") or ""))}</div>'
+                f'<div><span>Your move</span>{escape(str(item.get("key_window") or ""))}</div>'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+
+    moves = []
+    if games:
+        first_move = str(games[0].get("do_line") or "").strip()
+        if first_move:
+            moves.append(first_move)
+    if list(game_map.get("acts") or []):
+        moves.append("When the rules change, revise the plan. Do not drag the old position forward.")
+    moves.append("End the year with fewer options and cleaner terms.")
+    st.markdown("## Your move")
+    for item in dict.fromkeys(move for move in moves if move):
+        st.markdown(f"- {item}")
+
+    with _luna_evidence_panel("Why Luna sees this · yearly calculations"):
+        transitions = list(result.get("major_transitions") or [])
+        if transitions:
+            st.markdown("**Major yearly transitions**")
+            for item in transitions[:12]:
+                st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}")
+        dominant = list(result.get("dominant_houses") or [])
+        if dominant:
+            st.markdown("**Dominant calculated life areas**")
+            for item in dominant[:8]:
+                st.markdown(
+                    f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
+                )
+        st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
+        st.caption(LUNA_TRUST_DISCLOSURE)
+
+    if order_reference:
+        st.caption(f"Order reference · {order_reference}")
+    st.markdown('</section>', unsafe_allow_html=True)
+
 def natal_snapshot_page() -> None:
     set_page_metadata(
         "Free Natal Snapshot | Luna Convergence",
@@ -9170,43 +9533,6 @@ def natal_snapshot_page() -> None:
 
     track_event("free_natal_snapshot_generated", {"birth_time_known": bool(time_known)})
 
-    _render_natal_signature_grid(snapshot)
-
-    natal_facts = {
-        "birth_time_precision": "known" if snapshot.birth_time_known else "unknown",
-        "dominant_element": snapshot.dominant_element,
-        "dominant_modality": snapshot.dominant_modality,
-        "moon_uncertain_between": list(snapshot.moon_uncertain),
-        "positions": [
-            {
-                "planet": item.planet,
-                "sign": item.sign,
-                "degree": round(item.degree, 2),
-                "retrograde": item.retrograde,
-                "house": item.house,
-            }
-            for item in snapshot.positions
-        ],
-        "ascendant": snapshot.ascendant.sign if snapshot.ascendant else None,
-        "midheaven": snapshot.midheaven.sign if snapshot.midheaven else None,
-        "aspects": [
-            {
-                "planet_1": item.planet1,
-                "aspect": item.name,
-                "planet_2": item.planet2,
-                "orb": round(item.orb, 2),
-                "strength": round(item.strength, 3),
-            }
-            for item in snapshot.aspects[:12]
-        ],
-    }
-    guided_natal = _guided_luna_copy("natal", natal_facts)
-    st.markdown("### Read the pattern")
-    if guided_natal:
-        _render_guided_luna_story(guided_natal, "Luna reads the whole chart")
-    else:
-        _render_voice_unavailable(facts_label="natal chart calculation")
-
     birth_bits = [birth_date.strftime("%d %B %Y")]
     if time_known and birth_time_value is not None:
         birth_bits.append(birth_time_value.strftime("%H:%M"))
@@ -9217,92 +9543,34 @@ def natal_snapshot_page() -> None:
     else:
         birth_bits.append("Birth time unknown")
         birth_precision = "Angles and houses intentionally omitted"
-    st.markdown(
-        f'<div class="natal-birth-confirm"><strong>Birth data</strong> · {escape(" · ".join(birth_bits))}<br><span>{escape(birth_precision)}</span></div>',
-        unsafe_allow_html=True,
+    birth_confirmation_html = (
+        f'<div class="natal-birth-confirm"><strong>Birth data</strong> · {escape(" · ".join(birth_bits))}'
+        f'<br><span>{escape(birth_precision)}</span></div>'
     )
 
-    st.markdown(natal_wheel_svg(snapshot, size=760), unsafe_allow_html=True)
-
-    if not time_known:
-        if len(snapshot.moon_uncertain) > 1:
-            st.info(
-                "Birth time is unknown, and the Moon changed sign during this date. "
-                f"Luna will not choose between {' / '.join(snapshot.moon_uncertain)} without a time."
-            )
-        else:
-            st.caption(
-                "Birth time unknown: planetary positions are shown as a date-only snapshot. "
-                "Ascendant, Midheaven and houses are intentionally omitted."
-            )
+    if not time_known and len(snapshot.moon_uncertain) > 1:
+        precision_note = (
+            "Birth time is unknown, and the Moon changed sign during this date. "
+            f"Luna will not choose between {' / '.join(snapshot.moon_uncertain)} without a time."
+        )
+    elif not time_known:
+        precision_note = (
+            "Birth time unknown: planetary positions are shown as a date-only snapshot. "
+            "Ascendant, Midheaven and houses are intentionally omitted."
+        )
     elif snapshot.ascendant is None:
-        st.caption(
+        precision_note = (
             "Exact time supplied, but the birth location was not available. "
             "Planetary positions use the selected timezone; Ascendant and houses are intentionally omitted."
         )
     else:
-        st.caption("Tropical geocentric positions · Whole-sign houses · Swiss Ephemeris")
+        precision_note = "Tropical geocentric positions · Whole-sign houses · Swiss Ephemeris"
 
-    position_map = {item.planet: item for item in snapshot.positions}
-    signature_facts = {
-        "items": [
-            {
-                "source_id": f"natal-aspect:{index}",
-                "planet_1": aspect.planet1,
-                "planet_1_sign": position_map[aspect.planet1].sign if aspect.planet1 in position_map else None,
-                "planet_1_house": position_map[aspect.planet1].house if aspect.planet1 in position_map else None,
-                "aspect": aspect.name,
-                "planet_2": aspect.planet2,
-                "planet_2_sign": position_map[aspect.planet2].sign if aspect.planet2 in position_map else None,
-                "planet_2_house": position_map[aspect.planet2].house if aspect.planet2 in position_map else None,
-                "orb": round(aspect.orb, 2),
-                "strength": round(aspect.strength, 3),
-            }
-            for index, aspect in enumerate(snapshot.aspects[:6])
-        ]
-    }
-    generated_signatures = _guided_luna_collection("natal_signatures", signature_facts)
-    signature_voices = list((generated_signatures or {}).get("items", []))
-    signature_labels = {
-        item["source_id"]: (
-            f"{item['planet_1']} {item['aspect']} {item['planet_2']} · {item['orb']:.2f}° orb"
-        )
-        for item in signature_facts["items"]
-    }
-
-    if signature_voices:
-        st.markdown("## Your strongest signatures")
-        st.caption(
-            "Luna translates the strongest calculated aspects into lived behaviour without replacing the chart evidence."
-        )
-        for voice in signature_voices:
-            st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(signature_labels.get(str(voice["source_id"]), str(voice["source_id"])))}</div>
-  <h3>{escape(str(voice["headline"]))}</h3>
-  <p>{escape(str(voice["story"]))}</p>
-  <div class="natal-signature-meta">
-    <div><span>Remember</span>{escape(str(voice["affirmation"]))}</div>
-    <div><span>Your move</span>{escape(str(voice["your_move"]))}</div>
-  </div>
-</div>''',
-                unsafe_allow_html=True,
-            )
-
-    with _luna_evidence_panel("Why Luna sees this · chart evidence"):
-        rows = []
-        for item in snapshot.positions:
-            rows.append(
-                {
-                    "Point": item.planet,
-                    "Position": item.label(),
-                    "House": item.house if item.house is not None else "—",
-                }
-            )
-        st.dataframe(rows, use_container_width=True, hide_index=True)
-        st.markdown("**Strongest aspects**")
-        for aspect in snapshot.aspects[:10]:
-            st.markdown(f"- {aspect.label()}")
+    _render_snapshot_natal_core(
+        snapshot,
+        precision_note=precision_note,
+        birth_confirmation_html=birth_confirmation_html,
+    )
 
     st.markdown(
         '<a class="lean-monthly-link" href="/timing-map">Build your Year Ahead →</a>',
@@ -11122,15 +11390,12 @@ def solar_year_page() -> None:
         "Explore the twelve tropical solar phases, four equinox and solstice gates, local daylight movement and the activated whole-sign house.",
         "/solar-year",
     )
-    st.markdown('<div class="eyebrow">Explainable astrology / solar structure</div>', unsafe_allow_html=True)
-    st.markdown('<a class="lean-monthly-link" href="/natal-snapshot">Create your free Natal Snapshot →</a>', unsafe_allow_html=True)
-    st.markdown('<div class="editorial-title">The Solar<br>Convergence</div>', unsafe_allow_html=True)
-    _render_luna_prose(
-        "Use the Sun as the clock. Then make the timing practical. "
-        "Your location changes the light around you while the tropical sequence stays the same. "
-        "Use your sign to see which part of life needs the next move.",
-        product="solar",
+    _snapshot_page_heading(
+        "Free · Solar Structure",
+        "The Solar\nConvergence",
+        "Use the Sun as the clock. Then make the timing practical. Your location changes the light around you while the tropical sequence stays the same. Use your sign to see which part of life needs the next move.",
     )
+    st.markdown('<a class="lean-monthly-link" href="/natal-snapshot">Create your free Natal Snapshot →</a>', unsafe_allow_html=True)
 
     st.markdown("## The Luna Solar Clock")
     st.markdown(
