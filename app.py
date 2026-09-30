@@ -788,7 +788,7 @@ def install_css() -> None:
     st.markdown(
         """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=IBM+Plex+Mono:wght@400;500;600&family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=IBM+Plex+Mono:wght@400;500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap');
 
 :root {
     --white: #ffffff;
@@ -1008,7 +1008,7 @@ a {
     color:var(--ink);
     font-size:clamp(1.14rem, 1.8vw, 1.45rem);
     line-height:1.5;
-    font-weight:350;
+    font-weight:400;
 }
 
 .hero-rule {
@@ -1103,7 +1103,7 @@ a {
     font-family:"Josefin Sans", sans-serif;
     font-size:clamp(1.16rem, 1.7vw, 1.38rem);
     line-height:1.68;
-    font-weight:350;
+    font-weight:400;
 }
 
 .relationship-card {
@@ -1479,7 +1479,7 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
     font-size:clamp(1rem,1.15vw,1.08rem);
     line-height:1.72;
-    font-weight:300;
+    font-weight:400;
     letter-spacing:0;
     color:var(--black);
 }
@@ -1499,13 +1499,13 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
     font-size:1rem;
     line-height:1.72;
-    font-weight:300;
+    font-weight:400;
 }
 .timing-story-copy p {
     max-width:760px;
     margin:0 0 1.15rem;
     line-height:1.72;
-    font-weight:300;
+    font-weight:400;
 }
 .timing-story {
     padding-bottom:2.7rem;
@@ -1717,26 +1717,17 @@ a {
     max-width:720px;
 }
 
-/* One quiet sans-serif treatment for secondary paid-report rows.
-   Activation titles, phase titles, key-date consequences and their body copy
-   deliberately share one size and one light weight. Hierarchy comes from the
-   Bodoni section heading and mono evidence line, not extra bold text. */
-.report-flat-reading h3,
-.report-flat-reading p {
+/* Paid report rows use the exact same typographic grammar as Your strongest signatures:
+   mono evidence -> Bodoni H3 -> one regular-weight Josefin Sans body. */
+.natal-signature-reading p {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif !important;
-    font-size:1.02rem !important;
+    font-size:1.03rem !important;
     line-height:1.65 !important;
-    font-weight:300 !important;
+    font-weight:400 !important;
     letter-spacing:0 !important;
 }
-.report-flat-reading h3 {
-    margin:.28rem 0 .55rem !important;
-}
-.report-flat-reading p {
-    margin:.35rem 0 .7rem !important;
-}
-.report-flat-reading p strong {
-    font-weight:inherit !important;
+.natal-signature-reading p strong {
+    font-weight:400 !important;
 }
 
 .luna-guidance-line {
@@ -1764,7 +1755,7 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif !important;
     font-size:1rem !important;
     line-height:1.6 !important;
-    font-weight:350 !important;
+    font-weight:400 !important;
 }
 
 .luna-move-line {
@@ -2198,7 +2189,7 @@ hr {
     font-family:"Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
     font-size:clamp(1.08rem, 1.7vw, 1.28rem);
     line-height:1.68;
-    font-weight:350;
+    font-weight:400;
 }
 
 .weekly-synthesis-rule {
@@ -2330,7 +2321,7 @@ hr {
     font-family:"Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
     font-size:clamp(1.08rem, 1.7vw, 1.28rem);
     line-height:1.68;
-    font-weight:350;
+    font-weight:400;
 }
 
 .weekly-studio-controls {
@@ -9830,7 +9821,7 @@ def _render_snapshot_monthly_report(
             date_label = str(item.get("date_label") or "")
             signal = str(item.get("signal") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading">
+                f"""<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(date_label)} · {escape(signal)}</div>
   <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
   <p>{escape(str(item.get("text") or ""))}</p>
@@ -9849,7 +9840,7 @@ def _render_snapshot_monthly_report(
             stage = stage_labels[min(index, len(stage_labels) - 1)]
             date_range = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading">
+                f"""<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(stage)} · {escape(date_range)}</div>
   <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly phase"))}</h3>
   {body}
@@ -9866,7 +9857,7 @@ def _render_snapshot_monthly_report(
             consequence = str(getattr(item, "consequence", "") or "Key date")
             response = str(getattr(item, "response", "") or "")
             st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading">
+                f"""<div class="natal-signature-reading">
   <div class="natal-evidence">{escape(date_label)}</div>
   <h3>{escape(consequence)}</h3>
   <p>{escape(response)}</p>
@@ -10144,7 +10135,7 @@ def _render_snapshot_yearly_report(
         for story in themes:
             area = _timing_story_life_area(story)
             st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading yearly-theme-reading">
+                f"""<div class="natal-signature-reading yearly-theme-reading">
   <div class="natal-evidence">{escape(_timing_signal_type(story))} · {escape(story.polarity)}</div>
   <h3>{escape(str(story.headline))}</h3>
   <p>{escape(area)}</p>
@@ -10190,7 +10181,7 @@ def _render_snapshot_yearly_report(
             headline = str(story.headline)
             body = str(story.summary)
             st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading yearly-transit-reading">
+                f"""<div class="natal-signature-reading yearly-transit-reading">
   <div class="natal-evidence">{escape(story.transit_planet)} {escape(story.aspect)} natal {escape(story.natal_target)} · active {escape(periods_label)}</div>
   <h3>{escape(headline)}</h3>
   <p>{escape(body)}</p>
@@ -10207,7 +10198,7 @@ def _render_snapshot_yearly_report(
         for row in roadmap:
             carry = f"<p><strong>Carry forward ·</strong> {escape(previous_signal)}</p>" if previous_signal else ""
             st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading yearly-roadmap-reading">
+                f"""<div class="natal-signature-reading yearly-roadmap-reading">
   <div class="natal-evidence">{escape(row['stage'])} · {escape(human_date(row['start']))} – {escape(human_date(row['end']))}</div>
   <h3>{escape(row['headline'])}</h3>
   <p><strong>Main signal ·</strong> {escape(row['signal'] + row['exact_label'])}</p>
