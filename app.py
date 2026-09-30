@@ -96,7 +96,12 @@ from weekly_view import (
     default_week_start,
     monday_for,
 )
-from luna_guided_voice import generate_guided_collection_copy, generate_guided_voice_copy
+from luna_guided_voice import (
+    generate_guided_collection_copy,
+    generate_guided_voice_copy,
+    validate_guided_collection_copy,
+    validate_guided_voice_copy,
+)
 from luna_report_bundle import assemble_report_bundle
 from timing_map import (
     build_timing_map,
@@ -273,6 +278,57 @@ def _voice_error(product: str) -> str:
     return _VOICE_ERRORS.get(product, "No provider response was accepted.")
 
 
+def _word_count(value: object) -> int:
+    return len(re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", str(value or "")))
+
+
+def _guided_voice_complete(copy: dict) -> tuple[bool, tuple[str, ...]]:
+    """Reject structurally valid but visibly incomplete Luna copy before publication."""
+    errors: list[str] = []
+    if not isinstance(copy, dict):
+        return False, ("Luna copy is not an object.",)
+
+    minimum_words = {
+        "headline": 3,
+        "opening": 8,
+        "affirmation": 6,
+        "your_move": 5,
+    }
+    for key, minimum in minimum_words.items():
+        if _word_count(copy.get(key)) < minimum:
+            errors.append(f"{key} is incomplete.")
+
+    story = copy.get("story") or []
+    if isinstance(story, str):
+        story = [story]
+    if not isinstance(story, (list, tuple)) or not story:
+        errors.append("story is missing.")
+    else:
+        for index, paragraph in enumerate(story, 1):
+            if _word_count(paragraph) < 12:
+                errors.append(f"story paragraph {index} is incomplete.")
+
+    return not errors, tuple(errors)
+
+
+def _guided_collection_complete(copy: dict) -> tuple[bool, tuple[str, ...]]:
+    """Apply the same completeness floor to generated card collections globally."""
+    errors: list[str] = []
+    if not isinstance(copy, dict):
+        return False, ("Luna collection is not an object.",)
+    items = copy.get("items") or []
+    if not isinstance(items, list) or not items:
+        return False, ("Luna collection is empty.",)
+    for index, item in enumerate(items, 1):
+        if not isinstance(item, dict):
+            errors.append(f"item {index} is not an object.")
+            continue
+        for key, minimum in (("headline", 3), ("story", 18), ("affirmation", 5), ("your_move", 5)):
+            if _word_count(item.get(key)) < minimum:
+                errors.append(f"item {index} {key} is incomplete.")
+    return not errors, tuple(errors)
+
+
 @st.cache_data(show_spinner=False, ttl=86400)
 def _cached_guided_luna_copy(
     product: str,
@@ -281,13 +337,22 @@ def _cached_guided_luna_copy(
     model: str,
     _api_key: str,
 ) -> dict:
-    return generate_guided_voice_copy(
-        product,
-        json.loads(facts_json),
-        base_url=base_url,
-        model=model,
-        api_key=_api_key,
-    )
+    facts = json.loads(facts_json)
+    last_errors: tuple[str, ...] = ()
+    for _attempt in range(3):
+        copy = generate_guided_voice_copy(
+            product,
+            facts,
+            base_url=base_url,
+            model=model,
+            api_key=_api_key,
+        )
+        valid, schema_errors = validate_guided_voice_copy(product, copy, facts)
+        complete, completeness_errors = _guided_voice_complete(copy)
+        if valid and complete:
+            return copy
+        last_errors = tuple(schema_errors) + tuple(completeness_errors)
+    raise ValueError("Luna voice failed validation after three attempts: " + "; ".join(last_errors))
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -298,13 +363,22 @@ def _cached_guided_luna_collection(
     model: str,
     _api_key: str,
 ) -> dict:
-    return generate_guided_collection_copy(
-        product,
-        json.loads(facts_json),
-        base_url=base_url,
-        model=model,
-        api_key=_api_key,
-    )
+    facts = json.loads(facts_json)
+    last_errors: tuple[str, ...] = ()
+    for _attempt in range(2):
+        copy = generate_guided_collection_copy(
+            product,
+            facts,
+            base_url=base_url,
+            model=model,
+            api_key=_api_key,
+        )
+        valid, schema_errors = validate_guided_collection_copy(product, copy, facts)
+        complete, completeness_errors = _guided_collection_complete(copy)
+        if valid and complete:
+            return copy
+        last_errors = tuple(schema_errors) + tuple(completeness_errors)
+    raise ValueError("Luna collection failed validation after two attempts: " + "; ".join(last_errors))
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -705,23 +779,26 @@ h1,
 h2,
 [data-testid="stMarkdownContainer"] h2 {
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, "Times New Roman", serif !important;
-    font-size:clamp(1.7rem, 3vw, 2.55rem) !important;
-    line-height:1.02 !important;
-    margin-top: 2.6rem !important;
+    font-size:clamp(1.9rem, 2.7vw, 2.2rem) !important;
+    line-height:1.04 !important;
+    margin-top:3rem !important;
+    margin-bottom:.95rem !important;
 }
 
 h3,
 [data-testid="stMarkdownContainer"] h3 {
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, "Times New Roman", serif !important;
-    font-size:clamp(1.7rem, 3vw, 2.55rem) !important;
-    line-height:1.12 !important;
+    font-size:clamp(1.3rem, 1.8vw, 1.5rem) !important;
+    line-height:1.16 !important;
+    margin-top:1.35rem !important;
+    margin-bottom:.65rem !important;
 }
 
 p, li {
     font-family: "Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
-    font-size: 1.08rem;
-    line-height: 1.62;
-    font-weight: 400;
+    font-size:1.03rem;
+    line-height:1.65;
+    font-weight:400;
 }
 
 a {
@@ -1510,6 +1587,41 @@ a {
 
 .natal-signature-reading p {
     max-width:720px;
+}
+
+/* Global report hierarchy: section > story > body > evidence.
+   Product-specific hero titles retain their explicit display sizes above. */
+.paid-monthly-shell h2,
+.paid-yearly-shell h2 {
+    font-size:clamp(1.9rem,2.7vw,2.2rem) !important;
+    line-height:1.04 !important;
+}
+
+.paid-monthly-shell h3,
+.paid-yearly-shell h3,
+.monthly-activation-reading h3,
+.monthly-phase-reading h3,
+.monthly-key-date-reading h3 {
+    font-size:clamp(1.3rem,1.8vw,1.5rem) !important;
+    line-height:1.16 !important;
+    margin:.3rem 0 .65rem !important;
+}
+
+.monthly-activation-reading p,
+.monthly-phase-reading p,
+.monthly-key-date-reading p,
+.paid-yearly-shell .natal-signature-reading p {
+    font-size:1.03rem;
+    line-height:1.65;
+    margin:.35rem 0 .75rem;
+}
+
+.monthly-key-date-reading {
+    padding:1rem 0 1.1rem;
+}
+
+.monthly-key-date-reading h3 {
+    max-width:690px;
 }
 
 .natal-signature-meta {
@@ -9078,6 +9190,49 @@ def _snapshot_natal_facts(snapshot) -> dict:
     }
 
 
+def _snapshot_natal_fallback_story(snapshot) -> dict:
+    """Complete deterministic fallback so Read the pattern never publishes a fragment."""
+    positions = {item.planet: item for item in (getattr(snapshot, "positions", ()) or ())}
+    sun = positions.get("Sun")
+    moon = positions.get("Moon")
+    aspects = list(getattr(snapshot, "aspects", ()) or ())
+    strongest = aspects[0] if aspects else None
+
+    if strongest is not None:
+        headline = f"{strongest.planet1} and {strongest.planet2} set the strongest recurring pattern"
+        opening = (
+            f"The tightest calculated pattern is {strongest.planet1} {strongest.name} {strongest.planet2}. "
+            "Treat it as a recurring tension or capacity to work with, not a fixed verdict about who you are."
+        )
+        story = [
+            (
+                f"Your Sun is in {sun.sign if sun else 'its calculated sign'} and your Moon is in "
+                f"{moon.sign if moon else 'its calculated sign'}. The chart therefore begins with the relationship "
+                "between conscious direction and instinctive response, then shows where the strongest aspect keeps bringing that relationship back into view."
+            ),
+            (
+                f"The chart is weighted toward {getattr(snapshot, 'dominant_element', 'a dominant element')} "
+                f"and {getattr(snapshot, 'dominant_modality', 'a dominant mode')}. Use that as context rather than a label: "
+                "the useful question is how consistently you can choose your response when the familiar pattern appears."
+            ),
+        ]
+    else:
+        headline = "Your chart has a recognisable baseline"
+        opening = "The calculated planetary positions describe a recurring baseline rather than a fixed personality verdict."
+        story = [
+            f"Your Sun is in {sun.sign if sun else 'its calculated sign'} and your Moon is in {moon.sign if moon else 'its calculated sign'}. Read them together rather than as separate labels.",
+            f"The chart is weighted toward {getattr(snapshot, 'dominant_element', 'its dominant element')} and {getattr(snapshot, 'dominant_modality', 'its dominant mode')}. Notice how that pattern shows up in repeated choices, not just in descriptions that sound familiar.",
+        ]
+
+    return {
+        "headline": headline,
+        "opening": opening,
+        "story": story,
+        "affirmation": "A recurring pattern becomes more useful once you can recognise it without automatically obeying it.",
+        "your_move": "Name one situation where this pattern repeats, then choose the response you want to practise next time.",
+    }
+
+
 def _render_snapshot_natal_core(
     snapshot,
     *,
@@ -9092,10 +9247,10 @@ def _render_snapshot_natal_core(
     _render_natal_signature_grid(snapshot)
     guided_natal = _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
     st.markdown("### Read the pattern")
-    if guided_natal:
-        _render_guided_luna_story(guided_natal, "Luna reads the whole chart")
-    else:
-        _render_voice_unavailable(facts_label="natal chart calculation")
+    _render_guided_luna_story(
+        guided_natal or _snapshot_natal_fallback_story(snapshot),
+        "Luna reads the whole chart",
+    )
 
     if birth_confirmation_html:
         st.markdown(birth_confirmation_html, unsafe_allow_html=True)
