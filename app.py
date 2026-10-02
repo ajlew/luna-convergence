@@ -146,7 +146,7 @@ from email_delivery import send_report_email
 from report_pdf import build_report_pdf, report_filename
 from site_config import (
     BRAND_NAME,
-    BUILD_LABEL,
+    BUILD_LABEL as CONFIG_BUILD_LABEL,
     EDITOR_PREVIEW_ENABLED,
     TAGLINE,
     SUBTITLE,
@@ -158,6 +158,11 @@ from site_config import (
     TIMEZONES,
     NAV_ITEMS,
 )
+
+# Live deployment identifier. Keep this in app.py so a single-file update
+# visibly confirms which application build is running in Streamlit.
+APP_VERSION = "v3.55"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Monthly Subject Story"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
