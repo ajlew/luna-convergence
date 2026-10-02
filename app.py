@@ -161,9 +161,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.59"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Single Voice Pass"
-PAID_MONTHLY_STORY_REVISION = "free-month-arc-subject-2"
+APP_VERSION = "v3.60"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Quota-Safe Weave"
+PAID_MONTHLY_STORY_REVISION = "free-month-arc-subject-3"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10416,7 +10416,7 @@ def _paid_monthly_weave_prompt(facts: dict, *, revision_note: str = "") -> str:
         "meaningful turning points, consequences and an ending that feels earned by what came before. The month does not need "
         "to be uniformly positive. Later paragraphs must remember earlier developments. Dates are orientation only; mention "
         "them when they clarify a turn, station, lunation, retrograde or personal hit. Never invent a date range.\n\n"
-        "Write one editorial article: one headline and 10-22 substantial paragraphs, aiming for about 1,800-2,400 words. "
+        "Write one editorial article: one headline and 10-22 substantial paragraphs, aiming for about 1,800-2,200 words. "
         "No bullets, mini-headings, day-by-day labels, house numbers, engine language, cosmic filler, therapy slogans, guarantees, "
         "Remember labels or Your move labels. Say each idea once.\n\n"
         "The JSON provenance arrays are INTERNAL validation only and are never shown to the customer. Put a strength id in "
@@ -10443,9 +10443,14 @@ def _cached_paid_monthly_weave(
         model=model,
         api_key=_api_key,
         timeout=150,
-        max_tokens=8000,
+        # About 2,000 words fits comfortably inside this completion budget.
+        # Keeping the ceiling bounded prevents one paid report from reserving
+        # an 8k-token completion against Groq's daily token quota.
+        max_tokens=3800,
         response_format=_paid_monthly_weave_response_format(),
-        rate_limit_retries=2,
+        # A TPD 429 can require tens of minutes to reset. Do not hold a paid
+        # page open retrying the same quota failure inside the provider layer.
+        rate_limit_retries=0,
     )
 
 
@@ -10614,6 +10619,12 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         except Exception as exc:
             _record_voice_error("paid_monthly_story_weave", exc)
             candidate = None
+            # Token-per-day exhaustion is not a bad draft and cannot be fixed
+            # by immediately asking the same provider again. Fail fast so the
+            # owner/customer can retry after the provider reset instead of
+            # waiting through a second guaranteed 429.
+            if "429" in str(exc) or "rate limit" in str(exc).casefold():
+                break
 
         if candidate is None:
             continue
