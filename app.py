@@ -161,8 +161,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.55"
-BUILD_LABEL = f"Luna {APP_VERSION} — Paid Monthly Subject Story"
+APP_VERSION = "v3.56"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Story Weave"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10213,7 +10213,7 @@ def _paid_monthly_weave_response_format() -> dict:
                     "paragraphs": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "minItems": 10,
+                        "minItems": 8,
                         "maxItems": 24,
                     },
                 },
@@ -10288,30 +10288,59 @@ def _paid_monthly_signature_planets(strength: dict) -> tuple[str, ...]:
 
 
 def _paid_monthly_strength_present(strength: dict, text: str) -> bool:
+    """Detect whether a supplied natal signature is meaningfully present.
+
+    The writer is allowed to translate the signature into ordinary language, so
+    publication must not depend on parroting the exact card title.
+    """
     body = str(text or "").casefold()
     planets = _paid_monthly_signature_planets(strength)
     if len(planets) >= 2 and all(planet in body for planet in planets[:2]):
         return True
-    title_words = [
-        word.casefold() for word in re.findall(r"[A-Za-z]{5,}", str(strength.get("title") or ""))
-        if word.casefold() not in {"about", "become", "through", "together", "automatic"}
+
+    # Accept the human meaning of the supplied strength/watch pattern as well
+    # as its title.  This keeps the quality gate aligned with the product goal:
+    # the reader should recognise themselves, not see chart labels repeated.
+    source = " ".join(
+        str(strength.get(key) or "")
+        for key in ("title", "strength", "watch", "interpretation")
+    )
+    stop = {
+        "about", "after", "again", "against", "because", "become", "being",
+        "between", "could", "every", "from", "other", "should", "their",
+        "there", "these", "through", "together", "under", "where", "which",
+        "while", "would", "your", "automatic", "pattern", "strength", "watch",
+    }
+    keywords = [
+        word.casefold() for word in re.findall(r"[A-Za-z]{6,}", source)
+        if word.casefold() not in stop
     ]
-    return bool(title_words and sum(word in body for word in title_words[:4]) >= 2)
+    keywords = list(dict.fromkeys(keywords))[:12]
+    return bool(keywords and sum(word in body for word in keywords) >= 2)
 
 
 def _paid_monthly_core_identity_present(subject: dict, text: str) -> bool:
+    """Require a recognisable subject fingerprint without forcing chart jargon."""
     body = str(text or "").casefold()
     core = dict(subject.get("core_positions") or {})
     sun_sign = str((core.get("Sun") or {}).get("sign") or "").casefold()
     moon_sign = str((core.get("Moon") or {}).get("sign") or "").casefold()
-    sun_ok = not sun_sign or (sun_sign in body and "sun" in body)
-    moon_ok = not moon_sign or (moon_sign in body and "moon" in body)
+    # The Moon sign is especially useful here because it distinguishes the
+    # person from the generic Sun-sign background.  Do not require the literal
+    # words "Sun" and "Moon" if Luna expresses the character naturally.
+    sun_ok = not sun_sign or sun_sign in body
+    moon_ok = not moon_sign or moon_sign in body
     return sun_ok and moon_ok
 
 
-def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
+def _paid_monthly_publication_floor(copy: dict, facts: dict) -> tuple[bool, str]:
+    """Hard publication gate: complete, grounded and personal enough to sell.
+
+    Higher-level style checks may request a rewrite, but they must not throw
+    away a strong finished story merely because it paraphrases the natal cards.
+    """
     if not isinstance(copy, dict):
-        return False, "Return one JSON object with headline and paragraphs."
+        return False, "No usable story object was returned."
     headline = " ".join(str(copy.get("headline") or "").split())
     paragraphs = [
         " ".join(str(item or "").split())
@@ -10321,14 +10350,14 @@ def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
     combined = " ".join([headline, *paragraphs])
     words = _word_count(combined)
     problems: list[str] = []
-    if not headline or len(paragraphs) < 10:
-        problems.append("The finished month needs one headline and at least ten substantial paragraphs.")
-    if words < 1500:
-        problems.append(f"The finished month is incomplete at {words} words; develop the full chronology before ending.")
-    elif words > 3000:
-        problems.append(f"The finished month is over-expanded at {words} words; remove repetition without dropping turning points.")
+    if not headline or len(paragraphs) < 8:
+        problems.append("The story needs a headline and at least eight substantial paragraphs.")
+    if words < 1200:
+        problems.append(f"The story is incomplete at {words} words.")
+    if words > 3200:
+        problems.append(f"The story is over-expanded at {words} words.")
     if re.search(r"\b(?:your move|remember)\s*(?:[:·—-]|$)", combined, flags=re.I):
-        problems.append("Do not create Remember or Your move sections.")
+        problems.append("Reserved sub-section labels leaked into the article.")
 
     month_context = dict(facts.get("month_context") or {})
     for anchor in list(month_context.get("required_story_anchors") or []):
@@ -10336,7 +10365,7 @@ def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
             continue
         title = str(anchor.get("title") or "")
         if title and not _monthly_event_present(title, combined):
-            problems.append(f"The finished month omitted required structural event: {title}.")
+            problems.append(f"Missing structural event: {title}.")
 
     subject = dict(facts.get("subject") or {})
     for contact in list(subject.get("personal_activations") or []):
@@ -10345,24 +10374,50 @@ def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
         transit = str(contact.get("transit") or contact.get("transit_planet") or "").casefold()
         target = str(contact.get("target") or contact.get("natal_target") or "").casefold()
         if transit and target and not (transit in combined.casefold() and target in combined.casefold()):
-            problems.append(f"The finished month omitted personal contact: {transit} to natal {target}.")
+            problems.append(f"Missing personal contact: {transit} to natal {target}.")
 
-    opening = " ".join(paragraphs[:3])
+    # At least one unmistakably personal natal signature must affect the story.
+    strengths = [item for item in list(subject.get("strengths") or []) if isinstance(item, dict)]
+    if strengths and not any(_paid_monthly_strength_present(item, combined) for item in strengths):
+        problems.append("The story does not yet contain a recognisable supplied natal signature.")
+
+    return (not problems), " ".join(problems)
+
+
+def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
+    floor_ok, floor_note = _paid_monthly_publication_floor(copy, facts)
+    if not floor_ok:
+        return False, floor_note
+
+    headline = " ".join(str(copy.get("headline") or "").split())
+    paragraphs = [
+        " ".join(str(item or "").split())
+        for item in (copy.get("paragraphs") or [])
+        if str(item or "").strip()
+    ]
+    combined = " ".join([headline, *paragraphs])
+    words = _word_count(combined)
+    problems: list[str] = []
+    if len(paragraphs) < 10:
+        problems.append("Develop the article into at least ten substantial paragraphs if the material supports it.")
+    if words < 1600:
+        problems.append(f"The article is usable but light at {words} words; deepen the chronology toward the 1,800-2,500 word target.")
+    elif words > 2800:
+        problems.append(f"The article is long at {words} words; tighten repetition while preserving the story.")
+
+    subject = dict(facts.get("subject") or {})
+    opening = " ".join(paragraphs[:4])
     if subject and not _paid_monthly_core_identity_present(subject, opening):
-        problems.append("The opening does not yet establish the supplied Sun and Moon character of the subject.")
+        problems.append("Make the supplied Sun/Moon character evident early without turning it into chart inventory.")
 
     strengths = [item for item in list(subject.get("strengths") or []) if isinstance(item, dict)]
-    required_strength_count = min(3, len(strengths))
-    present_strengths = [item for item in strengths if _paid_monthly_strength_present(item, combined)]
-    if len(present_strengths) < required_strength_count:
-        problems.append(
-            f"The subject is still too generic: use at least {required_strength_count} distinct supplied natal signatures naturally in the story."
-        )
-    if strengths and not any(_paid_monthly_strength_present(item, opening) for item in strengths):
-        problems.append("Make at least one supplied natal signature evident in the first three paragraphs.")
+    desired = min(3, len(strengths))
+    present = [item for item in strengths if _paid_monthly_strength_present(item, combined)]
+    if len(present) < desired:
+        problems.append(f"Use {desired} distinct supplied natal patterns naturally across the story when possible.")
     closing = " ".join(paragraphs[-4:])
     if strengths and not any(_paid_monthly_strength_present(item, closing) for item in strengths):
-        problems.append("Carry the same subject into the ending by using at least one supplied natal signature in the closing movement.")
+        problems.append("Carry the recognisable subject into the closing movement.")
 
     return (not problems), " ".join(problems)
 
@@ -10377,6 +10432,8 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         return _paid_monthly_weave_fallback(facts)
     facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
     revision_note = ""
+    best_publishable: dict | None = None
+    best_words = -1
     for _attempt in range(3):
         try:
             candidate = _cached_paid_monthly_weave(
@@ -10385,10 +10442,31 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         except Exception as exc:
             _record_voice_error("paid_monthly_story_weave", exc)
             candidate = None
-        if candidate is not None:
-            valid, revision_note = _paid_monthly_weave_quality(candidate, facts)
-            if valid:
-                return {**candidate, "voice_complete": True}
+
+        if candidate is None:
+            continue
+
+        floor_ok, floor_note = _paid_monthly_publication_floor(candidate, facts)
+        if floor_ok:
+            candidate_words = _word_count(
+                " ".join([
+                    str(candidate.get("headline") or ""),
+                    *[str(item or "") for item in (candidate.get("paragraphs") or [])],
+                ])
+            )
+            if candidate_words > best_words:
+                best_publishable = candidate
+                best_words = candidate_words
+
+        ideal_ok, ideal_note = _paid_monthly_weave_quality(candidate, facts)
+        if ideal_ok:
+            return {**candidate, "voice_complete": True, "quality_tier": "ideal"}
+        revision_note = ideal_note or floor_note
+
+    # Do not discard a complete grounded paid story simply because the model
+    # paraphrased the natal material differently from our ideal stylistic test.
+    if best_publishable is not None:
+        return {**best_publishable, "voice_complete": True, "quality_tier": "publishable"}
     return _paid_monthly_weave_fallback(facts)
 
 
@@ -10509,6 +10587,11 @@ def _render_snapshot_monthly_report(
     story_headline = " ".join(str(longform.get("headline") or "").split())
     if not longform.get("voice_complete", False):
         st.error("Luna could not complete this report cleanly. Please regenerate it.")
+        if _admin_access_unlocked():
+            diagnostic = _voice_error("paid_monthly_story_weave")
+            if diagnostic and diagnostic != "No provider response was accepted.":
+                with st.expander("Owner diagnostic", expanded=False):
+                    st.caption(diagnostic)
     else:
         story_body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in story_paragraphs)
         if story_headline or story_body:
