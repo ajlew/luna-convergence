@@ -161,9 +161,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.60"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Quota-Safe Weave"
-PAID_MONTHLY_STORY_REVISION = "free-month-arc-subject-3"
+APP_VERSION = "v3.61"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly 6K Story Pass"
+PAID_MONTHLY_STORY_REVISION = "free-month-arc-subject-4"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10389,42 +10389,170 @@ def _paid_monthly_weave_response_format() -> dict:
     }
 
 
+def _paid_monthly_prompt_material(facts: dict) -> dict:
+    """Compress deterministic evidence for Groq's 6k-token request ceiling.
+
+    Keep every day's primary Daily signal, useful supporting currents, the Free
+    Monthly macro arc, the natal subject and all personal activations. Drop only
+    repeated JSON keys, verbose engine metadata and duplicate interpretation.
+    """
+    subject = dict(facts.get("subject") or {})
+    month = dict(facts.get("month_context") or {})
+    collective = dict(facts.get("collective_month") or {})
+
+    core = {}
+    for planet, item in dict(subject.get("core_positions") or {}).items():
+        if isinstance(item, dict):
+            sign = " ".join(str(item.get("sign") or "").split())
+            if sign:
+                core[str(planet)] = sign
+
+    strengths = []
+    for item in list(subject.get("strengths") or [])[:6]:
+        if not isinstance(item, dict):
+            continue
+        strengths.append([
+            str(item.get("id") or ""),
+            " ".join(str(item.get("title") or "").split())[:100],
+            " ".join(str(item.get("strength") or item.get("interpretation") or "").split())[:180],
+            " ".join(str(item.get("watch") or "").split())[:150],
+            " ".join(str(item.get("evidence") or "").split())[:90],
+        ])
+
+    activations = []
+    for item in list(subject.get("personal_activations") or []):
+        if not isinstance(item, dict):
+            continue
+        date_label = str(item.get("date_label") or item.get("date") or item.get("exact_date") or "")[:32]
+        signal = " ".join(str(item.get("signal") or "").split())
+        if not signal:
+            transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "")
+            aspect = str(item.get("aspect") or "")
+            target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "")
+            signal = " ".join(bit for bit in (transit, aspect, (f"natal {target}" if target else "")) if bit).strip()
+        activations.append([str(item.get("id") or ""), date_label, signal[:170]])
+
+    reader = dict(subject.get("reader_context") or {})
+    reader_context = {
+        key: " ".join(str(reader.get(key) or "").split())[:180]
+        for key in ("main_focus", "focus", "personal_question", "question")
+        if str(reader.get(key) or "").strip()
+    }
+
+    anchors = []
+    for item in list(month.get("required_story_anchors") or []):
+        if isinstance(item, dict):
+            anchors.append([
+                str(item.get("id") or ""),
+                " ".join(str(item.get("title") or "").split())[:100],
+                " ".join(str(item.get("date_label") or item.get("date") or "").split())[:28],
+            ])
+
+    threads = []
+    for item in list(month.get("transit_threads") or [])[:10]:
+        if isinstance(item, dict):
+            threads.append([
+                " ".join(str(item.get("label") or "").split())[:90],
+                str(item.get("start") or "")[:10],
+                str(item.get("end") or "")[:10],
+            ])
+
+    cycles = []
+    for item in list(month.get("retrograde_cycles") or [])[:5]:
+        if not isinstance(item, dict):
+            continue
+        label = item.get("title") or item.get("label") or item.get("planet") or "Retrograde"
+        start_value = item.get("retrograde_start") or item.get("pre_shadow_start") or item.get("start_date") or item.get("start") or ""
+        end_value = item.get("direct_date") or item.get("post_shadow_end") or item.get("end_date") or item.get("end") or ""
+        cycles.append([" ".join(str(label).split())[:80], str(start_value)[:10], str(end_value)[:10]])
+
+    signal_to_id: dict[str, str] = {}
+    area_to_id: dict[str, str] = {}
+
+    def signal_id(value: object) -> str:
+        text = " ".join(str(value or "").split())
+        if not text:
+            return ""
+        if text not in signal_to_id:
+            signal_to_id[text] = f"g{len(signal_to_id) + 1}"
+        return signal_to_id[text]
+
+    def area_id(value: object) -> str:
+        text = " ".join(str(value or "").split())
+        if not text:
+            return ""
+        if text not in area_to_id:
+            area_to_id[text] = f"l{len(area_to_id) + 1}"
+        return area_to_id[text]
+
+    month_events = []
+    for item in list(collective.get("monthly_events") or [])[:14]:
+        if isinstance(item, dict):
+            label = " ".join(str(item.get("event") or item.get("aspect") or "").split())[:105]
+            month_events.append([str(item.get("date") or "")[:10], signal_id(label)])
+
+    daily = []
+    for row in list(facts.get("daily_signals") or []):
+        if not isinstance(row, dict):
+            continue
+        primary = dict(row.get("primary") or {})
+        primary_label = " ".join(str(primary.get("aspect") or "").split())[:90]
+        supports = [" ".join(str(v or "").split()) for v in list(row.get("supporting") or [])]
+        supports = [v for v in supports if v][:3]
+        areas = [" ".join(str(v or "").split()) for v in list(primary.get("life_areas") or [])]
+        areas = [v for v in areas if v][:2]
+        majors = []
+        for event in list(row.get("major_events") or [])[:2]:
+            if isinstance(event, dict):
+                label = " ".join(str(event.get("event") or event.get("technical") or "").split())[:90]
+                if label:
+                    majors.append(label)
+        daily.append([
+            str(row.get("date") or "")[:10],
+            signal_id(primary_label),
+            [signal_id(v) for v in supports],
+            [area_id(v) for v in areas],
+            [signal_id(v) for v in majors],
+        ])
+
+    signal_legend = {code: text for text, code in signal_to_id.items()}
+    area_legend = {code: text for text, code in area_to_id.items()}
+
+    return {
+        "rev": str(facts.get("story_revision") or ""),
+        "subject": {
+            "core": core,
+            "element": str(subject.get("dominant_element") or ""),
+            "mode": str(subject.get("dominant_modality") or ""),
+            "strengths": strengths,
+            "activations": activations,
+            "reader": reader_context,
+            "birth_time_known": bool(subject.get("birth_time_known")),
+        },
+        "month": {
+            "label": str(month.get("label") or ""),
+            "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:1200],
+            "events": month_events,
+            "anchors": anchors,
+            "threads": threads,
+            "retrogrades": cycles,
+        },
+        "legend": {"signals": signal_legend, "areas": area_legend},
+        "daily": daily,
+    }
+
+
 def _paid_monthly_weave_prompt(facts: dict, *, revision_note: str = "") -> str:
-    correction = f"\nREVISION REQUIRED: {revision_note}\n" if revision_note else ""
+    correction = f"\nREVISION: {revision_note}\n" if revision_note else ""
     return (
-        "You are Luna writing one finished paid Personal Monthly story. Python owns every astronomical and natal fact. "
-        "The customer is the main character. The sky is the changing environment around that person. Do not recalculate, "
-        "invent astrology, invent biography, or predict guaranteed events.\n\n"
-        "Use the same storytelling logic as Luna's Free Monthly, but with much richer evidence and a real subject. "
-        "COLLECTIVE MONTH contains the sign-level month arc and the pre-generated Free Monthly story. Treat that existing "
-        "story as a STRUCTURAL SCAFFOLD ONLY: understand its beginning, development, turning points and ending, but do not "
-        "copy its wording or simply expand it. MONTHLY EVENTS define the macro plot.\n\n"
-        "DAILY SIGNALS are the detail/fact-check layer, calculated with the exact grounded path used by Luna's Free Daily. "
-        "Silently scan them in chronological order to see how the month actually breathes: support, pressure, openings, "
-        "troughs, reversals and changing emphasis. Do not write 28-31 mini horoscopes and do not mention every day. Use a "
-        "Daily signal only when it changes, deepens, explains or contradicts the larger monthly arc. A slow or repeated "
-        "influence may remain background across several days when TRANSIT THREADS or RETROGRADE CYCLES support that span.\n\n"
-        "SUBJECT is the protagonist. Before writing, silently build a coherent model of this person from core_positions, "
-        "strengths, natal_aspects, reader_context and personal_activations. Do not paste natal facts into a generic sign "
-        "forecast. Instead, let the natal pattern change what the month means. For each important development ask: what is "
-        "changing around this person; why does THIS person meet it differently; which supplied strength helps; which watch "
-        "pattern could distort the response; and what does the next development change in their position?\n\n"
-        "Personal activations are foreground events and must be integrated at their correct point in the chronology. Natal "
-        "strengths are character resources, not decorative labels. Make the reader recognisable through the whole article "
-        "without turning the prose into chart inventory. If birth time is unknown, never invent Ascendant, Midheaven or houses.\n\n"
-        "Find the story in the evidence. Build one cohesive wave with a clear starting position, rising or easing pressure, "
-        "meaningful turning points, consequences and an ending that feels earned by what came before. The month does not need "
-        "to be uniformly positive. Later paragraphs must remember earlier developments. Dates are orientation only; mention "
-        "them when they clarify a turn, station, lunation, retrograde or personal hit. Never invent a date range.\n\n"
-        "Write one editorial article: one headline and 10-22 substantial paragraphs, aiming for about 1,800-2,200 words. "
-        "No bullets, mini-headings, day-by-day labels, house numbers, engine language, cosmic filler, therapy slogans, guarantees, "
-        "Remember labels or Your move labels. Say each idea once.\n\n"
-        "The JSON provenance arrays are INTERNAL validation only and are never shown to the customer. Put a strength id in "
-        "used_strength_ids only if that strength materially shaped the prose. Put every personal activation id you actually "
-        "integrated in used_activation_ids. Put every required anchor id you integrated in used_anchor_ids. Return JSON only."
+        "Write one paid Personal Monthly story. Python owns every astrology fact. SUBJECT is the protagonist; the sky is the changing environment. Never invent astrology, biography or guaranteed events.\n"
+        "Use month.free_arc and month.events to find the beginning, development, turning points and ending. Use every daily row as chronological evidence, not as a diary. Each daily row is [date, primary signal id, supporting signal ids, life-area ids, major-event ids]; resolve ids through legend. Merge neighbouring signals into natural arcs and mention dates only when useful. Use only supplied thread/retrograde spans.\n"
+        "Personalise the arc through subject.core, strengths and activations. Strength rows are [id,title,strength,watch,evidence]; activation rows are [id,date,signal]. Show why this person meets the same month differently. Personal activations are foreground. Keep the same recognisable person from opening to ending. Never invent angles/houses when birth time is unknown.\n"
+        "Write a real wave: starting position, rises/troughs, openings, pressure, reversals, consequences and an earned ending. Do not force optimism or define transits one by one. No bullets, mini-headings, day labels, house numbers, engine language, cosmic filler, Remember or Your move labels.\n"
+        "Return JSON only: headline, 10-20 substantial paragraphs, used_strength_ids, used_activation_ids, used_anchor_ids. Aim for about 1,650-1,950 words. Provenance arrays are internal; include every personal activation and required anchor actually integrated."
         + correction
-        + "\nMONTH MATERIAL:\n"
-        + json.dumps(facts, ensure_ascii=False, default=str, separators=(",", ":"))
+        + "\nMATERIAL:\n"
+        + json.dumps(_paid_monthly_prompt_material(facts), ensure_ascii=False, separators=(",", ":"))
     )
 
 
@@ -10446,7 +10574,7 @@ def _cached_paid_monthly_weave(
         # About 2,000 words fits comfortably inside this completion budget.
         # Keeping the ceiling bounded prevents one paid report from reserving
         # an 8k-token completion against Groq's daily token quota.
-        max_tokens=3800,
+        max_tokens=2600,
         response_format=_paid_monthly_weave_response_format(),
         # A TPD 429 can require tens of minutes to reset. Do not hold a paid
         # page open retrying the same quota failure inside the provider layer.
@@ -10623,7 +10751,8 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
             # by immediately asking the same provider again. Fail fast so the
             # owner/customer can retry after the provider reset instead of
             # waiting through a second guaranteed 429.
-            if "429" in str(exc) or "rate limit" in str(exc).casefold():
+            error_text = str(exc).casefold()
+            if "429" in error_text or "rate limit" in error_text or "413" in error_text or "request too large" in error_text:
                 break
 
         if candidate is None:
