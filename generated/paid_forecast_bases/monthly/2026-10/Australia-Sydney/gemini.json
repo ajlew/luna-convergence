@@ -1,0 +1,5428 @@
+{
+  "schema_version": "1.1",
+  "base_schema_version": "1.0",
+  "product": "paid_personal_monthly",
+  "shared_sky": {
+    "sign": "Gemini",
+    "label": "October 2026",
+    "start": "2026-10-01",
+    "end": "2026-10-31",
+    "timezone": "Australia/Sydney",
+    "nearest_city": "Sydney",
+    "events": [
+      {
+        "event_date": "2026-10-01",
+        "title": "Mercury enters Scorpio",
+        "kind": "ingress",
+        "planets": [
+          "Mercury"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "neutral",
+        "importance": 5.8,
+        "detail": "Moves into house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-01",
+        "title": "Moon enters Gemini",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          1
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 1: identity, energy and personal direction."
+      },
+      {
+        "event_date": "2026-10-02",
+        "title": "Mercury square Mars",
+        "kind": "aspect",
+        "planets": [
+          "Mercury",
+          "Mars"
+        ],
+        "houses": [
+          6,
+          3
+        ],
+        "aspect_name": "square",
+        "orb": 0.2165434199215781,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 5.404886787516338,
+        "detail": "Exact within approximately 0.22°."
+      },
+      {
+        "event_date": "2026-10-03",
+        "title": "Mars opposition Pluto",
+        "kind": "aspect",
+        "planets": [
+          "Mars",
+          "Pluto"
+        ],
+        "houses": [
+          3,
+          9
+        ],
+        "aspect_name": "opposition",
+        "orb": 0.2104178465542077,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 6.923781297597843,
+        "detail": "Exact within approximately 0.21°."
+      },
+      {
+        "event_date": "2026-10-03",
+        "title": "Mars trine Neptune",
+        "kind": "aspect",
+        "planets": [
+          "Mars",
+          "Neptune"
+        ],
+        "houses": [
+          3,
+          11
+        ],
+        "aspect_name": "trine",
+        "orb": 0.0936968110326859,
+        "applying_state": "exact",
+        "polarity": "opportunity",
+        "importance": 6.611266311283309,
+        "detail": "Exact within approximately 0.09°."
+      },
+      {
+        "event_date": "2026-10-03",
+        "title": "Mercury square Pluto",
+        "kind": "aspect",
+        "planets": [
+          "Mercury",
+          "Pluto"
+        ],
+        "houses": [
+          6,
+          9
+        ],
+        "aspect_name": "square",
+        "orb": 0.28384611739272714,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 6.498174049291244,
+        "detail": "Exact within approximately 0.28°."
+      },
+      {
+        "event_date": "2026-10-03",
+        "title": "Moon enters Cancer",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          2
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 2: income, possessions and self-worth."
+      },
+      {
+        "event_date": "2026-10-04",
+        "title": "Sun opposition Saturn",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Saturn"
+        ],
+        "houses": [
+          5,
+          11
+        ],
+        "aspect_name": "opposition",
+        "orb": 0.5089754961958874,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 6.949827315659922,
+        "detail": "Exact within approximately 0.51°."
+      },
+      {
+        "event_date": "2026-10-04",
+        "title": "Venus stations retrograde",
+        "kind": "station",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "review",
+        "importance": 6.8,
+        "detail": "Intensifies house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-05",
+        "title": "Moon enters Leo",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          3
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 3: communication, sales, learning and local movement."
+      },
+      {
+        "event_date": "2026-10-07",
+        "title": "Mars sextile Uranus",
+        "kind": "aspect",
+        "planets": [
+          "Mars",
+          "Uranus"
+        ],
+        "houses": [
+          3,
+          1
+        ],
+        "aspect_name": "sextile",
+        "orb": 0.23877842526442805,
+        "applying_state": "exact",
+        "polarity": "opportunity",
+        "importance": 6.584229484515187,
+        "detail": "Exact within approximately 0.24°."
+      },
+      {
+        "event_date": "2026-10-07",
+        "title": "Mercury conjunction Venus",
+        "kind": "aspect",
+        "planets": [
+          "Mercury",
+          "Venus"
+        ],
+        "houses": [
+          6,
+          6
+        ],
+        "aspect_name": "conjunction",
+        "orb": 0.045661939665023965,
+        "applying_state": "exact",
+        "polarity": "neutral",
+        "importance": 5.479598203101636,
+        "detail": "Exact within approximately 0.05°."
+      },
+      {
+        "event_date": "2026-10-08",
+        "title": "Moon enters Virgo",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          4
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 4: home, family and private foundations."
+      },
+      {
+        "event_date": "2026-10-10",
+        "title": "Moon enters Libra",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          5
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+      },
+      {
+        "event_date": "2026-10-11",
+        "title": "New Moon in Libra",
+        "kind": "lunation",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          5
+        ],
+        "polarity": "new cycle",
+        "importance": 6.5,
+        "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship."
+      },
+      {
+        "event_date": "2026-10-11",
+        "title": "Venus square Mars",
+        "kind": "aspect",
+        "planets": [
+          "Venus",
+          "Mars"
+        ],
+        "houses": [
+          6,
+          3
+        ],
+        "aspect_name": "square",
+        "orb": 0.12525255085175502,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 5.472861947315453,
+        "detail": "Exact within approximately 0.13°."
+      },
+      {
+        "event_date": "2026-10-12",
+        "title": "Moon enters Scorpio",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-14",
+        "title": "Moon enters Sagittarius",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          7
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 7: relationships, clients, contracts and competitors."
+      },
+      {
+        "event_date": "2026-10-15",
+        "title": "Sun sextile Jupiter",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Jupiter"
+        ],
+        "houses": [
+          5,
+          3
+        ],
+        "aspect_name": "sextile",
+        "orb": 0.2561397417400144,
+        "applying_state": "exact",
+        "polarity": "opportunity",
+        "importance": 6.683629692437055,
+        "detail": "Exact within approximately 0.26°."
+      },
+      {
+        "event_date": "2026-10-16",
+        "title": "Mars trine Saturn",
+        "kind": "aspect",
+        "planets": [
+          "Mars",
+          "Saturn"
+        ],
+        "houses": [
+          3,
+          11
+        ],
+        "aspect_name": "trine",
+        "orb": 0.19607110104699643,
+        "applying_state": "exact",
+        "polarity": "opportunity",
+        "importance": 6.635492514293887,
+        "detail": "Exact within approximately 0.20°."
+      },
+      {
+        "event_date": "2026-10-17",
+        "title": "Pluto stations direct",
+        "kind": "station",
+        "planets": [
+          "Pluto"
+        ],
+        "houses": [
+          9
+        ],
+        "polarity": "release",
+        "importance": 8.2,
+        "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets."
+      },
+      {
+        "event_date": "2026-10-17",
+        "title": "Moon enters Capricorn",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          8
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 8: shared money, debt, tax, trust and obligations."
+      },
+      {
+        "event_date": "2026-10-20",
+        "title": "Venus square Pluto",
+        "kind": "aspect",
+        "planets": [
+          "Venus",
+          "Pluto"
+        ],
+        "houses": [
+          6,
+          9
+        ],
+        "aspect_name": "square",
+        "orb": 0.1430681365569626,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 6.596125771455864,
+        "detail": "Exact within approximately 0.14°."
+      },
+      {
+        "event_date": "2026-10-20",
+        "title": "Moon enters Aquarius",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          9
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 9: travel, publishing, law, education and foreign markets."
+      },
+      {
+        "event_date": "2026-10-21",
+        "title": "Sun trine True Node",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "True Node"
+        ],
+        "houses": [
+          5,
+          9
+        ],
+        "aspect_name": "trine",
+        "orb": 0.40313268766638544,
+        "applying_state": "exact",
+        "polarity": "opportunity",
+        "importance": 5.505935706211177,
+        "detail": "Exact within approximately 0.40°."
+      },
+      {
+        "event_date": "2026-10-22",
+        "title": "Moon enters Pisces",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          10
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 10: career, reputation, authority and public results."
+      },
+      {
+        "event_date": "2026-10-24",
+        "title": "Sun conjunction Venus",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Venus"
+        ],
+        "houses": [
+          6,
+          6
+        ],
+        "aspect_name": "conjunction",
+        "orb": 0.18327296404169147,
+        "applying_state": "exact",
+        "polarity": "neutral",
+        "importance": 5.781480672342328,
+        "detail": "Exact within approximately 0.18°."
+      },
+      {
+        "event_date": "2026-10-24",
+        "title": "Sun enters Scorpio",
+        "kind": "ingress",
+        "planets": [
+          "Sun"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "neutral",
+        "importance": 5.0,
+        "detail": "Moves into house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-24",
+        "title": "Moon enters Aries",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          11
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 11: networks, audiences, alliances and long-term goals."
+      },
+      {
+        "event_date": "2026-10-25",
+        "title": "Mercury stations retrograde",
+        "kind": "station",
+        "planets": [
+          "Mercury"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "review",
+        "importance": 6.8,
+        "detail": "Intensifies house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-26",
+        "title": "Sun square Pluto",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Pluto"
+        ],
+        "houses": [
+          6,
+          9
+        ],
+        "aspect_name": "square",
+        "orb": 0.462565857169011,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 6.763481856478821,
+        "detail": "Exact within approximately 0.46°."
+      },
+      {
+        "event_date": "2026-10-26",
+        "title": "Full Moon in Taurus",
+        "kind": "lunation",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          12
+        ],
+        "polarity": "culmination",
+        "importance": 6.5,
+        "detail": "Brings visibility or culmination in house 12: rest, hidden matters, closure and psychological patterns."
+      },
+      {
+        "event_date": "2026-10-26",
+        "title": "Venus enters Libra",
+        "kind": "ingress",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          5
+        ],
+        "polarity": "neutral",
+        "importance": 6.2,
+        "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+      },
+      {
+        "event_date": "2026-10-26",
+        "title": "Moon enters Taurus",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          12
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns."
+      },
+      {
+        "event_date": "2026-10-29",
+        "title": "Moon enters Gemini",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          1
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 1: identity, energy and personal direction."
+      },
+      {
+        "event_date": "2026-10-30",
+        "title": "Venus trine True Node",
+        "kind": "aspect",
+        "planets": [
+          "Venus",
+          "True Node"
+        ],
+        "houses": [
+          5,
+          9
+        ],
+        "aspect_name": "trine",
+        "orb": 0.21902764686609544,
+        "applying_state": "exact",
+        "polarity": "opportunity",
+        "importance": 5.308019701017332,
+        "detail": "Exact within approximately 0.22°."
+      },
+      {
+        "event_date": "2026-10-31",
+        "title": "Mercury square Mars",
+        "kind": "aspect",
+        "planets": [
+          "Mercury",
+          "Mars"
+        ],
+        "houses": [
+          6,
+          3
+        ],
+        "aspect_name": "square",
+        "orb": 0.470860270827302,
+        "applying_state": "exact",
+        "polarity": "pressure",
+        "importance": 5.351904110244313,
+        "detail": "Exact within approximately 0.47°."
+      },
+      {
+        "event_date": "2026-10-31",
+        "title": "Moon enters Cancer",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          2
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 2: income, possessions and self-worth."
+      }
+    ],
+    "major_sky_registry": [
+      {
+        "event_date": "2026-10-01",
+        "display_label": "Mercury enters Scorpio",
+        "technical_label": "Mercury enters Scorpio",
+        "tier": "B",
+        "planets": [
+          "Mercury"
+        ],
+        "houses": [
+          6
+        ],
+        "action": "Change the method that no longer fits the new conditions.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-03",
+        "display_label": "Mars trine Neptune",
+        "technical_label": "Mars trine Neptune",
+        "tier": "A-",
+        "planets": [
+          "Mars",
+          "Neptune"
+        ],
+        "houses": [
+          3,
+          11
+        ],
+        "action": "Make one useful move while the opening is available.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-03",
+        "display_label": "Mars opposite Pluto",
+        "technical_label": "Mars opposite Pluto",
+        "tier": "B",
+        "planets": [
+          "Mars",
+          "Pluto"
+        ],
+        "houses": [
+          3,
+          9
+        ],
+        "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-03",
+        "display_label": "Mercury square Pluto",
+        "technical_label": "Mercury square Pluto",
+        "tier": "B",
+        "planets": [
+          "Mercury",
+          "Pluto"
+        ],
+        "houses": [
+          6,
+          9
+        ],
+        "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-04",
+        "display_label": "Venus stations retrograde",
+        "technical_label": "Venus stations retrograde",
+        "tier": "A",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          6
+        ],
+        "action": "Keep what still feels valuable after the glamour is removed.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-04",
+        "display_label": "Sun opposite Saturn",
+        "technical_label": "Sun opposite Saturn",
+        "tier": "B",
+        "planets": [
+          "Sun",
+          "Saturn"
+        ],
+        "houses": [
+          5,
+          11
+        ],
+        "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-07",
+        "display_label": "Mars sextile Uranus",
+        "technical_label": "Mars sextile Uranus",
+        "tier": "A-",
+        "planets": [
+          "Mars",
+          "Uranus"
+        ],
+        "houses": [
+          3,
+          1
+        ],
+        "action": "Make one useful move while the opening is available.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-11",
+        "display_label": "New Moon in Libra",
+        "technical_label": "New Moon in Libra",
+        "tier": "B+",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          5
+        ],
+        "action": "Begin the piece you can support now.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-15",
+        "display_label": "Sun sextile Jupiter",
+        "technical_label": "Sun sextile Jupiter",
+        "tier": "A-",
+        "planets": [
+          "Sun",
+          "Jupiter"
+        ],
+        "houses": [
+          5,
+          3
+        ],
+        "action": "Make the call, application, proposal or booking that increases future choice.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-16",
+        "display_label": "Mars trine Saturn",
+        "technical_label": "Mars trine Saturn",
+        "tier": "A-",
+        "planets": [
+          "Mars",
+          "Saturn"
+        ],
+        "houses": [
+          3,
+          11
+        ],
+        "action": "Make one useful move while the opening is available.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-17",
+        "display_label": "Pluto stations direct",
+        "technical_label": "Pluto stations direct",
+        "tier": "A",
+        "planets": [
+          "Pluto"
+        ],
+        "houses": [
+          9
+        ],
+        "action": "Change the term, boundary or dependency that no longer matches the real balance.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-20",
+        "display_label": "Venus square Pluto",
+        "technical_label": "Venus square Pluto",
+        "tier": "B",
+        "planets": [
+          "Venus",
+          "Pluto"
+        ],
+        "houses": [
+          6,
+          9
+        ],
+        "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-21",
+        "display_label": "Sun trine True Node",
+        "technical_label": "Sun trine True Node",
+        "tier": "B",
+        "planets": [
+          "Sun",
+          "True Node"
+        ],
+        "houses": [
+          5,
+          9
+        ],
+        "action": "Keep the useful lesson. Stop carrying the obsolete route.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-24",
+        "display_label": "Venus cazimi · Sun conjunct Venus",
+        "technical_label": "Sun conjunct Venus",
+        "tier": "A",
+        "planets": [
+          "Sun",
+          "Venus"
+        ],
+        "houses": [
+          6,
+          6
+        ],
+        "action": "Choose what is worth more of your time, money or affection.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-25",
+        "display_label": "Mercury stations retrograde",
+        "technical_label": "Mercury stations retrograde",
+        "tier": "B+",
+        "planets": [
+          "Mercury"
+        ],
+        "houses": [
+          6
+        ],
+        "action": "Correct the detail before you repeat the decision.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-26",
+        "display_label": "Full Moon in Taurus",
+        "technical_label": "Full Moon in Taurus",
+        "tier": "B+",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          12
+        ],
+        "action": "Name what is complete, what needs an answer and what can now be released.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-26",
+        "display_label": "Venus enters Libra",
+        "technical_label": "Venus enters Libra",
+        "tier": "B+",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          5
+        ],
+        "action": "Change the method that no longer fits the new conditions.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-26",
+        "display_label": "Sun square Pluto",
+        "technical_label": "Sun square Pluto",
+        "tier": "B",
+        "planets": [
+          "Sun",
+          "Pluto"
+        ],
+        "houses": [
+          6,
+          9
+        ],
+        "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-30",
+        "display_label": "Venus trine True Node",
+        "technical_label": "Venus trine True Node",
+        "tier": "B",
+        "planets": [
+          "Venus",
+          "True Node"
+        ],
+        "houses": [
+          5,
+          9
+        ],
+        "action": "Keep the useful lesson. Stop carrying the obsolete route.",
+        "opportunity": true
+      }
+    ],
+    "major_sky_events": [
+      {
+        "event_date": "2026-10-04",
+        "display_label": "Venus stations retrograde",
+        "technical_label": "Venus stations retrograde",
+        "tier": "A",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          6
+        ],
+        "action": "Keep what still feels valuable after the glamour is removed.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-11",
+        "display_label": "New Moon in Libra",
+        "technical_label": "New Moon in Libra",
+        "tier": "B+",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          5
+        ],
+        "action": "Begin the piece you can support now.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-15",
+        "display_label": "Sun sextile Jupiter",
+        "technical_label": "Sun sextile Jupiter",
+        "tier": "A-",
+        "planets": [
+          "Sun",
+          "Jupiter"
+        ],
+        "houses": [
+          5,
+          3
+        ],
+        "action": "Make the call, application, proposal or booking that increases future choice.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-16",
+        "display_label": "Mars trine Saturn",
+        "technical_label": "Mars trine Saturn",
+        "tier": "A-",
+        "planets": [
+          "Mars",
+          "Saturn"
+        ],
+        "houses": [
+          3,
+          11
+        ],
+        "action": "Make one useful move while the opening is available.",
+        "opportunity": true
+      },
+      {
+        "event_date": "2026-10-17",
+        "display_label": "Pluto stations direct",
+        "technical_label": "Pluto stations direct",
+        "tier": "A",
+        "planets": [
+          "Pluto"
+        ],
+        "houses": [
+          9
+        ],
+        "action": "Change the term, boundary or dependency that no longer matches the real balance.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-24",
+        "display_label": "Venus cazimi · Sun conjunct Venus",
+        "technical_label": "Sun conjunct Venus",
+        "tier": "A",
+        "planets": [
+          "Sun",
+          "Venus"
+        ],
+        "houses": [
+          6,
+          6
+        ],
+        "action": "Choose what is worth more of your time, money or affection.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-25",
+        "display_label": "Mercury stations retrograde",
+        "technical_label": "Mercury stations retrograde",
+        "tier": "B+",
+        "planets": [
+          "Mercury"
+        ],
+        "houses": [
+          6
+        ],
+        "action": "Correct the detail before you repeat the decision.",
+        "opportunity": false
+      },
+      {
+        "event_date": "2026-10-26",
+        "display_label": "Full Moon in Taurus",
+        "technical_label": "Full Moon in Taurus",
+        "tier": "B+",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          12
+        ],
+        "action": "Name what is complete, what needs an answer and what can now be released.",
+        "opportunity": false
+      }
+    ],
+    "major_transitions": [
+      {
+        "event_date": "2026-10-04",
+        "title": "Venus stations retrograde",
+        "kind": "station",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "review",
+        "importance": 6.8,
+        "detail": "Intensifies house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-11",
+        "title": "New Moon in Libra",
+        "kind": "lunation",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          5
+        ],
+        "polarity": "new cycle",
+        "importance": 6.5,
+        "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship."
+      },
+      {
+        "event_date": "2026-10-15",
+        "title": "Sun sextile Jupiter",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Jupiter"
+        ],
+        "houses": [
+          5,
+          3
+        ],
+        "aspect_name": "sextile",
+        "orb": 0.2561397417400144,
+        "polarity": "opportunity",
+        "importance": 6.683629692437055,
+        "detail": "Exact within approximately 0.26°."
+      },
+      {
+        "event_date": "2026-10-16",
+        "title": "Mars trine Saturn",
+        "kind": "aspect",
+        "planets": [
+          "Mars",
+          "Saturn"
+        ],
+        "houses": [
+          3,
+          11
+        ],
+        "aspect_name": "trine",
+        "orb": 0.19607110104699643,
+        "polarity": "opportunity",
+        "importance": 6.635492514293887,
+        "detail": "Exact within approximately 0.20°."
+      },
+      {
+        "event_date": "2026-10-17",
+        "title": "Pluto stations direct",
+        "kind": "station",
+        "planets": [
+          "Pluto"
+        ],
+        "houses": [
+          9
+        ],
+        "polarity": "release",
+        "importance": 8.2,
+        "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets."
+      },
+      {
+        "event_date": "2026-10-24",
+        "title": "Sun conjunction Venus",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Venus"
+        ],
+        "houses": [
+          6,
+          6
+        ],
+        "aspect_name": "conjunction",
+        "orb": 0.18327296404169147,
+        "polarity": "neutral",
+        "importance": 5.781480672342328,
+        "detail": "Exact within approximately 0.18°."
+      },
+      {
+        "event_date": "2026-10-25",
+        "title": "Mercury stations retrograde",
+        "kind": "station",
+        "planets": [
+          "Mercury"
+        ],
+        "houses": [
+          6
+        ],
+        "polarity": "review",
+        "importance": 6.8,
+        "detail": "Intensifies house 6: work routines, health, service and operations."
+      },
+      {
+        "event_date": "2026-10-26",
+        "title": "Full Moon in Taurus",
+        "kind": "lunation",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          12
+        ],
+        "polarity": "culmination",
+        "importance": 6.5,
+        "detail": "Brings visibility or culmination in house 12: rest, hidden matters, closure and psychological patterns."
+      },
+      {
+        "event_date": "2026-10-26",
+        "title": "Venus enters Libra",
+        "kind": "ingress",
+        "planets": [
+          "Venus"
+        ],
+        "houses": [
+          5
+        ],
+        "polarity": "neutral",
+        "importance": 6.2,
+        "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+      }
+    ],
+    "retrograde_cycles": [
+      {
+        "planet": "Pluto",
+        "retrograde_start": "2026-05-07",
+        "direct_date": "2026-10-17",
+        "shadow_start": "2026-01-12",
+        "shadow_end": "2027-02-07",
+        "signs": [
+          "Aquarius"
+        ],
+        "houses": [
+          9
+        ],
+        "retrograde_longitude": 305.5093697744778,
+        "direct_longitude": 303.06869468451765
+      },
+      {
+        "planet": "Neptune",
+        "retrograde_start": "2026-07-08",
+        "direct_date": "2026-12-13",
+        "shadow_start": "2026-03-16",
+        "shadow_end": "2027-04-03",
+        "signs": [
+          "Aries"
+        ],
+        "houses": [
+          11
+        ],
+        "retrograde_longitude": 4.417860354568254,
+        "direct_longitude": 1.6128143454891055
+      },
+      {
+        "planet": "Saturn",
+        "retrograde_start": "2026-07-27",
+        "direct_date": "2026-12-11",
+        "shadow_start": "2026-04-20",
+        "shadow_end": "2027-03-15",
+        "signs": [
+          "Aries"
+        ],
+        "houses": [
+          11
+        ],
+        "retrograde_longitude": 14.749899946042301,
+        "direct_longitude": 7.93102601921149
+      },
+      {
+        "planet": "Uranus",
+        "retrograde_start": "2026-09-11",
+        "direct_date": "2027-02-09",
+        "shadow_start": "2026-05-25",
+        "shadow_end": "2027-05-26",
+        "signs": [
+          "Gemini"
+        ],
+        "houses": [
+          1
+        ],
+        "retrograde_longitude": 65.69696241786747,
+        "direct_longitude": 61.682745752828765
+      },
+      {
+        "planet": "Venus",
+        "retrograde_start": "2026-10-04",
+        "direct_date": "2026-11-14",
+        "shadow_start": "2026-09-01",
+        "shadow_end": "2026-12-16",
+        "signs": [
+          "Scorpio",
+          "Libra"
+        ],
+        "houses": [
+          6,
+          5
+        ],
+        "retrograde_longitude": 218.4805215983913,
+        "direct_longitude": 202.8636764060743
+      },
+      {
+        "planet": "Mercury",
+        "retrograde_start": "2026-10-25",
+        "direct_date": "2026-11-14",
+        "shadow_start": "2026-10-04",
+        "shadow_end": "2026-11-30",
+        "signs": [
+          "Scorpio"
+        ],
+        "houses": [
+          6
+        ],
+        "retrograde_longitude": 230.94204968938948,
+        "direct_longitude": 215.04680123319613
+      }
+    ],
+    "convergences": [
+      {
+        "start_date": "2026-10-11",
+        "end_date": "2026-10-20",
+        "title": "Opportunity convergence",
+        "score": 32.31533679236538,
+        "events": [
+          {
+            "event_date": "2026-10-11",
+            "kind": "lunation",
+            "title": "New Moon in Libra",
+            "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship.",
+            "importance": 6.5,
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "new cycle",
+            "orb": null,
+            "aspect_name": "",
+            "applying_state": "",
+            "event_id": "2026-10-11|lunation|new-moon-in-libra"
+          },
+          {
+            "event_date": "2026-10-15",
+            "kind": "aspect",
+            "title": "Sun sextile Jupiter",
+            "detail": "Exact within approximately 0.26°.",
+            "importance": 6.683629692437055,
+            "planets": [
+              "Sun",
+              "Jupiter"
+            ],
+            "houses": [
+              5,
+              3
+            ],
+            "polarity": "opportunity",
+            "orb": 0.2561397417400144,
+            "aspect_name": "sextile",
+            "applying_state": "exact",
+            "event_id": "2026-10-15|aspect|jupiter|sun|sextile"
+          },
+          {
+            "event_date": "2026-10-16",
+            "kind": "aspect",
+            "title": "Mars trine Saturn",
+            "detail": "Exact within approximately 0.20°.",
+            "importance": 6.635492514293887,
+            "planets": [
+              "Mars",
+              "Saturn"
+            ],
+            "houses": [
+              3,
+              11
+            ],
+            "polarity": "opportunity",
+            "orb": 0.19607110104699643,
+            "aspect_name": "trine",
+            "applying_state": "exact",
+            "event_id": "2026-10-16|aspect|mars|saturn|trine"
+          },
+          {
+            "event_date": "2026-10-17",
+            "kind": "station",
+            "title": "Pluto stations direct",
+            "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets.",
+            "importance": 8.2,
+            "planets": [
+              "Pluto"
+            ],
+            "houses": [
+              9
+            ],
+            "polarity": "release",
+            "orb": null,
+            "aspect_name": "",
+            "applying_state": "",
+            "event_id": "2026-10-17|station|pluto-stations-direct"
+          },
+          {
+            "event_date": "2026-10-20",
+            "kind": "aspect",
+            "title": "Venus square Pluto",
+            "detail": "Exact within approximately 0.14°.",
+            "importance": 6.596125771455864,
+            "planets": [
+              "Venus",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "polarity": "pressure",
+            "orb": 0.1430681365569626,
+            "aspect_name": "square",
+            "applying_state": "exact",
+            "event_id": "2026-10-20|aspect|pluto|venus|square"
+          }
+        ],
+        "planets": [
+          "Jupiter",
+          "Mars",
+          "Moon",
+          "Pluto",
+          "Saturn",
+          "Sun",
+          "Venus"
+        ],
+        "houses": [
+          3,
+          5,
+          6,
+          9,
+          11
+        ],
+        "polarity": "opportunity"
+      }
+    ],
+    "inherited_events": [
+      {
+        "event_date": "2026-09-25",
+        "title": "Moon enters Pisces",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          10
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 10: career, reputation, authority and public results."
+      },
+      {
+        "event_date": "2026-09-26",
+        "title": "Sun opposition Neptune",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Neptune"
+        ],
+        "houses": [
+          5,
+          11
+        ],
+        "aspect_name": "opposition",
+        "orb": 0.016641636523274883,
+        "polarity": "pressure",
+        "importance": 7.048641393039505,
+        "detail": "Exact within approximately 0.02°."
+      },
+      {
+        "event_date": "2026-09-26",
+        "title": "Sun trine Pluto",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Pluto"
+        ],
+        "houses": [
+          5,
+          9
+        ],
+        "aspect_name": "trine",
+        "orb": 0.14720562005012994,
+        "polarity": "opportunity",
+        "importance": 6.875303340557224,
+        "detail": "Exact within approximately 0.15°."
+      },
+      {
+        "event_date": "2026-09-27",
+        "title": "Full Moon in Aries",
+        "kind": "lunation",
+        "planets": [
+          "Sun",
+          "Moon"
+        ],
+        "houses": [
+          11
+        ],
+        "polarity": "culmination",
+        "importance": 6.5,
+        "detail": "Brings visibility or culmination in house 11: networks, audiences, alliances and long-term goals."
+      },
+      {
+        "event_date": "2026-09-27",
+        "title": "Moon enters Aries",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          11
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 11: networks, audiences, alliances and long-term goals."
+      },
+      {
+        "event_date": "2026-09-29",
+        "title": "Mars enters Leo",
+        "kind": "ingress",
+        "planets": [
+          "Mars"
+        ],
+        "houses": [
+          3
+        ],
+        "polarity": "pressure",
+        "importance": 6.8,
+        "detail": "Moves into house 3: communication, sales, learning and local movement."
+      },
+      {
+        "event_date": "2026-09-29",
+        "title": "Sun trine Uranus",
+        "kind": "aspect",
+        "planets": [
+          "Sun",
+          "Uranus"
+        ],
+        "houses": [
+          5,
+          1
+        ],
+        "aspect_name": "trine",
+        "orb": 0.4001077886647124,
+        "polarity": "opportunity",
+        "importance": 6.731962812910673,
+        "detail": "Exact within approximately 0.40°."
+      },
+      {
+        "event_date": "2026-09-29",
+        "title": "Moon enters Taurus",
+        "kind": "ingress",
+        "planets": [
+          "Moon"
+        ],
+        "houses": [
+          12
+        ],
+        "polarity": "neutral",
+        "importance": 1.6,
+        "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns."
+      },
+      {
+        "event_date": "2026-09-30",
+        "title": "Mercury trine True Node",
+        "kind": "aspect",
+        "planets": [
+          "Mercury",
+          "True Node"
+        ],
+        "houses": [
+          5,
+          9
+        ],
+        "aspect_name": "trine",
+        "orb": 0.23422268287410475,
+        "polarity": "opportunity",
+        "importance": 5.257059174806415,
+        "detail": "Exact within approximately 0.23°."
+      }
+    ],
+    "dominant_houses": [
+      {
+        "house": 11,
+        "topic": "networks, audiences, alliances and long-term goals",
+        "weight": 115.10000000000001
+      },
+      {
+        "house": 3,
+        "topic": "communication, sales, learning and local movement",
+        "weight": 99.79999999999998
+      },
+      {
+        "house": 9,
+        "topic": "travel, publishing, law, education and foreign markets",
+        "weight": 96.49999999999997
+      },
+      {
+        "house": 6,
+        "topic": "work routines, health, service and operations",
+        "weight": 78.10000000000004
+      },
+      {
+        "house": 1,
+        "topic": "identity, energy and personal direction",
+        "weight": 59.699999999999974
+      },
+      {
+        "house": 5,
+        "topic": "creativity, romance, pleasure and entrepreneurship",
+        "weight": 46.70000000000002
+      }
+    ],
+    "solar_convergence": {
+      "calculation_date": "2026-10-16",
+      "native_sign": "Gemini",
+      "solar_longitude": 202.6895,
+      "solar_sign": "Libra",
+      "solar_quarter": "Rebalancing",
+      "solar_process": "Relate",
+      "practical_phase": "Evaluation",
+      "current_solar_gate": "September Equinox",
+      "next_solar_gate": "December Solstice",
+      "next_gate_date": "2026-12-22",
+      "days_to_next_gate": 67,
+      "hemisphere": "Southern",
+      "local_season": "Location-aware light cycle",
+      "daylight_minutes": 774.7,
+      "daylight_change": 61.2,
+      "light_direction": "Increasing",
+      "city": "Sydney",
+      "country": "Australia",
+      "location_basis": "customer city",
+      "activated_house": 6,
+      "activated_house_name": "work, health and daily systems",
+      "start_solar_sign": "Libra",
+      "end_solar_sign": "Scorpio",
+      "start_house": 5,
+      "end_house": 6,
+      "solar_transition": "Libra to Scorpio: relate becomes transform.",
+      "main_focus": "General overview",
+      "headline": "Returning light asks growth to become sustainable",
+      "meaning": [
+        "The Sun is Luna's primary natural clock. During October, the current Sun moves from Libra into Scorpio. For Gemini, the emphasis moves from house 5 - romance, pleasure and creativity - into house 6 - work, health and daily systems.",
+        "In Sydney, daylight is increasing, changing from approximately 12.4 to 13.4 hours across the month. That local light direction does not alter the Aries-to-Pisces solar sequence.",
+        "The next solar gate is the Capricorn Gate · December Solstice on 22 December 2026, 67 days from the middle of the month."
+      ],
+      "focus_meaning": "Background emphasis: Make the week capable of carrying what you want to continue.",
+      "opportunity": "Use house 5 to give the creative, romantic or joyful opening room to develop. As the emphasis moves into house 6, make the week capable of carrying what you want to continue.",
+      "risk": "Watch for asking energy, health or operations to absorb more than the system can sustain. The solar background is context for the event-led story, not a replacement for it.",
+      "action": "During the Libra phase, give the creative, romantic or joyful opening room to develop. During the Scorpio phase, make the week capable of carrying what you want to continue.",
+      "solar_rule": "Test the result through fairness and reciprocity, then remove what cannot survive deeper truth.",
+      "equation": "Increasing light x house 5 expansion x house 6 visibility = an idea becoming a sustainable routine",
+      "gate_convergence": {
+        "status": "NONE",
+        "material": false,
+        "reason": "No cardinal solar gate falls inside this report period."
+      }
+    },
+    "monthly_arc": {
+      "sign": "Gemini",
+      "label": "October 2026",
+      "headline": "The spark grows louder before the quieter truth decides what stays",
+      "central_storyline": "A date, creative project or something you enjoy opens the month; the quiet part of life decides what still deserves a future. Make the ordinary week carry the opportunity. Change the method before adding effort.",
+      "theme_axis": "Romance & creativity x Rest & private renewal · Bridge: Work & wellbeing",
+      "primary_house": 5,
+      "secondary_house": 12,
+      "tertiary_house": 6,
+      "narrative_houses": [
+        5,
+        12,
+        6
+      ],
+      "convergence_score": 0.947,
+      "convergence_rationale": "House 6 is present in both major event clusters (primary support 0.99, secondary support 1.00, monthly weight 0.68, ruler-linked). It is promoted only as the bridge joining the two main plots.",
+      "primary_scenario_provenance": [
+        {
+          "key": "romance_creativity",
+          "scenario_houses": [
+            5
+          ],
+          "matched_houses": [
+            5
+          ]
+        },
+        {
+          "key": "relationship_opening",
+          "scenario_houses": [
+            5,
+            7,
+            8,
+            11
+          ],
+          "matched_houses": [
+            5
+          ]
+        },
+        {
+          "key": "romance_child_creative_cost",
+          "scenario_houses": [
+            2,
+            5,
+            8
+          ],
+          "matched_houses": [
+            5
+          ]
+        }
+      ],
+      "secondary_scenario_provenance": [
+        {
+          "key": "closure_private",
+          "scenario_houses": [
+            12
+          ],
+          "matched_houses": [
+            12
+          ]
+        },
+        {
+          "key": "private_preparation",
+          "scenario_houses": [
+            12
+          ],
+          "matched_houses": [
+            12
+          ]
+        }
+      ],
+      "tertiary_scenario_provenance": [
+        {
+          "key": "work_wellbeing",
+          "scenario_houses": [
+            6
+          ],
+          "matched_houses": [
+            6
+          ]
+        },
+        {
+          "key": "work_client_growth",
+          "scenario_houses": [
+            6
+          ],
+          "matched_houses": [
+            6
+          ]
+        },
+        {
+          "key": "health_treatment",
+          "scenario_houses": [
+            6
+          ],
+          "matched_houses": [
+            6
+          ]
+        }
+      ],
+      "primary_plot_houses": [
+        5,
+        6,
+        3
+      ],
+      "secondary_plot_houses": [
+        6,
+        9,
+        12,
+        5
+      ],
+      "primary_plot_evidence": [
+        "11 October 2026: New Moon in Libra",
+        "11 October 2026: Venus square Mars"
+      ],
+      "secondary_plot_evidence": [
+        "24 October 2026: Sun conjunction Venus",
+        "24 October 2026: Sun enters Scorpio",
+        "25 October 2026: Mercury stations retrograde",
+        "26 October 2026: Sun square Pluto",
+        "26 October 2026: Full Moon in Taurus",
+        "26 October 2026: Venus enters Libra"
+      ],
+      "supporting_house": 11,
+      "selection_rationale": "Primary plot: 11 October 2026 / house 5. Secondary plot: 24-26 October 2026 / house 12. Convergent bridge: house 6. House 11 remains background monthly evidence unless independently promoted.",
+      "intensity_rating": "Elevated",
+      "rulership_amplified": true,
+      "rulership_evidence": [
+        "25 October 2026: Mercury stations retrograde"
+      ],
+      "opening": [
+        "A date, creative project or something you enjoy supplies the opening spark: a romantic spark, date or memorable invitation, a creative project, performance or launch gaining momentum, news involving a child, pregnancy, leisure plan or family milestone. The early movement identifies the pattern; it is evidence of where the month is gathering force, not a guarantee of the final outcome."
+      ],
+      "complication": [
+        "Around 11 October 2026, that romantic or creative opening becomes concrete. Put names beside the work. Who books it? Who pays? Who has to rearrange the week? Define that before the plan becomes permanent."
+      ],
+      "pivot": [
+        "Make the ordinary week carry the opportunity. Change the method before adding effort. In practice, this may show up through a work project going off track or requiring a rapid fix, a staff departure, shortage or operational backlog. That is the hinge between the opening and the late-month result."
+      ],
+      "climax": [
+        "By late month, rest, closure or a private reality decides what should be released. Around 24-26 October 2026, this new domain may show up through a private matter or confidential negotiation resolving quietly, solo or behind-the-scenes work gaining protected space to develop, a restorative period of rest, reflection or treatment clearing the ground for what comes next. It changes the consequence of the opening rather than repeating it."
+      ],
+      "resolution": [
+        "The closing decision is therefore about what needs rest or closure. By this point, the useful question is which version survives the practical test once the month's other conditions are visible."
+      ],
+      "relationship_test": [],
+      "do_line": "Enjoy the spark, then give it one concrete next step.",
+      "dont_line": "Call chemistry, applause or excitement a finished plan.",
+      "beats": [
+        {
+          "role": "inherited state",
+          "start_date": "2026-09-26",
+          "end_date": "2026-09-29",
+          "title": "Full Moon in Aries",
+          "event_id": "2026-09-27|lunation|full-moon-in-aries",
+          "summary": "A date, creative project or something you enjoy supplies the opening spark: a romantic spark, date or memorable invitation, a creative project, performance or launch gaining momentum, news involving a child, pregnancy, leisure plan or family milestone. The early movement identifies the pattern; it is evidence of where the month is gathering force, not a guarantee of the final outcome.",
+          "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+          "score": 11.68,
+          "houses": [
+            5,
+            11,
+            9,
+            3,
+            1
+          ],
+          "planets": [
+            "Sun",
+            "Neptune",
+            "Pluto",
+            "Moon",
+            "Mars",
+            "Uranus"
+          ],
+          "scenarios": [
+            "friends, audience or future-plan development",
+            "friendship, network or joint venture opening",
+            "romantic or relationship opening"
+          ],
+          "scenario_provenance": [
+            {
+              "key": "networks_audience",
+              "scenario_houses": [
+                11
+              ],
+              "matched_houses": [
+                11
+              ]
+            },
+            {
+              "key": "community_joint_venture",
+              "scenario_houses": [
+                11
+              ],
+              "matched_houses": [
+                11
+              ]
+            },
+            {
+              "key": "relationship_opening",
+              "scenario_houses": [
+                5,
+                7,
+                8,
+                11
+              ],
+              "matched_houses": [
+                5,
+                11
+              ]
+            }
+          ],
+          "evidence": [
+            "26 September 2026: Sun opposition Neptune",
+            "26 September 2026: Sun trine Pluto",
+            "27 September 2026: Full Moon in Aries",
+            "29 September 2026: Mars enters Leo",
+            "29 September 2026: Sun trine Uranus"
+          ],
+          "direct_houses": [
+            11
+          ],
+          "connected_houses": [
+            5,
+            9,
+            3,
+            1
+          ],
+          "narrative_house": 11,
+          "connection_reason": "direct event house",
+          "strategy_domain": "overall",
+          "strategy_posture": "HOLD"
+        },
+        {
+          "role": "inciting event",
+          "start_date": "2026-10-01",
+          "end_date": "2026-10-04",
+          "title": "Mercury square Pluto",
+          "event_id": "2026-10-03|aspect|mercury|pluto|square",
+          "summary": "A new opening enters the month and begins to shift the available future.",
+          "response": "Do not chase this development; let the optional demand pass and protect time, money and freedom of movement.",
+          "score": 15.57,
+          "houses": [
+            6,
+            3,
+            9,
+            11,
+            5
+          ],
+          "planets": [
+            "Mercury",
+            "Mars",
+            "Pluto",
+            "Neptune",
+            "Sun",
+            "Saturn",
+            "Venus"
+          ],
+          "scenarios": [
+            "workload, routine or wellbeing adjustment",
+            "wellbeing, care or recovery adjustment",
+            "work, client or staffing growth"
+          ],
+          "scenario_provenance": [
+            {
+              "key": "work_wellbeing",
+              "scenario_houses": [
+                6
+              ],
+              "matched_houses": [
+                6
+              ]
+            },
+            {
+              "key": "health_treatment",
+              "scenario_houses": [
+                6
+              ],
+              "matched_houses": [
+                6
+              ]
+            },
+            {
+              "key": "work_client_growth",
+              "scenario_houses": [
+                6
+              ],
+              "matched_houses": [
+                6
+              ]
+            }
+          ],
+          "evidence": [
+            "1 October 2026: Mercury enters Scorpio",
+            "2 October 2026: Mercury square Mars",
+            "3 October 2026: Mars opposition Pluto",
+            "3 October 2026: Mars trine Neptune",
+            "3 October 2026: Mercury square Pluto",
+            "4 October 2026: Sun opposition Saturn",
+            "4 October 2026: Venus stations retrograde"
+          ],
+          "direct_houses": [
+            6,
+            9
+          ],
+          "connected_houses": [
+            3,
+            11,
+            5
+          ],
+          "narrative_house": 6,
+          "connection_reason": "direct event house",
+          "strategy_domain": "work",
+          "strategy_posture": "PASS"
+        },
+        {
+          "role": "complication",
+          "start_date": "2026-10-11",
+          "end_date": "2026-10-11",
+          "title": "New Moon in Libra",
+          "event_id": "2026-10-11|lunation|new-moon-in-libra",
+          "summary": "Around 11 October 2026, that romantic or creative opening becomes concrete. Put names beside the work. Who books it? Who pays? Who has to rearrange the week? Define that before the plan becomes permanent.",
+          "response": "Use this evidence to name the term that must change before you increase commitment.",
+          "score": 9.6,
+          "houses": [
+            5,
+            6,
+            3
+          ],
+          "planets": [
+            "Sun",
+            "Moon",
+            "Venus",
+            "Mars"
+          ],
+          "scenarios": [
+            "romance, creativity or joyful risk",
+            "romantic or relationship opening",
+            "money pressure tied to love, children or creativity"
+          ],
+          "scenario_provenance": [
+            {
+              "key": "romance_creativity",
+              "scenario_houses": [
+                5
+              ],
+              "matched_houses": [
+                5
+              ]
+            },
+            {
+              "key": "relationship_opening",
+              "scenario_houses": [
+                5,
+                7,
+                8,
+                11
+              ],
+              "matched_houses": [
+                5
+              ]
+            },
+            {
+              "key": "romance_child_creative_cost",
+              "scenario_houses": [
+                2,
+                5,
+                8
+              ],
+              "matched_houses": [
+                5
+              ]
+            }
+          ],
+          "evidence": [
+            "11 October 2026: New Moon in Libra",
+            "11 October 2026: Venus square Mars"
+          ],
+          "direct_houses": [
+            5
+          ],
+          "connected_houses": [
+            6,
+            3
+          ],
+          "narrative_house": 5,
+          "connection_reason": "direct event house",
+          "strategy_domain": "romance",
+          "strategy_posture": "NEGOTIATE"
+        },
+        {
+          "role": "pivot",
+          "start_date": "2026-10-16",
+          "end_date": "2026-10-17",
+          "title": "Pluto stations direct",
+          "event_id": "2026-10-17|station|pluto-stations-direct",
+          "summary": "Make the ordinary week carry the opportunity. Change the method before adding effort. In practice, this may show up through a work project going off track or requiring a rapid fix, a staff departure, shortage or operational backlog. That is the hinge between the opening and the late-month result.",
+          "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+          "score": 10.05,
+          "houses": [
+            3,
+            11,
+            9
+          ],
+          "planets": [
+            "Mars",
+            "Saturn",
+            "Pluto"
+          ],
+          "scenarios": [],
+          "scenario_provenance": [],
+          "evidence": [
+            "16 October 2026: Mars trine Saturn",
+            "17 October 2026: Pluto stations direct"
+          ],
+          "direct_houses": [
+            9
+          ],
+          "connected_houses": [
+            3,
+            11
+          ],
+          "narrative_house": 9,
+          "connection_reason": "direct event house",
+          "strategy_domain": "overall",
+          "strategy_posture": "HOLD"
+        },
+        {
+          "role": "climax",
+          "start_date": "2026-10-24",
+          "end_date": "2026-10-26",
+          "title": "Full Moon in Taurus",
+          "event_id": "2026-10-26|lunation|full-moon-in-taurus",
+          "summary": "By late month, rest, closure or a private reality decides what should be released. Around 24-26 October 2026, this new domain may show up through a private matter or confidential negotiation resolving quietly, solo or behind-the-scenes work gaining protected space to develop, a restorative period of rest, reflection or treatment clearing the ground for what comes next. It changes the consequence of the opening rather than repeating it.",
+          "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+          "score": 14.96,
+          "houses": [
+            6,
+            9,
+            12,
+            5
+          ],
+          "planets": [
+            "Sun",
+            "Venus",
+            "Mercury",
+            "Pluto",
+            "Moon"
+          ],
+          "scenarios": [
+            "closure, recovery or behind-the-scenes matter",
+            "private preparation, confidential work or closure"
+          ],
+          "scenario_provenance": [
+            {
+              "key": "closure_private",
+              "scenario_houses": [
+                12
+              ],
+              "matched_houses": [
+                12
+              ]
+            },
+            {
+              "key": "private_preparation",
+              "scenario_houses": [
+                12
+              ],
+              "matched_houses": [
+                12
+              ]
+            }
+          ],
+          "evidence": [
+            "24 October 2026: Sun conjunction Venus",
+            "24 October 2026: Sun enters Scorpio",
+            "25 October 2026: Mercury stations retrograde",
+            "26 October 2026: Sun square Pluto",
+            "26 October 2026: Full Moon in Taurus",
+            "26 October 2026: Venus enters Libra"
+          ],
+          "direct_houses": [
+            12
+          ],
+          "connected_houses": [
+            6,
+            9,
+            5
+          ],
+          "narrative_house": 12,
+          "connection_reason": "direct event house",
+          "strategy_domain": "overall",
+          "strategy_posture": "HOLD"
+        },
+        {
+          "role": "resolution",
+          "start_date": "2026-10-26",
+          "end_date": "2026-10-26",
+          "title": "Full Moon in Taurus",
+          "event_id": "2026-10-26|lunation|full-moon-in-taurus",
+          "summary": "The closing decision is therefore about what needs rest or closure. By this point, the useful question is which version survives the practical test once the month's other conditions are visible.",
+          "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+          "score": 9.78,
+          "houses": [
+            6,
+            9,
+            12,
+            5
+          ],
+          "planets": [
+            "Sun",
+            "Pluto",
+            "Moon",
+            "Venus"
+          ],
+          "scenarios": [
+            "closure, recovery or behind-the-scenes matter",
+            "private preparation, confidential work or closure"
+          ],
+          "scenario_provenance": [
+            {
+              "key": "closure_private",
+              "scenario_houses": [
+                12
+              ],
+              "matched_houses": [
+                12
+              ]
+            },
+            {
+              "key": "private_preparation",
+              "scenario_houses": [
+                12
+              ],
+              "matched_houses": [
+                12
+              ]
+            }
+          ],
+          "evidence": [
+            "26 October 2026: Sun square Pluto",
+            "26 October 2026: Full Moon in Taurus",
+            "26 October 2026: Venus enters Libra"
+          ],
+          "direct_houses": [
+            12
+          ],
+          "connected_houses": [
+            6,
+            9,
+            5
+          ],
+          "narrative_house": 12,
+          "connection_reason": "direct event house",
+          "strategy_domain": "overall",
+          "strategy_posture": "HOLD"
+        }
+      ],
+      "ranked_scenarios": [
+        {
+          "key": "networks_audience",
+          "label": "friends, audience or future-plan development",
+          "domain": "networks",
+          "score": 20.93,
+          "confidence": "strong event family",
+          "dominant_polarity": "positive",
+          "scenario_houses": [
+            11
+          ],
+          "matched_houses": [
+            11
+          ],
+          "examples": [
+            "a friendship, network or community opening useful doors",
+            "an industry event, group or audience creating valuable introductions",
+            "a joint venture or future plan gaining support from the right people"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-09-27",
+              "event_id": "2026-09-27|lunation|full-moon-in-aries",
+              "title": "Full Moon in Aries",
+              "houses": [
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "polarity": "culmination",
+              "contribution": 8.09
+            },
+            {
+              "event_date": "2026-09-26",
+              "event_id": "2026-09-26|aspect|neptune|sun|opposition",
+              "title": "Sun opposition Neptune",
+              "houses": [
+                5,
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Neptune"
+              ],
+              "polarity": "pressure",
+              "contribution": 7.37
+            }
+          ]
+        },
+        {
+          "key": "community_joint_venture",
+          "label": "friendship, network or joint venture opening",
+          "domain": "networks",
+          "score": 16.68,
+          "confidence": "supported event family",
+          "dominant_polarity": "positive",
+          "scenario_houses": [
+            11
+          ],
+          "matched_houses": [
+            11
+          ],
+          "examples": [
+            "a useful new friendship or professional contact",
+            "an industry event or community opening a future path",
+            "a joint venture with a friend or network contact becoming viable"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-09-27",
+              "event_id": "2026-09-27|lunation|full-moon-in-aries",
+              "title": "Full Moon in Aries",
+              "houses": [
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "polarity": "culmination",
+              "contribution": 8.67
+            },
+            {
+              "event_date": "2026-09-26",
+              "event_id": "2026-09-26|aspect|neptune|sun|opposition",
+              "title": "Sun opposition Neptune",
+              "houses": [
+                5,
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Neptune"
+              ],
+              "polarity": "pressure",
+              "contribution": 7.37
+            }
+          ]
+        },
+        {
+          "key": "romance_creativity",
+          "label": "romance, creativity or joyful risk",
+          "domain": "love",
+          "score": 9.92,
+          "confidence": "strong event family",
+          "dominant_polarity": "positive",
+          "scenario_houses": [
+            5
+          ],
+          "matched_houses": [
+            5
+          ],
+          "examples": [
+            "a romantic spark, date or memorable invitation",
+            "a creative project, performance or launch gaining momentum",
+            "news involving a child, pregnancy, leisure plan or family milestone"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-10-11",
+              "event_id": "2026-10-11|lunation|new-moon-in-libra",
+              "title": "New Moon in Libra",
+              "houses": [
+                5
+              ],
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "polarity": "new cycle",
+              "contribution": 9.21
+            }
+          ]
+        },
+        {
+          "key": "closure_private",
+          "label": "closure, recovery or behind-the-scenes matter",
+          "domain": "private",
+          "score": 8.04,
+          "confidence": "strong event family",
+          "dominant_polarity": "positive",
+          "scenario_houses": [
+            12
+          ],
+          "matched_houses": [
+            12
+          ],
+          "examples": [
+            "a private matter or confidential negotiation resolving quietly",
+            "solo or behind-the-scenes work gaining protected space to develop",
+            "a restorative period of rest, reflection or treatment clearing the ground for what comes next"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-10-26",
+              "event_id": "2026-10-26|lunation|full-moon-in-taurus",
+              "title": "Full Moon in Taurus",
+              "houses": [
+                12
+              ],
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "polarity": "culmination",
+              "contribution": 7.72
+            }
+          ]
+        },
+        {
+          "key": "publishing_media",
+          "label": "writing, publishing or audience response",
+          "domain": "communication",
+          "score": 112.46,
+          "confidence": "strong event family",
+          "dominant_polarity": "positive",
+          "scenario_houses": [
+            3,
+            5,
+            9,
+            10,
+            11
+          ],
+          "matched_houses": [
+            3,
+            5,
+            9,
+            11
+          ],
+          "examples": [
+            "a writing, speaking or media assignment gaining traction",
+            "publisher, audience, publicity or broadcast interest",
+            "a launch, pitch, presentation or digital project finding the right audience"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-10-15",
+              "event_id": "2026-10-15|aspect|jupiter|sun|sextile",
+              "title": "Sun sextile Jupiter",
+              "houses": [
+                5,
+                3
+              ],
+              "planets": [
+                "Sun",
+                "Jupiter"
+              ],
+              "polarity": "opportunity",
+              "contribution": 5.14
+            },
+            {
+              "event_date": "2026-10-03",
+              "event_id": "2026-10-03|aspect|mercury|pluto|square",
+              "title": "Mercury square Pluto",
+              "houses": [
+                6,
+                9
+              ],
+              "planets": [
+                "Mercury",
+                "Pluto"
+              ],
+              "polarity": "pressure",
+              "contribution": 5.1
+            },
+            {
+              "event_date": "2026-10-02",
+              "event_id": "2026-10-02|aspect|mars|mercury|square",
+              "title": "Mercury square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 5.01
+            },
+            {
+              "event_date": "2026-10-31",
+              "event_id": "2026-10-31|aspect|mars|mercury|square",
+              "title": "Mercury square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 5.0
+            },
+            {
+              "event_date": "2026-09-29",
+              "event_id": "2026-09-29|aspect|sun|uranus|trine",
+              "title": "Sun trine Uranus",
+              "houses": [
+                5,
+                1
+              ],
+              "planets": [
+                "Sun",
+                "Uranus"
+              ],
+              "polarity": "opportunity",
+              "contribution": 4.69
+            }
+          ]
+        },
+        {
+          "key": "communication_contracts",
+          "label": "message, contract or local decision",
+          "domain": "communication",
+          "score": 95.69,
+          "confidence": "strong event family",
+          "dominant_polarity": "friction",
+          "scenario_houses": [
+            3
+          ],
+          "matched_houses": [
+            3
+          ],
+          "examples": [
+            "a contract term or late change requiring another conversation",
+            "a transport, shipping or short-trip disruption",
+            "a disagreement with a sibling, relative or local contact"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-10-02",
+              "event_id": "2026-10-02|aspect|mars|mercury|square",
+              "title": "Mercury square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 9.06
+            },
+            {
+              "event_date": "2026-10-31",
+              "event_id": "2026-10-31|aspect|mars|mercury|square",
+              "title": "Mercury square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 9.05
+            },
+            {
+              "event_date": "2026-10-11",
+              "event_id": "2026-10-11|aspect|mars|venus|square",
+              "title": "Venus square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 7.01
+            },
+            {
+              "event_date": "2026-10-16",
+              "event_id": "2026-10-16|aspect|mars|saturn|trine",
+              "title": "Mars trine Saturn",
+              "houses": [
+                3,
+                11
+              ],
+              "planets": [
+                "Mars",
+                "Saturn"
+              ],
+              "polarity": "opportunity",
+              "contribution": 6.91
+            },
+            {
+              "event_date": "2026-10-07",
+              "event_id": "2026-10-07|aspect|mars|uranus|sextile",
+              "title": "Mars sextile Uranus",
+              "houses": [
+                3,
+                1
+              ],
+              "planets": [
+                "Mars",
+                "Uranus"
+              ],
+              "polarity": "opportunity",
+              "contribution": 6.76
+            }
+          ]
+        },
+        {
+          "key": "work_wellbeing",
+          "label": "workload, routine or wellbeing adjustment",
+          "domain": "work",
+          "score": 90.13,
+          "confidence": "supported event family",
+          "dominant_polarity": "friction",
+          "scenario_houses": [
+            6
+          ],
+          "matched_houses": [
+            6
+          ],
+          "examples": [
+            "a work project going off track or requiring a rapid fix",
+            "a staff departure, shortage or operational backlog",
+            "physical exhaustion or a health concern requiring attention"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-10-02",
+              "event_id": "2026-10-02|aspect|mars|mercury|square",
+              "title": "Mercury square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 9.47
+            },
+            {
+              "event_date": "2026-10-31",
+              "event_id": "2026-10-31|aspect|mars|mercury|square",
+              "title": "Mercury square Mars",
+              "houses": [
+                6,
+                3
+              ],
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "polarity": "pressure",
+              "contribution": 9.46
+            },
+            {
+              "event_date": "2026-10-25",
+              "event_id": "2026-10-25|station|mercury-stations-retrograde",
+              "title": "Mercury stations retrograde",
+              "houses": [
+                6
+              ],
+              "planets": [
+                "Mercury"
+              ],
+              "polarity": "review",
+              "contribution": 9.2
+            },
+            {
+              "event_date": "2026-10-03",
+              "event_id": "2026-10-03|aspect|mercury|pluto|square",
+              "title": "Mercury square Pluto",
+              "houses": [
+                6,
+                9
+              ],
+              "planets": [
+                "Mercury",
+                "Pluto"
+              ],
+              "polarity": "pressure",
+              "contribution": 8.7
+            },
+            {
+              "event_date": "2026-10-07",
+              "event_id": "2026-10-07|aspect|mercury|venus|conjunction",
+              "title": "Mercury conjunction Venus",
+              "houses": [
+                6,
+                6
+              ],
+              "planets": [
+                "Mercury",
+                "Venus"
+              ],
+              "polarity": "neutral",
+              "contribution": 7.44
+            }
+          ]
+        },
+        {
+          "key": "relationship_opening",
+          "label": "romantic or relationship opening",
+          "domain": "love",
+          "score": 73.81,
+          "confidence": "supported event family",
+          "dominant_polarity": "positive",
+          "scenario_houses": [
+            5,
+            7,
+            8,
+            11
+          ],
+          "matched_houses": [
+            5,
+            11
+          ],
+          "examples": [
+            "a first date, attraction or introduction gaining momentum",
+            "a relationship conversation about commitment or the next step",
+            "a social or travel setting creating a promising connection"
+          ],
+          "supporting_events": [
+            {
+              "event_date": "2026-10-16",
+              "event_id": "2026-10-16|aspect|mars|saturn|trine",
+              "title": "Mars trine Saturn",
+              "houses": [
+                3,
+                11
+              ],
+              "planets": [
+                "Mars",
+                "Saturn"
+              ],
+              "polarity": "opportunity",
+              "contribution": 5.41
+            },
+            {
+              "event_date": "2026-10-03",
+              "event_id": "2026-10-03|aspect|mars|neptune|trine",
+              "title": "Mars trine Neptune",
+              "houses": [
+                3,
+                11
+              ],
+              "planets": [
+                "Mars",
+                "Neptune"
+              ],
+              "polarity": "opportunity",
+              "contribution": 5.4
+            },
+            {
+              "event_date": "2026-09-27",
+              "event_id": "2026-09-27|lunation|full-moon-in-aries",
+              "title": "Full Moon in Aries",
+              "houses": [
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "polarity": "culmination",
+              "contribution": 5.1
+            },
+            {
+              "event_date": "2026-09-26",
+              "event_id": "2026-09-26|aspect|neptune|sun|opposition",
+              "title": "Sun opposition Neptune",
+              "houses": [
+                5,
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Neptune"
+              ],
+              "polarity": "pressure",
+              "contribution": 5.03
+            },
+            {
+              "event_date": "2026-10-04",
+              "event_id": "2026-10-04|aspect|saturn|sun|opposition",
+              "title": "Sun opposition Saturn",
+              "houses": [
+                5,
+                11
+              ],
+              "planets": [
+                "Sun",
+                "Saturn"
+              ],
+              "polarity": "pressure",
+              "contribution": 5.02
+            }
+          ]
+        }
+      ],
+      "inherited_events": [
+        {
+          "event_date": "2026-09-26",
+          "event_id": "2026-09-26|aspect|neptune|sun|opposition",
+          "kind": "aspect",
+          "title": "Sun opposition Neptune",
+          "detail": "Exact within approximately 0.02°.",
+          "importance": 7.048641393039505,
+          "planets": [
+            "Sun",
+            "Neptune"
+          ],
+          "houses": [
+            5,
+            11
+          ],
+          "polarity": "pressure"
+        },
+        {
+          "event_date": "2026-09-26",
+          "event_id": "2026-09-26|aspect|pluto|sun|trine",
+          "kind": "aspect",
+          "title": "Sun trine Pluto",
+          "detail": "Exact within approximately 0.15°.",
+          "importance": 6.875303340557224,
+          "planets": [
+            "Sun",
+            "Pluto"
+          ],
+          "houses": [
+            5,
+            9
+          ],
+          "polarity": "opportunity"
+        },
+        {
+          "event_date": "2026-09-27",
+          "event_id": "2026-09-27|lunation|full-moon-in-aries",
+          "kind": "lunation",
+          "title": "Full Moon in Aries",
+          "detail": "Brings visibility or culmination in house 11: networks, audiences, alliances and long-term goals.",
+          "importance": 6.5,
+          "planets": [
+            "Sun",
+            "Moon"
+          ],
+          "houses": [
+            11
+          ],
+          "polarity": "culmination"
+        },
+        {
+          "event_date": "2026-09-29",
+          "event_id": "2026-09-29|ingress|mars-enters-leo",
+          "kind": "ingress",
+          "title": "Mars enters Leo",
+          "detail": "Moves into house 3: communication, sales, learning and local movement.",
+          "importance": 6.8,
+          "planets": [
+            "Mars"
+          ],
+          "houses": [
+            3
+          ],
+          "polarity": "pressure"
+        },
+        {
+          "event_date": "2026-09-29",
+          "event_id": "2026-09-29|aspect|sun|uranus|trine",
+          "kind": "aspect",
+          "title": "Sun trine Uranus",
+          "detail": "Exact within approximately 0.40°.",
+          "importance": 6.731962812910673,
+          "planets": [
+            "Sun",
+            "Uranus"
+          ],
+          "houses": [
+            5,
+            1
+          ],
+          "polarity": "opportunity"
+        }
+      ],
+      "protected_evidence": [
+        {
+          "event_date": "2026-10-04",
+          "event_id": "2026-10-04|station|venus-stations-retrograde",
+          "kind": "station",
+          "title": "Venus stations retrograde",
+          "detail": "Intensifies house 6: work routines, health, service and operations.",
+          "importance": 6.8,
+          "planets": [
+            "Venus"
+          ],
+          "houses": [
+            6
+          ],
+          "polarity": "review"
+        },
+        {
+          "event_date": "2026-10-11",
+          "event_id": "2026-10-11|lunation|new-moon-in-libra",
+          "kind": "lunation",
+          "title": "New Moon in Libra",
+          "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship.",
+          "importance": 6.5,
+          "planets": [
+            "Sun",
+            "Moon"
+          ],
+          "houses": [
+            5
+          ],
+          "polarity": "new cycle"
+        },
+        {
+          "event_date": "2026-10-17",
+          "event_id": "2026-10-17|station|pluto-stations-direct",
+          "kind": "station",
+          "title": "Pluto stations direct",
+          "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets.",
+          "importance": 8.2,
+          "planets": [
+            "Pluto"
+          ],
+          "houses": [
+            9
+          ],
+          "polarity": "release"
+        },
+        {
+          "event_date": "2026-10-24",
+          "event_id": "2026-10-24|aspect|sun|venus|conjunction",
+          "kind": "aspect",
+          "title": "Sun conjunction Venus",
+          "detail": "Exact within approximately 0.18°.",
+          "importance": 5.781480672342328,
+          "planets": [
+            "Sun",
+            "Venus"
+          ],
+          "houses": [
+            6,
+            6
+          ],
+          "polarity": "neutral"
+        },
+        {
+          "event_date": "2026-10-25",
+          "event_id": "2026-10-25|station|mercury-stations-retrograde",
+          "kind": "station",
+          "title": "Mercury stations retrograde",
+          "detail": "Intensifies house 6: work routines, health, service and operations.",
+          "importance": 6.8,
+          "planets": [
+            "Mercury"
+          ],
+          "houses": [
+            6
+          ],
+          "polarity": "review"
+        },
+        {
+          "event_date": "2026-10-26",
+          "event_id": "2026-10-26|lunation|full-moon-in-taurus",
+          "kind": "lunation",
+          "title": "Full Moon in Taurus",
+          "detail": "Brings visibility or culmination in house 12: rest, hidden matters, closure and psychological patterns.",
+          "importance": 6.5,
+          "planets": [
+            "Sun",
+            "Moon"
+          ],
+          "houses": [
+            12
+          ],
+          "polarity": "culmination"
+        }
+      ],
+      "equation": "Normalized event importance + sign-ruler relevance + house evidence + event clustering + convergent 1-3 house narrative roles + deterministic scenario provenance + temporal roles = monthly narrative graph",
+      "strategy_aligned": true
+    },
+    "monthly_trajectory": {
+      "version": "1.2",
+      "period_start": "2026-10-01",
+      "period_end": "2026-10-31",
+      "trajectory": "oscillating",
+      "trajectory_reason": "The month changes polarity rather than moving in one straight line; timing matters more than an average score.",
+      "headline": "Make the person or project survive ordinary life; let timing decide when to move",
+      "central_storyline": "The balance around the person or project you want changes through the month, so timing determines how what needs privacy, rest or a clean ending should be handled.",
+      "primary_house": 5,
+      "secondary_house": 12,
+      "primary_area": "the date, attraction or creative project pulling your attention",
+      "secondary_area": "what needs privacy, rest or a clean ending",
+      "windows": [
+        {
+          "label": "early month",
+          "start_day": 1,
+          "end_day": 10,
+          "support": 31.0,
+          "friction": 57.6,
+          "uncertainty": 11.3,
+          "volatility": 11.7,
+          "capacity": 50.6,
+          "balance": -26.6,
+          "posture": "HOLD",
+          "pressure_aspects": [
+            "Mercury square Pluto (~0.28°)",
+            "Mercury square Mars (~0.22°)",
+            "Sun opposition Saturn (~0.51°)",
+            "Mars opposition Pluto (~0.21°)"
+          ],
+          "support_aspects": [
+            "Mars trine Neptune (~0.09°)",
+            "Mars sextile Uranus (~0.24°)"
+          ],
+          "events": [
+            {
+              "event_date": "2026-10-01",
+              "kind": "ingress",
+              "title": "Mercury enters Scorpio",
+              "detail": "Moves into house 6: work routines, health, service and operations.",
+              "importance": 5.8,
+              "planets": [
+                "Mercury"
+              ],
+              "houses": [
+                6
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-01",
+              "kind": "ingress",
+              "title": "Moon enters Gemini",
+              "detail": "Moves into house 1: identity, energy and personal direction.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                1
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-02",
+              "kind": "aspect",
+              "title": "Mercury square Mars",
+              "detail": "Exact within approximately 0.22°.",
+              "importance": 5.404886787516338,
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "houses": [
+                6,
+                3
+              ],
+              "polarity": "pressure",
+              "orb": 0.2165434199215781,
+              "aspect_name": "square",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-03",
+              "kind": "aspect",
+              "title": "Mars opposition Pluto",
+              "detail": "Exact within approximately 0.21°.",
+              "importance": 6.923781297597843,
+              "planets": [
+                "Mars",
+                "Pluto"
+              ],
+              "houses": [
+                3,
+                9
+              ],
+              "polarity": "pressure",
+              "orb": 0.2104178465542077,
+              "aspect_name": "opposition",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-03",
+              "kind": "aspect",
+              "title": "Mars trine Neptune",
+              "detail": "Exact within approximately 0.09°.",
+              "importance": 6.611266311283309,
+              "planets": [
+                "Mars",
+                "Neptune"
+              ],
+              "houses": [
+                3,
+                11
+              ],
+              "polarity": "opportunity",
+              "orb": 0.0936968110326859,
+              "aspect_name": "trine",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-03",
+              "kind": "aspect",
+              "title": "Mercury square Pluto",
+              "detail": "Exact within approximately 0.28°.",
+              "importance": 6.498174049291244,
+              "planets": [
+                "Mercury",
+                "Pluto"
+              ],
+              "houses": [
+                6,
+                9
+              ],
+              "polarity": "pressure",
+              "orb": 0.28384611739272714,
+              "aspect_name": "square",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-03",
+              "kind": "ingress",
+              "title": "Moon enters Cancer",
+              "detail": "Moves into house 2: income, possessions and self-worth.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                2
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-04",
+              "kind": "aspect",
+              "title": "Sun opposition Saturn",
+              "detail": "Exact within approximately 0.51°.",
+              "importance": 6.949827315659922,
+              "planets": [
+                "Sun",
+                "Saturn"
+              ],
+              "houses": [
+                5,
+                11
+              ],
+              "polarity": "pressure",
+              "orb": 0.5089754961958874,
+              "aspect_name": "opposition",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-04",
+              "kind": "station",
+              "title": "Venus stations retrograde",
+              "detail": "Intensifies house 6: work routines, health, service and operations.",
+              "importance": 6.8,
+              "planets": [
+                "Venus"
+              ],
+              "houses": [
+                6
+              ],
+              "polarity": "review",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-05",
+              "kind": "ingress",
+              "title": "Moon enters Leo",
+              "detail": "Moves into house 3: communication, sales, learning and local movement.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                3
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-07",
+              "kind": "aspect",
+              "title": "Mars sextile Uranus",
+              "detail": "Exact within approximately 0.24°.",
+              "importance": 6.584229484515187,
+              "planets": [
+                "Mars",
+                "Uranus"
+              ],
+              "houses": [
+                3,
+                1
+              ],
+              "polarity": "opportunity",
+              "orb": 0.23877842526442805,
+              "aspect_name": "sextile",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-07",
+              "kind": "aspect",
+              "title": "Mercury conjunction Venus",
+              "detail": "Exact within approximately 0.05°.",
+              "importance": 5.479598203101636,
+              "planets": [
+                "Mercury",
+                "Venus"
+              ],
+              "houses": [
+                6,
+                6
+              ],
+              "polarity": "neutral",
+              "orb": 0.045661939665023965,
+              "aspect_name": "conjunction",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-08",
+              "kind": "ingress",
+              "title": "Moon enters Virgo",
+              "detail": "Moves into house 4: home, family and private foundations.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                4
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-10",
+              "kind": "ingress",
+              "title": "Moon enters Libra",
+              "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                5
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            }
+          ],
+          "raw_posture": "HOLD"
+        },
+        {
+          "label": "mid-month",
+          "start_day": 11,
+          "end_day": 20,
+          "support": 52.2,
+          "friction": 42.6,
+          "uncertainty": 5.1,
+          "volatility": 9.5,
+          "capacity": 28.1,
+          "balance": 9.6,
+          "posture": "NEGOTIATE",
+          "pressure_aspects": [
+            "Venus square Pluto (~0.14°)",
+            "Venus square Mars (~0.13°)"
+          ],
+          "support_aspects": [
+            "Mars trine Saturn (~0.20°)",
+            "Sun sextile Jupiter (~0.26°)"
+          ],
+          "events": [
+            {
+              "event_date": "2026-10-11",
+              "kind": "lunation",
+              "title": "New Moon in Libra",
+              "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship.",
+              "importance": 6.5,
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "houses": [
+                5
+              ],
+              "polarity": "new cycle",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-11",
+              "kind": "aspect",
+              "title": "Venus square Mars",
+              "detail": "Exact within approximately 0.13°.",
+              "importance": 5.472861947315453,
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "houses": [
+                6,
+                3
+              ],
+              "polarity": "pressure",
+              "orb": 0.12525255085175502,
+              "aspect_name": "square",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-12",
+              "kind": "ingress",
+              "title": "Moon enters Scorpio",
+              "detail": "Moves into house 6: work routines, health, service and operations.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                6
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-14",
+              "kind": "ingress",
+              "title": "Moon enters Sagittarius",
+              "detail": "Moves into house 7: relationships, clients, contracts and competitors.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                7
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-15",
+              "kind": "aspect",
+              "title": "Sun sextile Jupiter",
+              "detail": "Exact within approximately 0.26°.",
+              "importance": 6.683629692437055,
+              "planets": [
+                "Sun",
+                "Jupiter"
+              ],
+              "houses": [
+                5,
+                3
+              ],
+              "polarity": "opportunity",
+              "orb": 0.2561397417400144,
+              "aspect_name": "sextile",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-16",
+              "kind": "aspect",
+              "title": "Mars trine Saturn",
+              "detail": "Exact within approximately 0.20°.",
+              "importance": 6.635492514293887,
+              "planets": [
+                "Mars",
+                "Saturn"
+              ],
+              "houses": [
+                3,
+                11
+              ],
+              "polarity": "opportunity",
+              "orb": 0.19607110104699643,
+              "aspect_name": "trine",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-17",
+              "kind": "station",
+              "title": "Pluto stations direct",
+              "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets.",
+              "importance": 8.2,
+              "planets": [
+                "Pluto"
+              ],
+              "houses": [
+                9
+              ],
+              "polarity": "release",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-17",
+              "kind": "ingress",
+              "title": "Moon enters Capricorn",
+              "detail": "Moves into house 8: shared money, debt, tax, trust and obligations.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                8
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-20",
+              "kind": "aspect",
+              "title": "Venus square Pluto",
+              "detail": "Exact within approximately 0.14°.",
+              "importance": 6.596125771455864,
+              "planets": [
+                "Venus",
+                "Pluto"
+              ],
+              "houses": [
+                6,
+                9
+              ],
+              "polarity": "pressure",
+              "orb": 0.1430681365569626,
+              "aspect_name": "square",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-20",
+              "kind": "ingress",
+              "title": "Moon enters Aquarius",
+              "detail": "Moves into house 9: travel, publishing, law, education and foreign markets.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                9
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            }
+          ],
+          "raw_posture": "NEGOTIATE"
+        },
+        {
+          "label": "late month",
+          "start_day": 21,
+          "end_day": 31,
+          "support": 27.8,
+          "friction": 50.4,
+          "uncertainty": 21.8,
+          "volatility": 6.0,
+          "capacity": 34.6,
+          "balance": -22.7,
+          "posture": "HOLD",
+          "pressure_aspects": [
+            "Mercury square Mars (~0.47°)",
+            "Sun square Pluto (~0.46°)"
+          ],
+          "support_aspects": [
+            "Sun trine True Node (~0.40°)",
+            "Venus trine True Node (~0.22°)"
+          ],
+          "events": [
+            {
+              "event_date": "2026-10-21",
+              "kind": "aspect",
+              "title": "Sun trine True Node",
+              "detail": "Exact within approximately 0.40°.",
+              "importance": 5.505935706211177,
+              "planets": [
+                "Sun",
+                "True Node"
+              ],
+              "houses": [
+                5,
+                9
+              ],
+              "polarity": "opportunity",
+              "orb": 0.40313268766638544,
+              "aspect_name": "trine",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-22",
+              "kind": "ingress",
+              "title": "Moon enters Pisces",
+              "detail": "Moves into house 10: career, reputation, authority and public results.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                10
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-24",
+              "kind": "aspect",
+              "title": "Sun conjunction Venus",
+              "detail": "Exact within approximately 0.18°.",
+              "importance": 5.781480672342328,
+              "planets": [
+                "Sun",
+                "Venus"
+              ],
+              "houses": [
+                6,
+                6
+              ],
+              "polarity": "neutral",
+              "orb": 0.18327296404169147,
+              "aspect_name": "conjunction",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-24",
+              "kind": "ingress",
+              "title": "Sun enters Scorpio",
+              "detail": "Moves into house 6: work routines, health, service and operations.",
+              "importance": 5.0,
+              "planets": [
+                "Sun"
+              ],
+              "houses": [
+                6
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-24",
+              "kind": "ingress",
+              "title": "Moon enters Aries",
+              "detail": "Moves into house 11: networks, audiences, alliances and long-term goals.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                11
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-25",
+              "kind": "station",
+              "title": "Mercury stations retrograde",
+              "detail": "Intensifies house 6: work routines, health, service and operations.",
+              "importance": 6.8,
+              "planets": [
+                "Mercury"
+              ],
+              "houses": [
+                6
+              ],
+              "polarity": "review",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-26",
+              "kind": "aspect",
+              "title": "Sun square Pluto",
+              "detail": "Exact within approximately 0.46°.",
+              "importance": 6.763481856478821,
+              "planets": [
+                "Sun",
+                "Pluto"
+              ],
+              "houses": [
+                6,
+                9
+              ],
+              "polarity": "pressure",
+              "orb": 0.462565857169011,
+              "aspect_name": "square",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-26",
+              "kind": "lunation",
+              "title": "Full Moon in Taurus",
+              "detail": "Brings visibility or culmination in house 12: rest, hidden matters, closure and psychological patterns.",
+              "importance": 6.5,
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "houses": [
+                12
+              ],
+              "polarity": "culmination",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-26",
+              "kind": "ingress",
+              "title": "Venus enters Libra",
+              "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship.",
+              "importance": 6.2,
+              "planets": [
+                "Venus"
+              ],
+              "houses": [
+                5
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-26",
+              "kind": "ingress",
+              "title": "Moon enters Taurus",
+              "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                12
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-29",
+              "kind": "ingress",
+              "title": "Moon enters Gemini",
+              "detail": "Moves into house 1: identity, energy and personal direction.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                1
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            },
+            {
+              "event_date": "2026-10-30",
+              "kind": "aspect",
+              "title": "Venus trine True Node",
+              "detail": "Exact within approximately 0.22°.",
+              "importance": 5.308019701017332,
+              "planets": [
+                "Venus",
+                "True Node"
+              ],
+              "houses": [
+                5,
+                9
+              ],
+              "polarity": "opportunity",
+              "orb": 0.21902764686609544,
+              "aspect_name": "trine",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-31",
+              "kind": "aspect",
+              "title": "Mercury square Mars",
+              "detail": "Exact within approximately 0.47°.",
+              "importance": 5.351904110244313,
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "houses": [
+                6,
+                3
+              ],
+              "polarity": "pressure",
+              "orb": 0.470860270827302,
+              "aspect_name": "square",
+              "applying_state": "exact"
+            },
+            {
+              "event_date": "2026-10-31",
+              "kind": "ingress",
+              "title": "Moon enters Cancer",
+              "detail": "Moves into house 2: income, possessions and self-worth.",
+              "importance": 1.6,
+              "planets": [
+                "Moon"
+              ],
+              "houses": [
+                2
+              ],
+              "polarity": "neutral",
+              "orb": null,
+              "aspect_name": "",
+              "applying_state": ""
+            }
+          ],
+          "raw_posture": "HOLD"
+        }
+      ],
+      "peak_window": {
+        "label": "early month",
+        "start_day": 1,
+        "end_day": 10,
+        "support": 31.0,
+        "friction": 57.6,
+        "uncertainty": 11.3,
+        "volatility": 11.7,
+        "capacity": 50.6,
+        "balance": -26.6,
+        "posture": "HOLD",
+        "pressure_aspects": [
+          "Mercury square Pluto (~0.28°)",
+          "Mercury square Mars (~0.22°)",
+          "Sun opposition Saturn (~0.51°)",
+          "Mars opposition Pluto (~0.21°)"
+        ],
+        "support_aspects": [
+          "Mars trine Neptune (~0.09°)",
+          "Mars sextile Uranus (~0.24°)"
+        ],
+        "raw_posture": "HOLD"
+      },
+      "countercurrent": null,
+      "relief": null,
+      "bridge": {
+        "house": 6,
+        "area": "the roster, workload and ordinary week you actually have to live",
+        "short": "workload and routine",
+        "movements": [
+          "Mercury enters Scorpio on 1 October",
+          "Venus stations retrograde on 4 October",
+          "Sun enters Scorpio on 24 October",
+          "Mercury stations retrograde on 25 October"
+        ],
+        "summary": "Workload and routine form the bridge between the date, attraction or creative project pulling your attention and what needs privacy, rest or a clean ending. The bridge is visible in Nature: Mercury enters Scorpio on 1 October; Venus stations retrograde on 4 October; Sun enters Scorpio on 24 October."
+      },
+      "portfolio_posture": "PROBE",
+      "portfolio_rationale": "Let each window earn its own answer. Stop forcing one rule across the whole month.",
+      "portfolio_action_plan": [
+        "Treat each major window as a new decision.",
+        "Move only where the support is clear.",
+        "Keep the rest easy to change until the pattern settles."
+      ],
+      "story_paragraphs": [
+        "October is not one flat condition. The main story concentrates around the date, attraction or creative project pulling your attention. Early in the month friction is stronger than support, so movement is information before it is a verdict.",
+        "By mid-month the pattern is easier to see in Nature itself: New Moon in Libra on 11 October. Those movements keep returning attention to the date, attraction or creative project pulling your attention. Hard pressure is visible too: Venus square Pluto (~0.14°); Venus square Mars (~0.13°). Support is not absent: Mars trine Saturn (~0.20°); Sun sextile Jupiter (~0.26°). The practical question is no longer whether something is happening, but what the situation is asking you to carry.",
+        "Workload and routine form the bridge between the date, attraction or creative project pulling your attention and what needs privacy, rest or a clean ending. The bridge is visible in Nature: Mercury enters Scorpio on 1 October; Venus stations retrograde on 4 October; Sun enters Scorpio on 24 October. It is not a separate third story; it is the route through which the opening reaches the later result.",
+        "Treat timing as part of the decision. Move when support is real. Keep the hard-to-reverse part open when it is not."
+      ],
+      "nature_rule": "The narrator follows the changing astronomical conditions; it does not force a bridge, subplot or positive ending that the evidence does not support."
+    },
+    "monthly_decision": {
+      "action_truth": "NOT ACT",
+      "posture": "HOLD",
+      "support_score": 34.6,
+      "friction_score": 52.4,
+      "uncertainty_score": 12.9,
+      "volatility_score": 9.5,
+      "capacity_pressure": 47.4,
+      "rationale": "Pressure and uncertainty are high enough that keeping the decision reversible is more useful than forcing progress. Convergent axis: H5 → H12 → H6. Evidence balance — support 35, friction 52, uncertainty 13; capacity pressure 47/100.",
+      "action_plan": [
+        "Protect room to move while the facts are still changing.",
+        "Do what is essential, but do not expand exposure simply because a decision is being demanded.",
+        "Reassess when the immediate pressure passes or new information changes the balance."
+      ],
+      "domain_decisions": {
+        "romance": {
+          "domain": "romance",
+          "relevance": "PRIMARY",
+          "relevance_score": 83.4,
+          "hierarchy_role": "PRIMARY",
+          "posture": "NEGOTIATE",
+          "action_truth": "NOT ACT",
+          "rationale": "Romance relevance 83/100: hierarchy primary, house weight 0.41, direct event support 1.00.",
+          "luna_line": "The connection may be real, but the present terms are not the only terms available. Let reciprocity improve the deal."
+        },
+        "work": {
+          "domain": "work",
+          "relevance": "BRIDGE",
+          "relevance_score": 76.4,
+          "hierarchy_role": "BRIDGE",
+          "posture": "PASS",
+          "action_truth": "NOT ACT",
+          "rationale": "Work relevance 76/100: hierarchy bridge, house weight 0.68, direct event support 1.00.",
+          "luna_line": "This domain does not currently offer favourable enough asymmetry to justify extra exposure. Let the optional demand pass."
+        },
+        "money": {
+          "domain": "money",
+          "relevance": "NOT MATERIAL",
+          "relevance_score": 0.0,
+          "hierarchy_role": "BACKGROUND",
+          "posture": "PASS",
+          "action_truth": "NOT ACT",
+          "rationale": "Money relevance 0/100: hierarchy background, house weight 0.00, direct event support 0.00.",
+          "luna_line": "This domain does not currently offer favourable enough asymmetry to justify extra exposure. Let the optional demand pass."
+        },
+        "home": {
+          "domain": "home",
+          "relevance": "NOT MATERIAL",
+          "relevance_score": 0.0,
+          "hierarchy_role": "BACKGROUND",
+          "posture": "PASS",
+          "action_truth": "NOT ACT",
+          "rationale": "Home relevance 0/100: hierarchy background, house weight 0.00, direct event support 0.00.",
+          "luna_line": "This domain does not currently offer favourable enough asymmetry to justify extra exposure. Let the optional demand pass."
+        }
+      },
+      "equation": "Nature -> pattern -> convergence -> symbolic meaning -> capacity-aware choice -> ACT or NOT ACT truth gate -> ADVANCE / QUESTION / NEGOTIATE / HOLD / PASS",
+      "climate_label": "Friction-dominant",
+      "capacity_label": "Selective capacity",
+      "evidence_balance": -17.8,
+      "portfolio_posture": "PROBE",
+      "portfolio_rationale": "Let each window earn its own answer. Stop forcing one rule across the whole month.",
+      "portfolio_action_plan": [
+        "Treat each major window as a new decision.",
+        "Move only where the support is clear.",
+        "Keep the rest easy to change until the pattern settles."
+      ],
+      "first_principles_version": "1.7",
+      "correspondence_note": "Astrological scenarios are symbolic correspondences derived from the calculated sky pattern. They are possible manifestations, not measured probabilities or guaranteed literal events.",
+      "first_principles_trace": {
+        "solar_clock": "Sun establishes the annual Aries-to-Pisces reference frame",
+        "local_light": "reader location determines the observed daylight direction",
+        "planetary_weather": "calculated astronomical events within the solar clock",
+        "pattern": "houses [5, 12, 6]",
+        "trajectory": "chronological pressure/support movement",
+        "convergence": "H5 -> H12 -> H6",
+        "meaning": "Friction-dominant",
+        "choice": "NOT ACT / HOLD",
+        "capacity": "Selective capacity",
+        "experience": "possible manifestation; not a guaranteed literal event",
+        "learning": "calibrate interpretation without rewriting the sky"
+      }
+    },
+    "calculated_chronology": [
+      {
+        "label": "Act I",
+        "date_range": "1-10 October 2026",
+        "hook": "A spark becomes easier to test in real life",
+        "title": "Mercury square Pluto",
+        "paragraphs": [
+          "A romantic, creative or pleasure-led opening becomes easier to test. Interest is useful; follow-through is the evidence."
+        ],
+        "action": "Let the response, not the fantasy, tell you whether the opening is real.",
+        "evidence": [
+          "26 September 2026: Sun opposition Neptune",
+          "26 September 2026: Sun trine Pluto",
+          "27 September 2026: Full Moon in Aries",
+          "29 September 2026: Mars enters Leo",
+          "29 September 2026: Sun trine Uranus",
+          "1 October 2026: Mercury enters Scorpio",
+          "2 October 2026: Mercury square Mars",
+          "3 October 2026: Mars opposition Pluto",
+          "3 October 2026: Mars trine Neptune",
+          "3 October 2026: Mercury square Pluto",
+          "4 October 2026: Sun opposition Saturn",
+          "4 October 2026: Venus stations retrograde"
+        ]
+      },
+      {
+        "label": "Act II",
+        "date_range": "11-20 October 2026",
+        "hook": "The spark asks for a real response",
+        "title": "New Moon in Libra",
+        "paragraphs": [
+          "A date, creative project or something you enjoy now needs a response that can survive beyond the initial spark.",
+          "This is a reset point rather than another ordinary day in the story.",
+          "The evidence is mixed enough that timing and terms matter more than speed."
+        ],
+        "action": "Make the interest concrete enough that reality can answer back. Renegotiate before adding exposure.",
+        "evidence": [
+          "11 October 2026: New Moon in Libra",
+          "11 October 2026: Venus square Mars"
+        ]
+      },
+      {
+        "label": "Act III",
+        "date_range": "21-31 October 2026",
+        "hook": "What began as desire now carries a consequence",
+        "title": "Full Moon in Taurus",
+        "paragraphs": [
+          "By late month, the earlier decision reaches what needs rest or closure. Judge the plan by the practical consequence it creates there.",
+          "Judge the later consequence on its own terms rather than allowing the month's opening mood to make the decision for you."
+        ],
+        "action": "Keep the desire that still has evidence behind it; do not make what needs rest or closure pay for the rest.",
+        "evidence": [
+          "24 October 2026: Sun conjunction Venus",
+          "24 October 2026: Sun enters Scorpio",
+          "25 October 2026: Mercury stations retrograde",
+          "26 October 2026: Sun square Pluto",
+          "26 October 2026: Full Moon in Taurus",
+          "26 October 2026: Venus enters Libra"
+        ]
+      }
+    ],
+    "key_dates": [
+      {
+        "date_label": "11 October 2026",
+        "consequence": "Around 11 October 2026, that romantic or creative opening becomes concrete. Put names beside the work. Who books it? Who pays? Who has to rearrange the week? Define that before the plan becomes permanent.",
+        "response": "Use this evidence to name the term that must change before you increase commitment.",
+        "evidence": "New Moon in Libra"
+      },
+      {
+        "date_label": "16-17 October 2026",
+        "consequence": "Make the ordinary week carry the opportunity. Change the method before adding effort. In practice, this may show up through a work project going off track or requiring a rapid fix, a staff departure, shortage or operational backlog. That is the hinge between the opening and the late-month result.",
+        "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+        "evidence": "Pluto stations direct"
+      },
+      {
+        "date_label": "24-26 October 2026",
+        "consequence": "By late month, rest, closure or a private reality decides what should be released. Around 24-26 October 2026, this new domain may show up through a private matter or confidential negotiation resolving quietly, solo or behind-the-scenes work gaining protected space to develop, a restorative period of rest, reflection or treatment clearing the ground for what comes next. It changes the consequence of the opening rather than repeating it.",
+        "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+        "evidence": "Full Moon in Taurus"
+      },
+      {
+        "date_label": "26 October 2026",
+        "consequence": "The closing decision is therefore about what needs rest or closure. By this point, the useful question is which version survives the practical test once the month's other conditions are visible.",
+        "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+        "evidence": "Full Moon in Taurus"
+      }
+    ],
+    "required_story_anchors": [
+      {
+        "title": "New Moon in Libra",
+        "date_label": "11-20 October 2026",
+        "detail": "A date, creative project or something you enjoy now needs a response that can survive beyond the initial spark."
+      },
+      {
+        "title": "Full Moon in Taurus",
+        "date_label": "21-31 October 2026",
+        "detail": "By late month, the earlier decision reaches what needs rest or closure. Judge the plan by the practical consequence it creates there."
+      },
+      {
+        "title": "Venus stations retrograde",
+        "date_label": "2026-10-04",
+        "detail": ""
+      },
+      {
+        "title": "Pluto stations direct",
+        "date_label": "2026-10-17",
+        "detail": ""
+      },
+      {
+        "title": "Mercury stations retrograde",
+        "date_label": "2026-10-25",
+        "detail": ""
+      }
+    ],
+    "story_skeleton": [
+      {
+        "id": "opening",
+        "label": "Opening",
+        "start": "2026-10-01",
+        "end": "2026-10-10",
+        "events": [
+          {
+            "event_date": "2026-10-01",
+            "title": "Mercury enters Scorpio",
+            "kind": "ingress",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "neutral",
+            "importance": 5.8,
+            "detail": "Moves into house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-01",
+            "title": "Moon enters Gemini",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 1: identity, energy and personal direction."
+          },
+          {
+            "event_date": "2026-10-02",
+            "title": "Mercury square Mars",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Mars"
+            ],
+            "houses": [
+              6,
+              3
+            ],
+            "aspect_name": "square",
+            "orb": 0.2165434199215781,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 5.404886787516338,
+            "detail": "Exact within approximately 0.22°."
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Mars opposition Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Pluto"
+            ],
+            "houses": [
+              3,
+              9
+            ],
+            "aspect_name": "opposition",
+            "orb": 0.2104178465542077,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.923781297597843,
+            "detail": "Exact within approximately 0.21°."
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Mars trine Neptune",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Neptune"
+            ],
+            "houses": [
+              3,
+              11
+            ],
+            "aspect_name": "trine",
+            "orb": 0.0936968110326859,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.611266311283309,
+            "detail": "Exact within approximately 0.09°."
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Mercury square Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "aspect_name": "square",
+            "orb": 0.28384611739272714,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.498174049291244,
+            "detail": "Exact within approximately 0.28°."
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Moon enters Cancer",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              2
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 2: income, possessions and self-worth."
+          },
+          {
+            "event_date": "2026-10-04",
+            "title": "Sun opposition Saturn",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Saturn"
+            ],
+            "houses": [
+              5,
+              11
+            ],
+            "aspect_name": "opposition",
+            "orb": 0.5089754961958874,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.949827315659922,
+            "detail": "Exact within approximately 0.51°."
+          },
+          {
+            "event_date": "2026-10-04",
+            "title": "Venus stations retrograde",
+            "kind": "station",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "review",
+            "importance": 6.8,
+            "detail": "Intensifies house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-05",
+            "title": "Moon enters Leo",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              3
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 3: communication, sales, learning and local movement."
+          },
+          {
+            "event_date": "2026-10-07",
+            "title": "Mars sextile Uranus",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Uranus"
+            ],
+            "houses": [
+              3,
+              1
+            ],
+            "aspect_name": "sextile",
+            "orb": 0.23877842526442805,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.584229484515187,
+            "detail": "Exact within approximately 0.24°."
+          },
+          {
+            "event_date": "2026-10-07",
+            "title": "Mercury conjunction Venus",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Venus"
+            ],
+            "houses": [
+              6,
+              6
+            ],
+            "aspect_name": "conjunction",
+            "orb": 0.045661939665023965,
+            "applying_state": "exact",
+            "polarity": "neutral",
+            "importance": 5.479598203101636,
+            "detail": "Exact within approximately 0.05°."
+          },
+          {
+            "event_date": "2026-10-08",
+            "title": "Moon enters Virgo",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              4
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 4: home, family and private foundations."
+          },
+          {
+            "event_date": "2026-10-10",
+            "title": "Moon enters Libra",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+          }
+        ],
+        "major_sky": [
+          {
+            "event_date": "2026-10-01",
+            "display_label": "Mercury enters Scorpio",
+            "technical_label": "Mercury enters Scorpio",
+            "tier": "B",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              6
+            ],
+            "action": "Change the method that no longer fits the new conditions.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-03",
+            "display_label": "Mars trine Neptune",
+            "technical_label": "Mars trine Neptune",
+            "tier": "A-",
+            "planets": [
+              "Mars",
+              "Neptune"
+            ],
+            "houses": [
+              3,
+              11
+            ],
+            "action": "Make one useful move while the opening is available.",
+            "opportunity": true
+          },
+          {
+            "event_date": "2026-10-03",
+            "display_label": "Mars opposite Pluto",
+            "technical_label": "Mars opposite Pluto",
+            "tier": "B",
+            "planets": [
+              "Mars",
+              "Pluto"
+            ],
+            "houses": [
+              3,
+              9
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-03",
+            "display_label": "Mercury square Pluto",
+            "technical_label": "Mercury square Pluto",
+            "tier": "B",
+            "planets": [
+              "Mercury",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-04",
+            "display_label": "Venus stations retrograde",
+            "technical_label": "Venus stations retrograde",
+            "tier": "A",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              6
+            ],
+            "action": "Keep what still feels valuable after the glamour is removed.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-04",
+            "display_label": "Sun opposite Saturn",
+            "technical_label": "Sun opposite Saturn",
+            "tier": "B",
+            "planets": [
+              "Sun",
+              "Saturn"
+            ],
+            "houses": [
+              5,
+              11
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-07",
+            "display_label": "Mars sextile Uranus",
+            "technical_label": "Mars sextile Uranus",
+            "tier": "A-",
+            "planets": [
+              "Mars",
+              "Uranus"
+            ],
+            "houses": [
+              3,
+              1
+            ],
+            "action": "Make one useful move while the opening is available.",
+            "opportunity": true
+          }
+        ],
+        "major_transitions": [
+          {
+            "event_date": "2026-10-04",
+            "title": "Venus stations retrograde",
+            "kind": "station",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "review",
+            "importance": 6.8,
+            "detail": "Intensifies house 6: work routines, health, service and operations."
+          }
+        ],
+        "convergences": [],
+        "inherited_context": [
+          {
+            "event_date": "2026-09-25",
+            "title": "Moon enters Pisces",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              10
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 10: career, reputation, authority and public results."
+          },
+          {
+            "event_date": "2026-09-26",
+            "title": "Sun opposition Neptune",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Neptune"
+            ],
+            "houses": [
+              5,
+              11
+            ],
+            "aspect_name": "opposition",
+            "orb": 0.016641636523274883,
+            "polarity": "pressure",
+            "importance": 7.048641393039505,
+            "detail": "Exact within approximately 0.02°."
+          },
+          {
+            "event_date": "2026-09-26",
+            "title": "Sun trine Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Pluto"
+            ],
+            "houses": [
+              5,
+              9
+            ],
+            "aspect_name": "trine",
+            "orb": 0.14720562005012994,
+            "polarity": "opportunity",
+            "importance": 6.875303340557224,
+            "detail": "Exact within approximately 0.15°."
+          },
+          {
+            "event_date": "2026-09-27",
+            "title": "Full Moon in Aries",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              11
+            ],
+            "polarity": "culmination",
+            "importance": 6.5,
+            "detail": "Brings visibility or culmination in house 11: networks, audiences, alliances and long-term goals."
+          },
+          {
+            "event_date": "2026-09-27",
+            "title": "Moon enters Aries",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              11
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 11: networks, audiences, alliances and long-term goals."
+          },
+          {
+            "event_date": "2026-09-29",
+            "title": "Mars enters Leo",
+            "kind": "ingress",
+            "planets": [
+              "Mars"
+            ],
+            "houses": [
+              3
+            ],
+            "polarity": "pressure",
+            "importance": 6.8,
+            "detail": "Moves into house 3: communication, sales, learning and local movement."
+          },
+          {
+            "event_date": "2026-09-29",
+            "title": "Sun trine Uranus",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Uranus"
+            ],
+            "houses": [
+              5,
+              1
+            ],
+            "aspect_name": "trine",
+            "orb": 0.4001077886647124,
+            "polarity": "opportunity",
+            "importance": 6.731962812910673,
+            "detail": "Exact within approximately 0.40°."
+          },
+          {
+            "event_date": "2026-09-29",
+            "title": "Moon enters Taurus",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns."
+          },
+          {
+            "event_date": "2026-09-30",
+            "title": "Mercury trine True Node",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "True Node"
+            ],
+            "houses": [
+              5,
+              9
+            ],
+            "aspect_name": "trine",
+            "orb": 0.23422268287410475,
+            "polarity": "opportunity",
+            "importance": 5.257059174806415,
+            "detail": "Exact within approximately 0.23°."
+          }
+        ],
+        "required_story_anchors": [
+          {
+            "title": "Venus stations retrograde",
+            "date_label": "2026-10-04",
+            "detail": ""
+          }
+        ],
+        "key_dates": [],
+        "source_chapters": [
+          {
+            "label": "Act I",
+            "date_range": "1-10 October 2026",
+            "hook": "A spark becomes easier to test in real life",
+            "title": "Mercury square Pluto",
+            "paragraphs": [
+              "A romantic, creative or pleasure-led opening becomes easier to test. Interest is useful; follow-through is the evidence."
+            ],
+            "action": "Let the response, not the fantasy, tell you whether the opening is real.",
+            "evidence": [
+              "26 September 2026: Sun opposition Neptune",
+              "26 September 2026: Sun trine Pluto",
+              "27 September 2026: Full Moon in Aries",
+              "29 September 2026: Mars enters Leo",
+              "29 September 2026: Sun trine Uranus",
+              "1 October 2026: Mercury enters Scorpio",
+              "2 October 2026: Mercury square Mars",
+              "3 October 2026: Mars opposition Pluto",
+              "3 October 2026: Mars trine Neptune",
+              "3 October 2026: Mercury square Pluto",
+              "4 October 2026: Sun opposition Saturn",
+              "4 October 2026: Venus stations retrograde"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "middle",
+        "label": "Middle",
+        "start": "2026-10-11",
+        "end": "2026-10-20",
+        "events": [
+          {
+            "event_date": "2026-10-11",
+            "title": "New Moon in Libra",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "new cycle",
+            "importance": 6.5,
+            "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship."
+          },
+          {
+            "event_date": "2026-10-11",
+            "title": "Venus square Mars",
+            "kind": "aspect",
+            "planets": [
+              "Venus",
+              "Mars"
+            ],
+            "houses": [
+              6,
+              3
+            ],
+            "aspect_name": "square",
+            "orb": 0.12525255085175502,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 5.472861947315453,
+            "detail": "Exact within approximately 0.13°."
+          },
+          {
+            "event_date": "2026-10-12",
+            "title": "Moon enters Scorpio",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-14",
+            "title": "Moon enters Sagittarius",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              7
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 7: relationships, clients, contracts and competitors."
+          },
+          {
+            "event_date": "2026-10-15",
+            "title": "Sun sextile Jupiter",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Jupiter"
+            ],
+            "houses": [
+              5,
+              3
+            ],
+            "aspect_name": "sextile",
+            "orb": 0.2561397417400144,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.683629692437055,
+            "detail": "Exact within approximately 0.26°."
+          },
+          {
+            "event_date": "2026-10-16",
+            "title": "Mars trine Saturn",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Saturn"
+            ],
+            "houses": [
+              3,
+              11
+            ],
+            "aspect_name": "trine",
+            "orb": 0.19607110104699643,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.635492514293887,
+            "detail": "Exact within approximately 0.20°."
+          },
+          {
+            "event_date": "2026-10-17",
+            "title": "Pluto stations direct",
+            "kind": "station",
+            "planets": [
+              "Pluto"
+            ],
+            "houses": [
+              9
+            ],
+            "polarity": "release",
+            "importance": 8.2,
+            "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets."
+          },
+          {
+            "event_date": "2026-10-17",
+            "title": "Moon enters Capricorn",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              8
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 8: shared money, debt, tax, trust and obligations."
+          },
+          {
+            "event_date": "2026-10-20",
+            "title": "Venus square Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Venus",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "aspect_name": "square",
+            "orb": 0.1430681365569626,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.596125771455864,
+            "detail": "Exact within approximately 0.14°."
+          },
+          {
+            "event_date": "2026-10-20",
+            "title": "Moon enters Aquarius",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              9
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 9: travel, publishing, law, education and foreign markets."
+          }
+        ],
+        "major_sky": [
+          {
+            "event_date": "2026-10-11",
+            "display_label": "New Moon in Libra",
+            "technical_label": "New Moon in Libra",
+            "tier": "B+",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              5
+            ],
+            "action": "Begin the piece you can support now.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-15",
+            "display_label": "Sun sextile Jupiter",
+            "technical_label": "Sun sextile Jupiter",
+            "tier": "A-",
+            "planets": [
+              "Sun",
+              "Jupiter"
+            ],
+            "houses": [
+              5,
+              3
+            ],
+            "action": "Make the call, application, proposal or booking that increases future choice.",
+            "opportunity": true
+          },
+          {
+            "event_date": "2026-10-16",
+            "display_label": "Mars trine Saturn",
+            "technical_label": "Mars trine Saturn",
+            "tier": "A-",
+            "planets": [
+              "Mars",
+              "Saturn"
+            ],
+            "houses": [
+              3,
+              11
+            ],
+            "action": "Make one useful move while the opening is available.",
+            "opportunity": true
+          },
+          {
+            "event_date": "2026-10-17",
+            "display_label": "Pluto stations direct",
+            "technical_label": "Pluto stations direct",
+            "tier": "A",
+            "planets": [
+              "Pluto"
+            ],
+            "houses": [
+              9
+            ],
+            "action": "Change the term, boundary or dependency that no longer matches the real balance.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-20",
+            "display_label": "Venus square Pluto",
+            "technical_label": "Venus square Pluto",
+            "tier": "B",
+            "planets": [
+              "Venus",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          }
+        ],
+        "major_transitions": [
+          {
+            "event_date": "2026-10-11",
+            "title": "New Moon in Libra",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "new cycle",
+            "importance": 6.5,
+            "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship."
+          },
+          {
+            "event_date": "2026-10-15",
+            "title": "Sun sextile Jupiter",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Jupiter"
+            ],
+            "houses": [
+              5,
+              3
+            ],
+            "aspect_name": "sextile",
+            "orb": 0.2561397417400144,
+            "polarity": "opportunity",
+            "importance": 6.683629692437055,
+            "detail": "Exact within approximately 0.26°."
+          },
+          {
+            "event_date": "2026-10-16",
+            "title": "Mars trine Saturn",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Saturn"
+            ],
+            "houses": [
+              3,
+              11
+            ],
+            "aspect_name": "trine",
+            "orb": 0.19607110104699643,
+            "polarity": "opportunity",
+            "importance": 6.635492514293887,
+            "detail": "Exact within approximately 0.20°."
+          },
+          {
+            "event_date": "2026-10-17",
+            "title": "Pluto stations direct",
+            "kind": "station",
+            "planets": [
+              "Pluto"
+            ],
+            "houses": [
+              9
+            ],
+            "polarity": "release",
+            "importance": 8.2,
+            "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets."
+          }
+        ],
+        "convergences": [
+          {
+            "start_date": "2026-10-11",
+            "end_date": "2026-10-20",
+            "title": "Opportunity convergence",
+            "score": 32.31533679236538,
+            "events": [
+              {
+                "event_date": "2026-10-11",
+                "kind": "lunation",
+                "title": "New Moon in Libra",
+                "detail": "Seeds a cycle in house 5: creativity, romance, pleasure and entrepreneurship.",
+                "importance": 6.5,
+                "planets": [
+                  "Sun",
+                  "Moon"
+                ],
+                "houses": [
+                  5
+                ],
+                "polarity": "new cycle",
+                "orb": null,
+                "aspect_name": "",
+                "applying_state": "",
+                "event_id": "2026-10-11|lunation|new-moon-in-libra"
+              },
+              {
+                "event_date": "2026-10-15",
+                "kind": "aspect",
+                "title": "Sun sextile Jupiter",
+                "detail": "Exact within approximately 0.26°.",
+                "importance": 6.683629692437055,
+                "planets": [
+                  "Sun",
+                  "Jupiter"
+                ],
+                "houses": [
+                  5,
+                  3
+                ],
+                "polarity": "opportunity",
+                "orb": 0.2561397417400144,
+                "aspect_name": "sextile",
+                "applying_state": "exact",
+                "event_id": "2026-10-15|aspect|jupiter|sun|sextile"
+              },
+              {
+                "event_date": "2026-10-16",
+                "kind": "aspect",
+                "title": "Mars trine Saturn",
+                "detail": "Exact within approximately 0.20°.",
+                "importance": 6.635492514293887,
+                "planets": [
+                  "Mars",
+                  "Saturn"
+                ],
+                "houses": [
+                  3,
+                  11
+                ],
+                "polarity": "opportunity",
+                "orb": 0.19607110104699643,
+                "aspect_name": "trine",
+                "applying_state": "exact",
+                "event_id": "2026-10-16|aspect|mars|saturn|trine"
+              },
+              {
+                "event_date": "2026-10-17",
+                "kind": "station",
+                "title": "Pluto stations direct",
+                "detail": "Intensifies house 9: travel, publishing, law, education and foreign markets.",
+                "importance": 8.2,
+                "planets": [
+                  "Pluto"
+                ],
+                "houses": [
+                  9
+                ],
+                "polarity": "release",
+                "orb": null,
+                "aspect_name": "",
+                "applying_state": "",
+                "event_id": "2026-10-17|station|pluto-stations-direct"
+              },
+              {
+                "event_date": "2026-10-20",
+                "kind": "aspect",
+                "title": "Venus square Pluto",
+                "detail": "Exact within approximately 0.14°.",
+                "importance": 6.596125771455864,
+                "planets": [
+                  "Venus",
+                  "Pluto"
+                ],
+                "houses": [
+                  6,
+                  9
+                ],
+                "polarity": "pressure",
+                "orb": 0.1430681365569626,
+                "aspect_name": "square",
+                "applying_state": "exact",
+                "event_id": "2026-10-20|aspect|pluto|venus|square"
+              }
+            ],
+            "planets": [
+              "Jupiter",
+              "Mars",
+              "Moon",
+              "Pluto",
+              "Saturn",
+              "Sun",
+              "Venus"
+            ],
+            "houses": [
+              3,
+              5,
+              6,
+              9,
+              11
+            ],
+            "polarity": "opportunity"
+          }
+        ],
+        "inherited_context": [],
+        "required_story_anchors": [
+          {
+            "title": "New Moon in Libra",
+            "date_label": "11-20 October 2026",
+            "detail": "A date, creative project or something you enjoy now needs a response that can survive beyond the initial spark."
+          },
+          {
+            "title": "Pluto stations direct",
+            "date_label": "2026-10-17",
+            "detail": ""
+          }
+        ],
+        "key_dates": [
+          {
+            "date_label": "11 October 2026",
+            "consequence": "Around 11 October 2026, that romantic or creative opening becomes concrete. Put names beside the work. Who books it? Who pays? Who has to rearrange the week? Define that before the plan becomes permanent.",
+            "response": "Use this evidence to name the term that must change before you increase commitment.",
+            "evidence": "New Moon in Libra"
+          },
+          {
+            "date_label": "16-17 October 2026",
+            "consequence": "Make the ordinary week carry the opportunity. Change the method before adding effort. In practice, this may show up through a work project going off track or requiring a rapid fix, a staff departure, shortage or operational backlog. That is the hinge between the opening and the late-month result.",
+            "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+            "evidence": "Pluto stations direct"
+          }
+        ],
+        "source_chapters": [
+          {
+            "label": "Act II",
+            "date_range": "11-20 October 2026",
+            "hook": "The spark asks for a real response",
+            "title": "New Moon in Libra",
+            "paragraphs": [
+              "A date, creative project or something you enjoy now needs a response that can survive beyond the initial spark.",
+              "This is a reset point rather than another ordinary day in the story.",
+              "The evidence is mixed enough that timing and terms matter more than speed."
+            ],
+            "action": "Make the interest concrete enough that reality can answer back. Renegotiate before adding exposure.",
+            "evidence": [
+              "11 October 2026: New Moon in Libra",
+              "11 October 2026: Venus square Mars"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "closing",
+        "label": "Closing",
+        "start": "2026-10-21",
+        "end": "2026-10-31",
+        "events": [
+          {
+            "event_date": "2026-10-21",
+            "title": "Sun trine True Node",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "True Node"
+            ],
+            "houses": [
+              5,
+              9
+            ],
+            "aspect_name": "trine",
+            "orb": 0.40313268766638544,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 5.505935706211177,
+            "detail": "Exact within approximately 0.40°."
+          },
+          {
+            "event_date": "2026-10-22",
+            "title": "Moon enters Pisces",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              10
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 10: career, reputation, authority and public results."
+          },
+          {
+            "event_date": "2026-10-24",
+            "title": "Sun conjunction Venus",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Venus"
+            ],
+            "houses": [
+              6,
+              6
+            ],
+            "aspect_name": "conjunction",
+            "orb": 0.18327296404169147,
+            "applying_state": "exact",
+            "polarity": "neutral",
+            "importance": 5.781480672342328,
+            "detail": "Exact within approximately 0.18°."
+          },
+          {
+            "event_date": "2026-10-24",
+            "title": "Sun enters Scorpio",
+            "kind": "ingress",
+            "planets": [
+              "Sun"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "neutral",
+            "importance": 5.0,
+            "detail": "Moves into house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-24",
+            "title": "Moon enters Aries",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              11
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 11: networks, audiences, alliances and long-term goals."
+          },
+          {
+            "event_date": "2026-10-25",
+            "title": "Mercury stations retrograde",
+            "kind": "station",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "review",
+            "importance": 6.8,
+            "detail": "Intensifies house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Sun square Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "aspect_name": "square",
+            "orb": 0.462565857169011,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.763481856478821,
+            "detail": "Exact within approximately 0.46°."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Full Moon in Taurus",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "culmination",
+            "importance": 6.5,
+            "detail": "Brings visibility or culmination in house 12: rest, hidden matters, closure and psychological patterns."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Venus enters Libra",
+            "kind": "ingress",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "neutral",
+            "importance": 6.2,
+            "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Moon enters Taurus",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns."
+          },
+          {
+            "event_date": "2026-10-29",
+            "title": "Moon enters Gemini",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 1: identity, energy and personal direction."
+          },
+          {
+            "event_date": "2026-10-30",
+            "title": "Venus trine True Node",
+            "kind": "aspect",
+            "planets": [
+              "Venus",
+              "True Node"
+            ],
+            "houses": [
+              5,
+              9
+            ],
+            "aspect_name": "trine",
+            "orb": 0.21902764686609544,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 5.308019701017332,
+            "detail": "Exact within approximately 0.22°."
+          },
+          {
+            "event_date": "2026-10-31",
+            "title": "Mercury square Mars",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Mars"
+            ],
+            "houses": [
+              6,
+              3
+            ],
+            "aspect_name": "square",
+            "orb": 0.470860270827302,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 5.351904110244313,
+            "detail": "Exact within approximately 0.47°."
+          },
+          {
+            "event_date": "2026-10-31",
+            "title": "Moon enters Cancer",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              2
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 2: income, possessions and self-worth."
+          }
+        ],
+        "major_sky": [
+          {
+            "event_date": "2026-10-21",
+            "display_label": "Sun trine True Node",
+            "technical_label": "Sun trine True Node",
+            "tier": "B",
+            "planets": [
+              "Sun",
+              "True Node"
+            ],
+            "houses": [
+              5,
+              9
+            ],
+            "action": "Keep the useful lesson. Stop carrying the obsolete route.",
+            "opportunity": true
+          },
+          {
+            "event_date": "2026-10-24",
+            "display_label": "Venus cazimi · Sun conjunct Venus",
+            "technical_label": "Sun conjunct Venus",
+            "tier": "A",
+            "planets": [
+              "Sun",
+              "Venus"
+            ],
+            "houses": [
+              6,
+              6
+            ],
+            "action": "Choose what is worth more of your time, money or affection.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-25",
+            "display_label": "Mercury stations retrograde",
+            "technical_label": "Mercury stations retrograde",
+            "tier": "B+",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              6
+            ],
+            "action": "Correct the detail before you repeat the decision.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-26",
+            "display_label": "Full Moon in Taurus",
+            "technical_label": "Full Moon in Taurus",
+            "tier": "B+",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "action": "Name what is complete, what needs an answer and what can now be released.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-26",
+            "display_label": "Venus enters Libra",
+            "technical_label": "Venus enters Libra",
+            "tier": "B+",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              5
+            ],
+            "action": "Change the method that no longer fits the new conditions.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-26",
+            "display_label": "Sun square Pluto",
+            "technical_label": "Sun square Pluto",
+            "tier": "B",
+            "planets": [
+              "Sun",
+              "Pluto"
+            ],
+            "houses": [
+              6,
+              9
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          },
+          {
+            "event_date": "2026-10-30",
+            "display_label": "Venus trine True Node",
+            "technical_label": "Venus trine True Node",
+            "tier": "B",
+            "planets": [
+              "Venus",
+              "True Node"
+            ],
+            "houses": [
+              5,
+              9
+            ],
+            "action": "Keep the useful lesson. Stop carrying the obsolete route.",
+            "opportunity": true
+          }
+        ],
+        "major_transitions": [
+          {
+            "event_date": "2026-10-24",
+            "title": "Sun conjunction Venus",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Venus"
+            ],
+            "houses": [
+              6,
+              6
+            ],
+            "aspect_name": "conjunction",
+            "orb": 0.18327296404169147,
+            "polarity": "neutral",
+            "importance": 5.781480672342328,
+            "detail": "Exact within approximately 0.18°."
+          },
+          {
+            "event_date": "2026-10-25",
+            "title": "Mercury stations retrograde",
+            "kind": "station",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "review",
+            "importance": 6.8,
+            "detail": "Intensifies house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Full Moon in Taurus",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "culmination",
+            "importance": 6.5,
+            "detail": "Brings visibility or culmination in house 12: rest, hidden matters, closure and psychological patterns."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Venus enters Libra",
+            "kind": "ingress",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "neutral",
+            "importance": 6.2,
+            "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+          }
+        ],
+        "convergences": [],
+        "inherited_context": [],
+        "required_story_anchors": [
+          {
+            "title": "Full Moon in Taurus",
+            "date_label": "21-31 October 2026",
+            "detail": "By late month, the earlier decision reaches what needs rest or closure. Judge the plan by the practical consequence it creates there."
+          },
+          {
+            "title": "Mercury stations retrograde",
+            "date_label": "2026-10-25",
+            "detail": ""
+          }
+        ],
+        "key_dates": [
+          {
+            "date_label": "24-26 October 2026",
+            "consequence": "By late month, rest, closure or a private reality decides what should be released. Around 24-26 October 2026, this new domain may show up through a private matter or confidential negotiation resolving quietly, solo or behind-the-scenes work gaining protected space to develop, a restorative period of rest, reflection or treatment clearing the ground for what comes next. It changes the consequence of the opening rather than repeating it.",
+            "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+            "evidence": "Full Moon in Taurus"
+          },
+          {
+            "date_label": "26 October 2026",
+            "consequence": "The closing decision is therefore about what needs rest or closure. By this point, the useful question is which version survives the practical test once the month's other conditions are visible.",
+            "response": "Do what is essential. Keep the rest reversible until the facts improve.",
+            "evidence": "Full Moon in Taurus"
+          }
+        ],
+        "source_chapters": [
+          {
+            "label": "Act III",
+            "date_range": "21-31 October 2026",
+            "hook": "What began as desire now carries a consequence",
+            "title": "Full Moon in Taurus",
+            "paragraphs": [
+              "By late month, the earlier decision reaches what needs rest or closure. Judge the plan by the practical consequence it creates there.",
+              "Judge the later consequence on its own terms rather than allowing the month's opening mood to make the decision for you."
+            ],
+            "action": "Keep the desire that still has evidence behind it; do not make what needs rest or closure pay for the rest.",
+            "evidence": [
+              "24 October 2026: Sun conjunction Venus",
+              "24 October 2026: Sun enters Scorpio",
+              "25 October 2026: Mercury stations retrograde",
+              "26 October 2026: Sun square Pluto",
+              "26 October 2026: Full Moon in Taurus",
+              "26 October 2026: Venus enters Libra"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "base_hash": "1206146e667c874545e61b4cffe9a3af7b355acf223332e464422cc5de968215"
+}
