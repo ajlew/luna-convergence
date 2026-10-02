@@ -161,8 +161,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.58"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Subject Arc"
+APP_VERSION = "v3.59"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Single Voice Pass"
 PAID_MONTHLY_STORY_REVISION = "free-month-arc-subject-2"
 
 
@@ -9566,13 +9566,23 @@ def _render_snapshot_natal_core(
     birth_confirmation_html: str = "",
     evidence_label: str = "Why Luna sees this · chart evidence",
     show_evidence: bool = True,
+    use_live_voice: bool = True,
+    use_live_signature_moves: bool = True,
 ) -> None:
     """Canonical Snapshot body shared by free Natal and both paid personal reports."""
     if snapshot is None:
         return
 
     _render_natal_signature_grid(snapshot)
-    guided_natal = _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
+    # Paid Monthly already has one expensive, subject-aware voice pass below.
+    # Re-running a separate natal LLM before the month adds latency without
+    # improving the monthly story, so callers can use the deterministic natal
+    # interpretation here and reserve Luna's live voice for Read the month.
+    guided_natal = (
+        _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
+        if use_live_voice
+        else None
+    )
     st.markdown("## Read the pattern")
     _render_guided_luna_story(
         guided_natal or _snapshot_natal_fallback_story(snapshot),
@@ -9598,7 +9608,11 @@ def _render_snapshot_natal_core(
     if signatures:
         st.markdown("## Your strengths")
         st.caption("The strongest capacities in your natal pattern when you use them deliberately. The calculation evidence stays available in Why Luna sees this.")
-        signature_moves = _strategic_signature_moves(snapshot)
+        signature_moves = (
+            _strategic_signature_moves(snapshot)
+            if use_live_signature_moves
+            else {}
+        )
         for index, signature in enumerate(signatures[:6]):
             strength = str(getattr(signature, "strength", "") or "").strip()
             watch = str(getattr(signature, "watch", "") or "").strip()
@@ -10750,6 +10764,8 @@ def _render_snapshot_monthly_report(
             paid_snapshot,
             precision_note=str(result.get("natal_precision") or ""),
             show_evidence=False,
+            use_live_voice=False,
+            use_live_signature_moves=False,
         )
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
