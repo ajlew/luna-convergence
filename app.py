@@ -260,14 +260,12 @@ def _admin_access_panel(context: str) -> bool:
     return False
 
 _LUNA_STRATEGIC_MOVE_RULE = (
-    "Every your_move must improve the reader's position rather than merely repeat the affirmation, warning, or summary, "
-    "framing the action as an active calibration with the universe. "
+    "Every your_move must improve the reader's position rather than merely repeat the affirmation, warning or summary. "
     "Make the advice strategically asymmetrical where the evidence supports it: preserve optionality, reduce exposure, "
-    "make information, reciprocity, cost, or commitment visible before committing more, and use leverage only where it is real. "
-    "When direct force is wasteful, be cohesive like water: redirect pressure, narrow the problem, wait for cosmic timing or a stronger opening, "
-    "or move around resistance instead of colliding with it. Give one concrete imperative action, framing it as an alignment with universal flow, "
-    "and make clear how it both improves their position and tunes their energy to the broader pattern. "
-    "Do not recommend deception, coercion, exploitation, or harm."
+    "make information, reciprocity, cost or commitment visible before committing more, and use leverage only where it is real. "
+    "When direct force is wasteful, be cohesive like water: redirect pressure, narrow the problem, wait for the stronger opening, "
+    "or move around resistance instead of colliding with it. Give one concrete imperative action and make clear why it improves "
+    "the position. Do not recommend deception, coercion, exploitation or harm."
 )
 
 # Apply the strategic-move rule at the central voice layer so Daily, Weekly,
@@ -9836,6 +9834,10 @@ def _paid_monthly_voice_facts(narrative, result: dict, snapshot=None) -> dict:
                 shared[key] = live_shared[key]
         # Refresh only missing derived writing views. The canonical stored sky
         # remains the source; these views are deterministic projections of it.
+        if not shared.get("daily_briefs"):
+            shared["daily_briefs"] = live_shared.get("daily_briefs") or []
+        if not shared.get("transit_threads"):
+            shared["transit_threads"] = live_shared.get("transit_threads") or []
         if not shared.get("daily_story_ledger"):
             shared["daily_story_ledger"] = live_shared.get("daily_story_ledger") or []
         if not shared.get("story_skeleton"):
@@ -9856,35 +9858,11 @@ def _paid_monthly_voice_facts(narrative, result: dict, snapshot=None) -> dict:
     )
 
 
-def _paid_monthly_lead_response_format() -> dict:
-    return {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "luna_paid_monthly_lead",
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "headline": {"type": "string"},
-                    "paragraphs": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 2,
-                        "maxItems": 3,
-                    },
-                },
-                "required": ["headline", "paragraphs"],
-                "additionalProperties": False,
-            },
-        },
-    }
-
-
 def _paid_monthly_day_batch_response_format(item_count: int) -> dict:
     return {
         "type": "json_schema",
         "json_schema": {
-            "name": "luna_paid_monthly_days",
+            "name": "luna_paid_monthly_daily_stories",
             "strict": True,
             "schema": {
                 "type": "object",
@@ -9896,10 +9874,9 @@ def _paid_monthly_day_batch_response_format(item_count: int) -> dict:
                             "properties": {
                                 "source_id": {"type": "string"},
                                 "date": {"type": "string"},
-                                "headline": {"type": "string"},
                                 "story": {"type": "string"},
                             },
-                            "required": ["source_id", "date", "headline", "story"],
+                            "required": ["source_id", "date", "story"],
                             "additionalProperties": False,
                         },
                         "minItems": item_count,
@@ -9912,67 +9889,24 @@ def _paid_monthly_day_batch_response_format(item_count: int) -> dict:
         },
     }
 
-
-def _paid_monthly_lead_prompt(facts: dict, *, revision_note: str = "") -> str:
-    correction = f"\nREVISION REQUIRED: {revision_note}\n" if revision_note else ""
-    return (
-        "You are Luna. Python owns every astronomical and natal fact in CALCULATED FACTS. Do not recalculate, "
-        "correct, move or invent astrology. The customer has already read the natal baseline and Your strengths. "
-        "Write only the opening editorial synthesis for this paid Personal Monthly.\n\n"
-        "Explain the governing tension of the month, what changes from the beginning to the end, and why the month "
-        "lands personally for this natal chart. The complete date-by-date story follows immediately afterwards, so do "
-        "not list every transit here and do not create Opening/Middle/Closing groups. Aim for roughly 160-240 words in "
-        "two or three substantial paragraphs.\n\n"
-        "Write serious, vivid, concrete prose. Be strategically useful and position-aware without deception. Preserve "
-        "agency and avoid guarantees, therapy slogans, mystical padding, house numbers, engine labels, bullet lists, "
-        "Remember labels or Your move labels. Return JSON only with exactly headline and paragraphs."
-        + correction
-        + "\nCALCULATED FACTS:\n"
-        + json.dumps(facts, ensure_ascii=False, default=str, separators=(",", ":"))
-    )
-
-
 def _paid_monthly_day_batch_prompt(facts: dict, *, revision_note: str = "") -> str:
     correction = f"\nREVISION REQUIRED: {revision_note}\n" if revision_note else ""
     return (
-        "You are Luna. Python owns every astronomical and natal fact in CALCULATED FACTS. Do not recalculate, "
-        "correct, move or invent an event. Write one independent chronological story entry for EACH supplied date, in "
-        "the exact supplied order. Different dates must never be merged into a phase or convergence group.\n\n"
-        "This should read like Luna's Daily expanded into a paid Monthly: explain every supplied transit on that date, "
-        "what it changes in ordinary life, how multiple same-day transits modify one another, and any supplied natal "
-        "contact. If one event is supplied, aim for roughly 70-90 words. If two events or contacts are supplied, aim for "
-        "roughly 90-110 words. If three or more are supplied, aim for roughly 105-135 words. One paragraph per date is "
-        "enough. The accumulated month should become a substantial story rather than a list of slogans.\n\n"
-        "Name every supplied transit naturally. Use exact dates only from the facts. Continue the developing story from "
-        "PRIOR STORY when supplied, but do not repeat it. Use the customer's natal strengths as character context rather "
-        "than retelling the natal report. Be concrete, strategically useful and position-aware without deception. No "
-        "bullet lists, house numbers, engine labels, generic cosmic filler, Remember labels or Your move labels.\n\n"
-        "Return JSON only with exactly one top-level key, items. Return exactly one item per supplied date. Copy each "
-        "source_id and date exactly. Each item must contain exactly source_id, date, headline and story."
+        "You are Luna. Each item contains the SAME grounded calculation brief used by Luna's free Daily. "
+        "Python owns every astronomical fact. Do not recalculate, move or invent an aspect, date, sign, life area or event.\n\n"
+        "For EACH supplied date, write one Daily-style scene: interpret the strongest calculated aspect first, then show "
+        "how the supplied supporting influences change the practical picture. Translate the supplied life areas into ordinary "
+        "life, connect pressure with support, and use one concrete example when the evidence supports it. This is background "
+        "material for a later personalised Monthly story, so do NOT personalise it to the natal chart here.\n\n"
+        "Match Luna's free Daily voice: alive, intimate, incisive, practical and specific. A capitalised imperative opening is "
+        "welcome when natural. Do not mention the calendar date merely because it exists; the date is chronology metadata for "
+        "the later writer. Do not create a headline, bullets, headings, house numbers, engine labels, Remember or Your move labels. "
+        "Aim for about 55-95 words per date. These scenes are never shown directly to the customer.\n\n"
+        "Return JSON only with exactly one top-level key, items. Return exactly one item per supplied date. Copy each source_id "
+        "and date exactly. Each item contains exactly source_id, date and story."
         + correction
         + "\nCALCULATED FACTS:\n"
         + json.dumps(facts, ensure_ascii=False, default=str, separators=(",", ":"))
-    )
-
-
-@st.cache_data(show_spinner=False, ttl=86400)
-def _cached_paid_monthly_lead(
-    facts_json: str,
-    base_url: str,
-    model: str,
-    _api_key: str,
-    revision_note: str = "",
-) -> dict:
-    facts = json.loads(facts_json)
-    return generate_openai_compatible_json(
-        _paid_monthly_lead_prompt(facts, revision_note=revision_note),
-        base_url=base_url,
-        model=model,
-        api_key=_api_key,
-        timeout=120,
-        max_tokens=2200,
-        response_format=_paid_monthly_lead_response_format(),
-        rate_limit_retries=2,
     )
 
 
@@ -10032,27 +9966,27 @@ def _monthly_event_present(title: str, text: str) -> bool:
     return True
 
 
-def _paid_monthly_lead_quality(copy: dict) -> tuple[bool, str]:
-    if not isinstance(copy, dict):
-        return False, "Return one JSON object with headline and paragraphs."
-    headline = " ".join(str(copy.get("headline") or "").split())
-    paragraphs = [
-        " ".join(str(item or "").split())
-        for item in (copy.get("paragraphs") or [])
-        if str(item or "").strip()
-    ]
-    combined = " ".join([headline, *paragraphs])
-    words = _word_count(combined)
-    problems = []
-    if not headline or len(paragraphs) < 2:
-        problems.append("Supply a headline and at least two substantial paragraphs.")
-    if words < 140:
-        problems.append(f"The opening is too short at {words} words; complete the whole-month synthesis.")
-    if words > 320:
-        problems.append(f"The opening is too long at {words} words; leave the dated detail to the story below.")
-    if re.search(r"\b(?:your move|remember)\s*(?:[:·—-]|$)", combined, flags=re.I):
-        problems.append("Do not create Remember or Your move sections.")
-    return (not problems), " ".join(problems)
+def _paid_monthly_daily_required_labels(source: dict) -> list[str]:
+    brief = dict(source.get("daily_brief") or {})
+    labels: list[str] = []
+    for event in list(brief.get("events") or []):
+        if isinstance(event, dict):
+            value = str(event.get("aspect") or event.get("event") or "").strip()
+            if value:
+                labels.append(value)
+    for event in list(brief.get("major_events") or []):
+        if isinstance(event, dict):
+            value = str(event.get("event") or event.get("technical") or "").strip()
+            if value:
+                labels.append(value)
+    for value in list(brief.get("calculated_labels") or []):
+        text = " ".join(str(value or "").split())
+        lower = text.casefold()
+        if not text or lower.startswith("orb") or lower in {"exact", "applying", "separating", "closest to exact today"}:
+            continue
+        if re.search(r"\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|true node)\b", lower):
+            labels.append(text)
+    return list(dict.fromkeys(labels))
 
 
 def _paid_monthly_day_batch_quality(copy: dict, facts: dict) -> tuple[bool, str]:
@@ -10061,8 +9995,7 @@ def _paid_monthly_day_batch_quality(copy: dict, facts: dict) -> tuple[bool, str]
     returned = [str(item.get("source_id") or "") for item in items if isinstance(item, dict)]
     problems: list[str] = []
     if returned != expected or len(items) != len(expected):
-        problems.append("Return exactly one item for each supplied source_id, in the supplied order.")
-        return False, " ".join(problems)
+        return False, "Return exactly one item for each supplied source_id, in the supplied order."
 
     source_by_id = {str(item.get("source_id") or ""): item for item in (facts.get("items") or [])}
     for index, item in enumerate(items):
@@ -10073,122 +10006,55 @@ def _paid_monthly_day_batch_quality(copy: dict, facts: dict) -> tuple[bool, str]
         source = source_by_id.get(source_id) or {}
         if str(item.get("date") or "") != str(source.get("date") or ""):
             problems.append(f"{source_id} changed its date.")
-        headline = " ".join(str(item.get("headline") or "").split())
         story = " ".join(str(item.get("story") or "").split())
-        if not headline or not story:
+        if not story:
             problems.append(f"{source_id} is incomplete.")
             continue
-        count = len(list(source.get("events") or [])) + len(list(source.get("personal_activations") or []))
-        minimum = 65 if count <= 1 else 85 if count == 2 else 100
-        maximum = 155
         words = _word_count(story)
-        if words < minimum:
-            problems.append(f"{source_id} is too short at {words} words; explain every supplied transit before ending.")
-        elif words > maximum:
-            problems.append(f"{source_id} is too long at {words} words; keep the date focused.")
-        for event in source.get("events") or []:
-            if not isinstance(event, dict):
-                continue
-            title = str(event.get("title") or event.get("display_label") or event.get("technical_label") or "")
-            if title and not _monthly_event_present(title, story):
-                problems.append(f"{source_id} omitted the supplied transit: {title}.")
-        lower = story.casefold()
-        for contact in source.get("personal_activations") or []:
-            if not isinstance(contact, dict):
-                continue
-            transit = str(contact.get("transit") or contact.get("transit_planet") or "").casefold()
-            target = str(contact.get("target") or contact.get("natal_target") or "").casefold()
-            if transit and target and not (transit in lower and target in lower):
-                problems.append(f"{source_id} omitted the personal contact: {transit} to natal {target}.")
-        if re.search(r"\b(?:your move|remember)\s*(?:[:·—-]|$)", story, flags=re.I):
-            problems.append(f"{source_id} added a reserved section label.")
+        if words < 45:
+            problems.append(f"{source_id} is too short at {words} words; interpret the Daily brief rather than reciting it.")
+        elif words > 125:
+            problems.append(f"{source_id} is too long at {words} words; keep the Daily-style pass focused.")
+        for label in _paid_monthly_daily_required_labels(source):
+            if not _monthly_event_present(label, story):
+                problems.append(f"{source_id} omitted calculated Daily evidence: {label}.")
     return (not problems), " ".join(problems)
 
 
-def _paid_monthly_lead_fallback(facts: dict) -> dict:
-    label = str(facts.get("label") or "This month")
-    arc = facts.get("monthly_arc") or {}
-    trajectory = facts.get("monthly_trajectory") or {}
-    paragraphs: list[str] = []
-    for source in (trajectory, arc, facts.get("monthly_decision") or {}):
-        if not isinstance(source, dict):
-            continue
-        for key in ("central_storyline", "summary", "headline", "story", "decision", "strategy", "reason"):
-            value = " ".join(str(source.get(key) or "").split())
-            if value and value not in paragraphs:
-                paragraphs.append(value)
-    if len(paragraphs) < 2:
-        paragraphs.extend([
-            "This month develops through a sequence of dated transits rather than one isolated theme. The story below follows each calculated change in order so that later decisions inherit what earlier dates have already revealed.",
-            "Your natal chart changes where that shared sky becomes most personal. Exact natal contacts are attached to their dates rather than repeated in a separate activation section.",
-        ])
-    return {"headline": label, "paragraphs": paragraphs[:3]}
-
-
 def _paid_monthly_day_fallback(source: dict) -> dict:
-    date_label = str(source.get("date_label") or source.get("date") or "This date")
-    events = [event for event in (source.get("events") or []) if isinstance(event, dict)]
-    contacts = [item for item in (source.get("personal_activations") or []) if isinstance(item, dict)]
-    headline = str((events[0].get("title") if events else "") or (contacts[0].get("title") if contacts else "") or date_label)
-    sentences: list[str] = []
-    for event in events:
-        title = str(event.get("title") or event.get("display_label") or event.get("technical_label") or "A calculated transit")
-        detail = str(event.get("detail") or event.get("registry_interpretation") or "").strip()
-        action = str(event.get("registry_action") or "").strip()
-        sentence = title + (f". {detail}" if detail else ".")
-        if action:
-            sentence += f" {action}"
-        sentences.append(sentence)
-    for contact in contacts:
-        signal = str(contact.get("signal") or "").strip()
-        text = str(contact.get("text") or "").strip()
-        if signal:
-            sentences.append(signal + (f". {text}" if text else "."))
-    if not sentences:
-        sentences.append("No separate transit was selected for this date; keep the prior development in view rather than inventing a new one.")
-    story = " ".join(sentences)
+    """Intermediate-only fallback. Raw calculation prose is never customer-facing."""
+    brief = dict(source.get("daily_brief") or {})
+    labels = _paid_monthly_daily_required_labels(source)
+    areas = []
+    for event in list(brief.get("events") or []):
+        if not isinstance(event, dict):
+            continue
+        for item in event.get("event_life_areas") or []:
+            if isinstance(item, dict) and item.get("life_area"):
+                areas.append(str(item.get("life_area")))
+        for item in event.get("house_meanings") or []:
+            if item:
+                areas.append(str(item))
+    pieces = []
+    if labels:
+        pieces.append("; ".join(labels))
+    if areas:
+        pieces.append("Life areas: " + "; ".join(dict.fromkeys(areas)))
     return {
         "source_id": str(source.get("source_id") or ""),
         "date": str(source.get("date") or ""),
-        "headline": headline,
-        "story": story,
+        "story": ". ".join(pieces) or "Calculated Daily evidence is available for this date.",
+        "intermediate_fallback": True,
     }
 
 
-def _generate_paid_monthly_lead(facts: dict) -> dict:
-    if not _luna_voice_ready():
-        return _paid_monthly_lead_fallback(facts)
-    facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
-    revision_note = ""
-    for _attempt in range(2):
-        try:
-            candidate = _cached_paid_monthly_lead(
-                facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY, revision_note
-            )
-        except Exception as exc:
-            _record_voice_error("paid_monthly_longform", exc)
-            break
-        valid, revision_note = _paid_monthly_lead_quality(candidate)
-        if valid:
-            return candidate
-    return _paid_monthly_lead_fallback(facts)
-
-
-def _generate_paid_monthly_day_partition(
-    items: list[dict],
-    shared_context: dict,
-    prior_story: str = "",
-) -> list[dict]:
+def _generate_paid_monthly_day_partition(items: list[dict]) -> list[dict]:
     if not items:
         return []
     if not _luna_voice_ready():
         return [_paid_monthly_day_fallback(item) for item in items]
 
-    facts = {
-        "shared_context": shared_context,
-        "prior_story": " ".join(str(prior_story or "").split())[-1400:],
-        "items": items,
-    }
+    facts = {"items": items}
     facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
     revision_note = ""
     for _attempt in range(2):
@@ -10197,57 +10063,378 @@ def _generate_paid_monthly_day_partition(
                 facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY, revision_note
             )
         except Exception as exc:
-            _record_voice_error("paid_monthly_days", exc)
+            _record_voice_error("paid_monthly_daily_collection", exc)
             candidate = None
         if candidate is not None:
             valid, revision_note = _paid_monthly_day_batch_quality(candidate, facts)
             if valid:
                 return list(candidate.get("items") or [])
 
-    # A malformed batch must not erase an otherwise valid month. Split until
-    # the failing date is isolated, then use deterministic evidence for it.
     if len(items) > 1:
         midpoint = max(1, len(items) // 2)
-        first = _generate_paid_monthly_day_partition(items[:midpoint], shared_context, prior_story)
-        next_prior = str(first[-1].get("story") or prior_story) if first else prior_story
-        second = _generate_paid_monthly_day_partition(items[midpoint:], shared_context, next_prior)
-        return first + second
+        return (
+            _generate_paid_monthly_day_partition(items[:midpoint])
+            + _generate_paid_monthly_day_partition(items[midpoint:])
+        )
     return [_paid_monthly_day_fallback(items[0])]
 
 
-def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
-    """Build one ~2,000-word month from complete chronological daily transit rows."""
-    context = _paid_monthly_voice_facts(narrative, result, snapshot)
-    plan = monthly_voice_days(context)
-    lead = _generate_paid_monthly_lead(dict(plan.get("lead") or {}))
-    shared_context = dict(plan.get("shared_context") or {})
-    source_days = [item for item in (plan.get("days") or []) if isinstance(item, dict)]
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_paid_monthly_daily_briefs(sign: str, start_iso: str, end_iso: str, timezone_name: str) -> list[dict]:
+    """Use the exact calculation packet and grounding path used by free Daily."""
+    from reading_facts import build_packet
+    from reading_quality import grounded_brief
 
-    days: list[dict] = []
-    prior_story = ""
-    batch_size = 4
-    for start in range(0, len(source_days), batch_size):
-        partition = source_days[start:start + batch_size]
-        generated = _generate_paid_monthly_day_partition(partition, shared_context, prior_story)
-        days.extend(generated)
-        if generated:
-            prior_story = str(generated[-1].get("story") or prior_story)
+    start_date = date.fromisoformat(start_iso)
+    end_date = date.fromisoformat(end_iso)
+    rows: list[dict] = []
+    current = start_date
+    while current <= end_date:
+        packet = build_packet("daily", current, sign, timezone_name)
+        rows.append({
+            "source_id": f"daily-brief:{current.isoformat()}",
+            "date": current.isoformat(),
+            "daily_brief": grounded_brief(packet),
+        })
+        current = date.fromordinal(current.toordinal() + 1)
+    return rows
 
-    lead_paragraphs = [
+
+def _paid_monthly_transit_threads(source_days: list[dict]) -> list[dict]:
+    """Detect neighbouring repeated Daily influences without inventing month-long spans."""
+    occurrences: dict[str, list[date]] = {}
+    display: dict[str, str] = {}
+    for row in source_days:
+        try:
+            day = date.fromisoformat(str(row.get("date") or "")[:10])
+        except ValueError:
+            continue
+        brief = dict(row.get("daily_brief") or {})
+        labels = list(brief.get("calculated_labels") or [])
+        for event in list(brief.get("major_events") or []):
+            if isinstance(event, dict):
+                labels.append(event.get("event") or event.get("technical") or "")
+        for raw in labels:
+            text = " ".join(str(raw or "").split())
+            lower = text.casefold()
+            if not text or lower.startswith("orb") or lower in {"exact", "applying", "separating", "closest to exact today"}:
+                continue
+            if not re.search(r"\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|true node)\b", lower):
+                continue
+            key = re.sub(r"[^a-z0-9]+", " ", lower).strip()
+            if not key:
+                continue
+            display.setdefault(key, text)
+            occurrences.setdefault(key, []).append(day)
+
+    threads: list[dict] = []
+    for key, values in occurrences.items():
+        ordered = sorted(set(values))
+        if not ordered:
+            continue
+        runs: list[list[date]] = [[ordered[0]]]
+        for current in ordered[1:]:
+            if (current - runs[-1][-1]).days <= 2:
+                runs[-1].append(current)
+            else:
+                runs.append([current])
+        structural = any(token in key for token in ("retrograde", "station", "eclipse", "new moon", "full moon", "equinox", "solstice"))
+        for run in runs:
+            if len(run) < 2 and not structural:
+                continue
+            threads.append({
+                "label": display.get(key, key),
+                "start": run[0].isoformat(),
+                "end": run[-1].isoformat(),
+                "days_seen": len(run),
+            })
+    return sorted(threads, key=lambda row: (str(row.get("start") or ""), str(row.get("label") or "")))
+
+
+def _paid_monthly_subject_dossier(snapshot, context: dict) -> dict:
+    """Internal protagonist model. This object is evidence for Luna, never page copy."""
+    natal = dict(context.get("natal_player") or {})
+    positions = [dict(item) for item in list(natal.get("positions") or []) if isinstance(item, dict)]
+    strengths = [dict(item) for item in list(natal.get("strengths") or []) if isinstance(item, dict)]
+    aspects = [dict(item) for item in list(natal.get("aspects") or []) if isinstance(item, dict)]
+
+    core_positions: dict[str, dict] = {}
+    for item in positions:
+        planet = str(item.get("planet") or "")
+        if planet in {"Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"}:
+            core_positions[planet] = item
+
+    if snapshot is not None:
+        ascendant = getattr(snapshot, "ascendant", None)
+        midheaven = getattr(snapshot, "midheaven", None)
+        if ascendant is not None:
+            core_positions["Ascendant"] = {
+                "planet": "Ascendant",
+                "sign": str(getattr(ascendant, "sign", "") or ""),
+                "degree": round(float(getattr(ascendant, "degree", 0.0) or 0.0), 3),
+                "house": getattr(ascendant, "house", None),
+            }
+        if midheaven is not None:
+            core_positions["Midheaven"] = {
+                "planet": "Midheaven",
+                "sign": str(getattr(midheaven, "sign", "") or ""),
+                "degree": round(float(getattr(midheaven, "degree", 0.0) or 0.0), 3),
+                "house": getattr(midheaven, "house", None),
+            }
+
+    personal = dict(context.get("personal_month") or {})
+    return {
+        "core_positions": core_positions,
+        "dominant_element": str(natal.get("dominant_element") or ""),
+        "dominant_modality": str(natal.get("dominant_modality") or ""),
+        "strengths": strengths[:6],
+        "natal_aspects": aspects[:12],
+        "personal_activations": [dict(item) for item in list(personal.get("activations") or []) if isinstance(item, dict)],
+        "reader_context": dict(context.get("reader_context") or {}),
+        "birth_time_known": bool(natal.get("birth_time_known")),
+    }
+
+
+def _paid_monthly_weave_response_format() -> dict:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "luna_paid_monthly_story",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "headline": {"type": "string"},
+                    "paragraphs": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 10,
+                        "maxItems": 24,
+                    },
+                },
+                "required": ["headline", "paragraphs"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
+def _paid_monthly_weave_prompt(facts: dict, *, revision_note: str = "") -> str:
+    correction = f"\nREVISION REQUIRED: {revision_note}\n" if revision_note else ""
+    return (
+        "You are Luna writing one finished Personal Monthly story. Python owns every astronomical and natal fact. "
+        "DAILY SCENES describe the changing environment. SUBJECT is the protagonist. The sky is never the protagonist. "
+        "Do not recalculate or invent astrology, biography or events.\n\n"
+        "Before writing, silently form a working model of SUBJECT from core_positions, strengths, natal_aspects, "
+        "personal_activations and reader_context. Keep that same person continuous from the first paragraph to the last. "
+        "This must not read like a generic Sun-sign forecast with natal facts sprinkled on top.\n\n"
+        "For every important development, silently solve this sequence: what changed in the environment; why that matters "
+        "to THIS person; which existing strength helps them use it; which recurring watch-pattern could distort the response; "
+        "and what the next development changes. Personal natal activations are foreground events. Shared-sky influences with "
+        "no personal contact are background conditions unless they are needed to carry the story.\n\n"
+        "Make it evident that Luna knows the subject. In the first three paragraphs, naturally establish the person's core "
+        "natal character using the supplied Sun and Moon signs and at least one supplied natal signature. Across the whole "
+        "story, naturally use at least three distinct supplied natal signatures when available. Naming a pattern such as "
+        "Sun-Saturn once is useful; do not turn the report into a chart inventory. Every supplied personal activation must be "
+        "integrated where it actually belongs in chronology. Never invent an Ascendant when birth time is unknown.\n\n"
+        "Use the DAILY SCENES as raw narrative material, not as 31 diary entries. Follow chronology, but merge neighbouring "
+        "developments into arcs when the supplied TRANSIT THREADS or RETROGRADE CYCLES support that. Dates are orientation, "
+        "not structure: mention a date, 'early October', or a supplied date range only when it helps the reader understand a "
+        "turning point. Do not mention every day. Never invent a date range.\n\n"
+        "Build a real wave: establish the starting position, let openings and pressures rise and fall, show troughs, reversals, "
+        "choices and consequences, and finish with the changed position the subject carries forward. Do not force optimism. "
+        "Later developments must inherit the consequences of earlier ones. Connect support and pressure instead of defining "
+        "transits one by one. Use concrete ordinary-life examples only where the supplied life areas support them.\n\n"
+        "Write one editorial article: one headline and 10-24 substantial paragraphs, roughly 1,800-2,500 words. No bullets, "
+        "mini-headings, day-by-day labels, house numbers, engine language, cosmic filler, therapy slogans, guarantees, Remember "
+        "labels or Your move labels. Say each idea once. The customer should feel recognised, not analysed from a distance. "
+        "Return JSON only with headline and paragraphs."
+        + correction
+        + "\nMONTH MATERIAL:\n"
+        + json.dumps(facts, ensure_ascii=False, default=str, separators=(",", ":"))
+    )
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_paid_monthly_weave(
+    facts_json: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+    revision_note: str = "",
+) -> dict:
+    facts = json.loads(facts_json)
+    return generate_openai_compatible_json(
+        _paid_monthly_weave_prompt(facts, revision_note=revision_note),
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+        timeout=180,
+        max_tokens=7600,
+        response_format=_paid_monthly_weave_response_format(),
+        rate_limit_retries=2,
+    )
+
+
+def _paid_monthly_signature_planets(strength: dict) -> tuple[str, ...]:
+    evidence = " ".join(str(strength.get("evidence") or "").split()).casefold()
+    found = re.findall(r"\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto)\b", evidence)
+    return tuple(dict.fromkeys(found))
+
+
+def _paid_monthly_strength_present(strength: dict, text: str) -> bool:
+    body = str(text or "").casefold()
+    planets = _paid_monthly_signature_planets(strength)
+    if len(planets) >= 2 and all(planet in body for planet in planets[:2]):
+        return True
+    title_words = [
+        word.casefold() for word in re.findall(r"[A-Za-z]{5,}", str(strength.get("title") or ""))
+        if word.casefold() not in {"about", "become", "through", "together", "automatic"}
+    ]
+    return bool(title_words and sum(word in body for word in title_words[:4]) >= 2)
+
+
+def _paid_monthly_core_identity_present(subject: dict, text: str) -> bool:
+    body = str(text or "").casefold()
+    core = dict(subject.get("core_positions") or {})
+    sun_sign = str((core.get("Sun") or {}).get("sign") or "").casefold()
+    moon_sign = str((core.get("Moon") or {}).get("sign") or "").casefold()
+    sun_ok = not sun_sign or (sun_sign in body and "sun" in body)
+    moon_ok = not moon_sign or (moon_sign in body and "moon" in body)
+    return sun_ok and moon_ok
+
+
+def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
+    if not isinstance(copy, dict):
+        return False, "Return one JSON object with headline and paragraphs."
+    headline = " ".join(str(copy.get("headline") or "").split())
+    paragraphs = [
         " ".join(str(item or "").split())
-        for item in (lead.get("paragraphs") or [])
+        for item in (copy.get("paragraphs") or [])
         if str(item or "").strip()
     ]
-    story_words = _word_count(" ".join([
-        *lead_paragraphs,
-        *[str(item.get("story") or "") for item in days],
-    ]))
+    combined = " ".join([headline, *paragraphs])
+    words = _word_count(combined)
+    problems: list[str] = []
+    if not headline or len(paragraphs) < 10:
+        problems.append("The finished month needs one headline and at least ten substantial paragraphs.")
+    if words < 1500:
+        problems.append(f"The finished month is incomplete at {words} words; develop the full chronology before ending.")
+    elif words > 3000:
+        problems.append(f"The finished month is over-expanded at {words} words; remove repetition without dropping turning points.")
+    if re.search(r"\b(?:your move|remember)\s*(?:[:·—-]|$)", combined, flags=re.I):
+        problems.append("Do not create Remember or Your move sections.")
+
+    month_context = dict(facts.get("month_context") or {})
+    for anchor in list(month_context.get("required_story_anchors") or []):
+        if not isinstance(anchor, dict):
+            continue
+        title = str(anchor.get("title") or "")
+        if title and not _monthly_event_present(title, combined):
+            problems.append(f"The finished month omitted required structural event: {title}.")
+
+    subject = dict(facts.get("subject") or {})
+    for contact in list(subject.get("personal_activations") or []):
+        if not isinstance(contact, dict):
+            continue
+        transit = str(contact.get("transit") or contact.get("transit_planet") or "").casefold()
+        target = str(contact.get("target") or contact.get("natal_target") or "").casefold()
+        if transit and target and not (transit in combined.casefold() and target in combined.casefold()):
+            problems.append(f"The finished month omitted personal contact: {transit} to natal {target}.")
+
+    opening = " ".join(paragraphs[:3])
+    if subject and not _paid_monthly_core_identity_present(subject, opening):
+        problems.append("The opening does not yet establish the supplied Sun and Moon character of the subject.")
+
+    strengths = [item for item in list(subject.get("strengths") or []) if isinstance(item, dict)]
+    required_strength_count = min(3, len(strengths))
+    present_strengths = [item for item in strengths if _paid_monthly_strength_present(item, combined)]
+    if len(present_strengths) < required_strength_count:
+        problems.append(
+            f"The subject is still too generic: use at least {required_strength_count} distinct supplied natal signatures naturally in the story."
+        )
+    if strengths and not any(_paid_monthly_strength_present(item, opening) for item in strengths):
+        problems.append("Make at least one supplied natal signature evident in the first three paragraphs.")
+    closing = " ".join(paragraphs[-4:])
+    if strengths and not any(_paid_monthly_strength_present(item, closing) for item in strengths):
+        problems.append("Carry the same subject into the ending by using at least one supplied natal signature in the closing movement.")
+
+    return (not problems), " ".join(problems)
+
+
+def _paid_monthly_weave_fallback(_facts: dict) -> dict:
+    """Never publish raw Daily/calculation fragments as a paid Monthly story."""
+    return {"headline": "", "paragraphs": [], "voice_complete": False}
+
+
+def _generate_paid_monthly_weave(facts: dict) -> dict:
+    if not _luna_voice_ready():
+        return _paid_monthly_weave_fallback(facts)
+    facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
+    revision_note = ""
+    for _attempt in range(3):
+        try:
+            candidate = _cached_paid_monthly_weave(
+                facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY, revision_note
+            )
+        except Exception as exc:
+            _record_voice_error("paid_monthly_story_weave", exc)
+            candidate = None
+        if candidate is not None:
+            valid, revision_note = _paid_monthly_weave_quality(candidate, facts)
+            if valid:
+                return {**candidate, "voice_complete": True}
+    return _paid_monthly_weave_fallback(facts)
+
+
+def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
+    """Build free-Daily background scenes, then rewrite them around one natal subject."""
+    context = _paid_monthly_voice_facts(narrative, result, snapshot)
+    sign = str(result.get("sign") or "")
+    timezone_name = str(result.get("timezone_name") or DEFAULT_TIMEZONE)
+    try:
+        start_date = date.fromisoformat(str(result.get("start") or "")[:10])
+        end_date = date.fromisoformat(str(result.get("end") or "")[:10])
+    except ValueError:
+        return {"headline": "", "paragraphs": [], "story_word_count": 0, "voice_complete": False, "context": context}
+
+    source_days = _cached_paid_monthly_daily_briefs(
+        sign, start_date.isoformat(), end_date.isoformat(), timezone_name
+    )
+    daily_stories: list[dict] = []
+    batch_size = 4
+    for index in range(0, len(source_days), batch_size):
+        daily_stories.extend(_generate_paid_monthly_day_partition(source_days[index:index + batch_size]))
+
+    shared = dict(context.get("shared_sky") or {})
+    subject = _paid_monthly_subject_dossier(snapshot, context)
+    month_context = {
+        "label": str(shared.get("label") or result.get("label") or ""),
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "transit_threads": _paid_monthly_transit_threads(source_days),
+        "retrograde_cycles": shared.get("retrograde_cycles") or result.get("retrograde_cycles") or [],
+        "required_story_anchors": shared.get("required_story_anchors") or monthly_required_story_anchors(narrative, result),
+    }
+    weave_facts = {
+        "subject": subject,
+        "month_context": month_context,
+        "daily_stories": daily_stories,
+    }
+    woven = _generate_paid_monthly_weave(weave_facts)
+    paragraphs = [
+        " ".join(str(item or "").split())
+        for item in (woven.get("paragraphs") or [])
+        if str(item or "").strip()
+    ]
     return {
-        "headline": " ".join(str(lead.get("headline") or "").split()),
-        "lead_paragraphs": lead_paragraphs,
-        "days": days,
-        "story_word_count": story_words,
+        "headline": " ".join(str(woven.get("headline") or "").split()),
+        "paragraphs": paragraphs,
+        "story_word_count": _word_count(" ".join(paragraphs)),
+        "voice_complete": bool(woven.get("voice_complete", False)),
         "context": context,
+        "daily_stories": daily_stories,
+        "subject": subject,
     }
 
 
@@ -10286,7 +10473,6 @@ def _render_snapshot_monthly_report(
 ) -> None:
     """Paid Monthly: natal baseline, one integrated long-form month, then compact dates/evidence."""
     st.markdown('<section class="natal-shell paid-monthly-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Paid · Personal Monthly</div>', unsafe_allow_html=True)
     title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
     st.markdown(f'<div class="editorial-title">{escape(title)}</div>', unsafe_allow_html=True)
     label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
@@ -10305,48 +10491,29 @@ def _render_snapshot_monthly_report(
             show_evidence=False,
         )
 
-    st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Personal Monthly</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Read the month")
     longform = _paid_monthly_longform(narrative, result, paid_snapshot)
     paid_context = dict(longform.get("context") or {})
 
-    lead_paragraphs = [
+    story_paragraphs = [
         " ".join(str(item or "").split())
-        for item in (longform.get("lead_paragraphs") or [])
+        for item in (longform.get("paragraphs") or [])
         if str(item or "").strip()
     ]
-    lead_body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in lead_paragraphs)
-    lead_headline = " ".join(str(longform.get("headline") or "").split())
-    if lead_headline or lead_body:
-        st.markdown(
-            '<div class="natal-signature-reading paid-monthly-longform">'
-            '<div class="natal-evidence">Luna reads the whole month</div>'
-            + (f'<h3>{escape(lead_headline)}</h3>' if lead_headline else '')
-            + lead_body
-            + '</div>',
-            unsafe_allow_html=True,
-        )
-
-    for day in list(longform.get("days") or []):
-        if not isinstance(day, dict):
-            continue
-        story = " ".join(str(day.get("story") or "").split())
-        if not story:
-            continue
-        date_label = str(day.get("date") or "")
-        try:
-            date_label = human_date(date.fromisoformat(date_label))
-        except (TypeError, ValueError):
-            date_label = str(day.get("date_label") or date_label)
-        headline = " ".join(str(day.get("headline") or "").split()) or date_label
-        st.markdown(
-            '<div class="natal-signature-reading paid-monthly-longform paid-monthly-day">'
-            f'<div class="natal-evidence">{escape(date_label)}</div>'
-            f'<h3>{escape(headline)}</h3>'
-            f'<p>{escape(story)}</p>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+    story_headline = " ".join(str(longform.get("headline") or "").split())
+    if not longform.get("voice_complete", False):
+        st.error("Luna could not complete this report cleanly. Please regenerate it.")
+    else:
+        story_body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in story_paragraphs)
+        if story_headline or story_body:
+            st.markdown(
+                '<div class="natal-signature-reading paid-monthly-longform paid-monthly-article">'
+                + (f'<h3>{escape(story_headline)}</h3>' if story_headline else '')
+                + story_body
+                + '</div>',
+                unsafe_allow_html=True,
+            )
 
     # Key Dates are now a compact reference index only. The full interpretation
     # already appears in Read the month and is not repeated here.
