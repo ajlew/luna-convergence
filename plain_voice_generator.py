@@ -1,4 +1,4 @@
-"""Scheduled plain-prose client with paced provider transport."""
+"""Scheduled plain-prose client with paced provider transport and editorial retry."""
 from __future__ import annotations
 import math
 import os
@@ -8,8 +8,10 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from plain_readings import prompt_for, clean_prose
 
+
 class GenerationError(RuntimeError):
     """Credential-free job diagnostic."""
+
 
 class RateLimitError(GenerationError):
     """Stop the batch rather than hammering a depleted account."""
@@ -50,23 +52,13 @@ def _wait(seconds, sleep):
         seconds -= chunk
 
 
-def generate_text(packet: dict, *, post=None, sleep=time.sleep) -> str:
-    if post is None:
-        import requests
-        post = requests.post
-    required = ('LUNA_VOICE_BASE_URL', 'LUNA_VOICE_MODEL', 'LUNA_VOICE_API_KEY')
-    missing = [name for name in required if not os.environ.get(name, '').strip()]
-    if missing:
-        raise GenerationError('missing configuration: ' + ', '.join(missing))
-    base, model, key = [os.environ[name].strip() for name in required]
-    messages = [
-        {'role': 'system', 'content': "Write Luna's interpretation from the supplied calculations. Return plain prose only."},
-        {'role': 'user', 'content': prompt_for(packet)}]
+def _provider_text(base, model, key, messages, *, post, sleep):
     payload = {'model': model, 'messages': messages, 'temperature': .72,
                'max_completion_tokens': int(os.environ.get('LUNA_VOICE_MAX_TOKENS', '4000'))}
     if model.startswith('openai/gpt-oss'):
         payload.update(reasoning_effort='low', include_reasoning=False)
 
+    response = None
     for transport in range(4):
         try:
             response = post(base.rstrip('/') + '/chat/completions',
@@ -100,8 +92,40 @@ def generate_text(packet: dict, *, post=None, sleep=time.sleep) -> str:
 
     if not isinstance(body, str) or not body.strip():
         raise GenerationError('missing response text')
-
     if choice.get('finish_reason') == 'length':
         raise GenerationError('response truncated')
-
     return clean_prose(body)
+
+
+def generate_text(packet: dict, *, post=None, sleep=time.sleep) -> str:
+    if post is None:
+        import requests
+        post = requests.post
+    required = ('LUNA_VOICE_BASE_URL', 'LUNA_VOICE_MODEL', 'LUNA_VOICE_API_KEY')
+    missing = [name for name in required if not os.environ.get(name, '').strip()]
+    if missing:
+        raise GenerationError('missing configuration: ' + ', '.join(missing))
+    base, model, key = [os.environ[name].strip() for name in required]
+
+    from reading_quality import content_errors
+    base_prompt = prompt_for(packet)
+    revision = ''
+    last_errors = []
+    for editorial_attempt in range(3):
+        user_prompt = base_prompt
+        if revision:
+            user_prompt += (
+                "\n\nEDITORIAL REVISION REQUIRED. Rewrite the complete reading, not just the final paragraph. "
+                + revision
+            )
+        messages = [
+            {'role': 'system', 'content': "Write Luna's interpretation from the supplied calculations. Return plain prose only."},
+            {'role': 'user', 'content': user_prompt},
+        ]
+        body = _provider_text(base, model, key, messages, post=post, sleep=sleep)
+        last_errors = content_errors(packet, body)
+        if not last_errors:
+            return body
+        revision = ' '.join(last_errors)
+
+    raise GenerationError('editorial gate failed after three attempts: ' + '; '.join(last_errors))

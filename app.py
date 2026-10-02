@@ -77,6 +77,7 @@ from natal_snapshot import (
     NatalSnapshot,
     NATAL_PROFILE_ORDER,
     detect_natal_aspects,
+    _build_signatures,
 )
 from birthday_card import (
     birthday_card_filename,
@@ -96,7 +97,14 @@ from weekly_view import (
     default_week_start,
     monday_for,
 )
-from luna_guided_voice import generate_guided_collection_copy, generate_guided_voice_copy
+import luna_guided_voice as _luna_guided_voice_module
+from luna_guided_voice import (
+    generate_guided_collection_copy,
+    generate_guided_voice_copy,
+    validate_guided_collection_copy,
+    validate_guided_voice_copy,
+)
+from luna_voice_provider import generate_openai_compatible_json
 from luna_report_bundle import assemble_report_bundle
 from timing_map import (
     build_timing_map,
@@ -242,6 +250,29 @@ def _admin_access_panel(context: str) -> bool:
                 st.error("That admin key is not valid.")
     return False
 
+_LUNA_STRATEGIC_MOVE_RULE = (
+    "Every your_move must improve the reader's position rather than merely repeat the affirmation, warning or summary. "
+    "Make the advice strategically asymmetrical where the evidence supports it: preserve optionality, reduce exposure, "
+    "make information, reciprocity, cost or commitment visible before committing more, and use leverage only where it is real. "
+    "When direct force is wasteful, be cohesive like water: redirect pressure, narrow the problem, wait for the stronger opening, "
+    "or move around resistance instead of colliding with it. Give one concrete imperative action and make clear why it improves "
+    "the position. Do not recommend deception, coercion, exploitation or harm."
+)
+
+# Apply the strategic-move rule at the central voice layer so Daily, Weekly,
+# Monthly, Yearly, Natal and collection-generated advice all follow the same
+# discipline without forking the astrology engines.
+for _product_name, _product_rule in list(getattr(_luna_guided_voice_module, "_PRODUCT_RULES", {}).items()):
+    if _LUNA_STRATEGIC_MOVE_RULE not in _product_rule:
+        _luna_guided_voice_module._PRODUCT_RULES[_product_name] = (
+            _product_rule + " " + _LUNA_STRATEGIC_MOVE_RULE
+        )
+for _collection_name, _collection_rule in list(getattr(_luna_guided_voice_module, "_COLLECTION_RULES", {}).items()):
+    if _LUNA_STRATEGIC_MOVE_RULE not in _collection_rule:
+        _luna_guided_voice_module._COLLECTION_RULES[_collection_name] = (
+            _collection_rule + " " + _LUNA_STRATEGIC_MOVE_RULE
+        )
+
 _VOICE_LOADING_LABELS = {
     "daily": "Luna is reading today's calculated sky. Keep this page openâ€¦",
     "monthly": "Luna is connecting your month. Keep this page openâ€¦",
@@ -273,6 +304,100 @@ def _voice_error(product: str) -> str:
     return _VOICE_ERRORS.get(product, "No provider response was accepted.")
 
 
+def _word_count(value: object) -> int:
+    return len(re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", str(value or "")))
+
+
+def _move_token_overlap(a: object, b: object) -> float:
+    stop = {
+        "the", "a", "an", "and", "or", "to", "of", "in", "on", "for", "with", "is", "it",
+        "that", "this", "your", "you", "be", "as", "at", "by", "from", "when", "then", "than",
+    }
+    def tokens(value: object) -> set[str]:
+        return {
+            token for token in re.findall(r"[a-z]+", str(value or "").lower())
+            if len(token) > 2 and token not in stop
+        }
+    left, right = tokens(a), tokens(b)
+    if not left or not right:
+        return 0.0
+    return len(left & right) / max(1, min(len(left), len(right)))
+
+
+def _strategic_move_quality(move: object, *, remember: object = "", story: object = "") -> tuple[bool, str]:
+    """Keep Your Move concrete, asymmetrical and distinct from the explanatory copy."""
+    text = " ".join(str(move or "").split())
+    if _word_count(text) < 9:
+        return False, "your_move is too vague."
+    if remember and _move_token_overlap(text, remember) >= 0.72:
+        return False, "your_move repeats the remember/affirmation line."
+    if story and _move_token_overlap(text, story) >= 0.82:
+        return False, "your_move repeats the story instead of changing the position."
+    return True, ""
+
+
+def _guided_voice_complete(copy: dict) -> tuple[bool, tuple[str, ...]]:
+    """Reject structurally valid but visibly incomplete Luna copy before publication."""
+    errors: list[str] = []
+    if not isinstance(copy, dict):
+        return False, ("Luna copy is not an object.",)
+
+    minimum_words = {
+        "headline": 3,
+        "opening": 8,
+        "affirmation": 6,
+        "your_move": 9,
+    }
+    for key, minimum in minimum_words.items():
+        if _word_count(copy.get(key)) < minimum:
+            errors.append(f"{key} is incomplete.")
+
+    story = copy.get("story") or []
+    if isinstance(story, str):
+        story = [story]
+    if not isinstance(story, (list, tuple)) or not story:
+        errors.append("story is missing.")
+    else:
+        for index, paragraph in enumerate(story, 1):
+            if _word_count(paragraph) < 12:
+                errors.append(f"story paragraph {index} is incomplete.")
+
+    move_ok, move_error = _strategic_move_quality(
+        copy.get("your_move"),
+        remember=copy.get("affirmation"),
+        story=" ".join(str(item or "") for item in (story or [])),
+    )
+    if not move_ok:
+        errors.append(move_error)
+
+    return not errors, tuple(errors)
+
+
+def _guided_collection_complete(copy: dict) -> tuple[bool, tuple[str, ...]]:
+    """Apply the same completeness floor to generated card collections globally."""
+    errors: list[str] = []
+    if not isinstance(copy, dict):
+        return False, ("Luna collection is not an object.",)
+    items = copy.get("items") or []
+    if not isinstance(items, list) or not items:
+        return False, ("Luna collection is empty.",)
+    for index, item in enumerate(items, 1):
+        if not isinstance(item, dict):
+            errors.append(f"item {index} is not an object.")
+            continue
+        for key, minimum in (("headline", 3), ("story", 18), ("affirmation", 5), ("your_move", 9)):
+            if _word_count(item.get(key)) < minimum:
+                errors.append(f"item {index} {key} is incomplete.")
+        move_ok, move_error = _strategic_move_quality(
+            item.get("your_move"),
+            remember=item.get("affirmation"),
+            story=item.get("story"),
+        )
+        if not move_ok:
+            errors.append(f"item {index} {move_error}")
+    return not errors, tuple(errors)
+
+
 @st.cache_data(show_spinner=False, ttl=86400)
 def _cached_guided_luna_copy(
     product: str,
@@ -281,13 +406,22 @@ def _cached_guided_luna_copy(
     model: str,
     _api_key: str,
 ) -> dict:
-    return generate_guided_voice_copy(
-        product,
-        json.loads(facts_json),
-        base_url=base_url,
-        model=model,
-        api_key=_api_key,
-    )
+    facts = json.loads(facts_json)
+    last_errors: tuple[str, ...] = ()
+    for _attempt in range(3):
+        copy = generate_guided_voice_copy(
+            product,
+            facts,
+            base_url=base_url,
+            model=model,
+            api_key=_api_key,
+        )
+        valid, schema_errors = validate_guided_voice_copy(product, copy, facts)
+        complete, completeness_errors = _guided_voice_complete(copy)
+        if valid and complete:
+            return copy
+        last_errors = tuple(schema_errors) + tuple(completeness_errors)
+    raise ValueError("Luna voice failed validation after three attempts: " + "; ".join(last_errors))
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -298,13 +432,27 @@ def _cached_guided_luna_collection(
     model: str,
     _api_key: str,
 ) -> dict:
-    return generate_guided_collection_copy(
+    """Generate a collection once at app level.
+
+    The provider helper already retries malformed individual items, and
+    validate_guided_collection_copy already enforces completeness, total word
+    ranges, provenance and imperative moves. Avoid multiplying those calls at
+    the Streamlit layer because large collections can hold a page open.
+    """
+    facts = json.loads(facts_json)
+    copy = generate_guided_collection_copy(
         product,
-        json.loads(facts_json),
+        facts,
         base_url=base_url,
         model=model,
         api_key=_api_key,
     )
+    valid, errors = validate_guided_collection_copy(product, copy, facts)
+    complete, completeness_errors = _guided_collection_complete(copy)
+    if valid and complete:
+        return copy
+    all_errors = tuple(errors) + tuple(completeness_errors)
+    raise ValueError("Luna collection failed validation: " + "; ".join(all_errors))
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -445,14 +593,17 @@ def _render_guided_luna_story(copy: dict, kicker: str) -> None:
     )
 
     affirmation_html = (
-        f'<p class="weekly-synthesis-rule">'
-        f'<strong>REMEMBER ·</strong> {escape(affirmation)}</p>'
+        f'<div class="luna-guidance-line luna-remember-line">'
+        f'<span class="luna-guidance-label">Remember</span>'
+        f'<p>{escape(affirmation)}</p></div>'
         if affirmation
         else ""
     )
 
     move_html = (
-        f"<p><strong>YOUR MOVE · {escape(your_move)}</strong></p>"
+        f'<div class="luna-guidance-line luna-move-line">'
+        f'<span class="luna-guidance-label">Your move</span>'
+        f'<p>{escape(your_move)}</p></div>'
         if your_move
         else ""
     )
@@ -466,6 +617,50 @@ def _render_guided_luna_story(copy: dict, kicker: str) -> None:
 {affirmation_html}
 {move_html}
 </section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_signature_style_story(copy: dict, kicker: str) -> None:
+    """Render a Luna narrative with the exact visual grammar of Snapshot signatures."""
+    if not isinstance(copy, dict):
+        return
+    headline = " ".join(str(copy.get("headline") or "").split())
+    opening = " ".join(str(copy.get("opening") or "").split())
+    affirmation = " ".join(str(copy.get("affirmation") or "").split())
+    your_move = " ".join(str(copy.get("your_move") or "").split())
+    story = copy.get("story") or []
+    if isinstance(story, str):
+        story = [story]
+    elif not isinstance(story, (list, tuple)):
+        story = [str(story)] if story else []
+
+    body_parts = []
+    if opening:
+        body_parts.append(f"<p>{escape(opening)}</p>")
+    body_parts.extend(
+        f"<p>{escape(' '.join(str(paragraph).split()))}</p>"
+        for paragraph in story
+        if str(paragraph).strip()
+    )
+
+    meta_parts = []
+    if affirmation:
+        meta_parts.append(f'<div><span>Remember</span>{escape(affirmation)}</div>')
+    if your_move:
+        meta_parts.append(f'<div><span>Your move</span>{escape(your_move)}</div>')
+    meta_html = ""
+    if meta_parts:
+        meta_class = "natal-signature-meta" if len(meta_parts) > 1 else "natal-signature-meta natal-signature-meta-single"
+        meta_html = f'<div class="{meta_class}">{"".join(meta_parts)}</div>'
+
+    st.markdown(
+        f"""<div class="natal-signature-reading report-story-reading">
+  <div class="natal-evidence">{escape(kicker)}</div>
+  {f'<h3>{escape(headline)}</h3>' if headline else ''}
+  {''.join(body_parts)}
+  {meta_html}
+</div>""",
         unsafe_allow_html=True,
     )
 LUNA_TRUST_STATEMENT = (
@@ -593,7 +788,7 @@ def install_css() -> None:
     st.markdown(
         """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=IBM+Plex+Mono:wght@400;500;600&family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=IBM+Plex+Mono:wght@400;500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap');
 
 :root {
     --white: #ffffff;
@@ -705,23 +900,26 @@ h1,
 h2,
 [data-testid="stMarkdownContainer"] h2 {
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, "Times New Roman", serif !important;
-    font-size:clamp(1.7rem, 3vw, 2.55rem) !important;
-    line-height:1.02 !important;
-    margin-top: 2.6rem !important;
+    font-size:clamp(1.9rem, 2.7vw, 2.2rem) !important;
+    line-height:1.04 !important;
+    margin-top:3rem !important;
+    margin-bottom:.95rem !important;
 }
 
 h3,
 [data-testid="stMarkdownContainer"] h3 {
     font-family:"Bodoni MT", "Bodoni 72", "Bodoni Moda", Didot, Georgia, "Times New Roman", serif !important;
-    font-size:clamp(1.7rem, 3vw, 2.55rem) !important;
-    line-height:1.12 !important;
+    font-size:clamp(1.3rem, 1.8vw, 1.5rem) !important;
+    line-height:1.16 !important;
+    margin-top:1.35rem !important;
+    margin-bottom:.65rem !important;
 }
 
 p, li {
     font-family: "Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
-    font-size: 1.08rem;
-    line-height: 1.62;
-    font-weight: 400;
+    font-size:1.03rem;
+    line-height:1.65;
+    font-weight:400;
 }
 
 a {
@@ -810,7 +1008,7 @@ a {
     color:var(--ink);
     font-size:clamp(1.14rem, 1.8vw, 1.45rem);
     line-height:1.5;
-    font-weight:350;
+    font-weight:400;
 }
 
 .hero-rule {
@@ -905,7 +1103,7 @@ a {
     font-family:"Josefin Sans", sans-serif;
     font-size:clamp(1.16rem, 1.7vw, 1.38rem);
     line-height:1.68;
-    font-weight:350;
+    font-weight:400;
 }
 
 .relationship-card {
@@ -1281,7 +1479,7 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
     font-size:clamp(1rem,1.15vw,1.08rem);
     line-height:1.72;
-    font-weight:300;
+    font-weight:400;
     letter-spacing:0;
     color:var(--black);
 }
@@ -1301,13 +1499,13 @@ a {
     font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif;
     font-size:1rem;
     line-height:1.72;
-    font-weight:300;
+    font-weight:400;
 }
 .timing-story-copy p {
     max-width:760px;
     margin:0 0 1.15rem;
     line-height:1.72;
-    font-weight:300;
+    font-weight:400;
 }
 .timing-story {
     padding-bottom:2.7rem;
@@ -1512,6 +1710,87 @@ a {
     max-width:720px;
 }
 
+/* Paid personal reports deliberately inherit the Natal Snapshot hierarchy.
+   H2 = section, H3 = reading/card title, paragraph = body, natal-evidence = calculation.
+   Do not introduce a second report-specific font or weight system here. */
+.report-story-reading p {
+    max-width:720px;
+}
+
+.paid-monthly-longform h3 {
+    max-width:820px;
+}
+.paid-monthly-longform p,
+.paid-key-date p {
+    max-width:780px;
+    margin:.45rem 0 1rem !important;
+    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif !important;
+    font-size:1.03rem !important;
+    line-height:1.7 !important;
+    font-weight:400 !important;
+    letter-spacing:0 !important;
+}
+.paid-key-date {
+    padding:1rem 0 1.1rem;
+}
+.paid-key-date p + p {
+    margin-top:-.2rem !important;
+}
+
+/* One quiet sans-serif treatment for secondary paid-report rows.
+   Activation titles, phase titles, key-date consequences and their body copy
+   deliberately share one size and one light weight. Hierarchy comes from the
+   Bodoni section heading and mono evidence line, not extra bold text. */
+.report-flat-reading h3,
+.report-flat-reading p {
+    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif !important;
+    font-size:1.02rem !important;
+    line-height:1.65 !important;
+    font-weight:400 !important;
+    letter-spacing:0 !important;
+}
+.report-flat-reading h3 {
+    margin:.28rem 0 .55rem !important;
+}
+.report-flat-reading p {
+    margin:.35rem 0 .7rem !important;
+}
+.report-flat-reading p strong {
+    font-weight:inherit !important;
+}
+
+.luna-guidance-line {
+    max-width:700px;
+    margin:1.15rem 0 0;
+    padding-top:.95rem;
+    border-top:1px solid var(--line);
+}
+
+.luna-guidance-label {
+    display:block;
+    margin:0 0 .32rem;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", "Courier New", monospace;
+    font-size:.64rem;
+    line-height:1.4;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    font-weight:500;
+}
+
+.luna-guidance-line p {
+    margin:0 !important;
+    max-width:680px;
+    font-family:"Josefin Sans","Avenir Next","Century Gothic",Arial,sans-serif !important;
+    font-size:1rem !important;
+    line-height:1.6 !important;
+    font-weight:400 !important;
+}
+
+.luna-move-line {
+    border-top-color:var(--black);
+}
+
 .natal-signature-meta {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -1519,6 +1798,10 @@ a {
     margin-top:.85rem;
     font-size:.84rem;
     line-height:1.55;
+}
+
+.natal-signature-meta-single {
+    grid-template-columns:1fr;
 }
 
 .natal-signature-meta span {
@@ -1935,7 +2218,7 @@ hr {
     font-family:"Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
     font-size:clamp(1.08rem, 1.7vw, 1.28rem);
     line-height:1.68;
-    font-weight:350;
+    font-weight:400;
 }
 
 .weekly-synthesis-rule {
@@ -2067,7 +2350,7 @@ hr {
     font-family:"Josefin Sans", "Avenir Next", "Century Gothic", Arial, sans-serif;
     font-size:clamp(1.08rem, 1.7vw, 1.28rem);
     line-height:1.68;
-    font-weight:350;
+    font-weight:400;
 }
 
 .weekly-studio-controls {
@@ -3325,6 +3608,7 @@ def payment_success_page() -> None:
                 result["natal_profile"] = natal_profile_value
                 result["natal_summary"] = natal_summary_value
                 result["natal_precision"] = natal_precision_value
+                _prepare_paid_yearly_personal_layer(result)
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -3708,6 +3992,7 @@ def _owner_report_output(order: dict) -> dict:
             result["natal_profile"] = str(order.get("natal_profile") or "")
             result["natal_summary"] = str(order.get("natal_summary") or "")
             result["natal_precision"] = str(order.get("natal_precision") or "")
+            _prepare_paid_yearly_personal_layer(result)
         pdf_bytes = build_report_pdf(
             result,
             main_focus=main_focus,
@@ -3745,6 +4030,7 @@ def _render_owner_report(order: dict, key_context: str) -> None:
     if not output:
         return
 
+    st.session_state["reports-generated-result-visible"] = True
     st.success("Owner copy generated. No Stripe payment was created.")
     st.download_button(
         "Download owner PDF",
@@ -5567,7 +5853,12 @@ def reports_page() -> None:
             label="Open the full printable editorial preview",
             use_container_width=True,
         )
+    st.session_state["reports-generated-result-visible"] = False
     report_cta(context="reports")
+
+    if st.session_state.get("reports-generated-result-visible"):
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## How ordering works")
@@ -6314,7 +6605,7 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
                         st.markdown(paragraph.strip())
             if event["move"]:
                 st.markdown(
-                    f'<div class="timing-move"><span class="timing-move-label">YOUR MOVE</span>'
+                    f'<div class="timing-move"><span class="timing-move-label">ACTION</span>'
                     f'<p>{escape(event["move"])}</p></div>',
                     unsafe_allow_html=True,
                 )
@@ -6356,7 +6647,7 @@ def _render_monthly_native_like_transits(narrative, result, *, sign: str, timezo
     if not final_move and events:
         final_move = next((e["move"] for e in reversed(events) if e["move"]), "")
     if final_move:
-        st.markdown("## Your move")
+        st.markdown("## Action")
         st.markdown(final_move)
 
     with _luna_evidence_panel():
@@ -8000,7 +8291,7 @@ def _render_major_sky_events(
 <div class="timing-meta">{escape(_major_event_date_label(item).upper())} · SOLAR ANCHOR</div>
 <h3>{escape(str(item.get("display_label") or ""))}</h3>
 <p>{escape(finalize_customer_prose(str(item.get("line_one") or ""), product=product))}</p>
-<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(finalize_customer_prose(str(item.get("action") or ""), product=product))}</p></div>
+<div class="timing-move"><div class="timing-move-label">Action</div><p>{escape(finalize_customer_prose(str(item.get("action") or ""), product=product))}</p></div>
 </article>""",
                 unsafe_allow_html=True,
             )
@@ -8021,7 +8312,7 @@ def _render_major_sky_events(
 <div class="timing-meta">{escape(_major_event_date_label(item).upper())} · {escape(_major_event_badge(item, product))}</div>
 <h3>{escape(str(item.get("display_label") or item.get("technical_label") or ""))}</h3>
 <p>{escape(line_one)}</p>
-<div class="timing-move"><div class="timing-move-label">Your move</div><p>{escape(action)}</p></div>
+<div class="timing-move"><div class="timing-move-label">Action</div><p>{escape(action)}</p></div>
 </article>""",
                 unsafe_allow_html=True,
             )
@@ -9070,6 +9361,164 @@ def _snapshot_natal_facts(snapshot) -> dict:
     }
 
 
+def _snapshot_natal_fallback_story(snapshot) -> dict:
+    """Complete deterministic fallback so Read the pattern never publishes a fragment."""
+    positions = {item.planet: item for item in (getattr(snapshot, "positions", ()) or ())}
+    sun = positions.get("Sun")
+    moon = positions.get("Moon")
+    aspects = list(getattr(snapshot, "aspects", ()) or ())
+    strongest = aspects[0] if aspects else None
+
+    if strongest is not None:
+        headline = f"{strongest.planet1} and {strongest.planet2} set the strongest recurring pattern"
+        opening = (
+            f"The tightest calculated pattern is {strongest.planet1} {strongest.name} {strongest.planet2}. "
+            "Treat it as a recurring tension or capacity to work with, not a fixed verdict about who you are."
+        )
+        story = [
+            (
+                f"Your Sun is in {sun.sign if sun else 'its calculated sign'} and your Moon is in "
+                f"{moon.sign if moon else 'its calculated sign'}. The chart therefore begins with the relationship "
+                "between conscious direction and instinctive response, then shows where the strongest aspect keeps bringing that relationship back into view."
+            ),
+            (
+                f"The chart is weighted toward {getattr(snapshot, 'dominant_element', 'a dominant element')} "
+                f"and {getattr(snapshot, 'dominant_modality', 'a dominant mode')}. Use that as context rather than a label: "
+                "the useful question is how consistently you can choose your response when the familiar pattern appears."
+            ),
+        ]
+    else:
+        headline = "Your chart has a recognisable baseline"
+        opening = "The calculated planetary positions describe a recurring baseline rather than a fixed personality verdict."
+        story = [
+            f"Your Sun is in {sun.sign if sun else 'its calculated sign'} and your Moon is in {moon.sign if moon else 'its calculated sign'}. Read them together rather than as separate labels.",
+            f"The chart is weighted toward {getattr(snapshot, 'dominant_element', 'its dominant element')} and {getattr(snapshot, 'dominant_modality', 'its dominant mode')}. Notice how that pattern shows up in repeated choices, not just in descriptions that sound familiar.",
+        ]
+
+    return {
+        "headline": headline,
+        "opening": opening,
+        "story": story,
+        "affirmation": "A recurring pattern becomes more useful once you can recognise it without automatically obeying it.",
+        # Advice is deliberately left to Luna's voice layer. If voice is
+        # unavailable, show the calculated interpretation without inventing a
+        # deterministic Your Move.
+        "your_move": "",
+    }
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_signature_move_voice(
+    facts_json: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+) -> dict:
+    facts = json.loads(facts_json)
+    items = list(facts.get("items") or [])
+    item_count = len(items)
+    if not item_count:
+        return {"moves": []}
+    prompt = (
+        "You are Luna. The following natal signatures are closed calculated interpretations. "
+        "Do not recalculate or invent astrology. Write only the strategic YOUR MOVE for each signature, in the supplied order. "
+        "Do not paraphrase the Remember/strength/watch material. The move must change the reader's position. "
+        "Be Machiavellian in the strategic sense, never manipulative: preserve optionality, reveal information or reciprocity before commitment, "
+        "reduce exposure, use leverage only where it exists, and let the other side or the situation show its hand before spending more. "
+        "When direct force wastes energy, behave like water: redirect, narrow, wait, sequence or move around resistance. "
+        "Choose the best path supported by the supplied signature. One concrete imperative sentence, roughly twelve to twenty-eight words. "
+        "No deception, coercion, exploitation, diagnosis, guarantees or mystical padding. Return JSON only.\n\n"
+        "CALCULATED SIGNATURES:\n" + json.dumps(facts, ensure_ascii=False, indent=2, default=str)
+    )
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "luna_signature_moves",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "moves": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source_id": {"type": "string"},
+                                "your_move": {"type": "string"},
+                            },
+                            "required": ["source_id", "your_move"],
+                            "additionalProperties": False,
+                        },
+                        "minItems": item_count,
+                        "maxItems": item_count,
+                    }
+                },
+                "required": ["moves"],
+                "additionalProperties": False,
+            },
+        },
+    }
+    return generate_openai_compatible_json(
+        prompt,
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+        timeout=25,
+        max_tokens=900,
+        response_format=response_format,
+        rate_limit_retries=0,
+    )
+
+
+def _strategic_signature_moves(snapshot) -> dict[str, str]:
+    """One bounded voice request for all natal-signature moves; no hard-coded move fallback."""
+    signatures = list(getattr(snapshot, "signatures", ()) or ())
+    if not signatures or not _luna_voice_ready():
+        return {}
+    facts = {
+        "items": [
+            {
+                "source_id": f"signature:{index}",
+                "title": str(getattr(signature, "title", "") or ""),
+                "interpretation": str(getattr(signature, "text", "") or ""),
+                "strength": str(getattr(signature, "strength", "") or ""),
+                "watch": str(getattr(signature, "watch", "") or ""),
+                "question": str(getattr(signature, "question", "") or ""),
+                "evidence": str(getattr(signature, "evidence", "") or ""),
+            }
+            for index, signature in enumerate(signatures[:6])
+        ]
+    }
+    try:
+        generated = _cached_signature_move_voice(
+            json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str),
+            LUNA_VOICE_BASE_URL,
+            LUNA_VOICE_MODEL,
+            LUNA_VOICE_API_KEY,
+        )
+    except Exception as exc:
+        _record_voice_error("natal_signature_moves", exc)
+        return {}
+    expected = {item["source_id"]: item for item in facts["items"]}
+    output: dict[str, str] = {}
+    for item in list((generated or {}).get("moves") or []):
+        if not isinstance(item, dict):
+            continue
+        source_id = str(item.get("source_id") or "")
+        move = " ".join(str(item.get("your_move") or "").split())
+        source = expected.get(source_id)
+        if not source:
+            continue
+        valid, _reason = _strategic_move_quality(
+            move,
+            remember=f"{source.get('strength', '')} {source.get('watch', '')}",
+            story=source.get("interpretation", ""),
+        )
+        if valid:
+            output[source_id] = move
+    return output
+
+
 def _render_snapshot_natal_core(
     snapshot,
     *,
@@ -9083,11 +9532,11 @@ def _render_snapshot_natal_core(
 
     _render_natal_signature_grid(snapshot)
     guided_natal = _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
-    st.markdown("### Read the pattern")
-    if guided_natal:
-        _render_guided_luna_story(guided_natal, "Luna reads the whole chart")
-    else:
-        _render_voice_unavailable(facts_label="natal chart calculation")
+    st.markdown("## Read the pattern")
+    _render_guided_luna_story(
+        guided_natal or _snapshot_natal_fallback_story(snapshot),
+        "Luna reads the whole chart",
+    )
 
     if birth_confirmation_html:
         st.markdown(birth_confirmation_html, unsafe_allow_html=True)
@@ -9100,44 +9549,39 @@ def _render_snapshot_natal_core(
     else:
         st.caption("Birth time or location precision is limited; Luna leaves unavailable angles or houses out rather than inventing them.")
 
-    position_map = {item.planet: item for item in (getattr(snapshot, "positions", ()) or ())}
-    aspect_items = list(getattr(snapshot, "aspects", ()) or ())[:6]
-    signature_facts = {
-        "items": [
-            {
-                "source_id": f"natal-aspect:{index}",
-                "planet_1": aspect.planet1,
-                "planet_1_sign": position_map[aspect.planet1].sign if aspect.planet1 in position_map else None,
-                "planet_1_house": position_map[aspect.planet1].house if aspect.planet1 in position_map else None,
-                "aspect": aspect.name,
-                "planet_2": aspect.planet2,
-                "planet_2_sign": position_map[aspect.planet2].sign if aspect.planet2 in position_map else None,
-                "planet_2_house": position_map[aspect.planet2].house if aspect.planet2 in position_map else None,
-                "orb": round(float(aspect.orb), 2),
-                "strength": round(float(aspect.strength), 3),
-            }
-            for index, aspect in enumerate(aspect_items)
-        ]
-    }
-    generated = _guided_luna_collection("natal_signatures", signature_facts) if signature_facts["items"] else None
-    voices = list((generated or {}).get("items", []))
-    labels = {
-        item["source_id"]: f"{item['planet_1']} {item['aspect']} {item['planet_2']} · {item['orb']:.2f}° orb"
-        for item in signature_facts["items"]
-    }
-    if voices:
-        st.markdown("## Your strongest signatures")
-        st.caption("Luna translates the strongest calculated aspects into lived behaviour without replacing the chart evidence.")
-        for voice in voices:
-            source_id = str(voice["source_id"])
+    # The strongest signatures are deterministic natal-engine output. Do not
+    # block the rest of a report on a second multi-item LLM request here.
+    signatures = list(getattr(snapshot, "signatures", ()) or ())
+    if not signatures:
+        signatures = list(_build_signatures(list(getattr(snapshot, "aspects", ()) or ()), limit=6))
+    if signatures:
+        st.markdown("## Your strengths")
+        st.caption("The strongest capacities in your natal pattern when you use them deliberately. The chart evidence stays available below.")
+        signature_moves = _strategic_signature_moves(snapshot)
+        for index, signature in enumerate(signatures[:6]):
+            strength = str(getattr(signature, "strength", "") or "").strip()
+            watch = str(getattr(signature, "watch", "") or "").strip()
+            remember_bits = []
+            if strength:
+                remember_bits.append(strength)
+            if watch:
+                watch_lower = watch[:1].lower() + watch[1:] if len(watch) > 1 else watch.lower()
+                remember_bits.append(f"Watch for {watch_lower}")
+            remember = " ".join(remember_bits)
+            move = str(signature_moves.get(f"signature:{index}") or "").strip()
+            move_html = (
+                f'<div><span>Your move</span>{escape(move)}</div>'
+                if move else ""
+            )
+            meta_class = "natal-signature-meta" if move else "natal-signature-meta natal-signature-meta-single"
             html = (
                 '<div class="natal-signature-reading">'
-                f'<div class="natal-evidence">{escape(labels.get(source_id, source_id))}</div>'
-                f'<h3>{escape(str(voice["headline"]))}</h3>'
-                f'<p>{escape(str(voice["story"]))}</p>'
-                '<div class="natal-signature-meta">'
-                f'<div><span>Remember</span>{escape(str(voice["affirmation"]))}</div>'
-                f'<div><span>Your move</span>{escape(str(voice["your_move"]))}</div>'
+                f'<div class="natal-evidence">{escape(str(getattr(signature, "evidence", "Calculated natal aspect") or "Calculated natal aspect"))}</div>'
+                f'<h3>{escape(str(getattr(signature, "title", "Natal signature") or "Natal signature"))}</h3>'
+                f'<p>{escape(str(getattr(signature, "text", "") or ""))}</p>'
+                f'<div class="{meta_class}">'
+                f'<div><span>Remember</span>{escape(remember)}</div>'
+                f'{move_html}'
                 '</div></div>'
             )
             st.markdown(html, unsafe_allow_html=True)
@@ -9205,8 +9649,358 @@ def _snapshot_monthly_story(narrative) -> dict:
         "opening": str(getattr(narrative, "subtitle", "") or getattr(narrative, "central_storyline", "") or ""),
         "story": story,
         "affirmation": str(getattr(narrative, "validation_rule", "") or getattr(narrative, "agency_rule", "") or ""),
-        "your_move": action_plan[0] if action_plan else str(getattr(narrative, "do_line", "") or ""),
+        # Strategic advice is a Luna voice responsibility. If live voice is
+        # unavailable, keep the calculated story but do not fabricate a move.
+        "your_move": "",
     }
+
+
+def _monthly_required_story_anchors(narrative, result: dict) -> list[dict]:
+    """Return structural monthly events that must be named in Read the month."""
+    anchors: list[dict] = []
+    seen: set[str] = set()
+
+    def add(title: object, date_label: object = "", paragraph: object = "") -> None:
+        clean_title = " ".join(str(title or "").split())
+        if not clean_title:
+            return
+        lowered = clean_title.lower()
+        if not any(token in lowered for token in ("retrograde", "station", "eclipse")):
+            return
+        key = re.sub(r"[^a-z0-9]+", " ", lowered).strip()
+        if not key or key in seen:
+            return
+        seen.add(key)
+        anchors.append({
+            "title": clean_title,
+            "date_label": " ".join(str(date_label or "").split()),
+            "paragraph": " ".join(str(paragraph or "").split()),
+        })
+
+    for chapter in list(getattr(narrative, "chapters", ()) or ()):
+        title = str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "")
+        date_label = str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "") or "")
+        paragraphs = [
+            " ".join(str(item or "").split())
+            for item in (getattr(chapter, "paragraphs", ()) or ())
+            if str(item or "").strip()
+        ]
+        add(title, date_label, paragraphs[0] if paragraphs else "")
+
+    for item in list(result.get("major_sky_events") or []) + list(result.get("major_transitions") or []):
+        if not isinstance(item, dict):
+            continue
+        title = item.get("display_label") or item.get("technical_label") or item.get("title")
+        date_label = item.get("event_date") or item.get("date") or ""
+        add(title, date_label, "")
+
+    return anchors[:4]
+
+
+def _monthly_copy_with_required_anchors(copy: dict, narrative, result: dict) -> dict:
+    """Guarantee defining stations/eclipses are named in the top Monthly story."""
+    if not isinstance(copy, dict):
+        copy = {}
+    merged = dict(copy)
+    story = merged.get("story") or []
+    if isinstance(story, str):
+        story = [story]
+    elif not isinstance(story, (list, tuple)):
+        story = [str(story)] if story else []
+    story = [" ".join(str(item or "").split()) for item in story if str(item or "").strip()]
+
+    combined = " ".join(
+        [str(merged.get("headline") or ""), str(merged.get("opening") or ""), *story]
+    ).lower()
+    additions: list[str] = []
+    for anchor in _monthly_required_story_anchors(narrative, result):
+        title = anchor["title"]
+        tokens = [token for token in re.findall(r"[a-z]+", title.lower()) if len(token) > 3]
+        # Require the defining planet/event words to appear, not merely a vague synonym.
+        present = bool(tokens) and all(token in combined for token in tokens[:3])
+        if present:
+            continue
+        date_label = anchor.get("date_label") or ""
+        paragraph = anchor.get("paragraph") or ""
+        lead = title + (f" · {date_label}" if date_label else "")
+        additions.append(lead + (f". {paragraph}" if paragraph else "."))
+        combined += " " + title.lower()
+
+    if additions:
+        story = additions + story
+    merged["story"] = story
+    return merged
+
+
+
+
+def _serialize_paid_monthly_snapshot(snapshot) -> dict:
+    """Readable natal evidence for the paid Monthly voice; never raw birth details."""
+    if snapshot is None:
+        return {}
+    return {
+        "positions": [
+            {
+                "planet": str(getattr(item, "planet", "")),
+                "sign": str(getattr(item, "sign", "")),
+                "degree": round(float(getattr(item, "degree", 0.0) or 0.0), 3),
+                "house": getattr(item, "house", None),
+                "retrograde": bool(getattr(item, "retrograde", False)),
+            }
+            for item in (getattr(snapshot, "positions", ()) or ())
+        ],
+        "aspects": [
+            {
+                "planet_1": str(getattr(item, "planet1", "")),
+                "aspect": str(getattr(item, "name", "")),
+                "planet_2": str(getattr(item, "planet2", "")),
+                "orb": round(float(getattr(item, "orb", 0.0) or 0.0), 3),
+                "strength": round(float(getattr(item, "strength", 0.0) or 0.0), 3),
+            }
+            for item in (getattr(snapshot, "aspects", ()) or ())
+        ],
+        "strengths": [
+            {
+                "title": str(getattr(item, "title", "")),
+                "interpretation": str(getattr(item, "text", "")),
+                "strength": str(getattr(item, "strength", "")),
+                "watch": str(getattr(item, "watch", "")),
+                "evidence": str(getattr(item, "evidence", "")),
+            }
+            for item in (getattr(snapshot, "signatures", ()) or ())
+        ],
+        "dominant_element": str(getattr(snapshot, "dominant_element", "") or ""),
+        "dominant_modality": str(getattr(snapshot, "dominant_modality", "") or ""),
+        "birth_time_known": bool(getattr(snapshot, "birth_time_known", False)),
+    }
+
+
+def _paid_monthly_voice_facts(narrative, result: dict, snapshot=None) -> dict:
+    """Complete closed Python evidence for one integrated paid Monthly interpretation."""
+    overlay = dict(result.get("natal_overlay") or {})
+    chronology = []
+    for chapter in list(getattr(narrative, "chapters", ()) or ()):
+        chronology.append({
+            "label": str(getattr(chapter, "label", "") or ""),
+            "date_range": str(getattr(chapter, "date_range", "") or ""),
+            "hook": str(getattr(chapter, "hook", "") or ""),
+            "title": str(getattr(chapter, "title", "") or ""),
+            "paragraphs": [str(value) for value in (getattr(chapter, "paragraphs", ()) or ())],
+            "action": str(getattr(chapter, "action", "") or ""),
+            "evidence": [str(value) for value in (getattr(chapter, "evidence", ()) or ())],
+        })
+    key_dates = [
+        {
+            "date_label": str(getattr(item, "date_label", "") or ""),
+            "consequence": str(getattr(item, "consequence", "") or ""),
+            "response": str(getattr(item, "response", "") or ""),
+            "evidence": str(getattr(item, "evidence", "") or ""),
+        }
+        for item in (getattr(narrative, "key_dates", ()) or ())
+    ]
+    anchors = _monthly_required_story_anchors(narrative, result)
+    return {
+        "product": "paid_personal_monthly",
+        "sign": str(result.get("sign") or ""),
+        "label": str(result.get("label") or getattr(narrative, "label", "") or ""),
+        "start": str(result.get("start") or ""),
+        "end": str(result.get("end") or ""),
+        "timezone": str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+        "main_focus": str(result.get("main_focus") or getattr(narrative, "main_focus", "") or "General overview"),
+        "personal_question": str(getattr(narrative, "personal_question", "") or ""),
+        "natal": _serialize_paid_monthly_snapshot(snapshot),
+        # Authoritative month calculations. These stay separate in Python but are
+        # intentionally given to Luna together so the reader receives one story.
+        "events": list(result.get("events") or []),
+        "major_sky_registry": list(result.get("major_sky_registry") or []),
+        "major_sky_events": list(result.get("major_sky_events") or []),
+        "major_transitions": list(result.get("major_transitions") or []),
+        "retrograde_cycles": list(result.get("retrograde_cycles") or []),
+        "convergences": list(result.get("convergences") or []),
+        "inherited_events": list(result.get("inherited_events") or []),
+        "dominant_houses": list(result.get("dominant_houses") or []),
+        "solar_convergence": result.get("solar_convergence") or {},
+        "monthly_arc": result.get("monthly_arc") or {},
+        "monthly_trajectory": result.get("monthly_trajectory") or {},
+        "monthly_decision": result.get("monthly_decision") or {},
+        "personal_activations": list(overlay.get("activations") or []),
+        "personal_overlay_summary": str(overlay.get("summary") or ""),
+        "calculated_chronology": chronology,
+        "key_dates": key_dates,
+        "required_story_anchors": anchors,
+    }
+
+
+def _paid_monthly_longform_response_format() -> dict:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "luna_paid_monthly_longform",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "headline": {"type": "string"},
+                    "paragraphs": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 7,
+                        "maxItems": 16,
+                    },
+                },
+                "required": ["headline", "paragraphs"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
+def _paid_monthly_longform_prompt(facts: dict, *, revision_note: str = "") -> str:
+    correction = f"\nREVISION REQUIRED: {revision_note}\n" if revision_note else ""
+    return (
+        "You are Luna writing a paid Personal Monthly as one absorbing editorial feature. "
+        "Python owns every astronomical and natal calculation in CALCULATED FACTS. Do not recalculate, correct, add or move an event. "
+        "Your job is interpretation and synthesis. The customer has already read the natal baseline and strengths above, so do not retell the natal chart as a separate report. "
+        "Instead, use that natal character as the player moving through this month's calculated sky.\n\n"
+        "WRITE ONE STORY, NOT MODULES. Fold the personal natal activations, the opening/middle/closing progression, convergences, stations, lunations, retrogrades, decisions and life-area emphasis into the same chronological narrative. "
+        "When calculations overlap on the same date or window, combine them into one turning point rather than repeating them as separate cards. "
+        "Integrate every item in required_story_anchors naturally, and integrate every supplied personal_activation where it materially changes the story. "
+        "Do not create sections called strongest monthly activations, where this month touches your chart, how the month unfolds, key dates, Remember or Your move. "
+        "Key Dates is rendered separately by the application as a reference after your story.\n\n"
+        "Make the month feel consequential and entertaining without making promises. Follow chronology. Use exact dates from the facts when they sharpen the story; otherwise use early, middle or late month. "
+        "Explain what a calculation means in ordinary life before moving to the next development. Show cause, pressure, information asymmetry, costly evidence, changing leverage, consequence and choice only when the supplied calculations support them. "
+        "Machiavellian means strategically clear, never deceptive or exploitative. Preserve agency. No therapy slogans, mystical padding, cosmic filler, generic flattery or repetitive advice. "
+        "Do not dump aspect lists into prose. Do not mention internal engine labels, scores, house numbers or JSON.\n\n"
+        "Length is not the goal; a complete story is. A strong month may need roughly 900-1800 words and may run longer when the evidence genuinely requires it. "
+        "Do not pad and do not truncate a useful thread merely to hit a target. Use 7-16 purposeful paragraphs with varied rhythm. "
+        "Return JSON only: headline plus paragraphs. No markdown, bullets, citations, Remember field or Your move field."
+        + correction
+        + "\nCALCULATED FACTS:\n"
+        + json.dumps(facts, ensure_ascii=False, default=str, separators=(",", ":"))
+    )
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_paid_monthly_longform(
+    facts_json: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+    revision_note: str = "",
+) -> dict:
+    facts = json.loads(facts_json)
+    return generate_openai_compatible_json(
+        _paid_monthly_longform_prompt(facts, revision_note=revision_note),
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+        timeout=120,
+        max_tokens=7000,
+        response_format=_paid_monthly_longform_response_format(),
+        rate_limit_retries=2,
+    )
+
+
+def _monthly_anchor_present(title: str, text: str) -> bool:
+    lowered = str(title or "").lower()
+    body = str(text or "").lower()
+    planets = re.findall(r"\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto)\b", lowered)
+    if "retrograde" in lowered or "station" in lowered:
+        return (not planets or all(planet in body for planet in planets[:1])) and "retrograde" in body
+    if "eclipse" in lowered:
+        return "eclipse" in body
+    if "new moon" in lowered:
+        return "new moon" in body
+    if "full moon" in lowered:
+        return "full moon" in body
+    return True
+
+
+def _paid_monthly_longform_quality(copy: dict, facts: dict) -> tuple[bool, str]:
+    if not isinstance(copy, dict):
+        return False, "Return one JSON object with a headline and paragraphs."
+    headline = " ".join(str(copy.get("headline") or "").split())
+    paragraphs = [" ".join(str(item or "").split()) for item in (copy.get("paragraphs") or []) if str(item or "").strip()]
+    if not headline or len(paragraphs) < 7:
+        return False, "The story is incomplete. Supply a headline and at least seven substantive chronological paragraphs."
+    combined = " ".join([headline, *paragraphs])
+    words = len(re.findall(r"\b[\w’'-]+\b", combined))
+    missing = [
+        str(item.get("title") or "")
+        for item in (facts.get("required_story_anchors") or [])
+        if str(item.get("title") or "").strip() and not _monthly_anchor_present(str(item.get("title") or ""), combined)
+    ]
+    # Personal contacts are part of the paid value. Require the transit and natal
+    # target to appear somewhere in the integrated story, rather than in a separate card.
+    missing_contacts = []
+    lower = combined.lower()
+    for item in (facts.get("personal_activations") or []):
+        transit = str(item.get("transit") or item.get("transit_planet") or "").strip().lower()
+        target = str(item.get("target") or item.get("natal_target") or "").strip().lower()
+        if transit and target and not (transit in lower and target in lower):
+            missing_contacts.append(f"{transit} to natal {target}")
+    problems = []
+    if words < 700:
+        problems.append(f"The paid Monthly is too compressed at {words} words; develop the calculated story instead of summarising it.")
+    if missing:
+        problems.append("Naturally integrate these required sky anchors: " + "; ".join(missing))
+    if missing_contacts:
+        problems.append("Naturally integrate these personal contacts: " + "; ".join(missing_contacts[:8]))
+    return (not problems), " ".join(problems)
+
+
+def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict | None:
+    """One voice pass over the complete paid-Monthly evidence; never splice missing events into prose."""
+    if not _luna_voice_ready():
+        return None
+    facts = _paid_monthly_voice_facts(narrative, result, snapshot)
+    facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
+    best = None
+    revision_note = ""
+    for attempt in range(2):
+        try:
+            candidate = _cached_paid_monthly_longform(
+                facts_json,
+                LUNA_VOICE_BASE_URL,
+                LUNA_VOICE_MODEL,
+                LUNA_VOICE_API_KEY,
+                revision_note,
+            )
+        except Exception as exc:
+            _record_voice_error("paid_monthly_longform", exc)
+            break
+        if isinstance(candidate, dict):
+            best = candidate
+        valid, revision_note = _paid_monthly_longform_quality(candidate, facts)
+        if valid:
+            return candidate
+    return best
+
+def _select_three_monthly_chapters(chapters) -> list:
+    """Compress the paid month to an opening, middle and closing phase."""
+    values = list(chapters or ())
+    if len(values) <= 3:
+        return values
+    indices = (0, len(values) // 2, len(values) - 1)
+    selected = []
+    for index in indices:
+        item = values[index]
+        if item not in selected:
+            selected.append(item)
+    return selected[:3]
+
+
+def _compact_monthly_paragraphs(chapter, maximum: int = 2) -> list[str]:
+    values = [
+        " ".join(str(item or "").split())
+        for item in (getattr(chapter, "paragraphs", ()) or ())
+        if str(item or "").strip()
+    ]
+    if len(values) <= maximum:
+        return values
+    return [values[0], values[-1]]
+
+
 
 
 def _render_snapshot_monthly_report(
@@ -9215,23 +10009,15 @@ def _render_snapshot_monthly_report(
     *,
     order_reference: str = "",
 ) -> None:
-    """Render paid Monthly through the Natal Snapshot presentation hierarchy."""
+    """Paid Monthly: natal baseline, one integrated long-form month, then compact dates/evidence."""
     st.markdown('<section class="natal-shell paid-monthly-shell">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Paid · Personal Monthly</div>', unsafe_allow_html=True)
     title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
-    st.markdown(
-        f'<div class="editorial-title">{escape(title)}</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown(f'<div class="editorial-title">{escape(title)}</div>', unsafe_allow_html=True)
     label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
     intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
-    intro_bits = [label]
-    if intro:
-        intro_bits.append(intro)
-    st.markdown(
-        f'<div class="natal-intro">{escape(" · ".join(intro_bits))}</div>',
-        unsafe_allow_html=True,
-    )
+    intro_text = label + (f" · {intro}" if intro else "")
+    st.markdown(f'<div class="natal-intro">{escape(intro_text)}</div>', unsafe_allow_html=True)
 
     paid_snapshot = _snapshot_from_encoded_natal_profile(
         str(result.get("natal_profile") or ""),
@@ -9244,92 +10030,112 @@ def _render_snapshot_monthly_report(
         )
 
     st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Personal Monthly</div>', unsafe_allow_html=True)
-    st.markdown("### Read the month")
-    _render_guided_luna_story(_snapshot_monthly_story(narrative), "Luna reads the month")
-
-    overlay = dict(result.get("natal_overlay") or {})
-    activations = list(overlay.get("activations") or [])
-    if activations:
-        st.markdown("## Your strongest monthly activations")
-        st.caption(
-            "The month-wide story stays intact; these are the calculated places where it lands most directly on your natal chart."
+    st.markdown("## Read the month")
+    longform = _paid_monthly_longform(narrative, result, paid_snapshot)
+    if longform and list(longform.get("paragraphs") or []):
+        headline = " ".join(str(longform.get("headline") or "").split())
+        paragraphs = [
+            " ".join(str(item or "").split())
+            for item in (longform.get("paragraphs") or [])
+            if str(item or "").strip()
+        ]
+        body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in paragraphs)
+        st.markdown(
+            '<div class="natal-signature-reading paid-monthly-longform">'
+            '<div class="natal-evidence">Luna reads the whole month</div>'
+            + (f'<h3>{escape(headline)}</h3>' if headline else '')
+            + body
+            + '</div>',
+            unsafe_allow_html=True,
         )
-        shared_remember = str(getattr(narrative, "validation_rule", "") or getattr(narrative, "agency_rule", "") or "")
-        for item in activations:
-            remember = str(item.get("signature") or shared_remember or "").strip()
-            st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(str(item.get("date_label") or ""))} · {escape(str(item.get("signal") or ""))}</div>
-  <h3>{escape(str(item.get("title") or "Personal activation"))}</h3>
-  <p>{escape(str(item.get("text") or ""))}</p>
-  <div class="natal-signature-meta">
-    <div><span>Remember</span>{escape(remember)}</div>
-    <div><span>Your move</span>{escape(str(item.get("move") or ""))}</div>
-  </div>
-</div>''',
-                unsafe_allow_html=True,
-            )
+    else:
+        # Deterministic narrative remains the non-blocking fallback. It is shown
+        # as one story only; separate activation/phase modules are never restored.
+        fallback = _snapshot_monthly_story(narrative)
+        story = fallback.get("story") or []
+        if isinstance(story, str):
+            story = [story]
+        opening = " ".join(str(fallback.get("opening") or "").split())
+        paragraphs = ([opening] if opening else []) + [
+            " ".join(str(item or "").split()) for item in story if str(item or "").strip()
+        ]
+        body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in paragraphs)
+        st.markdown(
+            '<div class="natal-signature-reading paid-monthly-longform">'
+            '<div class="natal-evidence">Luna reads the whole month</div>'
+            f'<h3>{escape(str(fallback.get("headline") or "Your month in motion"))}</h3>'
+            + body
+            + '</div>',
+            unsafe_allow_html=True,
+        )
 
-    chapters = list(getattr(narrative, "chapters", ()) or ())
-    if chapters:
-        st.markdown("## How the month unfolds")
-        for chapter in chapters:
-            paragraphs = "".join(
-                f"<p>{escape(str(paragraph))}</p>"
-                for paragraph in (getattr(chapter, "paragraphs", ()) or ())
-                if str(paragraph).strip()
-            )
-            st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(str(getattr(chapter, "date_range", "") or getattr(chapter, "label", "")))}</div>
-  <h3>{escape(str(getattr(chapter, "title", "") or getattr(chapter, "hook", "") or "Monthly turning point"))}</h3>
-  {paragraphs}
-  <div class="natal-signature-meta">
-    <div><span>Remember</span>{escape(str(getattr(chapter, "hook", "") or ""))}</div>
-    <div><span>Your move</span>{escape(str(getattr(chapter, "action", "") or ""))}</div>
-  </div>
-</div>''',
-                unsafe_allow_html=True,
-            )
-
-    key_dates = list(getattr(narrative, "key_dates", ()) or ())
+    # Key Dates remain a utility reference, not a second horoscope. The same
+    # regular Josefin body treatment is used throughout; dates stay in mono.
+    key_dates = list(getattr(narrative, "key_dates", ()) or ())[:8]
     if key_dates:
         st.markdown("## Key dates")
+        st.caption("The dates worth keeping beside the longer story.")
         for item in key_dates:
+            date_label = str(getattr(item, "date_label", "") or "")
+            consequence = " ".join(str(getattr(item, "consequence", "") or "").split())
+            response = " ".join(str(getattr(item, "response", "") or "").split())
+            response_html = f'<p>{escape(response)}</p>' if response and response.casefold() != consequence.casefold() else ''
             st.markdown(
-                f'''<div class="natal-signature-reading">
-  <div class="natal-evidence">{escape(str(getattr(item, "date_label", "") or ""))}</div>
-  <h3>{escape(str(getattr(item, "consequence", "") or "Key date"))}</h3>
-  <p>{escape(str(getattr(item, "response", "") or ""))}</p>
-</div>''',
+                '<div class="natal-signature-reading paid-key-date">'
+                f'<div class="natal-evidence">{escape(date_label)}</div>'
+                f'<p>{escape(consequence)}</p>'
+                f'{response_html}'
+                '</div>',
                 unsafe_allow_html=True,
             )
 
-    action_plan = [str(item).strip() for item in (getattr(narrative, "action_plan", ()) or ()) if str(item).strip()]
-    if action_plan:
-        st.markdown("## Your move")
-        for item in action_plan:
-            st.markdown(f"- {item}")
-
+    # No second/bottom Your Move. Strategic choices belong inside the long-form
+    # interpretation rather than appearing again as generic bullets.
+    overlay = dict(result.get("natal_overlay") or {})
+    activations = list(overlay.get("activations") or [])
     with _luna_evidence_panel("Why Luna sees this · chart evidence"):
-        if overlay:
+        paid_facts = _paid_monthly_voice_facts(narrative, result, paid_snapshot)
+        strengths = list((paid_facts.get("natal") or {}).get("strengths") or [])
+        if strengths:
+            st.markdown("**Natal strengths used in the interpretation**")
+            for item in strengths[:8]:
+                st.markdown(f"- {item.get('evidence', '')} · {item.get('title', '')}")
+        if activations:
             st.markdown("**Personal natal contacts**")
-            if activations:
-                for item in activations:
-                    st.markdown(f"- {item.get('signal', '')}")
-            else:
-                st.caption(str(overlay.get("summary") or "No tight personal contact dominates this month."))
+            for item in activations:
+                label_bits = [
+                    str(item.get("date_label") or item.get("date") or ""),
+                    str(item.get("signal") or ""),
+                ]
+                st.markdown("- " + " · ".join(bit for bit in label_bits if bit))
+        registry = list(result.get("major_sky_registry") or [])
+        if registry:
+            st.markdown("**Authoritative monthly sky**")
+            for item in registry:
+                if not isinstance(item, dict):
+                    continue
+                label_text = item.get("display_label") or item.get("technical_label") or item.get("source_title") or "Sky event"
+                st.markdown(f"- {human_date(item.get('event_date'))} · {label_text}")
         transitions = list(result.get("major_transitions") or [])
         if transitions:
             st.markdown("**Major monthly transitions**")
-            for item in transitions[:12]:
-                st.markdown(
-                    f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}"
-                )
+            for item in transitions:
+                st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}")
+        convergences = list(result.get("convergences") or [])
+        if convergences:
+            st.markdown("**Calculated convergence windows**")
+            for item in convergences:
+                if not isinstance(item, dict):
+                    continue
+                start_label = item.get("start_date") or ""
+                end_label = item.get("end_date") or ""
+                title_text = item.get("title") or item.get("label") or "Convergence"
+                window = human_date(start_label) if start_label == end_label else f"{human_date(start_label)} – {human_date(end_label)}"
+                st.markdown(f"- {window} · {title_text}")
         dominant = list(result.get("dominant_houses") or [])
         if dominant:
             st.markdown("**Dominant calculated life areas**")
-            for item in dominant[:6]:
+            for item in dominant:
                 st.markdown(
                     f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
                 )
@@ -9340,110 +10146,150 @@ def _render_snapshot_monthly_report(
         st.caption(f"Order reference · {order_reference}")
     st.markdown('</section>', unsafe_allow_html=True)
 
-
 def _render_snapshot_yearly_report(
     result: dict,
     *,
     order_reference: str = "",
 ) -> None:
-    """Render paid Year Ahead through the same Snapshot presentation system."""
+    """Render paid Year Ahead from the Snapshot baseline plus personal rolling transits."""
     st.markdown('<section class="natal-shell paid-yearly-shell">', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">Paid · Your Year Ahead</div>', unsafe_allow_html=True)
-    game_map = dict(result.get("yearly_game_map") or {})
-    headline = str(game_map.get("headline") or "Your Year Ahead")
-    st.markdown(f'<div class="editorial-title">{escape(headline)}</div>', unsafe_allow_html=True)
-    label = str(result.get("label") or "Rolling 12 months")
-    central = str(game_map.get("central_storyline") or "The long game becomes visible.")
-    st.markdown(
-        f'<div class="natal-intro">{escape(label)} · {escape(central)}</div>',
-        unsafe_allow_html=True,
-    )
 
     paid_snapshot = _snapshot_from_encoded_natal_profile(
         str(result.get("natal_profile") or ""),
         timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
     )
+    timing_report = result.get("paid_timing_report")
+    if paid_snapshot is not None and timing_report is None:
+        paid_snapshot, timing_report = _prepare_paid_yearly_personal_layer(result)
+
+    label = str(result.get("label") or "Rolling 12 months")
+    st.markdown('<div class="editorial-title">Your year, in the order it actually happens</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="natal-intro">{escape(label)} · Start with the natal baseline, then follow the personal contacts in chronological order.</div>',
+        unsafe_allow_html=True,
+    )
+
     if paid_snapshot is not None:
-        _render_snapshot_natal_core(
-            paid_snapshot,
-            precision_note=str(result.get("natal_precision") or ""),
-        )
+        _render_snapshot_natal_core(paid_snapshot, precision_note=str(result.get("natal_precision") or ""))
+
+    if timing_report is None:
+        st.error("Luna could not build the personal 12-month timing layer for this report.")
+        if order_reference:
+            st.caption(f"Order reference · {order_reference}")
+        st.markdown('</section>', unsafe_allow_html=True)
+        return
+
+    try:
+        display_end = date.fromisoformat(str(result.get("end") or ""))
+    except ValueError:
+        display_end = timing_report.end_date
 
     st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Your Year Ahead</div>', unsafe_allow_html=True)
-    st.markdown("### Read the year")
-    paragraphs = [
-        str(item).strip()
-        for item in (game_map.get("narrator_paragraphs") or ())
-        if str(item).strip()
-    ]
-    if not paragraphs:
-        paragraphs = [central]
-    for paragraph in paragraphs:
-        st.markdown(f'<div class="luna-prose"><p>{escape(paragraph)}</p></div>', unsafe_allow_html=True)
+    st.markdown("## Read the year")
+    year_facts = _paid_yearly_timing_facts(timing_report)
+    guided_year = _guided_luna_copy("yearly", year_facts)
+    if guided_year:
+        _render_signature_style_story(guided_year, "Luna's strategic map")
+    else:
+        _render_voice_unavailable(facts_label="personal year-ahead calculation")
 
-    games = list(game_map.get("games") or [])[:3]
-    if games:
-        st.markdown("## Your strongest yearly themes")
-        for item in games:
-            remember = str(item.get("advantage") or item.get("do_line") or "")
-            move = str(item.get("do_line") or item.get("question") or "")
+    ranked = sorted(list(timing_report.stories), key=lambda story: (-float(story.score), story.first_date))
+    themes = ranked[:3]
+    if themes:
+        st.markdown("## Three themes organise the year")
+        st.caption("These are the highest-ranked personal patterns. They are themes, not three extra forecasts.")
+        for story in themes:
+            area = _timing_story_life_area(story)
             st.markdown(
-                '<div class="natal-signature-reading">'
-                '<div class="natal-evidence">Annual theme</div>'
-                f'<h3>{escape(str(item.get("title") or "Yearly theme"))}</h3>'
-                f'<p>{escape(str(item.get("question") or ""))}</p>'
-                '<div class="natal-signature-meta">'
-                f'<div><span>Remember</span>{escape(remember)}</div>'
-                f'<div><span>Your move</span>{escape(move)}</div>'
-                '</div></div>',
+                f"""<div class="natal-signature-reading report-flat-reading yearly-theme-reading">
+  <div class="natal-evidence">{escape(_timing_signal_type(story))} · {escape(story.polarity)}</div>
+  <h3>{escape(str(story.headline))}</h3>
+  <p>{escape(area)}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    rounds = list(game_map.get("rounds") or [])
-    if rounds:
-        st.markdown("## How the year unfolds")
-        st.caption("Each month changes the options available next.")
-        for item in rounds:
-            meta = " · ".join(
-                bit for bit in (str(item.get("month") or ""), str(item.get("role") or "")) if bit
+    strongest = ranked[:6]
+    if strongest:
+        st.markdown("## Your strongest personal transits")
+        st.caption("Six contacts only. Timing and action stay visible; raw calculation detail stays collapsed.")
+        transit_facts = {
+            "start_date": timing_report.start_date.isoformat(),
+            "end_date": display_end.isoformat(),
+            "timezone": timing_report.timezone_name,
+            "items": [
+                {
+                    "source_id": f"paid-year-transit:{index}",
+                    "transiting_planet": story.transit_planet,
+                    "aspect": story.aspect,
+                    "natal_target": story.natal_target,
+                    "natal_house": story.natal_house,
+                    "polarity": story.polarity,
+                    "score": round(story.score, 3),
+                    "active_periods": [{"start": period.start_date.isoformat(), "end": period.end_date.isoformat()} for period in story.periods],
+                    "exact_hits": [{"date": hit.exact_date.isoformat(), "orb": round(hit.orb, 3), "retrograde": hit.retrograde} for hit in story.hits],
+                }
+                for index, story in enumerate(strongest)
+            ],
+        }
+        # These chapters already contain calculated timing-map interpretation.
+        # Keep them immediate instead of making six more live voice requests
+        # after the natal chart.
+        for story in sorted(strongest, key=lambda item: item.first_date):
+            periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
+            starts = _timing_story_start(story)
+            ends = _timing_story_end(story)
+            timing_line = (
+                f"Starts {_timing_date_label(starts) if starts else '—'} · "
+                f"Strongest {_timing_story_peak_label(story)} · "
+                f"Eases {_timing_date_label(ends) if ends else '—'}"
             )
+            headline = str(story.headline)
+            body = str(story.summary)
             st.markdown(
-                '<div class="natal-signature-reading">'
-                f'<div class="natal-evidence">{escape(meta)}</div>'
-                f'<h3>{escape(str(item.get("headline") or "Monthly turning point"))}</h3>'
-                f'<p>{escape(str(item.get("central_storyline") or ""))}</p>'
-                '<div class="natal-signature-meta">'
-                f'<div><span>Remember</span>{escape(str(item.get("dominant_game") or ""))}</div>'
-                f'<div><span>Your move</span>{escape(str(item.get("key_window") or ""))}</div>'
-                '</div></div>',
+                f"""<div class="natal-signature-reading report-flat-reading yearly-transit-reading">
+  <div class="natal-evidence">{escape(story.transit_planet)} {escape(story.aspect)} natal {escape(story.natal_target)} · active {escape(periods_label)}</div>
+  <h3>{escape(headline)}</h3>
+  <p>{escape(body)}</p>
+  <p><strong>Timing ·</strong> {escape(timing_line)}</p>
+</div>""",
                 unsafe_allow_html=True,
             )
 
-    moves = []
-    if games:
-        first_move = str(games[0].get("do_line") or "").strip()
-        if first_move:
-            moves.append(first_move)
-    if list(game_map.get("acts") or []):
-        moves.append("When the rules change, revise the plan. Do not drag the old position forward.")
-    moves.append("End the year with fewer options and cleaner terms.")
-    st.markdown("## Your move")
-    for item in dict.fromkeys(move for move in moves if move):
-        st.markdown(f"- {item}")
+    roadmap = _paid_yearly_roadmap(timing_report, display_end=display_end)
+    if roadmap:
+        st.markdown("## The year in twelve moves")
+        st.caption("This is a rolling roadmap from the selected start date—not a January-to-December calendar year. Each stage carries the previous stage forward.")
+        previous_signal = ""
+        for row in roadmap:
+            carry = f"<p><strong>Carry forward ·</strong> {escape(previous_signal)}</p>" if previous_signal else ""
+            st.markdown(
+                f"""<div class="natal-signature-reading report-flat-reading yearly-roadmap-reading">
+  <div class="natal-evidence">{escape(row['stage'])} · {escape(human_date(row['start']))} – {escape(human_date(row['end']))}</div>
+  <h3>{escape(row['headline'])}</h3>
+  <p><strong>Main signal ·</strong> {escape(row['signal'] + row['exact_label'])}</p>
+  <p>{escape(row['summary'])}</p>
+  {carry}
+</div>""",
+                unsafe_allow_html=True,
+            )
+            previous_signal = str(row["signal"])
+
+    # The strategic move belongs to Luna's voiced year reading above.
+    # Do not append deterministic timing-map actions as extra "Your move" advice.
 
     with _luna_evidence_panel("Why Luna sees this · yearly calculations"):
-        transitions = list(result.get("major_transitions") or [])
-        if transitions:
-            st.markdown("**Major yearly transitions**")
-            for item in transitions[:12]:
-                st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}")
-        dominant = list(result.get("dominant_houses") or [])
-        if dominant:
-            st.markdown("**Dominant calculated life areas**")
-            for item in dominant[:8]:
-                st.markdown(
-                    f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
-                )
+        st.markdown("**Calculated personal transits**")
+        for story in timing_report.stories:
+            periods = "; ".join(f"{human_date(period.start_date)}–{human_date(period.end_date)}" for period in story.periods)
+            st.markdown(f"- {story.transit_planet} {story.aspect} natal {story.natal_target} · {story.polarity} · {periods}")
+        shared = list(getattr(timing_report, "major_sky_events", ()) or ())
+        if shared:
+            st.markdown("**Shared-sky milestones inside your year**")
+            for item in shared[:12]:
+                if isinstance(item, dict):
+                    st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('display_label', item.get('technical_label', 'Sky event'))}")
         st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
         st.caption(LUNA_TRUST_DISCLOSURE)
 
