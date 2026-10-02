@@ -1,0 +1,86 @@
+name: Generate paid forecast calculation bases
+run-name: Paid forecast bases · ${{ inputs.product || 'monthly' }} · ${{ inputs.date || 'next month' }}
+
+on:
+  schedule:
+    # 25th of each month: prepare all 12 sign bases for next month.
+    - cron: '30 10 25 * *'
+  workflow_dispatch:
+    inputs:
+      product:
+        description: Calculation base to build
+        required: true
+        type: choice
+        options: [monthly, yearly]
+        default: monthly
+      date:
+        description: Monthly = any YYYY-MM-DD in target month; Yearly = rolling start date. Blank monthly means next month.
+        required: false
+        type: string
+      sign:
+        description: Optional single sign; blank builds all twelve
+        required: false
+        type: string
+      timezone:
+        description: IANA timezone used by the calculation base
+        required: false
+        default: Australia/Sydney
+        type: string
+      city:
+        description: Representative city used by the shared solar layer
+        required: false
+        default: Sydney
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: luna-paid-forecast-bases
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing app dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Build deterministic bases
+        shell: bash
+        env:
+          REQUEST_PRODUCT: ${{ inputs.product }}
+          REQUEST_DATE: ${{ inputs.date }}
+          REQUEST_SIGN: ${{ inputs.sign }}
+          REQUEST_TIMEZONE: ${{ inputs.timezone }}
+          REQUEST_CITY: ${{ inputs.city }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          product="$REQUEST_PRODUCT"
+          if [ -z "$product" ]; then product=monthly; fi
+          timezone="$REQUEST_TIMEZONE"
+          if [ -z "$timezone" ]; then timezone="Australia/Sydney"; fi
+          city="$REQUEST_CITY"
+          if [ -z "$city" ]; then city="Sydney"; fi
+
+          args=(--product "$product" --timezone "$timezone" --city "$city")
+          if [ -n "$REQUEST_DATE" ]; then args+=(--date "$REQUEST_DATE"); fi
+          if [ -n "$REQUEST_SIGN" ]; then args+=(--sign "$REQUEST_SIGN"); fi
+          python scripts/generate_paid_forecast_bases.py "${args[@]}"
+      - name: Commit bases
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- generated/paid_forecast_bases
+          if git diff --cached --quiet; then
+            echo "No base changes to commit."
+            exit 0
+          fi
+          git commit -m 'Generate paid forecast calculation bases'
+          git pull --rebase
+          git push
