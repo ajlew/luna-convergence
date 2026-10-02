@@ -22,8 +22,8 @@ import re
 from typing import Any
 
 
-PAID_FORECAST_CONTEXT_VERSION = "1.1"
-MONTHLY_BASE_SCHEMA_VERSION = "1.0"
+PAID_FORECAST_CONTEXT_VERSION = "1.2"
+MONTHLY_BASE_SCHEMA_VERSION = "1.1"
 YEARLY_BASE_SCHEMA_VERSION = "1.0"
 DEFAULT_BASE_ROOT = Path(__file__).parent / "generated" / "paid_forecast_bases"
 
@@ -146,6 +146,85 @@ def _overlapping_rows(rows: list[dict[str, Any]], start: date, end: date) -> lis
 def _stable_hash(value: Any) -> str:
     payload = json.dumps(_json_value(value), sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _event_title(row: dict[str, Any]) -> str:
+    return " ".join(str(
+        row.get("title")
+        or row.get("display_label")
+        or row.get("technical_label")
+        or ""
+    ).split())
+
+
+def _event_key(row: dict[str, Any]) -> tuple[str, str]:
+    day = str(row.get("event_date") or row.get("date") or "")[:10]
+    title = re.sub(r"[^a-z0-9]+", " ", _event_title(row).casefold()).strip()
+    return day, title
+
+
+def _monthly_daily_story_ledger(shared_sky: dict[str, Any]) -> list[dict[str, Any]]:
+    """One chronological row per active date. No phase/convergence grouping.
+
+    This is the paid Monthly writing skeleton. Every calculated monthly event is
+    preserved exactly once, then Luna Voice interprets one date at a time.
+    Convergence and arc calculations remain available in the evidence layer but
+    are deliberately not used to group the narrative.
+    """
+    event_rows = [row for row in list(shared_sky.get("events") or []) if isinstance(row, dict)]
+    registry_rows = [row for row in list(shared_sky.get("major_sky_registry") or []) if isinstance(row, dict)]
+
+    registry_by_key = {_event_key(row): row for row in registry_rows if _event_title(row)}
+    registry_by_day: dict[str, list[dict[str, Any]]] = {}
+    for row in registry_rows:
+        day = str(row.get("event_date") or row.get("date") or "")[:10]
+        if day:
+            registry_by_day.setdefault(day, []).append(row)
+
+    by_day: dict[str, list[dict[str, Any]]] = {}
+    seen_event_keys: set[tuple[str, str]] = set()
+    for source in sorted(event_rows, key=lambda row: (str(row.get("event_date") or row.get("date") or ""), _event_title(row))):
+        day = str(source.get("event_date") or source.get("date") or "")[:10]
+        title = _event_title(source)
+        if not day or not title:
+            continue
+        key = _event_key(source)
+        if key in seen_event_keys:
+            continue
+        seen_event_keys.add(key)
+        row = dict(source)
+        registry = registry_by_key.get(key)
+        if registry:
+            for field in ("tier", "action", "interpretation", "opportunity", "must_surface", "technical_label"):
+                value = registry.get(field)
+                if value not in (None, "", [], {}, ()):
+                    row[f"registry_{field}"] = _json_value(value)
+        by_day.setdefault(day, []).append(row)
+
+    # A registry event should not disappear merely because a lower-level event
+    # serializer omitted it. Add only genuinely missing title/date pairs.
+    for day, rows in registry_by_day.items():
+        for source in rows:
+            key = _event_key(source)
+            if key in seen_event_keys or not _event_title(source):
+                continue
+            seen_event_keys.add(key)
+            by_day.setdefault(day, []).append(dict(source))
+
+    ledger: list[dict[str, Any]] = []
+    for day in sorted(by_day):
+        try:
+            resolved = date.fromisoformat(day)
+            date_label = resolved.strftime("%d %B %Y").lstrip("0")
+        except ValueError:
+            date_label = day
+        ledger.append({
+            "source_id": f"monthly-day:{day}",
+            "date": day,
+            "date_label": date_label,
+            "events": by_day[day],
+        })
+    return ledger
 
 
 def _timezone_slug(timezone_name: str) -> str:
@@ -463,6 +542,9 @@ def monthly_calculation_base(
         "key_dates": key_dates,
         "required_story_anchors": _json_value(anchors),
     }
+    shared_sky["daily_story_ledger"] = _monthly_daily_story_ledger(shared_sky)
+    # Retain the older three-phase skeleton for backward compatibility only.
+    # Paid Monthly voice no longer consumes it.
     shared_sky["story_skeleton"] = _monthly_story_skeleton(shared_sky)
     base = {
         "schema_version": PAID_FORECAST_CONTEXT_VERSION,
@@ -495,6 +577,96 @@ def contextualize_monthly(
     }
     context["context_hash"] = _stable_hash(context)
     return context
+
+
+def monthly_voice_days(context: dict[str, Any]) -> dict[str, Any]:
+    """LLM-ready paid Monthly: one lead plus one row for every active date.
+
+    There are deliberately no Opening/Middle/Closing or convergence groups in
+    this writing contract. Each date carries every calculated transit for that
+    date, plus any exact natal activation belonging to the customer.
+    """
+    shared = dict(context.get("shared_sky") or {})
+    natal = dict(context.get("natal_player") or {})
+    personal = dict(context.get("personal_month") or {})
+    reader_context = dict(context.get("reader_context") or {})
+    activations = [row for row in list(personal.get("activations") or []) if isinstance(row, dict)]
+
+    ledger = [row for row in list(shared.get("daily_story_ledger") or []) if isinstance(row, dict)]
+    if not ledger:
+        ledger = _monthly_daily_story_ledger(shared)
+
+    activations_by_day: dict[str, list[dict[str, Any]]] = {}
+    for row in activations:
+        day = str(row.get("date") or "")[:10]
+        if day:
+            activations_by_day.setdefault(day, []).append(row)
+
+    days: list[dict[str, Any]] = []
+    used_activation_days: set[str] = set()
+    for row in ledger:
+        day = str(row.get("date") or "")[:10]
+        day_activations = activations_by_day.get(day, [])
+        if day_activations:
+            used_activation_days.add(day)
+        days.append({
+            "source_id": str(row.get("source_id") or f"monthly-day:{day}"),
+            "date": day,
+            "date_label": str(row.get("date_label") or day),
+            "events": _json_value(row.get("events") or []),
+            "personal_activations": _json_value(day_activations),
+        })
+
+    # A natal contact can occasionally fall on a calendar day with no selected
+    # sign-level event. It still belongs in the paid story and must not vanish.
+    for day, rows in activations_by_day.items():
+        if day in used_activation_days or any(item.get("date") == day for item in days):
+            continue
+        try:
+            resolved = date.fromisoformat(day)
+            date_label = resolved.strftime("%d %B %Y").lstrip("0")
+        except ValueError:
+            date_label = day
+        days.append({
+            "source_id": f"monthly-day:{day}",
+            "date": day,
+            "date_label": date_label,
+            "events": [],
+            "personal_activations": _json_value(rows),
+        })
+    days.sort(key=lambda item: str(item.get("date") or ""))
+
+    month_outline = [
+        {
+            "date": item.get("date"),
+            "events": [_event_title(event) for event in (item.get("events") or []) if isinstance(event, dict)],
+            "personal_contacts": [str(contact.get("signal") or "") for contact in (item.get("personal_activations") or []) if isinstance(contact, dict)],
+        }
+        for item in days
+    ]
+
+    shared_context = {
+        "sign": shared.get("sign"),
+        "label": shared.get("label"),
+        "start": shared.get("start"),
+        "end": shared.get("end"),
+        "dominant_houses": shared.get("dominant_houses"),
+        "solar_convergence": shared.get("solar_convergence"),
+        "monthly_arc": shared.get("monthly_arc"),
+        "monthly_trajectory": shared.get("monthly_trajectory"),
+        "monthly_decision": shared.get("monthly_decision"),
+        "retrograde_cycles": shared.get("retrograde_cycles"),
+        "natal_strengths": list(natal.get("strengths") or []),
+        "natal_element": natal.get("dominant_element"),
+        "natal_mode": natal.get("dominant_modality"),
+        "reader_context": reader_context,
+    }
+    lead = {
+        **shared_context,
+        "month_outline": month_outline,
+        "personal_activations": _json_value(activations),
+    }
+    return {"lead": lead, "shared_context": shared_context, "days": days}
 
 
 def monthly_voice_sections(context: dict[str, Any]) -> dict[str, Any]:
