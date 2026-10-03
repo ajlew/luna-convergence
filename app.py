@@ -160,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.64"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Plain Voice"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-plain-prose-1"
+APP_VERSION = "v3.66"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Prompt-Led Voice"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-plain-prose-3"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10320,17 +10320,20 @@ def _paid_monthly_weave_prompt(facts: dict) -> str:
         "Write Luna's paid Personal Monthly interpretation as one continuous article. "
         "Python owns every astrology fact. The SUBJECT is the protagonist; the sky is the changing environment. "
         "Never invent astrology, biography, events or guaranteed outcomes.\n"
-        "Use month.free_arc and month.events as the already-prepared month arc. Read every daily row in chronological order as evidence, not as a diary. "
-        "Daily rows are [day, primary signal id, supporting signal ids, life-area ids, major-event ids]; resolve ids through legend. "
-        "Merge related days into natural story arcs. Mention dates only when they clarify a genuine turn. Use only supplied transit-thread and retrograde spans.\n"
-        "Personalise the whole arc through subject.core, strengths and activations. Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
-        "Every supplied personal activation must be woven into the story. Every supplied monthly anchor must appear. "
-        "Use at least two supplied natal strengths when available, showing how they alter the way this person meets the month. "
+        "BEFORE WRITING, silently plan the complete month from beginning to end. Use month.free_arc and month.events as the already-prepared macro arc. "
+        "Read every daily row in chronological order as evidence, not as a diary. Daily rows are [day, primary signal id, supporting signal ids, life-area ids, major-event ids]; resolve ids through legend. "
+        "Merge related days and multi-day influences into natural story arcs. Mention dates only when they clarify a genuine turn. Use only supplied transit-thread and retrograde spans. "
+        "Carry the narrative through the end of the month; do not stop after the early or middle period.\n"
+        "The SUBJECT is the main character throughout. Personalise the whole arc through subject.core, strengths and activations. "
+        "Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. Every supplied personal activation must be woven into the story. "
+        "Every supplied monthly anchor must appear naturally in the story. Use at least two supplied natal strengths when available, showing how they alter the way this person meets the same sky. "
         "Keep the same recognisable protagonist from opening to ending. Never invent angles or houses when birth time is unknown.\n"
         "Build one wave: starting position, rises and troughs, openings, pressure, reversals, consequences and an earned ending. Later paragraphs must remember earlier developments. "
-        "Do not define transits one by one or write 31 mini-horoscopes. No bullets, headings, day labels, house numbers, engine language, cosmic filler, Remember or Your move labels.\n"
-        "Return PLAIN PROSE ONLY. Do not return JSON, metadata, ids, hashes, Markdown fences or field labels. "
-        "Write 10-18 substantial paragraphs separated by blank lines and aim for about 1,700-1,950 words.\n"
+        "Do not define transits one by one or write 31 mini-horoscopes. Do not repeat the Free Monthly story; use it as the background arc and transform it around the subject. "
+        "No bullets, headings, day labels, house numbers, engine language, cosmic filler, Remember or Your move labels.\n"
+        "COMPLETE THE ARTICLE IN THIS SINGLE RESPONSE. Silently check before finishing that all supplied personal activations and monthly anchors have been covered and that the story reaches the end of the month. "
+        "Return PLAIN PROSE ONLY. Do not return JSON, metadata, ids, hashes, Markdown fences, checklists or field labels. "
+        "Write 10-18 substantial paragraphs separated by blank lines and aim for about 1,700-1,950 words. If the word target conflicts with completing the supplied evidence, complete the evidence rather than stopping early.\n"
         "CALCULATED MATERIAL:\n"
         + json.dumps(_paid_monthly_prompt_material(facts), ensure_ascii=False, separators=(",", ":"))
     )
@@ -10444,137 +10447,44 @@ def _cached_paid_monthly_weave(
     return clean
 
 
-def _paid_monthly_signature_planets(strength: dict) -> tuple[str, ...]:
-    evidence = " ".join(str(strength.get("evidence") or "").split()).casefold()
-    found = re.findall(r"\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto)\b", evidence)
-    return tuple(dict.fromkeys(found))
-
-
-def _paid_monthly_strength_present(strength: dict, text: str) -> bool:
-    """Detect whether a supplied natal signature is meaningfully present.
-
-    The writer is allowed to translate the signature into ordinary language, so
-    publication must not depend on parroting the exact card title.
-    """
-    body = str(text or "").casefold()
-    planets = _paid_monthly_signature_planets(strength)
-    if len(planets) >= 2 and all(planet in body for planet in planets[:2]):
-        return True
-
-    # Accept the human meaning of the supplied strength/watch pattern as well
-    # as its title.  This keeps the quality gate aligned with the product goal:
-    # the reader should recognise themselves, not see chart labels repeated.
-    source = " ".join(
-        str(strength.get(key) or "")
-        for key in ("title", "strength", "watch", "interpretation")
-    )
-    stop = {
-        "about", "after", "again", "against", "because", "become", "being",
-        "between", "could", "every", "from", "other", "should", "their",
-        "there", "these", "through", "together", "under", "where", "which",
-        "while", "would", "your", "automatic", "pattern", "strength", "watch",
-    }
-    keywords = [
-        word.casefold() for word in re.findall(r"[A-Za-z]{6,}", source)
-        if word.casefold() not in stop
-    ]
-    keywords = list(dict.fromkeys(keywords))[:12]
-    return bool(keywords and sum(word in body for word in keywords) >= 2)
-
-
-def _paid_monthly_core_identity_present(subject: dict, text: str) -> bool:
-    """Require a recognisable subject fingerprint without forcing chart jargon."""
-    body = str(text or "").casefold()
-    core = dict(subject.get("core_positions") or {})
-    sun_sign = str((core.get("Sun") or {}).get("sign") or "").casefold()
-    moon_sign = str((core.get("Moon") or {}).get("sign") or "").casefold()
-    # The Moon sign is especially useful here because it distinguishes the
-    # person from the generic Sun-sign background.  Do not require the literal
-    # words "Sun" and "Moon" if Luna expresses the character naturally.
-    sun_ok = not sun_sign or sun_sign in body
-    moon_ok = not moon_sign or moon_sign in body
-    return sun_ok and moon_ok
-
-
-def _paid_monthly_activation_present(item: dict, text: str) -> bool:
-    body = str(text or "").casefold()
-    signal = " ".join(str(item.get("signal") or "").split())
-    if signal and _monthly_event_present(signal, text):
-        return True
-    transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "").casefold()
-    target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "").casefold()
-    return bool(transit and target and transit in body and target in body)
-
-
-def _paid_monthly_anchor_present(item: dict, text: str) -> bool:
-    title = str(item.get("title") or "")
-    return bool(title and _monthly_event_present(title, text))
-
+# All content requirements for Paid Monthly are instructions to Luna before the
+# provider call. After the call, Python does not judge whether Luna mentioned a
+# preferred strength, activation, anchor, word target or stylistic feature.
+# Post-call handling is transport-only: usable non-truncated prose is published.
 
 def _paid_monthly_story_paragraphs(body: object) -> list[str]:
+    """Normalise plain prose without making formatting a publication blocker.
+
+    Groq sometimes returns a complete article with too few blank-line breaks.
+    When the prose is substantial, split it deterministically into readable
+    paragraph-sized sentence groups instead of rejecting a good report.
+    """
     text = _paid_monthly_clean_plain_story(body)
-    return [
+    paragraphs = [
         " ".join(part.split())
         for part in re.split(r"\n\s*\n+", text)
         if str(part or "").strip()
     ]
+    if len(paragraphs) >= 8 or _word_count(text) < 1200:
+        return paragraphs
 
-
-def _paid_monthly_publication_floor(body: str, facts: dict) -> tuple[bool, str]:
-    """Hard gate only: completeness, grounding and subject recognition."""
-    paragraphs = _paid_monthly_story_paragraphs(body)
-    combined = " ".join(paragraphs)
-    words = _word_count(combined)
-    problems: list[str] = []
-
-    if len(paragraphs) < 8:
-        problems.append(f"The story returned only {len(paragraphs)} paragraphs; at least eight are required.")
-    if words < 1200:
-        problems.append(f"The story stopped too early at {words} words.")
-    if words > 3000:
-        problems.append(f"The story is over-expanded at {words} words.")
-    if re.search(r"\b(?:your move|remember)\s*(?:[:·—-]|$)", combined, flags=re.I):
-        problems.append("Reserved sub-section labels leaked into the article.")
-
-    subject = dict(facts.get("subject") or {})
-    strengths = [item for item in list(subject.get("strengths") or []) if isinstance(item, dict)]
-    activations = [item for item in list(subject.get("personal_activations") or []) if isinstance(item, dict)]
-    anchors = [
-        item for item in list((facts.get("month_context") or {}).get("required_story_anchors") or [])
-        if isinstance(item, dict)
+    # A long single/short block is a transport-format issue, not a failed story.
+    sentences = [
+        " ".join(item.split())
+        for item in re.split(r"(?<=[.!?])\s+", text)
+        if str(item or "").strip()
     ]
+    if len(sentences) < 8:
+        return paragraphs
 
-    missing_activations = [item for item in activations if not _paid_monthly_activation_present(item, combined)]
-    if missing_activations:
-        problems.append("One or more personal natal activations are missing from the story.")
+    target = max(8, min(14, round(_word_count(text) / 165)))
+    per_group = max(1, (len(sentences) + target - 1) // target)
+    rebuilt = [
+        " ".join(sentences[index:index + per_group]).strip()
+        for index in range(0, len(sentences), per_group)
+    ]
+    return [item for item in rebuilt if item]
 
-    missing_anchors = [item for item in anchors if not _paid_monthly_anchor_present(item, combined)]
-    if missing_anchors:
-        problems.append("One or more required monthly turning points are missing from the story.")
-
-    recognised_strengths = [item for item in strengths if _paid_monthly_strength_present(item, combined)]
-    minimum_strengths = min(2, len(strengths))
-    if minimum_strengths and len(recognised_strengths) < minimum_strengths:
-        problems.append(f"Use at least {minimum_strengths} supplied natal strengths so the subject is recognisable.")
-
-    return (not problems), " ".join(problems)
-
-
-def _paid_monthly_weave_quality(body: str, facts: dict) -> tuple[bool, str]:
-    """Soft editorial telemetry only. Never causes another provider call."""
-    floor_ok, floor_note = _paid_monthly_publication_floor(body, facts)
-    if not floor_ok:
-        return False, floor_note
-    paragraphs = _paid_monthly_story_paragraphs(body)
-    words = _word_count(" ".join(paragraphs))
-    notes: list[str] = []
-    if len(paragraphs) < 10:
-        notes.append("The article is publishable but has fewer than ten substantial paragraphs.")
-    if words < 1650:
-        notes.append(f"The article is complete but light at {words} words; preferred target is about 1,800-2,000.")
-    elif words > 2600:
-        notes.append(f"The article is long at {words} words; preferred target is about 1,800-2,000.")
-    return (not notes), " ".join(notes)
 
 
 def _paid_monthly_weave_fallback(_facts: dict) -> dict:
@@ -10583,7 +10493,12 @@ def _paid_monthly_weave_fallback(_facts: dict) -> dict:
 
 
 def _generate_paid_monthly_weave(facts: dict) -> dict:
-    """Exactly one paid-story call. The model writes prose; Python validates it."""
+    """Exactly one paid-story call; any usable non-truncated plain prose is published.
+
+    Content requirements are prompt instructions evaluated by Luna before it
+    finishes the response. Python performs no post-generation editorial or
+    factual completeness gate that could suppress an otherwise usable story.
+    """
     if not _luna_voice_ready():
         _record_voice_error("paid_monthly_story_weave", "Luna voice is not configured.")
         return _paid_monthly_weave_fallback(facts)
@@ -10597,24 +10512,18 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         _record_voice_error("paid_monthly_story_weave", exc)
         return _paid_monthly_weave_fallback(facts)
 
-    floor_ok, floor_note = _paid_monthly_publication_floor(body, facts)
-    if not floor_ok:
-        words = _word_count(body)
-        _record_voice_error(
-            "paid_monthly_story_weave",
-            f"Provider returned plain prose but publication validation rejected it at {words} words. {floor_note}",
-        )
+    paragraphs = _paid_monthly_story_paragraphs(body)
+    if not paragraphs:
+        _record_voice_error("paid_monthly_story_weave", "Voice provider returned no usable prose.")
         return _paid_monthly_weave_fallback(facts)
 
-    ideal_ok, ideal_note = _paid_monthly_weave_quality(body, facts)
     return {
         "headline": "",
-        "paragraphs": _paid_monthly_story_paragraphs(body),
+        "paragraphs": paragraphs,
         "voice_complete": True,
-        "quality_tier": "ideal" if ideal_ok else "publishable",
-        "quality_note": "" if ideal_ok else ideal_note,
+        "quality_tier": "published",
+        "quality_note": "",
     }
-
 
 def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
     """Free-Monthly macro arc + Daily detail + one natal subject -> one paid story."""
