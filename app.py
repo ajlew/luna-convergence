@@ -160,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.69"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Direct Address"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-second-person-1"
+APP_VERSION = "v3.70"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Date-Locked Voice"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-date-locked-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10169,11 +10169,10 @@ def _paid_monthly_subject_dossier(snapshot, context: dict) -> dict:
 def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dict:
     """Prepare the paid month before Luna writes, with adaptive compaction.
 
-    The GitHub base remains the full audit source. This function creates only
-    the minimum story packet the creative model needs. If the first packet is
-    too large for the provider ceiling, Python can rebuild it more compactly
-    BEFORE the one and only LLM call; production is never stopped merely because
-    optional context made the first prompt too large.
+    The full GitHub base stays untouched. The creative model receives a compact
+    exact-date calendar plus five chronological beats. Major-event dates are
+    canonicalised before the call so Luna never has to infer a station, lunation
+    or aspect date from a broad narrative range.
     """
     subject = dict(facts.get("subject") or {})
     month = dict(facts.get("month_context") or {})
@@ -10185,13 +10184,20 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
     strength_text = (120, 105, 90, 72)[level]
     watch_text = (90, 75, 60, 48)[level]
     activation_text = (145, 125, 105, 90)[level]
-    thread_limit = (5, 4, 2, 0)[level]
     cycle_limit = (4, 3, 2, 2)[level]
     structural_cap = (7, 6, 4, 3)[level]
     texture_cap = (2, 1, 1, 0)[level]
     area_cap = (4, 3, 3, 2)[level]
 
-    # Keep the personal fingerprint, not every chart field.
+    def event_key(value: object) -> str:
+        value = " ".join(str(value or "").split()).casefold()
+        value = value.replace("opposite", "opposition")
+        value = value.replace("conjunct", "conjunction")
+        value = value.replace("stations direct", "station direct")
+        value = value.replace("stations retrograde", "station retrograde")
+        value = re.sub(r"[^a-z0-9]+", " ", value)
+        return " ".join(value.split())
+
     allowed_core = (
         "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
         "Ascendant", "Midheaven",
@@ -10217,8 +10223,6 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
             " ".join(str(item.get("evidence") or "").split())[:62],
         ])
 
-    # Personal activations are never silently dropped; only their wording is
-    # compacted more aggressively at higher levels.
     activations = []
     for item in list(subject.get("personal_activations") or []):
         if not isinstance(item, dict):
@@ -10239,25 +10243,6 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
         if str(reader.get(key) or "").strip()
     }
 
-    # Anchors are protected; keep all of them and their dates.
-    anchors = []
-    for item in list(month.get("required_story_anchors") or []):
-        if not isinstance(item, dict):
-            continue
-        anchors.append([
-            " ".join(str(item.get("title") or "").split())[:82],
-            " ".join(str(item.get("date_label") or item.get("date") or "").split())[:22],
-        ])
-
-    threads = []
-    for item in list(month.get("transit_threads") or [])[:thread_limit]:
-        if isinstance(item, dict):
-            threads.append([
-                " ".join(str(item.get("label") or "").split())[:70],
-                str(item.get("start") or "")[:10],
-                str(item.get("end") or "")[:10],
-            ])
-
     cycles = []
     for item in list(month.get("retrograde_cycles") or [])[:cycle_limit]:
         if not isinstance(item, dict):
@@ -10273,8 +10258,84 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
 
     daily_rows = [row for row in list(facts.get("daily_signals") or []) if isinstance(row, dict)]
 
-    # Five chronological story beats preserve the whole month while preventing
-    # 31 Daily rows from becoming 31 mini-horoscopes.
+    # Build one authoritative exact-date calendar from the prebuilt Daily
+    # briefs. This is the only calendar Luna may quote as a specific event date.
+    calendar = []
+    calendar_seen = set()
+    exact_date_by_event = {}
+    for row in daily_rows:
+        date_text = str(row.get("date") or "")[:10]
+        for event in list(row.get("major_events") or []):
+            if not isinstance(event, dict):
+                continue
+            label = " ".join(str(event.get("event") or event.get("technical") or "").split())
+            if not date_text or not label:
+                continue
+            key = (date_text, event_key(label))
+            if key in calendar_seen:
+                continue
+            calendar_seen.add(key)
+            areas = [
+                " ".join(str(v or "").split())
+                for v in list(event.get("life_areas") or [])
+                if str(v or "").strip()
+            ][:2]
+            calendar.append([date_text, label[:96], areas])
+            exact_date_by_event.setdefault(event_key(label), date_text)
+
+    # Collective major events can supply a date if a Daily brief omitted one.
+    for event in list(collective.get("major_events") or []):
+        if not isinstance(event, dict):
+            continue
+        date_text = str(event.get("date") or "")[:10]
+        label = " ".join(str(event.get("event") or event.get("technical") or "").split())
+        if not date_text or not label:
+            continue
+        key = (date_text, event_key(label))
+        if key in calendar_seen:
+            continue
+        calendar_seen.add(key)
+        areas = [
+            " ".join(str(v or "").split())
+            for v in list(event.get("life_areas") or [])
+            if str(v or "").strip()
+        ][:2]
+        calendar.append([date_text, label[:96], areas])
+        exact_date_by_event.setdefault(event_key(label), date_text)
+
+    calendar.sort(key=lambda row: (str(row[0]), str(row[1])))
+
+    def exact_date_for(title: str, fallback: str) -> str:
+        key = event_key(title)
+        if key in exact_date_by_event:
+            return exact_date_by_event[key]
+        # Handle descriptive aliases such as "Sun conjunction Venus" versus
+        # "Venus cazimi · Sun conjunct Venus".
+        key_tokens = set(key.split())
+        best_date = ""
+        best_score = 0
+        for known_key, known_date in exact_date_by_event.items():
+            known_tokens = set(known_key.split())
+            if not key_tokens or not known_tokens:
+                continue
+            score = len(key_tokens & known_tokens)
+            if key_tokens.issubset(known_tokens):
+                score += 10
+            if score > best_score:
+                best_score = score
+                best_date = known_date
+        return best_date if best_score >= 2 else fallback
+
+    # Anchors keep their title, but broad phase labels are replaced by the
+    # exact authoritative event date whenever the event appears in the calendar.
+    anchors = []
+    for item in list(month.get("required_story_anchors") or []):
+        if not isinstance(item, dict):
+            continue
+        title = " ".join(str(item.get("title") or "").split())[:82]
+        raw_date = " ".join(str(item.get("date_label") or item.get("date") or "").split())[:22]
+        anchors.append([title, exact_date_for(title, raw_date)])
+
     beat_bounds = ((1, 6), (7, 12), (13, 18), (19, 24), (25, 31))
     beats = []
     for start_day, end_day in beat_bounds:
@@ -10318,7 +10379,6 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
                 if str(v or "").strip()
             ]
 
-            # Major events and non-lunar aspects drive the story.
             candidates = [*major_labels]
             if primary_label and "moon" not in primary_label.casefold():
                 candidates.append(primary_label)
@@ -10327,20 +10387,17 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
                 if "moon" not in label.casefold()
             )
             for label in candidates:
-                key = (date_text, label.casefold())
+                key = (date_text, event_key(label))
                 if key not in seen_structural:
                     structural.append([date_text, label[:82]])
                     seen_structural.add(key)
 
-            # Lunar Daily signals remain optional texture only.
             if texture_cap and primary_label and "moon" in primary_label.casefold():
-                key = (date_text, primary_label.casefold())
+                key = (date_text, event_key(primary_label))
                 if key not in seen_texture:
                     texture.append([date_text, primary_label[:74], primary_areas[:2]])
                     seen_texture.add(key)
 
-        # Major events were appended first, so trimming retains the strongest
-        # protected structure before optional supporting material.
         structural = structural[:structural_cap]
         if len(texture) > texture_cap:
             if texture_cap == 1:
@@ -10368,8 +10425,8 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
         "month": {
             "label": str(month.get("label") or ""),
             "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:free_arc_chars],
+            "calendar": calendar,
             "anchors": anchors,
-            "threads": threads,
             "retrogrades": cycles,
             "beats": beats,
         },
@@ -10381,14 +10438,20 @@ def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
         "Use SECOND PERSON throughout: you, your and yours. Speak to the person, never about the person. "
         "Do not use third-person meta-language such as protagonist, subject, reader, client or customer in the article. "
         "Never refer to the person as they, them, their, he, him, his, she, her or hers. "
-        "When another person must be mentioned, use a concrete role such as partner, colleague, friend, customer or family member rather than allowing the viewpoint to drift. "
         "Luna is your strategic guide: direct, clear and authoritative without pretending certainty.\n"
         "Python owns every astrology fact. The sky is the changing environment around you. Never invent astrology, biography or guaranteed events.\n"
-        "Before writing, silently plan one month-long story from month.free_arc and the five chronological month.beats. "
-        "Beats are evidence ranges, not sections to recite. Merge them into one wave: beginning, development, pressure/opening, reversal and ending. "
-        "Do not write a day-by-day sequence or mini-horoscopes. Mention dates only for supplied events, anchors, activations or genuine turning points.\n"
+        "DATE LOCK: month.calendar is the authoritative exact-date ledger. If you name an event with a calendar date, COPY that event's date from month.calendar. "
+        "Never move an event to the previous or next day. Never repeat a one-date event on an adjacent day unless the same event label appears on both dates in month.calendar. "
+        "month.anchors may guide importance, but calendar dates override any broad phase wording. "
+        "Do not turn an active orb or background influence into a second exact event date.\n"
+        "Before writing, silently plan one month-long story from month.free_arc, month.calendar and the five chronological month.beats. "
+        "The beats are only planning input. Never expose internal data words such as beat, anchor, thread, window, row, packet, prompt, source, calculated material, evidence list, or notes. "
+        "Merge the month into one wave: beginning, development, pressure/opening, reversal and ending. "
+        "Do not write a day-by-day sequence or mini-horoscopes. Mention dates selectively, only where they clarify a supplied turning point.\n"
         "Astronomy discipline: preserve every supplied planet pair, aspect/station state and date exactly. "
         "Never infer an unlisted conjunction, opposition, station, New Moon, Full Moon or direct station. "
+        "A New Moon or Full Moon exists only where month.calendar literally lists it. "
+        "A planet stations retrograde or direct only where month.calendar literally lists that station. "
         "Lunar texture is brief background only, never a new structural event. If a fact is not supplied, omit it.\n"
         "Personalise the whole arc through natal.core, natal.strengths and natal.activations. "
         "Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
@@ -10399,8 +10462,9 @@ def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
         "Do not explain transits one by one, repeat astronomical claims, or recycle prose to reach length. Stop when the story is complete.\n"
         "Return PLAIN PROSE ONLY: no JSON, metadata, ids, hashes, Markdown, headings, bullets, day labels, house numbers, engine language, Remember or Your move labels. "
         "Aim for about 1,400-1,650 words in 9-13 substantial paragraphs separated by blank lines. "
-        "Before finishing, silently check the POINT OF VIEW first: every human interpretation is written to YOU in second person and never describes you from outside. "
-        "Then silently check that the story reaches the end of the month, covers anchors/activations, preserves supplied astronomy and does not repeat itself.\n"
+        "Before returning the article, silently proofread it for spelling, grammar, repeated claims and date consistency. "
+        "Check especially that each named date matches month.calendar exactly, internal planning vocabulary has not leaked into prose, and ordinary terms such as self-worth are spelled correctly. "
+        "Then check point of view: every human interpretation is written to YOU in second person.\n"
         "CALCULATED MATERIAL:\n"
         + json.dumps(
             _paid_monthly_prompt_material(facts, compact_level=compact_level),
@@ -10739,6 +10803,64 @@ def _compact_monthly_paragraphs(chapter, maximum: int = 2) -> list[str]:
 
 
 
+def _paid_monthly_key_event_key(value: object) -> str:
+    text = " ".join(str(value or "").split()).casefold()
+    text = text.replace("opposite", "opposition")
+    text = text.replace("conjunct", "conjunction")
+    text = text.replace("stations direct", "station direct")
+    text = text.replace("stations retrograde", "station retrograde")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return " ".join(text.split())
+
+
+def _paid_monthly_exact_key_date(item, result: dict) -> str:
+    """Prefer the authoritative registry date over broad narrative date ranges."""
+    fallback = str(getattr(item, "date_label", "") or "")
+    evidence = " ".join(str(getattr(item, "evidence", "") or "").split())
+    if not evidence:
+        evidence = " ".join(str(getattr(item, "consequence", "") or "").split())
+
+    target_key = _paid_monthly_key_event_key(evidence)
+    if not target_key:
+        return fallback
+
+    candidates = []
+    for field in ("major_sky_registry", "major_sky_events", "major_transitions"):
+        for row in list(result.get(field) or []):
+            if not isinstance(row, dict):
+                continue
+            label = (
+                row.get("display_label")
+                or row.get("technical_label")
+                or row.get("title")
+                or row.get("event")
+                or row.get("source_title")
+                or ""
+            )
+            event_date = row.get("event_date") or row.get("date") or ""
+            if label and event_date:
+                candidates.append((str(event_date)[:10], str(label)))
+
+    target_tokens = set(target_key.split())
+    best_date = ""
+    best_score = 0
+    for event_date, label in candidates:
+        candidate_key = _paid_monthly_key_event_key(label)
+        candidate_tokens = set(candidate_key.split())
+        if not candidate_tokens:
+            continue
+        score = len(target_tokens & candidate_tokens)
+        if target_tokens.issubset(candidate_tokens):
+            score += 10
+        if candidate_tokens.issubset(target_tokens):
+            score += 4
+        if score > best_score:
+            best_score = score
+            best_date = event_date
+
+    return human_date(best_date) if best_date and best_score >= 2 else fallback
+
+
 def _render_snapshot_monthly_report(
     narrative,
     result: dict,
@@ -10804,7 +10926,7 @@ def _render_snapshot_monthly_report(
         st.markdown("## Key dates")
         st.caption("Quick reference only — the interpretation is already in Read the month.")
         for item in key_dates:
-            date_label = str(getattr(item, "date_label", "") or "")
+            date_label = _paid_monthly_exact_key_date(item, result)
             evidence = " ".join(str(getattr(item, "evidence", "") or "").split())
             if evidence.casefold() in {"", "transition", "convergence"}:
                 consequence = " ".join(str(getattr(item, "consequence", "") or "").split())
