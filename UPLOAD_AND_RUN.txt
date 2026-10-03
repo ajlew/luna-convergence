@@ -1,0 +1,19 @@
+Luna v3.62 — Monthly Prebuilt Base
+
+1. Upload/replace app.py on main.
+2. Upload/replace paid_forecast_context.py on main.
+3. In GitHub Actions run "Generate paid forecast calculation bases" manually:
+   product: monthly
+   date: 2026-10-01
+   sign: leave blank
+   timezone: Australia/Sydney
+   city: Sydney
+4. Wait for the Action to commit all 12 regenerated bases.
+5. Run the Owner Personal Monthly again.
+
+What changes:
+- Each sign/month JSON now precomputes and stores the Free Monthly collective scaffold.
+- Each sign/month JSON now precomputes all 28-31 Free-Daily grounded calculation briefs.
+- It stores repeated transit threads with the month.
+- Runtime does not rebuild this shared background when the regenerated base is available.
+- Runtime adds only the customer's natal subject, personal natal activations and reader context, then asks Luna for the final personal story.

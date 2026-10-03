@@ -22,8 +22,8 @@ import re
 from typing import Any
 
 
-PAID_FORECAST_CONTEXT_VERSION = "1.2"
-MONTHLY_BASE_SCHEMA_VERSION = "1.1"
+PAID_FORECAST_CONTEXT_VERSION = "1.4"
+MONTHLY_BASE_SCHEMA_VERSION = "1.3"
 YEARLY_BASE_SCHEMA_VERSION = "1.0"
 DEFAULT_BASE_ROOT = Path(__file__).parent / "generated" / "paid_forecast_bases"
 
@@ -225,6 +225,162 @@ def _monthly_daily_story_ledger(shared_sky: dict[str, Any]) -> list[dict[str, An
             "events": by_day[day],
         })
     return ledger
+
+
+
+
+def _daily_style_briefs(sign: str, start: date, end: date, timezone_name: str) -> list[dict[str, Any]]:
+    """Build the same calculation briefs used by Luna's free Daily, for every day.
+
+    Paid Monthly does not invent a second daily calculation path.  It reuses
+    ``reading_facts.build_packet('daily', ...)`` and ``reading_quality.grounded_brief``
+    so the monthly writer sees the same primary aspect, supporting influences
+    and life-area translation that produced the public Daily.
+    """
+    from reading_facts import build_packet
+    from reading_quality import grounded_brief
+
+    rows: list[dict[str, Any]] = []
+    current = start
+    while current <= end:
+        packet = build_packet("daily", current, sign, timezone_name)
+        brief = grounded_brief(packet)
+        rows.append({
+            "source_id": f"daily-brief:{current.isoformat()}",
+            "date": current.isoformat(),
+            "brief": _json_value(brief),
+        })
+        current = date.fromordinal(current.toordinal() + 1)
+    return rows
+
+
+def _free_monthly_scaffold(sign: str, month_start: date, timezone_name: str) -> dict[str, Any]:
+    """Read the already-generated Free Monthly arc and its grounded monthly facts.
+
+    This makes the paid sign/month base genuinely partially complete: the
+    collective month is understood once in GitHub, while customer-specific
+    natal context is attached later at runtime.  No LLM call is made here.
+    """
+    from reading_facts import build_packet
+    from reading_quality import grounded_brief
+    from plain_readings import load_reading
+
+    packet = build_packet("monthly", month_start.replace(day=1), sign, timezone_name)
+    brief = grounded_brief(packet)
+    reading = load_reading(packet) or {}
+
+    monthly_events: list[dict[str, Any]] = []
+    for event in list(brief.get("events") or []):
+        if not isinstance(event, dict):
+            continue
+        monthly_events.append({
+            "date": str(event.get("date") or ""),
+            "event": str(event.get("event") or event.get("aspect") or ""),
+            "aspect": str(event.get("aspect") or ""),
+            "phase": event.get("phase"),
+            "orb": event.get("orb"),
+            "life_areas": [
+                str(item.get("life_area"))
+                for item in (event.get("event_life_areas") or [])
+                if isinstance(item, dict) and item.get("life_area")
+            ],
+        })
+
+    major_events: list[dict[str, Any]] = []
+    for event in list(brief.get("major_events") or []):
+        if not isinstance(event, dict):
+            continue
+        major_events.append({
+            "date": str(event.get("date") or ""),
+            "event": str(event.get("event") or event.get("technical") or ""),
+            "technical": str(event.get("technical") or ""),
+            "tier": event.get("tier"),
+            "life_areas": [
+                str(item.get("life_area"))
+                for item in (event.get("event_life_areas") or [])
+                if isinstance(item, dict) and item.get("life_area")
+            ],
+        })
+
+    return {
+        "collective_story": " ".join(str(reading.get("voice_body") or "").split()),
+        "collective_story_status": "published" if reading.get("voice_body") else "missing",
+        "monthly_events": monthly_events,
+        "major_events": major_events,
+        "dominant_life_areas": list(packet.get("life_areas") or []),
+        "required_turning_points": _json_value(brief.get("required_turning_points") or []),
+    }
+
+
+def _thread_label(value: Any) -> str:
+    text = " ".join(str(value or "").split())
+    if not text:
+        return ""
+    lower = text.casefold()
+    if lower.startswith("orb ") or lower.startswith("orb ·"):
+        return ""
+    if lower in {"exact", "applying", "separating", "closest to exact today"}:
+        return ""
+    if re.fullmatch(r"(?:orb\s*[·:]?\s*)?\d+(?:\.\d+)?°?", lower):
+        return ""
+    return text
+
+
+def _daily_transit_threads(daily_briefs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Find repeated calculated labels across neighbouring Daily briefs.
+
+    A repeated aspect later in the month is a new pass, not one month-long
+    transit.  Runs are therefore split whenever appearances are more than two
+    days apart.  This prevents, for example, two Mercury-Mars exact hits weeks
+    apart from being described as continuously active between them.
+    """
+    occurrences: dict[str, list[str]] = {}
+    display: dict[str, str] = {}
+    for row in daily_briefs:
+        day = str(row.get("date") or "")[:10]
+        brief = row.get("brief") or {}
+        labels = list(brief.get("calculated_labels") or [])
+        for event in list(brief.get("major_events") or []):
+            if isinstance(event, dict):
+                labels.append(event.get("event") or event.get("technical") or "")
+        for raw in labels:
+            label = _thread_label(raw)
+            if not label:
+                continue
+            key = re.sub(r"[^a-z0-9]+", " ", label.casefold()).strip()
+            if not key:
+                continue
+            display.setdefault(key, label)
+            occurrences.setdefault(key, []).append(day)
+
+    threads: list[dict[str, Any]] = []
+    for key, date_values in occurrences.items():
+        parsed = []
+        for value in sorted(dict.fromkeys(d for d in date_values if d)):
+            try:
+                parsed.append(date.fromisoformat(value))
+            except ValueError:
+                pass
+        if not parsed:
+            continue
+        runs: list[list[date]] = [[parsed[0]]]
+        for current in parsed[1:]:
+            if (current - runs[-1][-1]).days <= 2:
+                runs[-1].append(current)
+            else:
+                runs.append([current])
+        structural = any(token in key for token in ("retrograde", "station", "eclipse", "new moon", "full moon", "equinox", "solstice"))
+        for run in runs:
+            if len(run) < 2 and not structural:
+                continue
+            threads.append({
+                "label": display.get(key, key),
+                "start": run[0].isoformat(),
+                "end": run[-1].isoformat(),
+                "days_seen": len(run),
+            })
+    threads.sort(key=lambda row: (str(row.get("start") or ""), str(row.get("label") or "")))
+    return threads
 
 
 def _timezone_slug(timezone_name: str) -> str:
@@ -491,11 +647,36 @@ def monthly_calculation_base(
     result: dict[str, Any],
     *,
     required_story_anchors: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
+    include_story_background: bool = True,
 ) -> dict[str, Any]:
-    """Complete deterministic sign/month before natal personalisation."""
+    """Complete deterministic sign/month before natal personalisation.
+
+    ``include_story_background`` is True for the GitHub pre-generation job, so
+    each stored base contains the Free Monthly macro arc plus all Free-Daily
+    grounded briefs. Runtime callers can set it False when they only need a
+    light reader-specific overlay and should not rebuild the month.
+    """
     chronology = _chapter_rows(narrative)
     key_dates = _key_date_rows(narrative)
     anchors = list(required_story_anchors or monthly_required_story_anchors(narrative, result))
+    start_date = _date_value(result.get("start"))
+    end_date = _date_value(result.get("end"))
+    sign = str(result.get("sign") or "")
+    timezone_name = str(result.get("timezone_name") or "")
+    story_background_ready = bool(
+        include_story_background
+        and start_date is not None and end_date is not None and sign and timezone_name
+    )
+    daily_briefs = (
+        _daily_style_briefs(sign, start_date, end_date, timezone_name)
+        if story_background_ready
+        else []
+    )
+    collective_month = (
+        _free_monthly_scaffold(sign, start_date, timezone_name)
+        if story_background_ready
+        else {}
+    )
     shared_sky = {
         "sign": str(result.get("sign") or ""),
         "label": str(result.get("label") or getattr(narrative, "label", "") or ""),
@@ -541,6 +722,10 @@ def monthly_calculation_base(
         "calculated_chronology": chronology,
         "key_dates": key_dates,
         "required_story_anchors": _json_value(anchors),
+        "collective_month": _json_value(collective_month),
+        "daily_briefs": _json_value(daily_briefs),
+        "transit_threads": _json_value(_daily_transit_threads(daily_briefs)),
+        "story_background_ready": bool(story_background_ready and daily_briefs),
     }
     shared_sky["daily_story_ledger"] = _monthly_daily_story_ledger(shared_sky)
     # Retain the older three-phase skeleton for backward compatibility only.
@@ -580,11 +765,12 @@ def contextualize_monthly(
 
 
 def monthly_voice_days(context: dict[str, Any]) -> dict[str, Any]:
-    """LLM-ready paid Monthly: one lead plus one row for every active date.
+    """LLM-ready paid Monthly built from the same briefs as Luna's free Daily.
 
-    There are deliberately no Opening/Middle/Closing or convergence groups in
-    this writing contract. Each date carries every calculated transit for that
-    date, plus any exact natal activation belonging to the customer.
+    The daily briefs are intermediate evidence, not customer-facing sections.
+    Luna first writes Daily-style micro-stories from them, then a second pass
+    weaves those stories into one month-long narrative with the reader as the
+    protagonist.
     """
     shared = dict(context.get("shared_sky") or {})
     natal = dict(context.get("natal_player") or {})
@@ -592,9 +778,14 @@ def monthly_voice_days(context: dict[str, Any]) -> dict[str, Any]:
     reader_context = dict(context.get("reader_context") or {})
     activations = [row for row in list(personal.get("activations") or []) if isinstance(row, dict)]
 
-    ledger = [row for row in list(shared.get("daily_story_ledger") or []) if isinstance(row, dict)]
-    if not ledger:
-        ledger = _monthly_daily_story_ledger(shared)
+    daily_briefs = [row for row in list(shared.get("daily_briefs") or []) if isinstance(row, dict)]
+    if not daily_briefs:
+        start = _date_value(shared.get("start"))
+        end = _date_value(shared.get("end"))
+        sign = str(shared.get("sign") or "")
+        timezone_name = str(shared.get("timezone") or "")
+        if start is not None and end is not None and sign and timezone_name:
+            daily_briefs = _daily_style_briefs(sign, start, end, timezone_name)
 
     activations_by_day: dict[str, list[dict[str, Any]]] = {}
     for row in activations:
@@ -603,70 +794,33 @@ def monthly_voice_days(context: dict[str, Any]) -> dict[str, Any]:
             activations_by_day.setdefault(day, []).append(row)
 
     days: list[dict[str, Any]] = []
-    used_activation_days: set[str] = set()
-    for row in ledger:
+    for row in daily_briefs:
         day = str(row.get("date") or "")[:10]
-        day_activations = activations_by_day.get(day, [])
-        if day_activations:
-            used_activation_days.add(day)
-        days.append({
-            "source_id": str(row.get("source_id") or f"monthly-day:{day}"),
-            "date": day,
-            "date_label": str(row.get("date_label") or day),
-            "events": _json_value(row.get("events") or []),
-            "personal_activations": _json_value(day_activations),
-        })
-
-    # A natal contact can occasionally fall on a calendar day with no selected
-    # sign-level event. It still belongs in the paid story and must not vanish.
-    for day, rows in activations_by_day.items():
-        if day in used_activation_days or any(item.get("date") == day for item in days):
+        if not day:
             continue
-        try:
-            resolved = date.fromisoformat(day)
-            date_label = resolved.strftime("%d %B %Y").lstrip("0")
-        except ValueError:
-            date_label = day
         days.append({
-            "source_id": f"monthly-day:{day}",
+            "source_id": str(row.get("source_id") or f"daily-brief:{day}"),
             "date": day,
-            "date_label": date_label,
-            "events": [],
-            "personal_activations": _json_value(rows),
+            "daily_brief": _json_value(row.get("brief") or {}),
+            "personal_activations": _json_value(activations_by_day.get(day, [])),
         })
     days.sort(key=lambda item: str(item.get("date") or ""))
-
-    month_outline = [
-        {
-            "date": item.get("date"),
-            "events": [_event_title(event) for event in (item.get("events") or []) if isinstance(event, dict)],
-            "personal_contacts": [str(contact.get("signal") or "") for contact in (item.get("personal_activations") or []) if isinstance(contact, dict)],
-        }
-        for item in days
-    ]
 
     shared_context = {
         "sign": shared.get("sign"),
         "label": shared.get("label"),
         "start": shared.get("start"),
         "end": shared.get("end"),
-        "dominant_houses": shared.get("dominant_houses"),
-        "solar_convergence": shared.get("solar_convergence"),
-        "monthly_arc": shared.get("monthly_arc"),
-        "monthly_trajectory": shared.get("monthly_trajectory"),
-        "monthly_decision": shared.get("monthly_decision"),
+        "transit_threads": shared.get("transit_threads") or _daily_transit_threads(daily_briefs),
         "retrograde_cycles": shared.get("retrograde_cycles"),
+        "required_story_anchors": shared.get("required_story_anchors"),
         "natal_strengths": list(natal.get("strengths") or []),
         "natal_element": natal.get("dominant_element"),
         "natal_mode": natal.get("dominant_modality"),
+        "personal_activations": _json_value(activations),
         "reader_context": reader_context,
     }
-    lead = {
-        **shared_context,
-        "month_outline": month_outline,
-        "personal_activations": _json_value(activations),
-    }
-    return {"lead": lead, "shared_context": shared_context, "days": days}
+    return {"shared_context": shared_context, "days": days}
 
 
 def monthly_voice_sections(context: dict[str, Any]) -> dict[str, Any]:

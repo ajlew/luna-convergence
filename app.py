@@ -161,9 +161,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.61"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly 6K Story Pass"
-PAID_MONTHLY_STORY_REVISION = "free-month-arc-subject-4"
+APP_VERSION = "v3.62"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Prebuilt Base"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-subject-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -9816,10 +9816,14 @@ def _serialize_paid_monthly_snapshot(snapshot) -> dict:
 
 def _paid_monthly_voice_facts(narrative, result: dict, snapshot=None) -> dict:
     """Load the reusable sign/month base, then attach this customer's Natal Player."""
+    # Runtime only needs a light deterministic overlay. The expensive shared
+    # month background (Free Monthly arc + 31 Daily grounded briefs) belongs in
+    # the pre-generated GitHub base and must not be rebuilt for each customer.
     live_base = monthly_calculation_base(
         narrative,
         result,
         required_story_anchors=monthly_required_story_anchors(narrative, result),
+        include_story_background=False,
     )
 
     stored_base = None
@@ -10130,7 +10134,7 @@ def _paid_monthly_compact_daily_briefs(source_days: list[dict]) -> list[dict]:
     """
     compact: list[dict] = []
     for row in source_days:
-        brief = dict(row.get("daily_brief") or {})
+        brief = dict(row.get("daily_brief") or row.get("brief") or {})
         event_rows = [item for item in list(brief.get("events") or []) if isinstance(item, dict)]
         primary = event_rows[0] if event_rows else {}
         primary_aspect = " ".join(str(primary.get("aspect") or primary.get("event") or "").split())
@@ -10254,7 +10258,7 @@ def _paid_monthly_transit_threads(source_days: list[dict]) -> list[dict]:
             day = date.fromisoformat(str(row.get("date") or "")[:10])
         except ValueError:
             continue
-        brief = dict(row.get("daily_brief") or {})
+        brief = dict(row.get("daily_brief") or row.get("brief") or {})
         labels = list(brief.get("calculated_labels") or [])
         for event in list(brief.get("major_events") or []):
             if isinstance(event, dict):
@@ -10793,21 +10797,31 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
     except ValueError:
         return {"headline": "", "paragraphs": [], "story_word_count": 0, "voice_complete": False, "context": context}
 
-    # Macro structure: exactly the same Monthly packet + pre-generated story
-    # used by the public Free Monthly.  It gives Luna the proven beginning /
-    # development / ending shape before personalisation.
-    collective_month = _cached_paid_monthly_collective_scaffold(
-        sign, start_date.isoformat(), timezone_name
-    )
-
-    # Detail layer: exact same grounded calculation path used by Free Daily.
-    # These rows are evidence, not visible day-by-day story structure.
-    source_days = _cached_paid_monthly_daily_briefs(
-        sign, start_date.isoformat(), end_date.isoformat(), timezone_name
-    )
-    daily_signals = _paid_monthly_compact_daily_briefs(source_days)
-
     shared = dict(context.get("shared_sky") or {})
+
+    # Preferred path: the GitHub sign/month JSON has already done the shared
+    # work.  It contains the Free Monthly macro arc and the same grounded Daily
+    # calculation briefs used by the public Daily.  Runtime should add only the
+    # customer's natal subject and personal contacts.
+    collective_month = dict(shared.get("collective_month") or {})
+    source_days = [
+        dict(item) for item in list(shared.get("daily_briefs") or [])
+        if isinstance(item, dict)
+    ]
+    background_source = "prebuilt" if collective_month and source_days else "runtime-fallback"
+
+    # Backward-compatible fallback for an old/stale base. This should disappear
+    # after the paid-base GitHub Action is rerun for the month.
+    if not collective_month:
+        collective_month = _cached_paid_monthly_collective_scaffold(
+            sign, start_date.isoformat(), timezone_name
+        )
+    if not source_days:
+        source_days = _cached_paid_monthly_daily_briefs(
+            sign, start_date.isoformat(), end_date.isoformat(), timezone_name
+        )
+
+    daily_signals = _paid_monthly_compact_daily_briefs(source_days)
     subject = _paid_monthly_subject_dossier(snapshot, context)
     raw_anchors = shared.get("required_story_anchors") or monthly_required_story_anchors(narrative, result)
     required_anchors = [
@@ -10820,7 +10834,7 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
         "label": str(shared.get("label") or result.get("label") or ""),
         "start": start_date.isoformat(),
         "end": end_date.isoformat(),
-        "transit_threads": _paid_monthly_transit_threads(source_days),
+        "transit_threads": list(shared.get("transit_threads") or []) or _paid_monthly_transit_threads(source_days),
         "retrograde_cycles": shared.get("retrograde_cycles") or result.get("retrograde_cycles") or [],
         "required_story_anchors": required_anchors,
     }
@@ -10850,6 +10864,7 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
         "subject": subject,
         "daily_signal_count": len(daily_signals),
         "collective_story_available": bool(collective_month.get("collective_story")),
+        "background_source": background_source,
     }
 
 
