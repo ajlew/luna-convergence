@@ -160,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.68"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Adaptive Preflight"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-adaptive-1"
+APP_VERSION = "v3.69"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Direct Address"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-second-person-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10356,13 +10356,13 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
         })
 
     return {
-        "subject": {
+        "natal": {
             "core": core,
             "element": str(subject.get("dominant_element") or ""),
             "mode": str(subject.get("dominant_modality") or ""),
             "strengths": strengths,
             "activations": activations,
-            "reader": reader_context,
+            "focus": reader_context,
             "birth_time_known": bool(subject.get("birth_time_known")),
         },
         "month": {
@@ -10377,24 +10377,30 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
 
 def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
     return (
-        "Write Luna's paid Personal Monthly interpretation as one continuous article. "
-        "Python owns every astrology fact. The SUBJECT is the protagonist; the sky is the changing environment. "
-        "Never invent astrology, biography or guaranteed events.\n"
+        "Write Luna's paid Personal Monthly interpretation as one continuous article addressed DIRECTLY to the person whose chart this is. "
+        "Use SECOND PERSON throughout: you, your and yours. Speak to the person, never about the person. "
+        "Do not use third-person meta-language such as protagonist, subject, reader, client or customer in the article. "
+        "Never refer to the person as they, them, their, he, him, his, she, her or hers. "
+        "When another person must be mentioned, use a concrete role such as partner, colleague, friend, customer or family member rather than allowing the viewpoint to drift. "
+        "Luna is your strategic guide: direct, clear and authoritative without pretending certainty.\n"
+        "Python owns every astrology fact. The sky is the changing environment around you. Never invent astrology, biography or guaranteed events.\n"
         "Before writing, silently plan one month-long story from month.free_arc and the five chronological month.beats. "
         "Beats are evidence ranges, not sections to recite. Merge them into one wave: beginning, development, pressure/opening, reversal and ending. "
         "Do not write a day-by-day sequence or mini-horoscopes. Mention dates only for supplied events, anchors, activations or genuine turning points.\n"
         "Astronomy discipline: preserve every supplied planet pair, aspect/station state and date exactly. "
         "Never infer an unlisted conjunction, opposition, station, New Moon, Full Moon or direct station. "
         "Lunar texture is brief background only, never a new structural event. If a fact is not supplied, omit it.\n"
-        "Personalise the whole arc through subject.core, strengths and activations. "
+        "Personalise the whole arc through natal.core, natal.strengths and natal.activations. "
         "Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
+        "Translate those facts into what YOU may notice, face, decide, protect, test or use. "
         "Weave every activation naturally, use at least two strengths when available, and include every supplied anchor. "
         "Never invent angles or houses when birth time is unknown.\n"
         "Later paragraphs must remember earlier pressures, openings and choices rather than resetting. "
         "Do not explain transits one by one, repeat astronomical claims, or recycle prose to reach length. Stop when the story is complete.\n"
         "Return PLAIN PROSE ONLY: no JSON, metadata, ids, hashes, Markdown, headings, bullets, day labels, house numbers, engine language, Remember or Your move labels. "
         "Aim for about 1,400-1,650 words in 9-13 substantial paragraphs separated by blank lines. "
-        "Silently check before finishing that the story reaches the end of the month, covers anchors/activations, preserves supplied astronomy and does not repeat itself.\n"
+        "Before finishing, silently check the POINT OF VIEW first: every human interpretation is written to YOU in second person and never describes you from outside. "
+        "Then silently check that the story reaches the end of the month, covers anchors/activations, preserves supplied astronomy and does not repeat itself.\n"
         "CALCULATED MATERIAL:\n"
         + json.dumps(
             _paid_monthly_prompt_material(facts, compact_level=compact_level),
