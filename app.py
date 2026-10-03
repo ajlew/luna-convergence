@@ -18,7 +18,7 @@ from PIL import Image
 import streamlit as st
 import streamlit.components.v1 as components
 
-from astrology_engine import SIGNS, HOUSE_NAMES, positions_for_date
+from astrology_engine import SIGNS, HOUSE_NAMES, positions_for_date, position_for_local_minute, angular_distance
 from date_display import human_date
 from customer_experience import (
     HOUSE_VOICE,
@@ -160,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.70"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Date-Locked Voice"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-date-locked-1"
+APP_VERSION = "v3.71"
+BUILD_LABEL = f"Luna {APP_VERSION} — Birthday + Verified Dates"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-birthday-verified-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -3581,6 +3581,11 @@ def payment_success_page() -> None:
                 result["natal_overlay"] = build_monthly_natal_overlay(natal_profile_value, result)
                 result["natal_summary"] = natal_summary_value
                 result["natal_precision"] = natal_precision_value
+                try:
+                    _report_start = date.fromisoformat(str(result.get("start") or "")[:10])
+                except ValueError:
+                    _report_start = None
+                result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -3948,6 +3953,157 @@ def _build_monthly_checkout_natal(values: dict):
     snapshot, precision, _ = _build_natal_from_values(values)
     return snapshot, precision
 
+def _encode_monthly_natal_profile(snapshot, birth_date_value: date, period_code: str) -> str:
+    """Persist only the birthday month/day when the ordered month contains it.
+
+    The ordinary paid profile still excludes birth year, birth time and birthplace.
+    This tiny calendar hint survives Stripe so the paid report can acknowledge a
+    birthday naturally after payment without storing the customer's full birth date.
+    """
+    encoded = encode_natal_profile(snapshot)
+    try:
+        payload = json.loads(encoded)
+        report_month = int(str(period_code or "")[5:7])
+    except Exception:
+        return encoded
+    if isinstance(payload, dict) and birth_date_value and birth_date_value.month == report_month:
+        payload["bd"] = f"{birth_date_value.month:02d}-{birth_date_value.day:02d}"
+        return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+    return encoded
+
+
+def _monthly_birthday_date_from_profile(profile_value: str, report_start: date | None) -> str:
+    """Return the birthday date in the report year, or an empty string."""
+    if report_start is None:
+        return ""
+    try:
+        payload = json.loads(str(profile_value or ""))
+        month_text, day_text = str(payload.get("bd") or "").split("-", 1)
+        month_value, day_value = int(month_text), int(day_text)
+        if month_value != report_start.month:
+            return ""
+        return date(report_start.year, month_value, day_value).isoformat()
+    except Exception:
+        return ""
+
+
+_PLANET_LABELS = (
+    "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
+    "Uranus", "Neptune", "Pluto", "True Node",
+)
+_ASPECT_ANGLES = {
+    "conjunction": 0.0,
+    "sextile": 60.0,
+    "square": 90.0,
+    "trine": 120.0,
+    "opposition": 180.0,
+}
+
+
+def _paid_monthly_event_date_from_ephemeris(
+    label: object,
+    fallback_date: object,
+    timezone_name: str,
+) -> str:
+    """Verify a supplied event's local calendar date with exact-minute ephemeris.
+
+    The prebuilt base remains the event source. This helper only corrects the
+    local day attached to a supplied event; it never invents a new event.
+    """
+    raw_label = " ".join(str(label or "").split())
+    raw_date = str(fallback_date or "")[:10]
+    try:
+        base_date = date.fromisoformat(raw_date)
+    except ValueError:
+        return raw_date
+
+    zone = str(timezone_name or DEFAULT_TIMEZONE)
+    normalized = raw_label.replace(" opposite ", " opposition ").replace(" conjunct ", " conjunction ")
+
+    # Stations: locate the local day where speed changes sign.
+    station_match = re.search(
+        r"\b(" + "|".join(re.escape(p) for p in _PLANET_LABELS if p not in {"Sun", "Moon", "True Node"}) +
+        r")\s+stations?\s+(retrograde|direct)\b",
+        normalized,
+        flags=re.I,
+    )
+    if station_match:
+        planet = next((p for p in _PLANET_LABELS if p.casefold() == station_match.group(1).casefold()), station_match.group(1))
+        direction = station_match.group(2).casefold()
+        for offset in range(-2, 3):
+            day = base_date + timedelta(days=offset)
+            next_day = day + timedelta(days=1)
+            before = position_for_local_minute(day.isoformat(), zone, 0, planet).speed
+            after = position_for_local_minute(next_day.isoformat(), zone, 0, planet).speed
+            if direction == "retrograde" and before >= 0 > after:
+                return day.isoformat()
+            if direction == "direct" and before < 0 <= after:
+                return day.isoformat()
+        return raw_date
+
+    # Ingresses: locate the local day where the sign actually changes.
+    ingress_match = re.search(
+        r"\b(" + "|".join(re.escape(p) for p in _PLANET_LABELS) +
+        r")\s+enters\s+(Aries|Taurus|Gemini|Cancer|Leo|Virgo|Libra|Scorpio|Sagittarius|Capricorn|Aquarius|Pisces)\b",
+        normalized,
+        flags=re.I,
+    )
+    if ingress_match:
+        planet = next((p for p in _PLANET_LABELS if p.casefold() == ingress_match.group(1).casefold()), ingress_match.group(1))
+        target_sign = ingress_match.group(2).capitalize()
+        for offset in range(-2, 3):
+            day = base_date + timedelta(days=offset)
+            next_day = day + timedelta(days=1)
+            before = position_for_local_minute(day.isoformat(), zone, 0, planet)
+            after = position_for_local_minute(next_day.isoformat(), zone, 0, planet)
+            if before.sign != after.sign and after.sign == target_sign:
+                return day.isoformat()
+        return raw_date
+
+    # Lunations: find the closest Sun/Moon geometry around the supplied day.
+    if re.search(r"\bnew moon\b", normalized, flags=re.I):
+        pair, target = ("Sun", "Moon"), 0.0
+    elif re.search(r"\bfull moon\b", normalized, flags=re.I):
+        pair, target = ("Sun", "Moon"), 180.0
+    else:
+        pair = None
+        target = None
+
+    # Ordinary aspects, including cazimi labels that contain "Sun conjunct Venus".
+    if pair is None:
+        planet_pattern = "(" + "|".join(re.escape(p) for p in _PLANET_LABELS) + ")"
+        aspect_match = re.search(
+            rf"\b{planet_pattern}\s+(conjunction|sextile|square|trine|opposition)\s+{planet_pattern}\b",
+            normalized,
+            flags=re.I,
+        )
+        if aspect_match:
+            p1 = next((p for p in _PLANET_LABELS if p.casefold() == aspect_match.group(1).casefold()), aspect_match.group(1))
+            aspect_name = aspect_match.group(2).casefold()
+            p2 = next((p for p in _PLANET_LABELS if p.casefold() == aspect_match.group(3).casefold()), aspect_match.group(3))
+            pair = (p1, p2)
+            target = _ASPECT_ANGLES[aspect_name]
+
+    if pair is not None and target is not None:
+        best_date = base_date
+        best_orb = 999.0
+        # Half-hour resolution is enough to identify the correct local day.
+        for offset in range(-2, 3):
+            day = base_date + timedelta(days=offset)
+            for minute in range(0, 1440, 30):
+                p1 = position_for_local_minute(day.isoformat(), zone, minute, pair[0])
+                p2 = position_for_local_minute(day.isoformat(), zone, minute, pair[1])
+                distance = angular_distance(p1.longitude, p2.longitude)
+                orb = abs(distance - target)
+                if orb < best_orb:
+                    best_orb = orb
+                    best_date = day
+        if best_orb <= 2.0:
+            return best_date.isoformat()
+
+    return raw_date
+
+
 def _owner_report_output(order: dict) -> dict:
     """Build the same paid output after session-scoped owner authentication."""
     product_code = str(order.get("product_code") or "").upper()
@@ -3976,6 +4132,11 @@ def _owner_report_output(order: dict) -> dict:
             result["natal_overlay"] = build_monthly_natal_overlay(natal_profile_value, result)
             result["natal_summary"] = str(order.get("natal_summary") or "")
             result["natal_precision"] = str(order.get("natal_precision") or "")
+            try:
+                _report_start = date.fromisoformat(str(result.get("start") or "")[:10])
+            except ValueError:
+                _report_start = None
+            result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
         pdf_bytes = build_report_pdf(
             result,
             main_focus=main_focus,
@@ -4153,7 +4314,7 @@ def report_cta(
             else:
                 st.caption(
                     "Instant delivery: after Stripe confirms payment, your report opens immediately and Luna emails your private return link. "
-                    "Raw birth details are used to calculate the natal chart in this session; Stripe receives only the derived natal geometry needed for fulfilment."
+                    "Raw birth details are used to calculate the natal chart in this session; Stripe receives the derived natal geometry needed for fulfilment. If the selected report is your birthday month, Luna also carries only the birthday month/day so the report can acknowledge it; your birth year, birth time and birthplace are not sent."
                 )
             submitted = st.button(
                 (
@@ -4215,7 +4376,7 @@ def report_cta(
                         "main_focus": main_focus,
                         "personal_question": personal_question.strip(),
                         "reference": reference,
-                        "natal_profile": encode_natal_profile(natal_snapshot),
+                        "natal_profile": _encode_monthly_natal_profile(natal_snapshot, natal_values["birth_date"], period_code),
                         "natal_summary": natal_profile_summary(natal_snapshot),
                         "natal_precision": natal_precision,
                     }
@@ -9872,6 +10033,7 @@ def _paid_monthly_voice_facts(narrative, result: dict, snapshot=None) -> dict:
         "personal_question": str(getattr(narrative, "personal_question", "") or ""),
         "nearest_city": str(result.get("nearest_city") or ""),
         "timezone": timezone_name,
+        "birthday_date": str(result.get("birthday_date") or ""),
     }
     return contextualize_monthly(
         base,
@@ -10186,7 +10348,7 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
     activation_text = (145, 125, 105, 90)[level]
     cycle_limit = (4, 3, 2, 2)[level]
     structural_cap = (7, 6, 4, 3)[level]
-    texture_cap = (2, 1, 1, 0)[level]
+    texture_cap = 0  # Monthly long-form excludes fast lunar aspects; lunations remain structural calendar events.
     area_cap = (4, 3, 3, 2)[level]
 
     def event_key(value: object) -> str:
@@ -10242,6 +10404,7 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
         for key in ("main_focus", "focus", "personal_question", "question")
         if str(reader.get(key) or "").strip()
     }
+    birthday_date = str(reader.get("birthday_date") or "")[:10]
 
     cycles = []
     for item in list(month.get("retrograde_cycles") or [])[:cycle_limit]:
@@ -10271,6 +10434,11 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
             label = " ".join(str(event.get("event") or event.get("technical") or "").split())
             if not date_text or not label:
                 continue
+            date_text = _paid_monthly_event_date_from_ephemeris(
+                label,
+                date_text,
+                str((subject.get("reader_context") or {}).get("timezone") or DEFAULT_TIMEZONE),
+            )
             key = (date_text, event_key(label))
             if key in calendar_seen:
                 continue
@@ -10291,6 +10459,11 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
         label = " ".join(str(event.get("event") or event.get("technical") or "").split())
         if not date_text or not label:
             continue
+        date_text = _paid_monthly_event_date_from_ephemeris(
+            label,
+            date_text,
+            str((subject.get("reader_context") or {}).get("timezone") or DEFAULT_TIMEZONE),
+        )
         key = (date_text, event_key(label))
         if key in calendar_seen:
             continue
@@ -10420,6 +10593,7 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
             "strengths": strengths,
             "activations": activations,
             "focus": reader_context,
+            "birthday": birthday_date,
             "birth_time_known": bool(subject.get("birth_time_known")),
         },
         "month": {
@@ -10453,7 +10627,7 @@ def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
         "A New Moon or Full Moon exists only where month.calendar literally lists it. "
         "A planet stations retrograde or direct only where month.calendar literally lists that station. "
         "Lunar texture is brief background only, never a new structural event. If a fact is not supplied, omit it.\n"
-        "Personalise the whole arc through natal.core, natal.strengths and natal.activations. "
+        "If natal.birthday contains a date, acknowledge it naturally ONCE around that point in the story. Say Happy birthday in a warm, restrained way. ""Treat the birthday as a personal calendar milestone, not as an astronomical event: do not invent a solar return, birthday transit or exact aspect unless month.calendar explicitly supplies it. ""A nearby transit may frame the days around the birthday, but keep its exact calendar date distinct from the birthday. ""Do not use fate language such as rare alignment, destiny, fated, the universe is guiding you, or the universe is rewarding you; preserve choice and agency. ""Fast lunar aspects are intentionally absent from this monthly packet; do not invent or reconstruct them. ""Personalise the whole arc through natal.core, natal.strengths and natal.activations. "
         "Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
         "Translate those facts into what YOU may notice, face, decide, protect, test or use. "
         "Weave every activation naturally, use at least two strengths when available, and include every supplied anchor. "
@@ -10858,7 +11032,14 @@ def _paid_monthly_exact_key_date(item, result: dict) -> str:
             best_score = score
             best_date = event_date
 
-    return human_date(best_date) if best_date and best_score >= 2 else fallback
+    if best_date and best_score >= 2:
+        verified = _paid_monthly_event_date_from_ephemeris(
+            evidence,
+            best_date,
+            str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+        )
+        return human_date(verified)
+    return fallback
 
 
 def _render_snapshot_monthly_report(
@@ -10967,12 +11148,23 @@ def _render_snapshot_monthly_report(
                 if not isinstance(item, dict):
                     continue
                 label_text = item.get("display_label") or item.get("technical_label") or item.get("source_title") or "Sky event"
-                st.markdown(f"- {human_date(item.get('event_date'))} · {label_text}")
+                _registry_date = _paid_monthly_event_date_from_ephemeris(
+                    label_text,
+                    item.get("event_date"),
+                    str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+                )
+                st.markdown(f"- {human_date(_registry_date)} · {label_text}")
         transitions = list(result.get("major_transitions") or [])
         if transitions:
             st.markdown("**Major monthly transitions**")
             for item in transitions:
-                st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('title', 'Transition')}")
+                _transition_label = item.get("title", "Transition")
+                _transition_date = _paid_monthly_event_date_from_ephemeris(
+                    _transition_label,
+                    item.get("event_date"),
+                    str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+                )
+                st.markdown(f"- {human_date(_transition_date)} · {_transition_label}")
         convergences = list(result.get("convergences") or [])
         if convergences:
             st.markdown("**Calculated convergence windows**")
