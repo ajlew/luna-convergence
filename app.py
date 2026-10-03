@@ -98,7 +98,6 @@ from paid_forecast_context import (
     contextualize_yearly,
     load_monthly_calculation_base,
     monthly_required_story_anchors,
-    monthly_voice_days,
 )
 from concentration_theme import build_monthly_concentration_theme
 from solar_year_wave import solar_year_wave_svg
@@ -161,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.62"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Prebuilt Base"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-subject-1"
+APP_VERSION = "v3.64"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Plain Voice"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-plain-prose-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -9882,80 +9881,6 @@ def _paid_monthly_voice_facts(narrative, result: dict, snapshot=None) -> dict:
     )
 
 
-def _paid_monthly_day_batch_response_format(item_count: int) -> dict:
-    return {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "luna_paid_monthly_daily_stories",
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "items": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "source_id": {"type": "string"},
-                                "date": {"type": "string"},
-                                "story": {"type": "string"},
-                            },
-                            "required": ["source_id", "date", "story"],
-                            "additionalProperties": False,
-                        },
-                        "minItems": item_count,
-                        "maxItems": item_count,
-                    },
-                },
-                "required": ["items"],
-                "additionalProperties": False,
-            },
-        },
-    }
-
-def _paid_monthly_day_batch_prompt(facts: dict, *, revision_note: str = "") -> str:
-    correction = f"\nREVISION REQUIRED: {revision_note}\n" if revision_note else ""
-    return (
-        "You are Luna. Each item contains the SAME grounded calculation brief used by Luna's free Daily. "
-        "Python owns every astronomical fact. Do not recalculate, move or invent an aspect, date, sign, life area or event.\n\n"
-        "For EACH supplied date, write one Daily-style scene: interpret the strongest calculated aspect first, then show "
-        "how the supplied supporting influences change the practical picture. Translate the supplied life areas into ordinary "
-        "life, connect pressure with support, and use one concrete example when the evidence supports it. This is background "
-        "material for a later personalised Monthly story, so do NOT personalise it to the natal chart here.\n\n"
-        "Match Luna's free Daily voice: alive, intimate, incisive, practical and specific. A capitalised imperative opening is "
-        "welcome when natural. Do not mention the calendar date merely because it exists; the date is chronology metadata for "
-        "the later writer. Do not create a headline, bullets, headings, house numbers, engine labels, Remember or Your move labels. "
-        "Aim for about 55-95 words per date. These scenes are never shown directly to the customer.\n\n"
-        "Return JSON only with exactly one top-level key, items. Return exactly one item per supplied date. Copy each source_id "
-        "and date exactly. Each item contains exactly source_id, date and story."
-        + correction
-        + "\nCALCULATED FACTS:\n"
-        + json.dumps(facts, ensure_ascii=False, default=str, separators=(",", ":"))
-    )
-
-
-@st.cache_data(show_spinner=False, ttl=86400)
-def _cached_paid_monthly_day_batch(
-    facts_json: str,
-    base_url: str,
-    model: str,
-    _api_key: str,
-    revision_note: str = "",
-) -> dict:
-    facts = json.loads(facts_json)
-    item_count = max(1, len(list(facts.get("items") or [])))
-    return generate_openai_compatible_json(
-        _paid_monthly_day_batch_prompt(facts, revision_note=revision_note),
-        base_url=base_url,
-        model=model,
-        api_key=_api_key,
-        timeout=120,
-        max_tokens=min(4600, 1000 + item_count * 850),
-        response_format=_paid_monthly_day_batch_response_format(item_count),
-        rate_limit_retries=2,
-    )
-
-
 def _monthly_event_present(title: str, text: str) -> bool:
     title_text = str(title or "").casefold()
     body = str(text or "").casefold()
@@ -9988,119 +9913,6 @@ def _monthly_event_present(title: str, text: str) -> bool:
         if source in title_text and not any(value in body for value in alternatives):
             return False
     return True
-
-
-def _paid_monthly_daily_required_labels(source: dict) -> list[str]:
-    brief = dict(source.get("daily_brief") or {})
-    labels: list[str] = []
-    for event in list(brief.get("events") or []):
-        if isinstance(event, dict):
-            value = str(event.get("aspect") or event.get("event") or "").strip()
-            if value:
-                labels.append(value)
-    for event in list(brief.get("major_events") or []):
-        if isinstance(event, dict):
-            value = str(event.get("event") or event.get("technical") or "").strip()
-            if value:
-                labels.append(value)
-    for value in list(brief.get("calculated_labels") or []):
-        text = " ".join(str(value or "").split())
-        lower = text.casefold()
-        if not text or lower.startswith("orb") or lower in {"exact", "applying", "separating", "closest to exact today"}:
-            continue
-        if re.search(r"\b(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|true node)\b", lower):
-            labels.append(text)
-    return list(dict.fromkeys(labels))
-
-
-def _paid_monthly_day_batch_quality(copy: dict, facts: dict) -> tuple[bool, str]:
-    expected = [str(item.get("source_id") or "") for item in (facts.get("items") or [])]
-    items = list(copy.get("items") or []) if isinstance(copy, dict) else []
-    returned = [str(item.get("source_id") or "") for item in items if isinstance(item, dict)]
-    problems: list[str] = []
-    if returned != expected or len(items) != len(expected):
-        return False, "Return exactly one item for each supplied source_id, in the supplied order."
-
-    source_by_id = {str(item.get("source_id") or ""): item for item in (facts.get("items") or [])}
-    for index, item in enumerate(items):
-        if not isinstance(item, dict):
-            problems.append(f"Item {index + 1} is not a JSON object.")
-            continue
-        source_id = str(item.get("source_id") or "")
-        source = source_by_id.get(source_id) or {}
-        if str(item.get("date") or "") != str(source.get("date") or ""):
-            problems.append(f"{source_id} changed its date.")
-        story = " ".join(str(item.get("story") or "").split())
-        if not story:
-            problems.append(f"{source_id} is incomplete.")
-            continue
-        words = _word_count(story)
-        if words < 45:
-            problems.append(f"{source_id} is too short at {words} words; interpret the Daily brief rather than reciting it.")
-        elif words > 125:
-            problems.append(f"{source_id} is too long at {words} words; keep the Daily-style pass focused.")
-        for label in _paid_monthly_daily_required_labels(source):
-            if not _monthly_event_present(label, story):
-                problems.append(f"{source_id} omitted calculated Daily evidence: {label}.")
-    return (not problems), " ".join(problems)
-
-
-def _paid_monthly_day_fallback(source: dict) -> dict:
-    """Intermediate-only fallback. Raw calculation prose is never customer-facing."""
-    brief = dict(source.get("daily_brief") or {})
-    labels = _paid_monthly_daily_required_labels(source)
-    areas = []
-    for event in list(brief.get("events") or []):
-        if not isinstance(event, dict):
-            continue
-        for item in event.get("event_life_areas") or []:
-            if isinstance(item, dict) and item.get("life_area"):
-                areas.append(str(item.get("life_area")))
-        for item in event.get("house_meanings") or []:
-            if item:
-                areas.append(str(item))
-    pieces = []
-    if labels:
-        pieces.append("; ".join(labels))
-    if areas:
-        pieces.append("Life areas: " + "; ".join(dict.fromkeys(areas)))
-    return {
-        "source_id": str(source.get("source_id") or ""),
-        "date": str(source.get("date") or ""),
-        "story": ". ".join(pieces) or "Calculated Daily evidence is available for this date.",
-        "intermediate_fallback": True,
-    }
-
-
-def _generate_paid_monthly_day_partition(items: list[dict]) -> list[dict]:
-    if not items:
-        return []
-    if not _luna_voice_ready():
-        return [_paid_monthly_day_fallback(item) for item in items]
-
-    facts = {"items": items}
-    facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
-    revision_note = ""
-    for _attempt in range(2):
-        try:
-            candidate = _cached_paid_monthly_day_batch(
-                facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY, revision_note
-            )
-        except Exception as exc:
-            _record_voice_error("paid_monthly_daily_collection", exc)
-            candidate = None
-        if candidate is not None:
-            valid, revision_note = _paid_monthly_day_batch_quality(candidate, facts)
-            if valid:
-                return list(candidate.get("items") or [])
-
-    if len(items) > 1:
-        midpoint = max(1, len(items) // 2)
-        return (
-            _generate_paid_monthly_day_partition(items[:midpoint])
-            + _generate_paid_monthly_day_partition(items[midpoint:])
-        )
-    return [_paid_monthly_day_fallback(items[0])]
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -10354,51 +10166,11 @@ def _paid_monthly_subject_dossier(snapshot, context: dict) -> dict:
     }
 
 
-def _paid_monthly_weave_response_format() -> dict:
-    return {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "luna_paid_monthly_story",
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "headline": {"type": "string"},
-                    "paragraphs": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 8,
-                        "maxItems": 24,
-                    },
-                    "used_strength_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    "used_activation_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    "used_anchor_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                },
-                "required": [
-                    "headline", "paragraphs", "used_strength_ids",
-                    "used_activation_ids", "used_anchor_ids"
-                ],
-                "additionalProperties": False,
-            },
-        },
-    }
-
-
 def _paid_monthly_prompt_material(facts: dict) -> dict:
-    """Compress deterministic evidence for Groq's 6k-token request ceiling.
+    """Compact Python-owned evidence for one plain-prose Monthly voice call.
 
-    Keep every day's primary Daily signal, useful supporting currents, the Free
-    Monthly macro arc, the natal subject and all personal activations. Drop only
-    repeated JSON keys, verbose engine metadata and duplicate interpretation.
+    JSON is used only as an input transport owned by Python. The model never
+    has to reproduce this structure, provenance ids, hashes or schema fields.
     """
     subject = dict(facts.get("subject") or {})
     month = dict(facts.get("month_context") or {})
@@ -10412,33 +10184,32 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
                 core[str(planet)] = sign
 
     strengths = []
-    for item in list(subject.get("strengths") or [])[:6]:
+    for item in list(subject.get("strengths") or [])[:5]:
         if not isinstance(item, dict):
             continue
         strengths.append([
-            str(item.get("id") or ""),
-            " ".join(str(item.get("title") or "").split())[:100],
-            " ".join(str(item.get("strength") or item.get("interpretation") or "").split())[:180],
-            " ".join(str(item.get("watch") or "").split())[:150],
-            " ".join(str(item.get("evidence") or "").split())[:90],
+            " ".join(str(item.get("title") or "").split())[:80],
+            " ".join(str(item.get("strength") or item.get("interpretation") or "").split())[:135],
+            " ".join(str(item.get("watch") or "").split())[:105],
+            " ".join(str(item.get("evidence") or "").split())[:70],
         ])
 
     activations = []
     for item in list(subject.get("personal_activations") or []):
         if not isinstance(item, dict):
             continue
-        date_label = str(item.get("date_label") or item.get("date") or item.get("exact_date") or "")[:32]
+        date_label = str(item.get("date_label") or item.get("date") or item.get("exact_date") or "")[:28]
         signal = " ".join(str(item.get("signal") or "").split())
         if not signal:
             transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "")
             aspect = str(item.get("aspect") or "")
             target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "")
             signal = " ".join(bit for bit in (transit, aspect, (f"natal {target}" if target else "")) if bit).strip()
-        activations.append([str(item.get("id") or ""), date_label, signal[:170]])
+        activations.append([date_label, signal[:160]])
 
     reader = dict(subject.get("reader_context") or {})
     reader_context = {
-        key: " ".join(str(reader.get(key) or "").split())[:180]
+        key: " ".join(str(reader.get(key) or "").split())[:120]
         for key in ("main_focus", "focus", "personal_question", "question")
         if str(reader.get(key) or "").strip()
     }
@@ -10447,16 +10218,15 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
     for item in list(month.get("required_story_anchors") or []):
         if isinstance(item, dict):
             anchors.append([
-                str(item.get("id") or ""),
-                " ".join(str(item.get("title") or "").split())[:100],
-                " ".join(str(item.get("date_label") or item.get("date") or "").split())[:28],
+                " ".join(str(item.get("title") or "").split())[:80],
+                " ".join(str(item.get("date_label") or item.get("date") or "").split())[:20],
             ])
 
     threads = []
-    for item in list(month.get("transit_threads") or [])[:10]:
+    for item in list(month.get("transit_threads") or [])[:8]:
         if isinstance(item, dict):
             threads.append([
-                " ".join(str(item.get("label") or "").split())[:90],
+                " ".join(str(item.get("label") or "").split())[:70],
                 str(item.get("start") or "")[:10],
                 str(item.get("end") or "")[:10],
             ])
@@ -10468,7 +10238,7 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
         label = item.get("title") or item.get("label") or item.get("planet") or "Retrograde"
         start_value = item.get("retrograde_start") or item.get("pre_shadow_start") or item.get("start_date") or item.get("start") or ""
         end_value = item.get("direct_date") or item.get("post_shadow_end") or item.get("end_date") or item.get("end") or ""
-        cycles.append([" ".join(str(label).split())[:80], str(start_value)[:10], str(end_value)[:10]])
+        cycles.append([" ".join(str(label).split())[:75], str(start_value)[:10], str(end_value)[:10]])
 
     signal_to_id: dict[str, str] = {}
     area_to_id: dict[str, str] = {}
@@ -10490,40 +10260,36 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
         return area_to_id[text]
 
     month_events = []
-    for item in list(collective.get("monthly_events") or [])[:14]:
+    for item in list(collective.get("monthly_events") or [])[:12]:
         if isinstance(item, dict):
-            label = " ".join(str(item.get("event") or item.get("aspect") or "").split())[:105]
-            month_events.append([str(item.get("date") or "")[:10], signal_id(label)])
+            label = " ".join(str(item.get("event") or item.get("aspect") or "").split())[:80]
+            month_events.append([str(item.get("date") or "")[-2:], signal_id(label)])
 
     daily = []
     for row in list(facts.get("daily_signals") or []):
         if not isinstance(row, dict):
             continue
         primary = dict(row.get("primary") or {})
-        primary_label = " ".join(str(primary.get("aspect") or "").split())[:90]
+        primary_label = " ".join(str(primary.get("aspect") or "").split())[:75]
         supports = [" ".join(str(v or "").split()) for v in list(row.get("supporting") or [])]
-        supports = [v for v in supports if v][:3]
+        supports = [v for v in supports if v][:2]
         areas = [" ".join(str(v or "").split()) for v in list(primary.get("life_areas") or [])]
         areas = [v for v in areas if v][:2]
         majors = []
         for event in list(row.get("major_events") or [])[:2]:
             if isinstance(event, dict):
-                label = " ".join(str(event.get("event") or event.get("technical") or "").split())[:90]
+                label = " ".join(str(event.get("event") or event.get("technical") or "").split())[:75]
                 if label:
                     majors.append(label)
         daily.append([
-            str(row.get("date") or "")[:10],
+            str(row.get("date") or "")[-2:],
             signal_id(primary_label),
             [signal_id(v) for v in supports],
             [area_id(v) for v in areas],
             [signal_id(v) for v in majors],
         ])
 
-    signal_legend = {code: text for text, code in signal_to_id.items()}
-    area_legend = {code: text for text, code in area_to_id.items()}
-
     return {
-        "rev": str(facts.get("story_revision") or ""),
         "subject": {
             "core": core,
             "element": str(subject.get("dominant_element") or ""),
@@ -10535,55 +10301,147 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
         },
         "month": {
             "label": str(month.get("label") or ""),
-            "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:1200],
+            "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:900],
             "events": month_events,
             "anchors": anchors,
             "threads": threads,
             "retrogrades": cycles,
         },
-        "legend": {"signals": signal_legend, "areas": area_legend},
+        "legend": {
+            "signals": {code: text for text, code in signal_to_id.items()},
+            "areas": {code: text for text, code in area_to_id.items()},
+        },
         "daily": daily,
     }
 
 
-def _paid_monthly_weave_prompt(facts: dict, *, revision_note: str = "") -> str:
-    correction = f"\nREVISION: {revision_note}\n" if revision_note else ""
+def _paid_monthly_weave_prompt(facts: dict) -> str:
     return (
-        "Write one paid Personal Monthly story. Python owns every astrology fact. SUBJECT is the protagonist; the sky is the changing environment. Never invent astrology, biography or guaranteed events.\n"
-        "Use month.free_arc and month.events to find the beginning, development, turning points and ending. Use every daily row as chronological evidence, not as a diary. Each daily row is [date, primary signal id, supporting signal ids, life-area ids, major-event ids]; resolve ids through legend. Merge neighbouring signals into natural arcs and mention dates only when useful. Use only supplied thread/retrograde spans.\n"
-        "Personalise the arc through subject.core, strengths and activations. Strength rows are [id,title,strength,watch,evidence]; activation rows are [id,date,signal]. Show why this person meets the same month differently. Personal activations are foreground. Keep the same recognisable person from opening to ending. Never invent angles/houses when birth time is unknown.\n"
-        "Write a real wave: starting position, rises/troughs, openings, pressure, reversals, consequences and an earned ending. Do not force optimism or define transits one by one. No bullets, mini-headings, day labels, house numbers, engine language, cosmic filler, Remember or Your move labels.\n"
-        "Return JSON only: headline, 10-20 substantial paragraphs, used_strength_ids, used_activation_ids, used_anchor_ids. Aim for about 1,650-1,950 words. Provenance arrays are internal; include every personal activation and required anchor actually integrated."
-        + correction
-        + "\nMATERIAL:\n"
+        "Write Luna's paid Personal Monthly interpretation as one continuous article. "
+        "Python owns every astrology fact. The SUBJECT is the protagonist; the sky is the changing environment. "
+        "Never invent astrology, biography, events or guaranteed outcomes.\n"
+        "Use month.free_arc and month.events as the already-prepared month arc. Read every daily row in chronological order as evidence, not as a diary. "
+        "Daily rows are [day, primary signal id, supporting signal ids, life-area ids, major-event ids]; resolve ids through legend. "
+        "Merge related days into natural story arcs. Mention dates only when they clarify a genuine turn. Use only supplied transit-thread and retrograde spans.\n"
+        "Personalise the whole arc through subject.core, strengths and activations. Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
+        "Every supplied personal activation must be woven into the story. Every supplied monthly anchor must appear. "
+        "Use at least two supplied natal strengths when available, showing how they alter the way this person meets the month. "
+        "Keep the same recognisable protagonist from opening to ending. Never invent angles or houses when birth time is unknown.\n"
+        "Build one wave: starting position, rises and troughs, openings, pressure, reversals, consequences and an earned ending. Later paragraphs must remember earlier developments. "
+        "Do not define transits one by one or write 31 mini-horoscopes. No bullets, headings, day labels, house numbers, engine language, cosmic filler, Remember or Your move labels.\n"
+        "Return PLAIN PROSE ONLY. Do not return JSON, metadata, ids, hashes, Markdown fences or field labels. "
+        "Write 10-18 substantial paragraphs separated by blank lines and aim for about 1,700-1,950 words.\n"
+        "CALCULATED MATERIAL:\n"
         + json.dumps(_paid_monthly_prompt_material(facts), ensure_ascii=False, separators=(",", ":"))
     )
 
 
-@st.cache_data(show_spinner=False, ttl=86400)
+def _paid_monthly_clean_plain_story(value: object) -> str:
+    text = str(value or "").strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].lstrip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    # Free Luna uses plain prose. Remove accidental emphasis delimiters only;
+    # do not rewrite the model's wording or paragraph structure.
+    return re.sub(r"\*{1,3}|_{2,3}|`+", "", text).strip()
+
+
+def _paid_monthly_estimated_tokens(text: str) -> int:
+    """Estimate request tokens with tiktoken when available, otherwise safely approximate."""
+    try:
+        import tiktoken  # optional; Streamlit deploy does not require it
+        encoding = tiktoken.get_encoding("cl100k_base")
+        return len(encoding.encode(str(text or "")))
+    except Exception:
+        # Conservative approximation for English + compact JSON input.
+        return max(1, math.ceil(len(str(text or "")) / 4.0))
+
+
+def _paid_monthly_preflight_tokens(prompt: str, completion_tokens: int) -> tuple[int, int]:
+    # Include the short system message and a 15% safety buffer. Keep the whole
+    # request comfortably below the provider's observed 6k token ceiling.
+    raw_input = _paid_monthly_estimated_tokens(prompt) + 80
+    buffered_input = math.ceil(raw_input * 1.15)
+    total = buffered_input + int(completion_tokens)
+    if total > 5500:
+        raise RuntimeError(
+            f"Paid Monthly preflight stopped an oversized request: estimated {buffered_input} input + "
+            f"{completion_tokens} completion = {total} tokens (limit 5500)."
+        )
+    return buffered_input, total
+
+
+@st.cache_data(show_spinner=False, ttl=1800)
 def _cached_paid_monthly_weave(
     facts_json: str,
     base_url: str,
     model: str,
     _api_key: str,
-    revision_note: str = "",
-) -> dict:
+) -> str:
+    """One provider call, plain prose out. No JSON schema and no automatic retry."""
+    import requests
+
     facts = json.loads(facts_json)
-    return generate_openai_compatible_json(
-        _paid_monthly_weave_prompt(facts, revision_note=revision_note),
-        base_url=base_url,
-        model=model,
-        api_key=_api_key,
-        timeout=150,
-        # About 2,000 words fits comfortably inside this completion budget.
-        # Keeping the ceiling bounded prevents one paid report from reserving
-        # an 8k-token completion against Groq's daily token quota.
-        max_tokens=2600,
-        response_format=_paid_monthly_weave_response_format(),
-        # A TPD 429 can require tens of minutes to reset. Do not hold a paid
-        # page open retrying the same quota failure inside the provider layer.
-        rate_limit_retries=0,
-    )
+    prompt = _paid_monthly_weave_prompt(facts)
+    max_completion_tokens = 2650
+    _paid_monthly_preflight_tokens(prompt, max_completion_tokens)
+
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Write Luna's interpretation from the supplied calculations. "
+                    "Return plain prose only. Python owns the facts and validation."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.72,
+        "max_completion_tokens": max_completion_tokens,
+    }
+    if str(model or "").startswith("openai/gpt-oss"):
+        payload["reasoning_effort"] = "low"
+        payload["include_reasoning"] = False
+
+    try:
+        response = requests.post(
+            f"{str(base_url).rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {_api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=150,
+        )
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Voice provider request failed: {exc}") from exc
+
+    if response.status_code in (413, 429):
+        body = " ".join(str(response.text or "").split())[:500]
+        raise RuntimeError(f"Voice provider HTTP {response.status_code}: {body}")
+    if response.status_code >= 400:
+        body = " ".join(str(response.text or "").split())[:500]
+        raise RuntimeError(f"Voice provider HTTP {response.status_code}: {body}")
+
+    try:
+        choice = response.json()["choices"][0]
+        body = choice["message"]["content"]
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
+        raise RuntimeError("Voice provider returned no usable prose.") from exc
+
+    if str(choice.get("finish_reason") or "") == "length":
+        raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
+
+    clean = _paid_monthly_clean_plain_story(body)
+    if not clean:
+        raise RuntimeError("Voice provider returned an empty Paid Monthly story.")
+    return clean
 
 
 def _paid_monthly_signature_planets(strength: dict) -> tuple[str, ...]:
@@ -10638,26 +10496,42 @@ def _paid_monthly_core_identity_present(subject: dict, text: str) -> bool:
     return sun_ok and moon_ok
 
 
-def _paid_monthly_publication_floor(copy: dict, facts: dict) -> tuple[bool, str]:
-    """Hard gate: long enough, structurally complete and demonstrably personal."""
-    if not isinstance(copy, dict):
-        return False, "No usable story object was returned."
+def _paid_monthly_activation_present(item: dict, text: str) -> bool:
+    body = str(text or "").casefold()
+    signal = " ".join(str(item.get("signal") or "").split())
+    if signal and _monthly_event_present(signal, text):
+        return True
+    transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "").casefold()
+    target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "").casefold()
+    return bool(transit and target and transit in body and target in body)
 
-    headline = " ".join(str(copy.get("headline") or "").split())
-    paragraphs = [
-        " ".join(str(item or "").split())
-        for item in (copy.get("paragraphs") or [])
-        if str(item or "").strip()
+
+def _paid_monthly_anchor_present(item: dict, text: str) -> bool:
+    title = str(item.get("title") or "")
+    return bool(title and _monthly_event_present(title, text))
+
+
+def _paid_monthly_story_paragraphs(body: object) -> list[str]:
+    text = _paid_monthly_clean_plain_story(body)
+    return [
+        " ".join(part.split())
+        for part in re.split(r"\n\s*\n+", text)
+        if str(part or "").strip()
     ]
-    combined = " ".join([headline, *paragraphs])
+
+
+def _paid_monthly_publication_floor(body: str, facts: dict) -> tuple[bool, str]:
+    """Hard gate only: completeness, grounding and subject recognition."""
+    paragraphs = _paid_monthly_story_paragraphs(body)
+    combined = " ".join(paragraphs)
     words = _word_count(combined)
     problems: list[str] = []
 
-    if not headline or len(paragraphs) < 8:
-        problems.append("The story needs a headline and at least eight substantial paragraphs.")
-    if words < 1400:
-        problems.append(f"The story is incomplete at {words} words.")
-    if words > 3200:
+    if len(paragraphs) < 8:
+        problems.append(f"The story returned only {len(paragraphs)} paragraphs; at least eight are required.")
+    if words < 1200:
+        problems.append(f"The story stopped too early at {words} words.")
+    if words > 3000:
         problems.append(f"The story is over-expanded at {words} words.")
     if re.search(r"\b(?:your move|remember)\s*(?:[:·—-]|$)", combined, flags=re.I):
         problems.append("Reserved sub-section labels leaked into the article.")
@@ -10665,70 +10539,42 @@ def _paid_monthly_publication_floor(copy: dict, facts: dict) -> tuple[bool, str]
     subject = dict(facts.get("subject") or {})
     strengths = [item for item in list(subject.get("strengths") or []) if isinstance(item, dict)]
     activations = [item for item in list(subject.get("personal_activations") or []) if isinstance(item, dict)]
-    anchors = [item for item in list((facts.get("month_context") or {}).get("required_story_anchors") or []) if isinstance(item, dict)]
+    anchors = [
+        item for item in list((facts.get("month_context") or {}).get("required_story_anchors") or [])
+        if isinstance(item, dict)
+    ]
 
-    valid_strength_ids = {str(item.get("id") or "") for item in strengths if item.get("id")}
-    valid_activation_ids = {str(item.get("id") or "") for item in activations if item.get("id")}
-    valid_anchor_ids = {str(item.get("id") or "") for item in anchors if item.get("id")}
+    missing_activations = [item for item in activations if not _paid_monthly_activation_present(item, combined)]
+    if missing_activations:
+        problems.append("One or more personal natal activations are missing from the story.")
 
-    used_strength_ids = {str(item) for item in (copy.get("used_strength_ids") or [])}
-    used_activation_ids = {str(item) for item in (copy.get("used_activation_ids") or [])}
-    used_anchor_ids = {str(item) for item in (copy.get("used_anchor_ids") or [])}
+    missing_anchors = [item for item in anchors if not _paid_monthly_anchor_present(item, combined)]
+    if missing_anchors:
+        problems.append("One or more required monthly turning points are missing from the story.")
 
-    if valid_activation_ids and not valid_activation_ids.issubset(used_activation_ids):
-        missing = sorted(valid_activation_ids - used_activation_ids)
-        problems.append("Missing personal activation(s): " + ", ".join(missing) + ".")
-    if valid_anchor_ids and not valid_anchor_ids.issubset(used_anchor_ids):
-        missing = sorted(valid_anchor_ids - used_anchor_ids)
-        problems.append("Missing required monthly turning point(s): " + ", ".join(missing) + ".")
-
-    minimum_strengths = min(2, len(valid_strength_ids))
-    if minimum_strengths and len(valid_strength_ids & used_strength_ids) < minimum_strengths:
-        problems.append(f"Use at least {minimum_strengths} supplied natal strengths to make the subject recognisable.")
-
-    # Reject impossible provenance ids rather than accepting invented evidence.
-    if used_strength_ids - valid_strength_ids:
-        problems.append("The story claimed an unknown natal strength id.")
-    if used_activation_ids - valid_activation_ids:
-        problems.append("The story claimed an unknown personal activation id.")
-    if used_anchor_ids - valid_anchor_ids:
-        problems.append("The story claimed an unknown monthly anchor id.")
+    recognised_strengths = [item for item in strengths if _paid_monthly_strength_present(item, combined)]
+    minimum_strengths = min(2, len(strengths))
+    if minimum_strengths and len(recognised_strengths) < minimum_strengths:
+        problems.append(f"Use at least {minimum_strengths} supplied natal strengths so the subject is recognisable.")
 
     return (not problems), " ".join(problems)
 
 
-def _paid_monthly_weave_quality(copy: dict, facts: dict) -> tuple[bool, str]:
-    floor_ok, floor_note = _paid_monthly_publication_floor(copy, facts)
+def _paid_monthly_weave_quality(body: str, facts: dict) -> tuple[bool, str]:
+    """Soft editorial telemetry only. Never causes another provider call."""
+    floor_ok, floor_note = _paid_monthly_publication_floor(body, facts)
     if not floor_ok:
         return False, floor_note
-
-    paragraphs = [
-        " ".join(str(item or "").split())
-        for item in (copy.get("paragraphs") or [])
-        if str(item or "").strip()
-    ]
-    words = _word_count(" ".join([str(copy.get("headline") or ""), *paragraphs]))
-    problems: list[str] = []
-
+    paragraphs = _paid_monthly_story_paragraphs(body)
+    words = _word_count(" ".join(paragraphs))
+    notes: list[str] = []
     if len(paragraphs) < 10:
-        problems.append("Develop the month into at least ten substantial paragraphs when the evidence supports it.")
-    if words < 1750:
-        problems.append(f"The article is usable but light at {words} words; deepen the full month toward about 2,000 words.")
-    elif words > 2700:
-        problems.append(f"The article is long at {words} words; remove repetition without losing the arc.")
-
-    subject = dict(facts.get("subject") or {})
-    strength_ids = {
-        str(item.get("id") or "")
-        for item in list(subject.get("strengths") or [])
-        if isinstance(item, dict) and item.get("id")
-    }
-    used_strength_ids = {str(item) for item in (copy.get("used_strength_ids") or [])}
-    desired = min(3, len(strength_ids))
-    if desired and len(strength_ids & used_strength_ids) < desired:
-        problems.append(f"Use {desired} distinct natal strengths across the story when available.")
-
-    return (not problems), " ".join(problems)
+        notes.append("The article is publishable but has fewer than ten substantial paragraphs.")
+    if words < 1650:
+        notes.append(f"The article is complete but light at {words} words; preferred target is about 1,800-2,000.")
+    elif words > 2600:
+        notes.append(f"The article is long at {words} words; preferred target is about 1,800-2,000.")
+    return (not notes), " ".join(notes)
 
 
 def _paid_monthly_weave_fallback(_facts: dict) -> dict:
@@ -10737,53 +10583,37 @@ def _paid_monthly_weave_fallback(_facts: dict) -> dict:
 
 
 def _generate_paid_monthly_weave(facts: dict) -> dict:
+    """Exactly one paid-story call. The model writes prose; Python validates it."""
     if not _luna_voice_ready():
+        _record_voice_error("paid_monthly_story_weave", "Luna voice is not configured.")
         return _paid_monthly_weave_fallback(facts)
+
     facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
-    revision_note = ""
-    best_publishable: dict | None = None
-    best_words = -1
-    for _attempt in range(2):
-        try:
-            candidate = _cached_paid_monthly_weave(
-                facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY, revision_note
-            )
-        except Exception as exc:
-            _record_voice_error("paid_monthly_story_weave", exc)
-            candidate = None
-            # Token-per-day exhaustion is not a bad draft and cannot be fixed
-            # by immediately asking the same provider again. Fail fast so the
-            # owner/customer can retry after the provider reset instead of
-            # waiting through a second guaranteed 429.
-            error_text = str(exc).casefold()
-            if "429" in error_text or "rate limit" in error_text or "413" in error_text or "request too large" in error_text:
-                break
+    try:
+        body = _cached_paid_monthly_weave(
+            facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY
+        )
+    except Exception as exc:
+        _record_voice_error("paid_monthly_story_weave", exc)
+        return _paid_monthly_weave_fallback(facts)
 
-        if candidate is None:
-            continue
+    floor_ok, floor_note = _paid_monthly_publication_floor(body, facts)
+    if not floor_ok:
+        words = _word_count(body)
+        _record_voice_error(
+            "paid_monthly_story_weave",
+            f"Provider returned plain prose but publication validation rejected it at {words} words. {floor_note}",
+        )
+        return _paid_monthly_weave_fallback(facts)
 
-        floor_ok, floor_note = _paid_monthly_publication_floor(candidate, facts)
-        if floor_ok:
-            candidate_words = _word_count(
-                " ".join([
-                    str(candidate.get("headline") or ""),
-                    *[str(item or "") for item in (candidate.get("paragraphs") or [])],
-                ])
-            )
-            if candidate_words > best_words:
-                best_publishable = candidate
-                best_words = candidate_words
-
-        ideal_ok, ideal_note = _paid_monthly_weave_quality(candidate, facts)
-        if ideal_ok:
-            return {**candidate, "voice_complete": True, "quality_tier": "ideal"}
-        revision_note = ideal_note or floor_note
-
-    # Do not discard a complete grounded paid story simply because the model
-    # paraphrased the natal material differently from our ideal stylistic test.
-    if best_publishable is not None:
-        return {**best_publishable, "voice_complete": True, "quality_tier": "publishable"}
-    return _paid_monthly_weave_fallback(facts)
+    ideal_ok, ideal_note = _paid_monthly_weave_quality(body, facts)
+    return {
+        "headline": "",
+        "paragraphs": _paid_monthly_story_paragraphs(body),
+        "voice_complete": True,
+        "quality_tier": "ideal" if ideal_ok else "publishable",
+        "quality_note": "" if ideal_ok else ideal_note,
+    }
 
 
 def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
@@ -10808,21 +10638,36 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
         dict(item) for item in list(shared.get("daily_briefs") or [])
         if isinstance(item, dict)
     ]
-    background_source = "prebuilt" if collective_month and source_days else "runtime-fallback"
-
-    # Backward-compatible fallback for an old/stale base. This should disappear
-    # after the paid-base GitHub Action is rerun for the month.
-    if not collective_month:
-        collective_month = _cached_paid_monthly_collective_scaffold(
-            sign, start_date.isoformat(), timezone_name
+    expected_days = monthrange(start_date.year, start_date.month)[1]
+    if (
+        not bool(shared.get("story_background_ready"))
+        or not collective_month.get("collective_story")
+        or len(source_days) != expected_days
+    ):
+        _record_voice_error(
+            "paid_monthly_story_weave",
+            "Paid Monthly preflight failed: the prebuilt GitHub sign/month background is missing or incomplete. "
+            f"Expected {expected_days} Daily briefs and a published Free Monthly arc; found {len(source_days)} Daily briefs.",
         )
-    if not source_days:
-        source_days = _cached_paid_monthly_daily_briefs(
-            sign, start_date.isoformat(), end_date.isoformat(), timezone_name
-        )
+        return {
+            "headline": "", "paragraphs": [], "story_word_count": 0,
+            "voice_complete": False, "context": context, "background_source": "preflight-failed",
+        }
 
     daily_signals = _paid_monthly_compact_daily_briefs(source_days)
     subject = _paid_monthly_subject_dossier(snapshot, context)
+    core_positions = dict(subject.get("core_positions") or {})
+    if not isinstance(core_positions.get("Sun"), dict) or not isinstance(core_positions.get("Moon"), dict):
+        _record_voice_error(
+            "paid_monthly_story_weave",
+            "Paid Monthly preflight failed: the Subject dossier does not contain both Sun and Moon.",
+        )
+        return {
+            "headline": "", "paragraphs": [], "story_word_count": 0,
+            "voice_complete": False, "context": context, "subject": subject,
+            "background_source": "preflight-failed",
+        }
+    background_source = "prebuilt"
     raw_anchors = shared.get("required_story_anchors") or monthly_required_story_anchors(narrative, result)
     required_anchors = [
         {"id": f"anchor:{index}", **dict(item)}
