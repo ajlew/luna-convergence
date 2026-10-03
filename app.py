@@ -160,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.71"
-BUILD_LABEL = f"Luna {APP_VERSION} — Birthday + Verified Dates"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-birthday-verified-1"
+APP_VERSION = "v3.72"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Single Timeline"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10385,18 +10385,32 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
             " ".join(str(item.get("evidence") or "").split())[:62],
         ])
 
-    activations = []
+    activation_rows = []
     for item in list(subject.get("personal_activations") or []):
         if not isinstance(item, dict):
             continue
-        date_label = str(item.get("date_label") or item.get("date") or item.get("exact_date") or "")[:24]
+        date_label = str(item.get("date") or item.get("exact_date") or item.get("date_label") or "")[:24]
         signal = " ".join(str(item.get("signal") or "").split())
+        transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "")
+        aspect = str(item.get("aspect") or "")
+        target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "")
         if not signal:
-            transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "")
-            aspect = str(item.get("aspect") or "")
-            target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "")
-            signal = " ".join(bit for bit in (transit, aspect, (f"natal {target}" if target else "")) if bit).strip()
-        activations.append([date_label, signal[:activation_text]])
+            signal = " ".join(
+                bit for bit in (
+                    transit,
+                    aspect,
+                    (f"natal {target}" if target else ""),
+                )
+                if bit
+            ).strip()
+        if date_label and signal:
+            activation_rows.append({
+                "date": date_label[:10],
+                "signal": signal[:activation_text],
+                "transit": transit,
+                "aspect": aspect,
+                "target": target,
+            })
 
     reader = dict(subject.get("reader_context") or {})
     reader_context = {
@@ -10477,6 +10491,53 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
         exact_date_by_event.setdefault(event_key(label), date_text)
 
     calendar.sort(key=lambda row: (str(row[0]), str(row[1])))
+
+    # One chronology for the writer: shared sky + personal activations +
+    # birthday. Personal material is interleaved here BEFORE the LLM call so it
+    # cannot be appended later as a second pass that rewinds the month.
+    timeline = [
+        [str(row[0]), "sky", str(row[1]), list(row[2] or [])]
+        for row in calendar
+        if isinstance(row, list) and len(row) >= 3
+    ]
+    for item in activation_rows:
+        timeline.append([
+            str(item.get("date") or "")[:10],
+            "personal",
+            str(item.get("signal") or ""),
+            [],
+        ])
+
+    birthday_activation = ""
+    for item in activation_rows:
+        if str(item.get("date") or "")[:10] != birthday_date:
+            continue
+        transit = str(item.get("transit") or "").casefold()
+        target = str(item.get("target") or "").casefold()
+        aspect = str(item.get("aspect") or "").casefold()
+        signal = str(item.get("signal") or "")
+        if transit == "sun" and target == "sun" and aspect == "conjunction":
+            birthday_activation = signal
+            break
+        if "transit sun" in signal.casefold() and "natal sun" in signal.casefold() and "conjunction" in signal.casefold():
+            birthday_activation = signal
+            break
+
+    if birthday_date:
+        birthday_label = "Birthday"
+        if birthday_activation:
+            birthday_label += f" · {birthday_activation}"
+        timeline.append([birthday_date, "birthday", birthday_label, []])
+
+    timeline = [
+        row for row in timeline
+        if row[0] and row[2]
+    ]
+    timeline.sort(key=lambda row: (
+        str(row[0]),
+        {"sky": 0, "birthday": 1, "personal": 2}.get(str(row[1]), 3),
+        str(row[2]),
+    ))
 
     def exact_date_for(title: str, fallback: str) -> str:
         key = event_key(title)
@@ -10591,7 +10652,6 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
             "element": str(subject.get("dominant_element") or ""),
             "mode": str(subject.get("dominant_modality") or ""),
             "strengths": strengths,
-            "activations": activations,
             "focus": reader_context,
             "birthday": birthday_date,
             "birth_time_known": bool(subject.get("birth_time_known")),
@@ -10600,6 +10660,7 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
             "label": str(month.get("label") or ""),
             "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:free_arc_chars],
             "calendar": calendar,
+            "timeline": timeline,
             "anchors": anchors,
             "retrogrades": cycles,
             "beats": beats,
@@ -10608,37 +10669,41 @@ def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dic
 
 def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
     return (
-        "Write Luna's paid Personal Monthly interpretation as one continuous article addressed DIRECTLY to the person whose chart this is. "
+        "Write Luna's paid Personal Monthly interpretation as ONE continuous article addressed DIRECTLY to the person whose chart this is. "
         "Use SECOND PERSON throughout: you, your and yours. Speak to the person, never about the person. "
-        "Do not use third-person meta-language such as protagonist, subject, reader, client or customer in the article. "
-        "Never refer to the person as they, them, their, he, him, his, she, her or hers. "
+        "Do not use third-person meta-language such as protagonist, subject, reader, client or customer. "
         "Luna is your strategic guide: direct, clear and authoritative without pretending certainty.\n"
-        "Python owns every astrology fact. The sky is the changing environment around you. Never invent astrology, biography or guaranteed events.\n"
-        "DATE LOCK: month.calendar is the authoritative exact-date ledger. If you name an event with a calendar date, COPY that event's date from month.calendar. "
-        "Never move an event to the previous or next day. Never repeat a one-date event on an adjacent day unless the same event label appears on both dates in month.calendar. "
-        "month.anchors may guide importance, but calendar dates override any broad phase wording. "
+        "Python owns every astrology fact. Never invent astrology, biography, placements, aspects, dates or guaranteed events.\n"
+        "SINGLE TIMELINE RULE: month.timeline is already the complete chronological writing spine. "
+        "Read it ONCE from earliest date to latest date and weave those rows into one story. "
+        "Rows marked sky are collective turning points; rows marked personal are natal activations; a birthday row is the birthday milestone. "
+        "Personal activations and the birthday are already placed where they belong. DO NOT append a separate natal-activation section after the month, "
+        "DO NOT announce 'key activations', DO NOT rewind to an earlier date after reaching a later date, and DO NOT summarize the whole month a second or third time. "
+        "After the final chronological development, write only a brief closing synthesis.\n"
+        "DATE LOCK: month.calendar is the authoritative exact-date ledger for shared-sky events. "
+        "If you name a shared event with a date, copy that date exactly. Never shift an event to an adjacent day. "
         "Do not turn an active orb or background influence into a second exact event date.\n"
-        "Before writing, silently plan one month-long story from month.free_arc, month.calendar and the five chronological month.beats. "
-        "The beats are only planning input. Never expose internal data words such as beat, anchor, thread, window, row, packet, prompt, source, calculated material, evidence list, or notes. "
-        "Merge the month into one wave: beginning, development, pressure/opening, reversal and ending. "
-        "Do not write a day-by-day sequence or mini-horoscopes. Mention dates selectively, only where they clarify a supplied turning point.\n"
-        "Astronomy discipline: preserve every supplied planet pair, aspect/station state and date exactly. "
-        "Never infer an unlisted conjunction, opposition, station, New Moon, Full Moon or direct station. "
-        "A New Moon or Full Moon exists only where month.calendar literally lists it. "
-        "A planet stations retrograde or direct only where month.calendar literally lists that station. "
-        "Lunar texture is brief background only, never a new structural event. If a fact is not supplied, omit it.\n"
-        "If natal.birthday contains a date, acknowledge it naturally ONCE around that point in the story. Say Happy birthday in a warm, restrained way. ""Treat the birthday as a personal calendar milestone, not as an astronomical event: do not invent a solar return, birthday transit or exact aspect unless month.calendar explicitly supplies it. ""A nearby transit may frame the days around the birthday, but keep its exact calendar date distinct from the birthday. ""Do not use fate language such as rare alignment, destiny, fated, the universe is guiding you, or the universe is rewarding you; preserve choice and agency. ""Fast lunar aspects are intentionally absent from this monthly packet; do not invent or reconstruct them. ""Personalise the whole arc through natal.core, natal.strengths and natal.activations. "
-        "Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
-        "Translate those facts into what YOU may notice, face, decide, protect, test or use. "
-        "Weave every activation naturally, use at least two strengths when available, and include every supplied anchor. "
-        "Never invent angles or houses when birth time is unknown.\n"
-        "Later paragraphs must remember earlier pressures, openings and choices rather than resetting. "
-        "Do not explain transits one by one, repeat astronomical claims, or recycle prose to reach length. Stop when the story is complete.\n"
-        "Return PLAIN PROSE ONLY: no JSON, metadata, ids, hashes, Markdown, headings, bullets, day labels, house numbers, engine language, Remember or Your move labels. "
-        "Aim for about 1,400-1,650 words in 9-13 substantial paragraphs separated by blank lines. "
-        "Before returning the article, silently proofread it for spelling, grammar, repeated claims and date consistency. "
-        "Check especially that each named date matches month.calendar exactly, internal planning vocabulary has not leaked into prose, and ordinary terms such as self-worth are spelled correctly. "
-        "Then check point of view: every human interpretation is written to YOU in second person.\n"
+        "BIRTHDAY: if month.timeline contains a birthday row, acknowledge it naturally ONCE at that exact chronological point and say 'Happy birthday.' "
+        "If that same row contains a supplied Transit Sun conjunction natal Sun activation, you may describe the Sun returning to its natal position. "
+        "Do not invent a Solar Return time or exact solar-return claim when birth time is unknown.\n"
+        "NATAL FACT LOCK: natal.core is the ONLY source for natal sign placements. "
+        "If you mention a natal placement, copy the planet and sign exactly from natal.core. "
+        "Do not infer or substitute a sign because it fits the prose. Use natal.strengths as behavioural context, not as permission to invent chart geometry.\n"
+        "ASTRONOMY DISCIPLINE: preserve every supplied planet pair, aspect/station state and date exactly. "
+        "Never infer an unlisted conjunction, opposition, station, New Moon, Full Moon or direct/retrograde station. "
+        "Fast lunar aspects are intentionally excluded from this monthly packet; do not reconstruct them. "
+        "If a fact is not supplied, omit it.\n"
+        "Use month.free_arc and month.beats only to understand the rise and fall of the month; they are NOT extra chronologies. "
+        "Never expose internal words such as beat, anchor, thread, row, packet, prompt, source, calculated material, evidence list or notes. "
+        "Do not write a day-by-day diary. Mention dates selectively where the timeline contains a genuine turning point.\n"
+        "Translate the natal information into what YOU may notice, face, decide, protect, test or use. "
+        "Use at least two supplied strengths when useful. Never invent angles or houses when birth time is unknown. "
+        "Do not use fate language such as rare alignment, destiny, fated, the universe is guiding you or the universe is rewarding you; preserve choice and agency.\n"
+        "Return PLAIN PROSE ONLY: no JSON, metadata, ids, hashes, Markdown, headings, bullets, day labels, house numbers, Remember or Your move labels. "
+        "Aim for about 1,350-1,600 words in 9-13 substantial paragraphs separated by blank lines. "
+        "Before returning the article, silently proofread it for spelling, grammar, repeated claims and chronology. "
+        "Check that dates only move forward, the birthday/personal activations appear in their chronological position rather than at the end, "
+        "natal signs match natal.core exactly, and no month-summary paragraph is repeated.\n"
         "CALCULATED MATERIAL:\n"
         + json.dumps(
             _paid_monthly_prompt_material(facts, compact_level=compact_level),
@@ -11103,9 +11168,12 @@ def _render_snapshot_monthly_report(
     # Key Dates are now a compact reference index only. The full interpretation
     # already appears in Read the month and is not repeated here.
     key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
-    if key_dates:
+    birthday_date_value = str(result.get("birthday_date") or "")[:10]
+    if key_dates or birthday_date_value:
         st.markdown("## Key dates")
         st.caption("Quick reference only — the interpretation is already in Read the month.")
+
+        key_rows: list[tuple[str, str, str]] = []
         for item in key_dates:
             date_label = _paid_monthly_exact_key_date(item, result)
             evidence = " ".join(str(getattr(item, "evidence", "") or "").split())
@@ -11114,6 +11182,45 @@ def _render_snapshot_monthly_report(
                 first_sentence = re.split(r"(?<=[.!?])\s+", consequence, maxsplit=1)[0].strip()
                 words = first_sentence.split()
                 evidence = " ".join(words[:22]).rstrip(",;:") + ("…" if len(words) > 22 else "")
+            match = re.search(
+                r"\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b",
+                date_label,
+                flags=re.I,
+            )
+            sort_key = "9999-12-31"
+            if match:
+                try:
+                    sort_key = datetime.strptime(
+                        f"{match.group(1)} {match.group(2)} {match.group(3)}",
+                        "%d %B %Y",
+                    ).date().isoformat()
+                except ValueError:
+                    pass
+            key_rows.append((sort_key, date_label, evidence))
+
+        if birthday_date_value:
+            birthday_label = "Birthday"
+            overlay = dict(result.get("natal_overlay") or {})
+            for activation in list(overlay.get("activations") or []):
+                if not isinstance(activation, dict):
+                    continue
+                if str(activation.get("date") or "")[:10] != birthday_date_value:
+                    continue
+                signal = " ".join(str(activation.get("signal") or "").split())
+                if (
+                    "transit sun" in signal.casefold()
+                    and "natal sun" in signal.casefold()
+                    and "conjunction" in signal.casefold()
+                ):
+                    birthday_label = "Birthday · Sun conjunct natal Sun"
+                    break
+            key_rows.append((
+                birthday_date_value,
+                human_date(birthday_date_value),
+                birthday_label,
+            ))
+
+        for _sort_key, date_label, evidence in sorted(key_rows, key=lambda row: (row[0], row[2])):
             st.markdown(
                 '<div class="natal-signature-reading paid-key-date">'
                 f'<div class="natal-evidence">{escape(date_label)}</div>'
