@@ -160,9 +160,9 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.67"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Story Beats"
-PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-story-beats-1"
+APP_VERSION = "v3.68"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Adaptive Preflight"
+PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-adaptive-1"
 
 
 ASSET_DIR = Path(__file__).parent / "assets"
@@ -10166,119 +10166,115 @@ def _paid_monthly_subject_dossier(snapshot, context: dict) -> dict:
     }
 
 
-def _paid_monthly_prompt_material(facts: dict) -> dict:
-    """Shape the prebuilt month into story beats before Luna writes.
+def _paid_monthly_prompt_material(facts: dict, *, compact_level: int = 0) -> dict:
+    """Prepare the paid month before Luna writes, with adaptive compaction.
 
-    The 31 grounded Daily briefs remain Python-owned source evidence, but Luna
-    does not receive them as 31 sequential mini-prompts. Python groups the month
-    into a small number of chronological beats, promotes structural/slow events,
-    and uses lunar Daily signals only as limited texture. This prevents the
-    creative model from turning the report into a day-by-day horoscope or
-    inventing repeated lunar/station events to fill a long response.
+    The GitHub base remains the full audit source. This function creates only
+    the minimum story packet the creative model needs. If the first packet is
+    too large for the provider ceiling, Python can rebuild it more compactly
+    BEFORE the one and only LLM call; production is never stopped merely because
+    optional context made the first prompt too large.
     """
     subject = dict(facts.get("subject") or {})
     month = dict(facts.get("month_context") or {})
     collective = dict(facts.get("collective_month") or {})
 
+    level = max(0, min(3, int(compact_level or 0)))
+    free_arc_chars = (760, 600, 460, 300)[level]
+    strength_limit = (4, 4, 3, 2)[level]
+    strength_text = (120, 105, 90, 72)[level]
+    watch_text = (90, 75, 60, 48)[level]
+    activation_text = (145, 125, 105, 90)[level]
+    thread_limit = (5, 4, 2, 0)[level]
+    cycle_limit = (4, 3, 2, 2)[level]
+    structural_cap = (7, 6, 4, 3)[level]
+    texture_cap = (2, 1, 1, 0)[level]
+    area_cap = (4, 3, 3, 2)[level]
+
+    # Keep the personal fingerprint, not every chart field.
+    allowed_core = (
+        "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
+        "Ascendant", "Midheaven",
+    )
+    raw_core = dict(subject.get("core_positions") or {})
     core = {}
-    for planet, item in dict(subject.get("core_positions") or {}).items():
-        if isinstance(item, dict):
-            sign = " ".join(str(item.get("sign") or "").split())
-            if sign:
-                core[str(planet)] = sign
+    for planet in allowed_core:
+        item = raw_core.get(planet)
+        if not isinstance(item, dict):
+            continue
+        sign = " ".join(str(item.get("sign") or "").split())
+        if sign:
+            core[planet] = sign
 
     strengths = []
-    for item in list(subject.get("strengths") or [])[:5]:
+    for item in list(subject.get("strengths") or [])[:strength_limit]:
         if not isinstance(item, dict):
             continue
         strengths.append([
-            " ".join(str(item.get("title") or "").split())[:80],
-            " ".join(str(item.get("strength") or item.get("interpretation") or "").split())[:135],
-            " ".join(str(item.get("watch") or "").split())[:105],
-            " ".join(str(item.get("evidence") or "").split())[:70],
+            " ".join(str(item.get("title") or "").split())[:72],
+            " ".join(str(item.get("strength") or item.get("interpretation") or "").split())[:strength_text],
+            " ".join(str(item.get("watch") or "").split())[:watch_text],
+            " ".join(str(item.get("evidence") or "").split())[:62],
         ])
 
+    # Personal activations are never silently dropped; only their wording is
+    # compacted more aggressively at higher levels.
     activations = []
     for item in list(subject.get("personal_activations") or []):
         if not isinstance(item, dict):
             continue
-        date_label = str(item.get("date_label") or item.get("date") or item.get("exact_date") or "")[:28]
+        date_label = str(item.get("date_label") or item.get("date") or item.get("exact_date") or "")[:24]
         signal = " ".join(str(item.get("signal") or "").split())
         if not signal:
             transit = str(item.get("transit") or item.get("transit_planet") or item.get("transiting_planet") or "")
             aspect = str(item.get("aspect") or "")
             target = str(item.get("target") or item.get("natal_target") or item.get("natal_planet") or "")
             signal = " ".join(bit for bit in (transit, aspect, (f"natal {target}" if target else "")) if bit).strip()
-        activations.append([date_label, signal[:160]])
+        activations.append([date_label, signal[:activation_text]])
 
     reader = dict(subject.get("reader_context") or {})
     reader_context = {
-        key: " ".join(str(reader.get(key) or "").split())[:120]
+        key: " ".join(str(reader.get(key) or "").split())[:90 if level < 2 else 60]
         for key in ("main_focus", "focus", "personal_question", "question")
         if str(reader.get(key) or "").strip()
     }
 
+    # Anchors are protected; keep all of them and their dates.
     anchors = []
     for item in list(month.get("required_story_anchors") or []):
-        if isinstance(item, dict):
-            anchors.append([
-                " ".join(str(item.get("title") or "").split())[:90],
-                " ".join(str(item.get("date_label") or item.get("date") or "").split())[:24],
-            ])
+        if not isinstance(item, dict):
+            continue
+        anchors.append([
+            " ".join(str(item.get("title") or "").split())[:82],
+            " ".join(str(item.get("date_label") or item.get("date") or "").split())[:22],
+        ])
 
     threads = []
-    for item in list(month.get("transit_threads") or [])[:10]:
+    for item in list(month.get("transit_threads") or [])[:thread_limit]:
         if isinstance(item, dict):
             threads.append([
-                " ".join(str(item.get("label") or "").split())[:80],
+                " ".join(str(item.get("label") or "").split())[:70],
                 str(item.get("start") or "")[:10],
                 str(item.get("end") or "")[:10],
             ])
 
     cycles = []
-    for item in list(month.get("retrograde_cycles") or [])[:6]:
+    for item in list(month.get("retrograde_cycles") or [])[:cycle_limit]:
         if not isinstance(item, dict):
             continue
         label = item.get("title") or item.get("label") or item.get("planet") or "Retrograde"
         start_value = item.get("retrograde_start") or item.get("pre_shadow_start") or item.get("start_date") or item.get("start") or ""
         end_value = item.get("direct_date") or item.get("post_shadow_end") or item.get("end_date") or item.get("end") or ""
         cycles.append([
-            " ".join(str(label).split())[:80],
+            " ".join(str(label).split())[:68],
             str(start_value)[:10],
             str(end_value)[:10],
         ])
 
-    # Exact collective month events are authoritative and already ranked by the
-    # Free Monthly pipeline. Keep the literal label + date together.
-    month_events = []
-    for item in list(collective.get("monthly_events") or [])[:16]:
-        if not isinstance(item, dict):
-            continue
-        label = " ".join(str(item.get("event") or item.get("aspect") or "").split())[:100]
-        if label:
-            month_events.append([
-                str(item.get("date") or "")[:10],
-                label,
-                [str(v) for v in list(item.get("life_areas") or [])[:2]],
-            ])
-
-    for item in list(collective.get("major_events") or [])[:20]:
-        if not isinstance(item, dict):
-            continue
-        label = " ".join(str(item.get("event") or item.get("technical") or "").split())[:100]
-        row = [
-            str(item.get("date") or "")[:10],
-            label,
-            [str(v) for v in list(item.get("life_areas") or [])[:2]],
-        ]
-        if label and row not in month_events:
-            month_events.append(row)
-    month_events.sort(key=lambda row: (str(row[0]), str(row[1])))
-
     daily_rows = [row for row in list(facts.get("daily_signals") or []) if isinstance(row, dict)]
 
-    # Five chronological beats are enough to preserve the full month without
-    # suggesting that Luna should narrate 31 separate days.
+    # Five chronological story beats preserve the whole month while preventing
+    # 31 Daily rows from becoming 31 mini-horoscopes.
     beat_bounds = ((1, 6), (7, 12), (13, 18), (19, 24), (25, 31))
     beats = []
     for start_day, end_day in beat_bounds:
@@ -10287,6 +10283,7 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
         areas = []
         seen_structural = set()
         seen_texture = set()
+
         for row in daily_rows:
             date_text = str(row.get("date") or "")[:10]
             try:
@@ -10321,9 +10318,7 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
                 if str(v or "").strip()
             ]
 
-            # Major events and non-lunar aspects are structural. Lunar aspects
-            # are short triggers/texture unless they are explicitly a New/Full
-            # Moon major event.
+            # Major events and non-lunar aspects drive the story.
             candidates = [*major_labels]
             if primary_label and "moon" not in primary_label.casefold():
                 candidates.append(primary_label)
@@ -10334,28 +10329,30 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
             for label in candidates:
                 key = (date_text, label.casefold())
                 if key not in seen_structural:
-                    structural.append([date_text, label])
+                    structural.append([date_text, label[:82]])
                     seen_structural.add(key)
 
-            if primary_label and "moon" in primary_label.casefold():
+            # Lunar Daily signals remain optional texture only.
+            if texture_cap and primary_label and "moon" in primary_label.casefold():
                 key = (date_text, primary_label.casefold())
                 if key not in seen_texture:
-                    texture.append([date_text, primary_label, primary_areas])
+                    texture.append([date_text, primary_label[:74], primary_areas[:2]])
                     seen_texture.add(key)
 
-        # Keep only a little lunar texture per beat. The underlying 31 Daily
-        # briefs were still used to build this, but Luna is not invited to
-        # recite each day's Moon aspect.
-        if len(texture) > 3:
-            picks = [texture[0], texture[len(texture)//2], texture[-1]]
-            texture = list(dict.fromkeys(tuple(map(str, row)) for row in picks))
-            texture = [list(row) for row in texture]
+        # Major events were appended first, so trimming retains the strongest
+        # protected structure before optional supporting material.
+        structural = structural[:structural_cap]
+        if len(texture) > texture_cap:
+            if texture_cap == 1:
+                texture = [texture[len(texture) // 2]]
+            else:
+                texture = [texture[0], texture[-1]][:texture_cap]
 
         beats.append({
             "range": f"{start_day:02d}-{end_day:02d}",
-            "structural": structural[:12],
-            "texture": texture[:3],
-            "areas": areas[:5],
+            "structural": structural,
+            "texture": texture[:texture_cap],
+            "areas": areas[:area_cap],
         })
 
     return {
@@ -10370,8 +10367,7 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
         },
         "month": {
             "label": str(month.get("label") or ""),
-            "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:1050],
-            "events": month_events,
+            "free_arc": " ".join(str(collective.get("collective_story") or "").split())[:free_arc_chars],
             "anchors": anchors,
             "threads": threads,
             "retrogrades": cycles,
@@ -10379,39 +10375,32 @@ def _paid_monthly_prompt_material(facts: dict) -> dict:
         },
     }
 
-def _paid_monthly_weave_prompt(facts: dict) -> str:
+def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
     return (
         "Write Luna's paid Personal Monthly interpretation as one continuous article. "
         "Python owns every astrology fact. The SUBJECT is the protagonist; the sky is the changing environment. "
-        "Never invent astrology, biography, events or guaranteed outcomes.\n"
-        "BEFORE WRITING, silently plan one month-long story from month.free_arc, month.events and month.beats. "
-        "The five beats are chronological evidence ranges, NOT sections to recite and NOT five mini-horoscopes. "
-        "Merge them into one narrative wave with a beginning, development, pressure/opening, reversal and ending. "
-        "Do not write 'the first day', 'the second day', 'day 20', or any day-by-day sequence. "
-        "Mention a calendar date only when a supplied event, anchor, activation or genuine turning point makes the date useful.\n"
-        "ASTRONOMY DISCIPLINE: every astronomical claim must preserve the exact supplied planet pair, aspect/station state and date. "
-        "Never convert one supplied aspect into another. Never infer an unlisted conjunction, opposition, station, New Moon, Full Moon or direct station. "
-        "A New Moon exists only where the material literally says New Moon. A Full Moon exists only where it literally says Full Moon. "
-        "Venus is retrograde/direct only according to the supplied retrograde/station material; never say Venus moves direct unless a supplied event says it stations direct. "
-        "Lunar texture rows are brief background triggers only. Do not promote a lunar texture aspect into a structural monthly event. "
-        "If a fact is not explicitly supplied, leave it out rather than completing the pattern yourself.\n"
-        "The SUBJECT is the main character throughout. Personalise the whole arc through subject.core, strengths and activations. "
+        "Never invent astrology, biography or guaranteed events.\n"
+        "Before writing, silently plan one month-long story from month.free_arc and the five chronological month.beats. "
+        "Beats are evidence ranges, not sections to recite. Merge them into one wave: beginning, development, pressure/opening, reversal and ending. "
+        "Do not write a day-by-day sequence or mini-horoscopes. Mention dates only for supplied events, anchors, activations or genuine turning points.\n"
+        "Astronomy discipline: preserve every supplied planet pair, aspect/station state and date exactly. "
+        "Never infer an unlisted conjunction, opposition, station, New Moon, Full Moon or direct station. "
+        "Lunar texture is brief background only, never a new structural event. If a fact is not supplied, omit it.\n"
+        "Personalise the whole arc through subject.core, strengths and activations. "
         "Strength rows are [title,strength,watch,evidence]; activation rows are [date,signal]. "
-        "Weave every supplied personal activation naturally into the story and use at least two supplied natal strengths when available. "
-        "Every supplied monthly anchor must appear naturally. Keep the same recognisable protagonist from opening to ending. "
+        "Weave every activation naturally, use at least two strengths when available, and include every supplied anchor. "
         "Never invent angles or houses when birth time is unknown.\n"
-        "Use the Free Monthly arc as structural background, not text to copy. The article must develop consequences across the month: "
-        "later paragraphs should remember earlier choices, pressures and openings instead of resetting the interpretation each paragraph. "
-        "Use the beat structural rows for the main story; use beat texture only sparingly to colour mood or timing. "
-        "Do not define transits one by one. Do not write 31 mini-horoscopes. Do not repeat an astronomical claim or sentence merely to reach length. "
-        "If the story is complete, stop rather than padding or recycling earlier language.\n"
-        "No bullets, headings, day labels, house numbers, engine language, cosmic filler, Remember or Your move labels. "
-        "Return PLAIN PROSE ONLY. Do not return JSON, metadata, ids, hashes, Markdown fences, checklists or field labels. "
-        "Write about 1,500-1,800 words in 9-14 substantial paragraphs separated by blank lines. "
-        "Silently check before finishing: the story reaches the end of the month; anchors and personal activations are covered; "
-        "no planet pair/date/station has been invented; and no paragraph repeats the substance of an earlier paragraph.\n"
+        "Later paragraphs must remember earlier pressures, openings and choices rather than resetting. "
+        "Do not explain transits one by one, repeat astronomical claims, or recycle prose to reach length. Stop when the story is complete.\n"
+        "Return PLAIN PROSE ONLY: no JSON, metadata, ids, hashes, Markdown, headings, bullets, day labels, house numbers, engine language, Remember or Your move labels. "
+        "Aim for about 1,400-1,650 words in 9-13 substantial paragraphs separated by blank lines. "
+        "Silently check before finishing that the story reaches the end of the month, covers anchors/activations, preserves supplied astronomy and does not repeat itself.\n"
         "CALCULATED MATERIAL:\n"
-        + json.dumps(_paid_monthly_prompt_material(facts), ensure_ascii=False, separators=(',', ':'))
+        + json.dumps(
+            _paid_monthly_prompt_material(facts, compact_level=compact_level),
+            ensure_ascii=False,
+            separators=(',', ':'),
+        )
     )
 
 def _paid_monthly_clean_plain_story(value: object) -> str:
@@ -10440,17 +10429,37 @@ def _paid_monthly_estimated_tokens(text: str) -> int:
 
 
 def _paid_monthly_preflight_tokens(prompt: str, completion_tokens: int) -> tuple[int, int]:
-    # Include the short system message and a 15% safety buffer. Keep the whole
-    # request comfortably below the provider's observed 6k token ceiling.
+    """Measure a candidate request; never make this helper a production stop."""
     raw_input = _paid_monthly_estimated_tokens(prompt) + 80
     buffered_input = math.ceil(raw_input * 1.15)
-    total = buffered_input + int(completion_tokens)
-    if total > 5500:
-        raise RuntimeError(
-            f"Paid Monthly preflight stopped an oversized request: estimated {buffered_input} input + "
-            f"{completion_tokens} completion = {total} tokens (limit 5500)."
-        )
-    return buffered_input, total
+    return buffered_input, buffered_input + int(completion_tokens)
+
+
+def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
+    """Fit the one Paid Monthly request before it reaches Groq.
+
+    Try progressively more compact Python-built packets. This is not an LLM
+    retry: no provider call has happened yet. The full GitHub base remains
+    untouched; only optional duplicate/context wording is removed from the
+    creative prompt until the request fits safely below the observed provider
+    ceiling.
+    """
+    target_total = 5350
+    preferred_completion = 2500
+
+    for level in range(4):
+        prompt = _paid_monthly_weave_prompt(facts, compact_level=level)
+        buffered_input, total = _paid_monthly_preflight_tokens(prompt, preferred_completion)
+        if total <= target_total:
+            return prompt, preferred_completion, buffered_input, level
+
+    # Extremely activation-heavy subjects can still enlarge the prompt. Rather
+    # than stopping production, keep the most compact evidence packet and give
+    # the remaining safe budget to the prose, with a useful minimum.
+    prompt = _paid_monthly_weave_prompt(facts, compact_level=3)
+    buffered_input, _ = _paid_monthly_preflight_tokens(prompt, 0)
+    completion_tokens = max(1900, min(preferred_completion, target_total - buffered_input))
+    return prompt, completion_tokens, buffered_input, 3
 
 
 @st.cache_data(show_spinner=False, ttl=1800)
@@ -10464,9 +10473,9 @@ def _cached_paid_monthly_weave(
     import requests
 
     facts = json.loads(facts_json)
-    prompt = _paid_monthly_weave_prompt(facts)
-    max_completion_tokens = 2550
-    _paid_monthly_preflight_tokens(prompt, max_completion_tokens)
+    prompt, max_completion_tokens, _estimated_input_tokens, _compact_level = (
+        _paid_monthly_prepare_request(facts)
+    )
 
     payload = {
         "model": model,
