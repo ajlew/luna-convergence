@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-08",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-08 · Mercury conjunct Venus · separating · 0.71° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "dee6eacb8f006a04ff15a40529f9cac3bf22032ea9a8b3a3bda2cc253235b247",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Listen: on 8 October, Mercury and Venus touch, then drift apart—ideas sparkle, romance flares, then settle. Let curiosity guide conversation, then give space. Act: spark a thoughtful chat today.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

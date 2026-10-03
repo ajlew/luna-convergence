@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-11",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-11 · New Moon in Libra · lunation"
+      ],
+      "life_areas": [],
+      "facts_hash": "d5c04acc6fcf253c1d8a5e35922716daa5d4bf5e408963b750a1fe0e0961696b",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Take a breath and set a fresh intention now, because the New Moon in Libra invites you to reset balance, let old patterns fall, and draft a new, harmonious plan for today.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

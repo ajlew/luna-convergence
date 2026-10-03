@@ -1,6 +1,22 @@
 {
-  "signs": {},
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-07",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-07 · Mars sextile Uranus · opening"
+      ],
+      "life_areas": [],
+      "facts_hash": "139ac3a26ce2ced6673f94f7e7347f521d6e013f1e2b6eaabb4f3cc302e93bd3",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "ACT NOW: The universe has nudged you on 2026‑10‑07 with Mars sextile Uranus, a spark of bold, inventive energy. This alignment signals a gentle push to break routine and experiment—think of it as a friendly invitation to try a new hobby, rearrange your workspace, or propose an unconventional idea at work. The symbolic meaning? Mars, the planet of action, feels a supportive boost from Uranus, the god of surprise, so your usual drive is amplified by fresh, unexpected insights. In plain terms, it’s an invitation to mix the familiar with the novel—don’t fear the unknown; let it fuel your ambition. Use this day to launch a small, daring project: draft a fresh business plan, start a side hustle, or redesign a living space. Let the impulsive spark guide you, but keep the end goal clear. Finish the day by jotting down one bold idea you’ll explore tomorrow.",
+      "status": "published"
+    }
+  },
   "jobs": {
-    "All signs": "failed"
+    "All signs": "published"
   }
 }

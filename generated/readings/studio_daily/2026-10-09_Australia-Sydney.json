@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-09",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-09 · Venus square Mars · applying · 1.13° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "e3769baccfc44ab93994e2360f6df786b7ba934e6bbe1f51cd8bdf0392679991",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "SEIZE THE MOMENT: Today, Venus’s sharp square to Mars urges you to channel flirtatious energy into constructive action—think a bold, new project proposal that sparks excitement while staying disciplined. The tension signals a push‑pull between desire and drive; acknowledge the friction, then harness it to ignite creativity rather than frustration. Use this spark to draft that proposal, and let the competitive spark fuel progress, not conflict. ACT NOW: draft that proposal.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}
