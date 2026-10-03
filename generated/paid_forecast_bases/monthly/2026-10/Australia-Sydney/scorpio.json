@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.1",
-  "base_schema_version": "1.0",
+  "schema_version": "1.4",
+  "base_schema_version": "1.3",
   "product": "paid_personal_monthly",
   "shared_sky": {
     "sign": "Scorpio",
@@ -3845,6 +3845,4419 @@
         "detail": ""
       }
     ],
+    "collective_month": {
+      "collective_story": "LOOK OUT FOR THE SHARP EDGE THAT’S PULLING YOU BOTH WAY. October’s first week is a tug‑of‑war between the fierce drive of Mars and the transformative force of Pluto. In the workplace you’ll feel the pressure to assert authority, but at home the same energy pushes you to confront hidden family dynamics. Think of it as a tug‑of‑war between a boss demanding a new report and a sibling nagging about overdue chores. The practical response? Set a clear boundary: write a concise update for work and schedule a one‑on‑one with your family to air grievances. The symbolism is simple—Mars represents initiative, Pluto the deep transformation—so the clash signals a need to channel ambition into constructive change rather than confrontation. On October 4, the Sun faces Saturn, a reminder that discipline and structure are now in the spotlight. Your energy will feel boxed in, especially in routine tasks. The symbolic lesson is that hard work pays off, but only if you accept the slow, steady grind. A concrete action is to break a long‑standing project into micro‑tasks and reward yourself after each milestone. This turns the heavy weight of the opposition into a ladder of progress. Mid‑month, the New Moon in Libra on the 11th invites fresh starts in relationships and collaborations. The darkening of the mind (Mercury’s retrograde on the 25th) will make you question past decisions, but the New Moon gives you a clean slate. Symbolically, the moon’s darkness is a chance to unearth hidden patterns; the new light is a chance to rewrite them. Write a list of one partnership you’d like to nurture and one you’d like to let go—then act on the first item. The month’s finale, the Full Moon in Taurus on the 26th, releases tension built up around material and emotional security. It’s a cue to let go of old debts—financial or relational—and embrace a new sense of stability. The practical takeaway: review your budget and cut one non‑essential subscription. The symbolism here is release: the full moon’s illumination forces you to see what truly supports you, then drop the rest. SET A DAILY 5‑MINUTE INTENTION BEFORE WORK, FOCUSING ON CHANNELING MARS’S ENERGY INTO A SINGLE, CLEAR ACTION.",
+      "collective_story_status": "published",
+      "monthly_events": [
+        {
+          "date": "2026-10-03",
+          "event": "Mars opposition Pluto",
+          "aspect": "opposition",
+          "phase": "exact",
+          "orb": 0.2104178465542077,
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-03",
+          "event": "Mars trine Neptune",
+          "aspect": "trine",
+          "phase": "exact",
+          "orb": 0.0936968110326859,
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "work routines, health, service and operations"
+          ]
+        },
+        {
+          "date": "2026-10-04",
+          "event": "Sun opposition Saturn",
+          "aspect": "opposition",
+          "phase": "exact",
+          "orb": 0.5089754961958874,
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns",
+            "work routines, health, service and operations"
+          ]
+        },
+        {
+          "date": "2026-10-04",
+          "event": "Venus stations retrograde",
+          "aspect": "",
+          "phase": "",
+          "orb": null,
+          "life_areas": [
+            "identity, energy and personal direction"
+          ]
+        },
+        {
+          "date": "2026-10-07",
+          "event": "Mars sextile Uranus",
+          "aspect": "sextile",
+          "phase": "exact",
+          "orb": 0.23877842526442805,
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "shared money, debt, tax, trust and obligations"
+          ]
+        },
+        {
+          "date": "2026-10-11",
+          "event": "New Moon in Libra",
+          "aspect": "",
+          "phase": "",
+          "orb": null,
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "event": "Sun sextile Jupiter",
+          "aspect": "sextile",
+          "phase": "exact",
+          "orb": 0.2561397417400144,
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns",
+            "career, reputation, authority and public results"
+          ]
+        },
+        {
+          "date": "2026-10-16",
+          "event": "Mars trine Saturn",
+          "aspect": "trine",
+          "phase": "exact",
+          "orb": 0.19607110104699643,
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "work routines, health, service and operations"
+          ]
+        },
+        {
+          "date": "2026-10-17",
+          "event": "Pluto stations direct",
+          "aspect": "",
+          "phase": "",
+          "orb": null,
+          "life_areas": [
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "event": "Venus square Pluto",
+          "aspect": "square",
+          "phase": "exact",
+          "orb": 0.1430681365569626,
+          "life_areas": [
+            "identity, energy and personal direction",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-25",
+          "event": "Mercury stations retrograde",
+          "aspect": "",
+          "phase": "",
+          "orb": null,
+          "life_areas": [
+            "identity, energy and personal direction"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "event": "Sun square Pluto",
+          "aspect": "square",
+          "phase": "exact",
+          "orb": 0.462565857169011,
+          "life_areas": [
+            "identity, energy and personal direction",
+            "home, family and private foundations"
+          ]
+        }
+      ],
+      "major_events": [
+        {
+          "date": "2026-10-01",
+          "event": "Mercury enters Scorpio",
+          "technical": "Mercury enters Scorpio",
+          "tier": "B",
+          "life_areas": [
+            "identity, energy and personal direction"
+          ]
+        },
+        {
+          "date": "2026-10-03",
+          "event": "Mars trine Neptune",
+          "technical": "Mars trine Neptune",
+          "tier": "A-",
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "work routines, health, service and operations"
+          ]
+        },
+        {
+          "date": "2026-10-03",
+          "event": "Mars opposite Pluto",
+          "technical": "Mars opposite Pluto",
+          "tier": "B",
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-03",
+          "event": "Mercury square Pluto",
+          "technical": "Mercury square Pluto",
+          "tier": "B",
+          "life_areas": [
+            "identity, energy and personal direction",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-04",
+          "event": "Venus stations retrograde",
+          "technical": "Venus stations retrograde",
+          "tier": "A",
+          "life_areas": [
+            "identity, energy and personal direction"
+          ]
+        },
+        {
+          "date": "2026-10-04",
+          "event": "Sun opposite Saturn",
+          "technical": "Sun opposite Saturn",
+          "tier": "B",
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns",
+            "work routines, health, service and operations"
+          ]
+        },
+        {
+          "date": "2026-10-07",
+          "event": "Mars sextile Uranus",
+          "technical": "Mars sextile Uranus",
+          "tier": "A-",
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "shared money, debt, tax, trust and obligations"
+          ]
+        },
+        {
+          "date": "2026-10-11",
+          "event": "New Moon in Libra",
+          "technical": "New Moon in Libra",
+          "tier": "B+",
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "event": "Sun sextile Jupiter",
+          "technical": "Sun sextile Jupiter",
+          "tier": "A-",
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns",
+            "career, reputation, authority and public results"
+          ]
+        },
+        {
+          "date": "2026-10-16",
+          "event": "Mars trine Saturn",
+          "technical": "Mars trine Saturn",
+          "tier": "A-",
+          "life_areas": [
+            "career, reputation, authority and public results",
+            "work routines, health, service and operations"
+          ]
+        },
+        {
+          "date": "2026-10-17",
+          "event": "Pluto stations direct",
+          "technical": "Pluto stations direct",
+          "tier": "A",
+          "life_areas": [
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "event": "Venus square Pluto",
+          "technical": "Venus square Pluto",
+          "tier": "B",
+          "life_areas": [
+            "identity, energy and personal direction",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-21",
+          "event": "Sun trine True Node",
+          "technical": "Sun trine True Node",
+          "tier": "B",
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-24",
+          "event": "Venus cazimi · Sun conjunct Venus",
+          "technical": "Sun conjunct Venus",
+          "tier": "A",
+          "life_areas": [
+            "identity, energy and personal direction"
+          ]
+        },
+        {
+          "date": "2026-10-25",
+          "event": "Mercury stations retrograde",
+          "technical": "Mercury stations retrograde",
+          "tier": "B+",
+          "life_areas": [
+            "identity, energy and personal direction"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "event": "Full Moon in Taurus",
+          "technical": "Full Moon in Taurus",
+          "tier": "B+",
+          "life_areas": [
+            "relationships, clients, contracts and competitors"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "event": "Venus enters Libra",
+          "technical": "Venus enters Libra",
+          "tier": "B+",
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "event": "Sun square Pluto",
+          "technical": "Sun square Pluto",
+          "tier": "B",
+          "life_areas": [
+            "identity, energy and personal direction",
+            "home, family and private foundations"
+          ]
+        },
+        {
+          "date": "2026-10-30",
+          "event": "Venus trine True Node",
+          "technical": "Venus trine True Node",
+          "tier": "B",
+          "life_areas": [
+            "rest, hidden matters, closure and psychological patterns",
+            "home, family and private foundations"
+          ]
+        }
+      ],
+      "dominant_life_areas": [
+        "work routines, health, service and operations",
+        "career, reputation, authority and public results",
+        "home, family and private foundations",
+        "identity, energy and personal direction"
+      ],
+      "required_turning_points": [
+        "New Moon in Libra",
+        "Full Moon in Taurus"
+      ]
+    },
+    "daily_briefs": [
+      {
+        "source_id": "daily-brief:2026-10-01",
+        "date": "2026-10-01",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-01",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-01",
+              "aspect": "Moon conjunction Uranus",
+              "planets": [
+                "Moon",
+                "Uranus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.4279493194593442,
+              "houses": [
+                8
+              ],
+              "house_meanings": [
+                "shared money, debt, tax, trust and obligations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.26°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars opposition Pluto** (orb 1.38°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation.",
+                "**Moon conjunction Uranus** (orb 0.43°) concentrates both planets in house 8: mood, instinct and rapidly changing conditions interact with disruption, freedom, innovation and sudden change."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 8,
+                  "life_area": "shared money, debt, tax, trust and obligations"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-01",
+              "event": "Mercury enters Scorpio",
+              "technical": "Mercury enters Scorpio",
+              "tier": "B",
+              "planets": [
+                "Mercury"
+              ],
+              "houses": [
+                1
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-01|ingress|mercury-enters-scorpio",
+              "local_date": "2026-10-01",
+              "display_label": "Mercury enters Scorpio",
+              "technical_label": "Mercury enters Scorpio",
+              "event_type": "ingress",
+              "planets": [
+                "Mercury"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-01|aspect|moon|uranus|conjunction",
+              "local_date": "2026-10-01",
+              "display_label": "Moon conjunction Uranus",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Uranus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.4279493194593442,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon conjunction Uranus",
+            "Closest to exact today",
+            "Orb · 0.43°",
+            "Mercury enters Scorpio"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-02",
+        "date": "2026-10-02",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-02",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-02",
+              "aspect": "Moon sextile Jupiter",
+              "planets": [
+                "Moon",
+                "Jupiter"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.40931546839465227,
+              "houses": [
+                8,
+                10
+              ],
+              "house_meanings": [
+                "shared money, debt, tax, trust and obligations",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.28°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars opposition Pluto** (orb 0.80°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars trine Neptune** (orb 0.51°) connects house 10 with house 6: action, pressure, competition and conflict interact with imagination, ideals, uncertainty and blurred boundaries."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 8,
+                  "life_area": "shared money, debt, tax, trust and obligations"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-02|aspect|jupiter|moon|sextile",
+              "local_date": "2026-10-02",
+              "display_label": "Moon sextile Jupiter",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Jupiter"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.40931546839465227,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon sextile Jupiter",
+            "Closest to exact today",
+            "Orb · 0.41°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-03",
+        "date": "2026-10-03",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-03",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-03",
+              "aspect": "Moon square Neptune",
+              "planets": [
+                "Moon",
+                "Neptune"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.8059737543330243,
+              "houses": [
+                9,
+                6
+              ],
+              "house_meanings": [
+                "travel, publishing, law, education and foreign markets",
+                "work routines, health, service and operations"
+              ],
+              "technical_aspects": [
+                "**Mars opposition Pluto** (orb 0.21°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation.",
+                "**Neptune sextile Pluto** (orb 0.30°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun opposition Saturn** (orb 1.53°) connects house 12 with house 6: purpose, visibility and conscious direction interact with limits, responsibility, discipline and durable structure."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 9,
+                  "life_area": "travel, publishing, law, education and foreign markets"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-03",
+              "event": "Mars trine Neptune",
+              "technical": "Mars trine Neptune",
+              "tier": "A-",
+              "planets": [
+                "Mars",
+                "Neptune"
+              ],
+              "houses": [
+                10,
+                6
+              ],
+              "event_life_areas": [
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            },
+            {
+              "date": "2026-10-03",
+              "event": "Mars opposite Pluto",
+              "technical": "Mars opposite Pluto",
+              "tier": "B",
+              "planets": [
+                "Mars",
+                "Pluto"
+              ],
+              "houses": [
+                10,
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            },
+            {
+              "date": "2026-10-03",
+              "event": "Mercury square Pluto",
+              "technical": "Mercury square Pluto",
+              "tier": "B",
+              "planets": [
+                "Mercury",
+                "Pluto"
+              ],
+              "houses": [
+                1,
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-03|aspect|mars|pluto|opposition",
+              "local_date": "2026-10-03",
+              "display_label": "Mars opposite Pluto",
+              "technical_label": "Mars opposite Pluto",
+              "event_type": "aspect",
+              "planets": [
+                "Mars",
+                "Pluto"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-03|aspect|mars|neptune|trine",
+              "local_date": "2026-10-03",
+              "display_label": "Mars trine Neptune",
+              "technical_label": "Mars trine Neptune",
+              "event_type": "aspect",
+              "planets": [
+                "Mars",
+                "Neptune"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-03|aspect|mercury|pluto|square",
+              "local_date": "2026-10-03",
+              "display_label": "Mercury square Pluto",
+              "technical_label": "Mercury square Pluto",
+              "event_type": "aspect",
+              "planets": [
+                "Mercury",
+                "Pluto"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-03|aspect|moon|neptune|square",
+              "local_date": "2026-10-03",
+              "display_label": "Moon square Neptune",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Neptune"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.8059737543330243,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon square Neptune",
+            "Closest to exact today",
+            "Orb · 0.81°",
+            "Mars opposite Pluto",
+            "Mercury square Pluto",
+            "2026-10-03 · Mars trine Neptune"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-04",
+        "date": "2026-10-04",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-04",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-04",
+              "aspect": "Sun opposition Saturn",
+              "planets": [
+                "Sun",
+                "Saturn"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.5089754961958874,
+              "houses": [
+                12,
+                6
+              ],
+              "house_meanings": [
+                "rest, hidden matters, closure and psychological patterns",
+                "work routines, health, service and operations"
+              ],
+              "technical_aspects": [
+                "**Sun opposition Saturn** (orb 0.51°) connects house 12 with house 6: purpose, visibility and conscious direction interact with limits, responsibility, discipline and durable structure.",
+                "**Mars opposition Pluto** (orb 0.35°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation.",
+                "**Neptune sextile Pluto** (orb 0.32°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-04",
+              "event": "Venus stations retrograde",
+              "technical": "Venus stations retrograde",
+              "tier": "A",
+              "planets": [
+                "Venus"
+              ],
+              "houses": [
+                1
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            },
+            {
+              "date": "2026-10-04",
+              "event": "Sun opposite Saturn",
+              "technical": "Sun opposite Saturn",
+              "tier": "B",
+              "planets": [
+                "Sun",
+                "Saturn"
+              ],
+              "houses": [
+                12,
+                6
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-04|station|venus-stations-retrograde",
+              "local_date": "2026-10-04",
+              "display_label": "Venus stations retrograde",
+              "technical_label": "Venus stations retrograde",
+              "event_type": "station",
+              "planets": [
+                "Venus"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-04|aspect|saturn|sun|opposition",
+              "local_date": "2026-10-04",
+              "display_label": "Sun opposition Saturn",
+              "technical_label": "Sun opposite Saturn",
+              "event_type": "aspect",
+              "planets": [
+                "Sun",
+                "Saturn"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.5089754961958874,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Sun opposition Saturn",
+            "Closest to exact today",
+            "Orb · 0.51°",
+            "Sun opposite Saturn",
+            "2026-10-04 · Venus stations retrograde"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-05",
+        "date": "2026-10-05",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-05",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-05",
+              "aspect": "Moon conjunction Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.8050149982710764,
+              "houses": [
+                10
+              ],
+              "house_meanings": [
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Sun opposition Saturn** (orb 0.55°) connects house 12 with house 6: purpose, visibility and conscious direction interact with limits, responsibility, discipline and durable structure.",
+                "**Neptune sextile Pluto** (orb 0.35°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars opposition Pluto** (orb 0.93°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-05|aspect|mars|moon|conjunction",
+              "local_date": "2026-10-05",
+              "display_label": "Moon conjunction Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.8050149982710764,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon conjunction Mars",
+            "Closest to exact today",
+            "Orb · 2.81°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-06",
+        "date": "2026-10-06",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-06",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-06",
+              "aspect": "Sun sextile Moon",
+              "planets": [
+                "Moon",
+                "Sun"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.3437473005615743,
+              "houses": [
+                12,
+                10
+              ],
+              "house_meanings": [
+                "rest, hidden matters, closure and psychological patterns",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.37°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun opposition Saturn** (orb 1.62°) connects house 12 with house 6: purpose, visibility and conscious direction interact with limits, responsibility, discipline and durable structure.",
+                "**Mars opposition Pluto** (orb 1.51°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-06|aspect|moon|sun|sextile",
+              "local_date": "2026-10-06",
+              "display_label": "Sun sextile Moon",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Sun"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.3437473005615743,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Sun sextile Moon",
+            "Closest to exact today",
+            "Orb · 2.34°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-07",
+        "date": "2026-10-07",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-07",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-07",
+              "aspect": "Moon opposition True Node",
+              "planets": [
+                "Moon",
+                "True Node"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.18286509983749966,
+              "houses": [
+                10,
+                4
+              ],
+              "house_meanings": [
+                "career, reputation, authority and public results",
+                "home, family and private foundations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.39°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars sextile Uranus** (orb 0.24°) connects house 10 with house 8: action, pressure, competition and conflict interact with disruption, freedom, innovation and sudden change.",
+                "**Mars opposition Pluto** (orb 2.08°) connects house 10 with house 4: action, pressure, competition and conflict interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-07",
+              "event": "Mars sextile Uranus",
+              "technical": "Mars sextile Uranus",
+              "tier": "A-",
+              "planets": [
+                "Mars",
+                "Uranus"
+              ],
+              "houses": [
+                10,
+                8
+              ],
+              "event_life_areas": [
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                },
+                {
+                  "house": 8,
+                  "life_area": "shared money, debt, tax, trust and obligations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-07|aspect|mars|uranus|sextile",
+              "local_date": "2026-10-07",
+              "display_label": "Mars sextile Uranus",
+              "technical_label": "Mars sextile Uranus",
+              "event_type": "aspect",
+              "planets": [
+                "Mars",
+                "Uranus"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-07|aspect|moon|true node|opposition",
+              "local_date": "2026-10-07",
+              "display_label": "Moon opposition True Node",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "True Node"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.18286509983749966,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon opposition True Node",
+            "Closest to exact today",
+            "Orb · 0.18°",
+            "2026-10-07 · Mars sextile Uranus"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-08",
+        "date": "2026-10-08",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-08",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-08",
+              "aspect": "Venus square Mars",
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "phase": "Applying — still building",
+              "orb": 2.3077009439440275,
+              "houses": [
+                1,
+                10
+              ],
+              "house_meanings": [
+                "identity, energy and personal direction",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.41°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars sextile Uranus** (orb 0.35°) connects house 10 with house 8: action, pressure, competition and conflict interact with disruption, freedom, innovation and sudden change.",
+                "**Uranus trine Pluto** (orb 2.31°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-08|aspect|mars|venus|square",
+              "local_date": "2026-10-08",
+              "display_label": "Venus square Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "phase": "Applying — still building",
+              "orb": 2.3077009439440275,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Venus square Mars",
+            "Applying — still building",
+            "Orb · 2.31°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-09",
+        "date": "2026-10-09",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-09",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-09",
+              "aspect": "Venus square Mars",
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "phase": "Applying — still building",
+              "orb": 1.5336826239660013,
+              "houses": [
+                1,
+                10
+              ],
+              "house_meanings": [
+                "identity, energy and personal direction",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.44°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars sextile Uranus** (orb 0.94°) connects house 10 with house 8: action, pressure, competition and conflict interact with disruption, freedom, innovation and sudden change.",
+                "**Uranus trine Pluto** (orb 2.29°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-09|aspect|mars|venus|square",
+              "local_date": "2026-10-09",
+              "display_label": "Venus square Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "phase": "Applying — still building",
+              "orb": 1.5336826239660013,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Venus square Mars",
+            "Applying — still building",
+            "Orb · 1.53°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-10",
+        "date": "2026-10-10",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-10",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-10",
+              "aspect": "Moon opposition Saturn",
+              "planets": [
+                "Moon",
+                "Saturn"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.595579490749941,
+              "houses": [
+                12,
+                6
+              ],
+              "house_meanings": [
+                "rest, hidden matters, closure and psychological patterns",
+                "work routines, health, service and operations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.46°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Moon opposition Saturn** (orb 1.60°) connects house 12 with house 6: mood, instinct and rapidly changing conditions interact with limits, responsibility, discipline and durable structure.",
+                "**Uranus trine Pluto** (orb 2.27°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-10|aspect|moon|saturn|opposition",
+              "local_date": "2026-10-10",
+              "display_label": "Moon opposition Saturn",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Saturn"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.595579490749941,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon opposition Saturn",
+            "Closest to exact today",
+            "Orb · 1.60°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-11",
+        "date": "2026-10-11",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-11",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-11",
+              "aspect": "Venus square Mars",
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.12525255085175502,
+              "houses": [
+                1,
+                10
+              ],
+              "house_meanings": [
+                "identity, energy and personal direction",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.49°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Venus square Mars** (orb 0.13°) connects house 1 with house 10: relationships, value, attraction and money preferences interact with action, pressure, competition and conflict.",
+                "**Uranus trine Pluto** (orb 2.25°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-11",
+              "event": "New Moon in Libra",
+              "technical": "New Moon in Libra",
+              "tier": "B+",
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "houses": [
+                12
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-11|new_moon|new-moon-in-libra",
+              "local_date": "2026-10-11",
+              "display_label": "New Moon in Libra",
+              "technical_label": "New Moon in Libra",
+              "event_type": "new_moon",
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-11|aspect|mars|venus|square",
+              "local_date": "2026-10-11",
+              "display_label": "Venus square Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Venus",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.12525255085175502,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Venus square Mars",
+            "Closest to exact today",
+            "Orb · 0.13°",
+            "2026-10-11 · New Moon in Libra"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-12",
+        "date": "2026-10-12",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-12",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-12",
+              "aspect": "Moon square Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.8786077391203264,
+              "houses": [
+                1,
+                10
+              ],
+              "house_meanings": [
+                "identity, energy and personal direction",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.51°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 2.22°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Venus square Mars** (orb 1.01°) connects house 1 with house 10: relationships, value, attraction and money preferences interact with action, pressure, competition and conflict."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-12|aspect|mars|moon|square",
+              "local_date": "2026-10-12",
+              "display_label": "Moon square Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.8786077391203264,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon square Mars",
+            "Closest to exact today",
+            "Orb · 2.88°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-13",
+        "date": "2026-10-13",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-13",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-13",
+              "aspect": "Moon conjunction Mercury",
+              "planets": [
+                "Moon",
+                "Mercury"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.970176805449853,
+              "houses": [
+                1
+              ],
+              "house_meanings": [
+                "identity, energy and personal direction"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.53°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 2.20°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars trine Saturn** (orb 2.08°) connects house 10 with house 6: action, pressure, competition and conflict interact with limits, responsibility, discipline and durable structure."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-13|aspect|mercury|moon|conjunction",
+              "local_date": "2026-10-13",
+              "display_label": "Moon conjunction Mercury",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mercury"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.970176805449853,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon conjunction Mercury",
+            "Closest to exact today",
+            "Orb · 2.97°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-14",
+        "date": "2026-10-14",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-14",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-14",
+              "aspect": "Moon square True Node",
+              "planets": [
+                "Moon",
+                "True Node"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.6296999299257209,
+              "houses": [
+                2,
+                4
+              ],
+              "house_meanings": [
+                "income, possessions and self-worth",
+                "home, family and private foundations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.56°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun sextile Jupiter** (orb 1.09°) connects house 12 with house 10: purpose, visibility and conscious direction interact with growth, confidence, reach and excess.",
+                "**Mars trine Saturn** (orb 1.45°) connects house 10 with house 6: action, pressure, competition and conflict interact with limits, responsibility, discipline and durable structure."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 2,
+                  "life_area": "income, possessions and self-worth"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-14|aspect|moon|true node|square",
+              "local_date": "2026-10-14",
+              "display_label": "Moon square True Node",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "True Node"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.6296999299257209,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon square True Node",
+            "Closest to exact today",
+            "Orb · 1.63°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-15",
+        "date": "2026-10-15",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-15",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-15",
+              "aspect": "Moon trine Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.466248276149315,
+              "houses": [
+                2,
+                10
+              ],
+              "house_meanings": [
+                "income, possessions and self-worth",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Sun sextile Jupiter** (orb 0.26°) connects house 12 with house 10: purpose, visibility and conscious direction interact with growth, confidence, reach and excess.",
+                "**Neptune sextile Pluto** (orb 0.58°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars trine Saturn** (orb 0.82°) connects house 10 with house 6: action, pressure, competition and conflict interact with limits, responsibility, discipline and durable structure."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 2,
+                  "life_area": "income, possessions and self-worth"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-15",
+              "event": "Sun sextile Jupiter",
+              "technical": "Sun sextile Jupiter",
+              "tier": "A-",
+              "planets": [
+                "Sun",
+                "Jupiter"
+              ],
+              "houses": [
+                12,
+                10
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-15|aspect|mars|moon|trine",
+              "local_date": "2026-10-15",
+              "display_label": "Moon trine Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.466248276149315,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-15|aspect|jupiter|sun|sextile",
+              "local_date": "2026-10-15",
+              "display_label": "Sun sextile Jupiter",
+              "technical_label": "Sun sextile Jupiter",
+              "event_type": "aspect",
+              "planets": [
+                "Sun",
+                "Jupiter"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon trine Mars",
+            "Closest to exact today",
+            "Orb · 2.47°",
+            "2026-10-15 · Sun sextile Jupiter"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-16",
+        "date": "2026-10-16",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-16",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-16",
+              "aspect": "Sun sextile Moon",
+              "planets": [
+                "Moon",
+                "Sun"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.3968970486565127,
+              "houses": [
+                12,
+                2
+              ],
+              "house_meanings": [
+                "rest, hidden matters, closure and psychological patterns",
+                "income, possessions and self-worth"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.61°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars trine Saturn** (orb 0.20°) connects house 10 with house 6: action, pressure, competition and conflict interact with limits, responsibility, discipline and durable structure.",
+                "**Sun sextile Jupiter** (orb 0.58°) connects house 12 with house 10: purpose, visibility and conscious direction interact with growth, confidence, reach and excess."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 2,
+                  "life_area": "income, possessions and self-worth"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-16",
+              "event": "Mars trine Saturn",
+              "technical": "Mars trine Saturn",
+              "tier": "A-",
+              "planets": [
+                "Mars",
+                "Saturn"
+              ],
+              "houses": [
+                10,
+                6
+              ],
+              "event_life_areas": [
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-16|aspect|mars|saturn|trine",
+              "local_date": "2026-10-16",
+              "display_label": "Mars trine Saturn",
+              "technical_label": "Mars trine Saturn",
+              "event_type": "aspect",
+              "planets": [
+                "Mars",
+                "Saturn"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-16|aspect|moon|sun|sextile",
+              "local_date": "2026-10-16",
+              "display_label": "Sun sextile Moon",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Sun"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.3968970486565127,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Sun sextile Moon",
+            "Closest to exact today",
+            "Orb · 1.40°",
+            "2026-10-16 · Mars trine Saturn"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-17",
+        "date": "2026-10-17",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-17",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-17",
+              "aspect": "Moon sextile Venus",
+              "planets": [
+                "Moon",
+                "Venus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.1027368273748834,
+              "houses": [
+                3,
+                1
+              ],
+              "house_meanings": [
+                "communication, sales, learning and local movement",
+                "identity, energy and personal direction"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.64°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars trine Saturn** (orb 0.43°) connects house 10 with house 6: action, pressure, competition and conflict interact with limits, responsibility, discipline and durable structure.",
+                "**Uranus trine Pluto** (orb 2.09°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 3,
+                  "life_area": "communication, sales, learning and local movement"
+                },
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-17",
+              "event": "Pluto stations direct",
+              "technical": "Pluto stations direct",
+              "tier": "A",
+              "planets": [
+                "Pluto"
+              ],
+              "houses": [
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-17|station|pluto-stations-direct",
+              "local_date": "2026-10-17",
+              "display_label": "Pluto stations direct",
+              "technical_label": "Pluto stations direct",
+              "event_type": "station",
+              "planets": [
+                "Pluto"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-17|aspect|moon|venus|sextile",
+              "local_date": "2026-10-17",
+              "display_label": "Moon sextile Venus",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Venus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.1027368273748834,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon sextile Venus",
+            "Closest to exact today",
+            "Orb · 1.10°",
+            "2026-10-17 · Pluto stations direct"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-18",
+        "date": "2026-10-18",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-18",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-18",
+              "aspect": "Moon sextile Mercury",
+              "planets": [
+                "Moon",
+                "Mercury"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.9892116319935553,
+              "houses": [
+                3,
+                1
+              ],
+              "house_meanings": [
+                "communication, sales, learning and local movement",
+                "identity, energy and personal direction"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.66°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mars trine Saturn** (orb 1.05°) connects house 10 with house 6: action, pressure, competition and conflict interact with limits, responsibility, discipline and durable structure.",
+                "**Uranus trine Pluto** (orb 2.06°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 3,
+                  "life_area": "communication, sales, learning and local movement"
+                },
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-18|aspect|mercury|moon|sextile",
+              "local_date": "2026-10-18",
+              "display_label": "Moon sextile Mercury",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mercury"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.9892116319935553,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon sextile Mercury",
+            "Closest to exact today",
+            "Orb · 0.99°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-19",
+        "date": "2026-10-19",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-19",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-19",
+              "aspect": "Moon sextile Neptune",
+              "planets": [
+                "Moon",
+                "Neptune"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.714007235993506,
+              "houses": [
+                3,
+                6
+              ],
+              "house_meanings": [
+                "communication, sales, learning and local movement",
+                "work routines, health, service and operations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.69°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Venus square Pluto** (orb 0.71°) connects house 1 with house 4: relationships, value, attraction and money preferences interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 2.03°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 3,
+                  "life_area": "communication, sales, learning and local movement"
+                },
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-19|aspect|moon|neptune|sextile",
+              "local_date": "2026-10-19",
+              "display_label": "Moon sextile Neptune",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Neptune"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.714007235993506,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon sextile Neptune",
+            "Closest to exact today",
+            "Orb · 2.71°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-20",
+        "date": "2026-10-20",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-20",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-20",
+              "aspect": "Moon opposition Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.6813469294531274,
+              "houses": [
+                4,
+                10
+              ],
+              "house_meanings": [
+                "home, family and private foundations",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Venus square Pluto** (orb 0.14°) connects house 1 with house 4: relationships, value, attraction and money preferences interact with power, elimination, compulsion and irreversible transformation.",
+                "**Neptune sextile Pluto** (orb 0.71°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 2.00°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-20",
+              "event": "Venus square Pluto",
+              "technical": "Venus square Pluto",
+              "tier": "B",
+              "planets": [
+                "Venus",
+                "Pluto"
+              ],
+              "houses": [
+                1,
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-20|aspect|mars|moon|opposition",
+              "local_date": "2026-10-20",
+              "display_label": "Moon opposition Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.6813469294531274,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-20|aspect|pluto|venus|square",
+              "local_date": "2026-10-20",
+              "display_label": "Venus square Pluto",
+              "technical_label": "Venus square Pluto",
+              "event_type": "aspect",
+              "planets": [
+                "Venus",
+                "Pluto"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon opposition Mars",
+            "Closest to exact today",
+            "Orb · 0.68°",
+            "Venus square Pluto"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-21",
+        "date": "2026-10-21",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-21",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-21",
+              "aspect": "Moon opposition Jupiter",
+              "planets": [
+                "Moon",
+                "Jupiter"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.1111015151187758,
+              "houses": [
+                4,
+                10
+              ],
+              "house_meanings": [
+                "home, family and private foundations",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.74°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Venus square Pluto** (orb 0.44°) connects house 1 with house 4: relationships, value, attraction and money preferences interact with power, elimination, compulsion and irreversible transformation.",
+                "**Moon opposition Jupiter** (orb 1.11°) connects house 4 with house 10: mood, instinct and rapidly changing conditions interact with growth, confidence, reach and excess."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-21",
+              "event": "Sun trine True Node",
+              "technical": "Sun trine True Node",
+              "tier": "B",
+              "planets": [
+                "Sun",
+                "True Node"
+              ],
+              "houses": [
+                12,
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-21|aspect|jupiter|moon|opposition",
+              "local_date": "2026-10-21",
+              "display_label": "Moon opposition Jupiter",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Jupiter"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.1111015151187758,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-21|aspect|sun|true node|trine",
+              "local_date": "2026-10-21",
+              "display_label": "Sun trine True Node",
+              "technical_label": "Sun trine True Node",
+              "event_type": "aspect",
+              "planets": [
+                "Sun",
+                "True Node"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon opposition Jupiter",
+            "Closest to exact today",
+            "Orb · 1.11°",
+            "2026-10-21 · Sun trine True Node"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-22",
+        "date": "2026-10-22",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-22",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-22",
+              "aspect": "Moon square Uranus",
+              "planets": [
+                "Moon",
+                "Uranus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.5368750102686022,
+              "houses": [
+                5,
+                8
+              ],
+              "house_meanings": [
+                "creativity, romance, pleasure and entrepreneurship",
+                "shared money, debt, tax, trust and obligations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.77°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Venus square Pluto** (orb 1.04°) connects house 1 with house 4: relationships, value, attraction and money preferences interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.94°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 5,
+                  "life_area": "creativity, romance, pleasure and entrepreneurship"
+                },
+                {
+                  "house": 8,
+                  "life_area": "shared money, debt, tax, trust and obligations"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-22|aspect|moon|uranus|square",
+              "local_date": "2026-10-22",
+              "display_label": "Moon square Uranus",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Uranus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.5368750102686022,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon square Uranus",
+            "Closest to exact today",
+            "Orb · 1.54°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-23",
+        "date": "2026-10-23",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-23",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-23",
+              "aspect": "Moon trine Mercury",
+              "planets": [
+                "Moon",
+                "Mercury"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.3691123257277127,
+              "houses": [
+                5,
+                1
+              ],
+              "house_meanings": [
+                "creativity, romance, pleasure and entrepreneurship",
+                "identity, energy and personal direction"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.79°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.90°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun conjunction Venus** (orb 1.79°) connects house 12 with house 1: purpose, visibility and conscious direction interact with relationships, value, attraction and money preferences."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 5,
+                  "life_area": "creativity, romance, pleasure and entrepreneurship"
+                },
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-23|aspect|mercury|moon|trine",
+              "local_date": "2026-10-23",
+              "display_label": "Moon trine Mercury",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mercury"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.3691123257277127,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon trine Mercury",
+            "Closest to exact today",
+            "Orb · 1.37°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-24",
+        "date": "2026-10-24",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-24",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-24",
+              "aspect": "Moon conjunction Neptune",
+              "planets": [
+                "Moon",
+                "Neptune"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.6205181551037633,
+              "houses": [
+                6
+              ],
+              "house_meanings": [
+                "work routines, health, service and operations"
+              ],
+              "technical_aspects": [
+                "**Sun conjunction Venus** (orb 0.18°) concentrates both planets in house 1: purpose, visibility and conscious direction interact with relationships, value, attraction and money preferences.",
+                "**Neptune sextile Pluto** (orb 0.82°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Moon conjunction Neptune** (orb 0.62°) concentrates both planets in house 6: mood, instinct and rapidly changing conditions interact with imagination, ideals, uncertainty and blurred boundaries."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-24",
+              "event": "Venus cazimi · Sun conjunct Venus",
+              "technical": "Sun conjunct Venus",
+              "tier": "A",
+              "planets": [
+                "Sun",
+                "Venus"
+              ],
+              "houses": [
+                1,
+                1
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-24|aspect|moon|neptune|conjunction",
+              "local_date": "2026-10-24",
+              "display_label": "Moon conjunction Neptune",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Neptune"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.6205181551037633,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-24|aspect|sun|venus|conjunction",
+              "local_date": "2026-10-24",
+              "display_label": "Venus cazimi · Sun conjunct Venus",
+              "technical_label": "Sun conjunct Venus",
+              "event_type": "aspect",
+              "planets": [
+                "Sun",
+                "Venus"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon conjunction Neptune",
+            "Closest to exact today",
+            "Orb · 0.62°",
+            "2026-10-24 · Venus cazimi · Sun conjunct Venus"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-25",
+        "date": "2026-10-25",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-25",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-25",
+              "aspect": "Moon trine Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.6327499260599438,
+              "houses": [
+                6,
+                10
+              ],
+              "house_meanings": [
+                "work routines, health, service and operations",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.85°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun square Pluto** (orb 1.45°) connects house 1 with house 4: purpose, visibility and conscious direction interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.83°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 6,
+                  "life_area": "work routines, health, service and operations"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-25",
+              "event": "Mercury stations retrograde",
+              "technical": "Mercury stations retrograde",
+              "tier": "B+",
+              "planets": [
+                "Mercury"
+              ],
+              "houses": [
+                1
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-25|station|mercury-stations-retrograde",
+              "local_date": "2026-10-25",
+              "display_label": "Mercury stations retrograde",
+              "technical_label": "Mercury stations retrograde",
+              "event_type": "station",
+              "planets": [
+                "Mercury"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-25|aspect|mars|moon|trine",
+              "local_date": "2026-10-25",
+              "display_label": "Moon trine Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.6327499260599438,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon trine Mars",
+            "Closest to exact today",
+            "Orb · 1.63°",
+            "2026-10-25 · Mercury stations retrograde"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-26",
+        "date": "2026-10-26",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-26",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-26",
+              "aspect": "Moon opposition Venus",
+              "planets": [
+                "Moon",
+                "Venus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.2510985979726286,
+              "houses": [
+                7,
+                12
+              ],
+              "house_meanings": [
+                "relationships, clients, contracts and competitors",
+                "rest, hidden matters, closure and psychological patterns"
+              ],
+              "technical_aspects": [
+                "**Sun square Pluto** (orb 0.46°) connects house 1 with house 4: purpose, visibility and conscious direction interact with power, elimination, compulsion and irreversible transformation.",
+                "**Neptune sextile Pluto** (orb 0.88°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.79°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 7,
+                  "life_area": "relationships, clients, contracts and competitors"
+                },
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-26",
+              "event": "Full Moon in Taurus",
+              "technical": "Full Moon in Taurus",
+              "tier": "B+",
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "houses": [
+                7
+              ],
+              "event_life_areas": [
+                {
+                  "house": 7,
+                  "life_area": "relationships, clients, contracts and competitors"
+                }
+              ]
+            },
+            {
+              "date": "2026-10-26",
+              "event": "Venus enters Libra",
+              "technical": "Venus enters Libra",
+              "tier": "B+",
+              "planets": [
+                "Venus"
+              ],
+              "houses": [
+                12
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                }
+              ]
+            },
+            {
+              "date": "2026-10-26",
+              "event": "Sun square Pluto",
+              "technical": "Sun square Pluto",
+              "tier": "B",
+              "planets": [
+                "Sun",
+                "Pluto"
+              ],
+              "houses": [
+                1,
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-26|full_moon|full-moon-in-taurus",
+              "local_date": "2026-10-26",
+              "display_label": "Full Moon in Taurus",
+              "technical_label": "Full Moon in Taurus",
+              "event_type": "full_moon",
+              "planets": [
+                "Sun",
+                "Moon"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-26|ingress|venus-enters-libra",
+              "local_date": "2026-10-26",
+              "display_label": "Venus enters Libra",
+              "technical_label": "Venus enters Libra",
+              "event_type": "ingress",
+              "planets": [
+                "Venus"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": true,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-26|aspect|moon|venus|opposition",
+              "local_date": "2026-10-26",
+              "display_label": "Moon opposition Venus",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Venus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 1.2510985979726286,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-26|aspect|pluto|sun|square",
+              "local_date": "2026-10-26",
+              "display_label": "Sun square Pluto",
+              "technical_label": "Sun square Pluto",
+              "event_type": "aspect",
+              "planets": [
+                "Sun",
+                "Pluto"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon opposition Venus",
+            "Closest to exact today",
+            "Orb · 1.25°",
+            "Venus enters Libra",
+            "Sun square Pluto",
+            "2026-10-26 · Full Moon in Taurus"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-27",
+        "date": "2026-10-27",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-27",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-27",
+              "aspect": "Moon square Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.7631262486780201,
+              "houses": [
+                7,
+                10
+              ],
+              "house_meanings": [
+                "relationships, clients, contracts and competitors",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Sun square Pluto** (orb 0.53°) connects house 1 with house 4: purpose, visibility and conscious direction interact with power, elimination, compulsion and irreversible transformation.",
+                "**Neptune sextile Pluto** (orb 0.90°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.75°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 7,
+                  "life_area": "relationships, clients, contracts and competitors"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-27|aspect|mars|moon|square",
+              "local_date": "2026-10-27",
+              "display_label": "Moon square Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.7631262486780201,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon square Mars",
+            "Closest to exact today",
+            "Orb · 0.76°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-28",
+        "date": "2026-10-28",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-28",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-28",
+              "aspect": "Moon square True Node",
+              "planets": [
+                "Moon",
+                "True Node"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.656800455249652,
+              "houses": [
+                7,
+                4
+              ],
+              "house_meanings": [
+                "relationships, clients, contracts and competitors",
+                "home, family and private foundations"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.93°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.71°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun square Pluto** (orb 1.52°) connects house 1 with house 4: purpose, visibility and conscious direction interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 7,
+                  "life_area": "relationships, clients, contracts and competitors"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-28|aspect|moon|true node|square",
+              "local_date": "2026-10-28",
+              "display_label": "Moon square True Node",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "True Node"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.656800455249652,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon square True Node",
+            "Closest to exact today",
+            "Orb · 2.66°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-29",
+        "date": "2026-10-29",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-29",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-29",
+              "aspect": "Moon sextile Mars",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.424422926276577,
+              "houses": [
+                8,
+                10
+              ],
+              "house_meanings": [
+                "shared money, debt, tax, trust and obligations",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.96°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.67°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Sun square Pluto** (orb 2.51°) connects house 1 with house 4: purpose, visibility and conscious direction interact with power, elimination, compulsion and irreversible transformation."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 8,
+                  "life_area": "shared money, debt, tax, trust and obligations"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-29|aspect|mars|moon|sextile",
+              "local_date": "2026-10-29",
+              "display_label": "Moon sextile Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.424422926276577,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon sextile Mars",
+            "Closest to exact today",
+            "Orb · 2.42°"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-30",
+        "date": "2026-10-30",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-30",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-30",
+              "aspect": "Moon trine Venus",
+              "planets": [
+                "Moon",
+                "Venus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.0664256008631128,
+              "houses": [
+                8,
+                12
+              ],
+              "house_meanings": [
+                "shared money, debt, tax, trust and obligations",
+                "rest, hidden matters, closure and psychological patterns"
+              ],
+              "technical_aspects": [
+                "**Neptune sextile Pluto** (orb 0.99°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Uranus trine Pluto** (orb 1.63°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Venus trine True Node** (orb 0.22°) connects house 12 with house 4: relationships, value, attraction and money preferences interact with developmental direction and unfamiliar growth."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 8,
+                  "life_area": "shared money, debt, tax, trust and obligations"
+                },
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                }
+              ]
+            }
+          ],
+          "major_events": [
+            {
+              "date": "2026-10-30",
+              "event": "Venus trine True Node",
+              "technical": "Venus trine True Node",
+              "tier": "B",
+              "planets": [
+                "Venus",
+                "True Node"
+              ],
+              "houses": [
+                12,
+                4
+              ],
+              "event_life_areas": [
+                {
+                  "house": 12,
+                  "life_area": "rest, hidden matters, closure and psychological patterns"
+                },
+                {
+                  "house": 4,
+                  "life_area": "home, family and private foundations"
+                }
+              ]
+            }
+          ],
+          "timeline": [
+            {
+              "event_id": "2026-10-30|aspect|moon|venus|trine",
+              "local_date": "2026-10-30",
+              "display_label": "Moon trine Venus",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Moon",
+                "Venus"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 2.0664256008631128,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            },
+            {
+              "event_id": "2026-10-30|aspect|true node|venus|trine",
+              "local_date": "2026-10-30",
+              "display_label": "Venus trine True Node",
+              "technical_label": "Venus trine True Node",
+              "event_type": "aspect",
+              "planets": [
+                "Venus",
+                "True Node"
+              ],
+              "phase": "",
+              "orb": null,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Moon trine Venus",
+            "Closest to exact today",
+            "Orb · 2.07°",
+            "2026-10-30 · Venus trine True Node"
+          ]
+        }
+      },
+      {
+        "source_id": "daily-brief:2026-10-31",
+        "date": "2026-10-31",
+        "brief": {
+          "product": "daily",
+          "period": "2026-10-31",
+          "sign": "Scorpio",
+          "timezone": "Australia/Sydney",
+          "events": [
+            {
+              "date": "2026-10-31",
+              "aspect": "Mercury square Mars",
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.470860270827302,
+              "houses": [
+                1,
+                10
+              ],
+              "house_meanings": [
+                "identity, energy and personal direction",
+                "career, reputation, authority and public results"
+              ],
+              "technical_aspects": [
+                "**Uranus trine Pluto** (orb 1.59°) connects house 8 with house 4: disruption, freedom, innovation and sudden change interact with power, elimination, compulsion and irreversible transformation.",
+                "**Neptune sextile Pluto** (orb 1.02°) connects house 6 with house 4: imagination, ideals, uncertainty and blurred boundaries interact with power, elimination, compulsion and irreversible transformation.",
+                "**Mercury square Mars** (orb 0.47°) connects house 1 with house 10: communication, analysis, trade and decisions interact with action, pressure, competition and conflict."
+              ],
+              "event_life_areas": [
+                {
+                  "house": 1,
+                  "life_area": "identity, energy and personal direction"
+                },
+                {
+                  "house": 10,
+                  "life_area": "career, reputation, authority and public results"
+                }
+              ]
+            }
+          ],
+          "major_events": [],
+          "timeline": [
+            {
+              "event_id": "2026-10-31|aspect|mars|mercury|square",
+              "local_date": "2026-10-31",
+              "display_label": "Mercury square Mars",
+              "technical_label": "",
+              "event_type": "aspect",
+              "planets": [
+                "Mercury",
+                "Mars"
+              ],
+              "phase": "Closest to exact today",
+              "orb": 0.470860270827302,
+              "exact_utc": "",
+              "exact_local": "",
+              "timezone": "Australia/Sydney",
+              "timezone_label": "",
+              "utc_offset": "",
+              "protected": false,
+              "importance": 0.0,
+              "supporting_events": []
+            }
+          ],
+          "required_turning_points": [],
+          "calculated_labels": [
+            "Mercury square Mars",
+            "Closest to exact today",
+            "Orb · 0.47°"
+          ]
+        }
+      }
+    ],
+    "transit_threads": [
+      {
+        "label": "2026-10-04 · Venus stations retrograde",
+        "start": "2026-10-04",
+        "end": "2026-10-04",
+        "days_seen": 1
+      },
+      {
+        "label": "Venus stations retrograde",
+        "start": "2026-10-04",
+        "end": "2026-10-04",
+        "days_seen": 1
+      },
+      {
+        "label": "Applying — still building",
+        "start": "2026-10-08",
+        "end": "2026-10-09",
+        "days_seen": 2
+      },
+      {
+        "label": "Venus square Mars",
+        "start": "2026-10-08",
+        "end": "2026-10-11",
+        "days_seen": 3
+      },
+      {
+        "label": "2026-10-11 · New Moon in Libra",
+        "start": "2026-10-11",
+        "end": "2026-10-11",
+        "days_seen": 1
+      },
+      {
+        "label": "New Moon in Libra",
+        "start": "2026-10-11",
+        "end": "2026-10-11",
+        "days_seen": 1
+      },
+      {
+        "label": "2026-10-17 · Pluto stations direct",
+        "start": "2026-10-17",
+        "end": "2026-10-17",
+        "days_seen": 1
+      },
+      {
+        "label": "Pluto stations direct",
+        "start": "2026-10-17",
+        "end": "2026-10-17",
+        "days_seen": 1
+      },
+      {
+        "label": "2026-10-25 · Mercury stations retrograde",
+        "start": "2026-10-25",
+        "end": "2026-10-25",
+        "days_seen": 1
+      },
+      {
+        "label": "Mercury stations retrograde",
+        "start": "2026-10-25",
+        "end": "2026-10-25",
+        "days_seen": 1
+      },
+      {
+        "label": "2026-10-26 · Full Moon in Taurus",
+        "start": "2026-10-26",
+        "end": "2026-10-26",
+        "days_seen": 1
+      },
+      {
+        "label": "Full Moon in Taurus",
+        "start": "2026-10-26",
+        "end": "2026-10-26",
+        "days_seen": 1
+      }
+    ],
+    "story_background_ready": true,
+    "daily_story_ledger": [
+      {
+        "source_id": "monthly-day:2026-10-01",
+        "date": "2026-10-01",
+        "date_label": "1 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-01",
+            "title": "Mercury enters Scorpio",
+            "kind": "ingress",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "neutral",
+            "importance": 5.8,
+            "detail": "Moves into house 1: identity, energy and personal direction.",
+            "registry_tier": "B",
+            "registry_action": "Change the method that no longer fits the new conditions.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Mercury enters Scorpio"
+          },
+          {
+            "event_date": "2026-10-01",
+            "title": "Moon enters Gemini",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              8
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 8: shared money, debt, tax, trust and obligations."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-02",
+        "date": "2026-10-02",
+        "date_label": "2 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-02",
+            "title": "Mercury square Mars",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Mars"
+            ],
+            "houses": [
+              1,
+              10
+            ],
+            "aspect_name": "square",
+            "orb": 0.2165434199215781,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 5.404886787516338,
+            "detail": "Exact within approximately 0.22°."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-03",
+        "date": "2026-10-03",
+        "date_label": "3 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-03",
+            "title": "Mars opposition Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Pluto"
+            ],
+            "houses": [
+              10,
+              4
+            ],
+            "aspect_name": "opposition",
+            "orb": 0.2104178465542077,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.923781297597843,
+            "detail": "Exact within approximately 0.21°."
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Mars trine Neptune",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Neptune"
+            ],
+            "houses": [
+              10,
+              6
+            ],
+            "aspect_name": "trine",
+            "orb": 0.0936968110326859,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.611266311283309,
+            "detail": "Exact within approximately 0.09°.",
+            "registry_tier": "A-",
+            "registry_action": "Make one useful move while the opening is available.",
+            "registry_opportunity": true,
+            "registry_technical_label": "Mars trine Neptune"
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Mercury square Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Pluto"
+            ],
+            "houses": [
+              1,
+              4
+            ],
+            "aspect_name": "square",
+            "orb": 0.28384611739272714,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.498174049291244,
+            "detail": "Exact within approximately 0.28°.",
+            "registry_tier": "B",
+            "registry_action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Mercury square Pluto"
+          },
+          {
+            "event_date": "2026-10-03",
+            "title": "Moon enters Cancer",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              9
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 9: travel, publishing, law, education and foreign markets."
+          },
+          {
+            "event_date": "2026-10-03",
+            "display_label": "Mars opposite Pluto",
+            "technical_label": "Mars opposite Pluto",
+            "tier": "B",
+            "planets": [
+              "Mars",
+              "Pluto"
+            ],
+            "houses": [
+              10,
+              4
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-04",
+        "date": "2026-10-04",
+        "date_label": "4 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-04",
+            "title": "Sun opposition Saturn",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Saturn"
+            ],
+            "houses": [
+              12,
+              6
+            ],
+            "aspect_name": "opposition",
+            "orb": 0.5089754961958874,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.949827315659922,
+            "detail": "Exact within approximately 0.51°."
+          },
+          {
+            "event_date": "2026-10-04",
+            "title": "Venus stations retrograde",
+            "kind": "station",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "review",
+            "importance": 6.8,
+            "detail": "Intensifies house 1: identity, energy and personal direction.",
+            "registry_tier": "A",
+            "registry_action": "Keep what still feels valuable after the glamour is removed.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Venus stations retrograde"
+          },
+          {
+            "event_date": "2026-10-04",
+            "display_label": "Sun opposite Saturn",
+            "technical_label": "Sun opposite Saturn",
+            "tier": "B",
+            "planets": [
+              "Sun",
+              "Saturn"
+            ],
+            "houses": [
+              12,
+              6
+            ],
+            "action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "opportunity": false
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-05",
+        "date": "2026-10-05",
+        "date_label": "5 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-05",
+            "title": "Moon enters Leo",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              10
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 10: career, reputation, authority and public results."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-07",
+        "date": "2026-10-07",
+        "date_label": "7 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-07",
+            "title": "Mars sextile Uranus",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Uranus"
+            ],
+            "houses": [
+              10,
+              8
+            ],
+            "aspect_name": "sextile",
+            "orb": 0.23877842526442805,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.584229484515187,
+            "detail": "Exact within approximately 0.24°.",
+            "registry_tier": "A-",
+            "registry_action": "Make one useful move while the opening is available.",
+            "registry_opportunity": true,
+            "registry_technical_label": "Mars sextile Uranus"
+          },
+          {
+            "event_date": "2026-10-07",
+            "title": "Mercury conjunction Venus",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Venus"
+            ],
+            "houses": [
+              1,
+              1
+            ],
+            "aspect_name": "conjunction",
+            "orb": 0.045661939665023965,
+            "applying_state": "exact",
+            "polarity": "neutral",
+            "importance": 5.479598203101636,
+            "detail": "Exact within approximately 0.05°."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-08",
+        "date": "2026-10-08",
+        "date_label": "8 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-08",
+            "title": "Moon enters Virgo",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              11
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 11: networks, audiences, alliances and long-term goals."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-10",
+        "date": "2026-10-10",
+        "date_label": "10 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-10",
+            "title": "Moon enters Libra",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-11",
+        "date": "2026-10-11",
+        "date_label": "11 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-11",
+            "title": "New Moon in Libra",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "new cycle",
+            "importance": 6.5,
+            "detail": "Seeds a cycle in house 12: rest, hidden matters, closure and psychological patterns.",
+            "registry_tier": "B+",
+            "registry_action": "Begin the piece you can support now.",
+            "registry_opportunity": false,
+            "registry_technical_label": "New Moon in Libra"
+          },
+          {
+            "event_date": "2026-10-11",
+            "title": "Venus square Mars",
+            "kind": "aspect",
+            "planets": [
+              "Venus",
+              "Mars"
+            ],
+            "houses": [
+              1,
+              10
+            ],
+            "aspect_name": "square",
+            "orb": 0.12525255085175502,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 5.472861947315453,
+            "detail": "Exact within approximately 0.13°."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-12",
+        "date": "2026-10-12",
+        "date_label": "12 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-12",
+            "title": "Moon enters Scorpio",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 1: identity, energy and personal direction."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-14",
+        "date": "2026-10-14",
+        "date_label": "14 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-14",
+            "title": "Moon enters Sagittarius",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              2
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 2: income, possessions and self-worth."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-15",
+        "date": "2026-10-15",
+        "date_label": "15 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-15",
+            "title": "Sun sextile Jupiter",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Jupiter"
+            ],
+            "houses": [
+              12,
+              10
+            ],
+            "aspect_name": "sextile",
+            "orb": 0.2561397417400144,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.683629692437055,
+            "detail": "Exact within approximately 0.26°.",
+            "registry_tier": "A-",
+            "registry_action": "Make the call, application, proposal or booking that increases future choice.",
+            "registry_opportunity": true,
+            "registry_technical_label": "Sun sextile Jupiter"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-16",
+        "date": "2026-10-16",
+        "date_label": "16 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-16",
+            "title": "Mars trine Saturn",
+            "kind": "aspect",
+            "planets": [
+              "Mars",
+              "Saturn"
+            ],
+            "houses": [
+              10,
+              6
+            ],
+            "aspect_name": "trine",
+            "orb": 0.19607110104699643,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 6.635492514293887,
+            "detail": "Exact within approximately 0.20°.",
+            "registry_tier": "A-",
+            "registry_action": "Make one useful move while the opening is available.",
+            "registry_opportunity": true,
+            "registry_technical_label": "Mars trine Saturn"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-17",
+        "date": "2026-10-17",
+        "date_label": "17 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-17",
+            "title": "Moon enters Capricorn",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              3
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 3: communication, sales, learning and local movement."
+          },
+          {
+            "event_date": "2026-10-17",
+            "title": "Pluto stations direct",
+            "kind": "station",
+            "planets": [
+              "Pluto"
+            ],
+            "houses": [
+              4
+            ],
+            "polarity": "release",
+            "importance": 8.2,
+            "detail": "Intensifies house 4: home, family and private foundations.",
+            "registry_tier": "A",
+            "registry_action": "Change the term, boundary or dependency that no longer matches the real balance.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Pluto stations direct"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-20",
+        "date": "2026-10-20",
+        "date_label": "20 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-20",
+            "title": "Moon enters Aquarius",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              4
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 4: home, family and private foundations."
+          },
+          {
+            "event_date": "2026-10-20",
+            "title": "Venus square Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Venus",
+              "Pluto"
+            ],
+            "houses": [
+              1,
+              4
+            ],
+            "aspect_name": "square",
+            "orb": 0.1430681365569626,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.596125771455864,
+            "detail": "Exact within approximately 0.14°.",
+            "registry_tier": "B",
+            "registry_action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Venus square Pluto"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-21",
+        "date": "2026-10-21",
+        "date_label": "21 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-21",
+            "title": "Sun trine True Node",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "True Node"
+            ],
+            "houses": [
+              12,
+              4
+            ],
+            "aspect_name": "trine",
+            "orb": 0.40313268766638544,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 5.505935706211177,
+            "detail": "Exact within approximately 0.40°.",
+            "registry_tier": "B",
+            "registry_action": "Keep the useful lesson. Stop carrying the obsolete route.",
+            "registry_opportunity": true,
+            "registry_technical_label": "Sun trine True Node"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-22",
+        "date": "2026-10-22",
+        "date_label": "22 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-22",
+            "title": "Moon enters Pisces",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              5
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 5: creativity, romance, pleasure and entrepreneurship."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-24",
+        "date": "2026-10-24",
+        "date_label": "24 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-24",
+            "title": "Moon enters Aries",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              6
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 6: work routines, health, service and operations."
+          },
+          {
+            "event_date": "2026-10-24",
+            "title": "Sun conjunction Venus",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Venus"
+            ],
+            "houses": [
+              1,
+              1
+            ],
+            "aspect_name": "conjunction",
+            "orb": 0.18327296404169147,
+            "applying_state": "exact",
+            "polarity": "neutral",
+            "importance": 5.781480672342328,
+            "detail": "Exact within approximately 0.18°."
+          },
+          {
+            "event_date": "2026-10-24",
+            "title": "Sun enters Scorpio",
+            "kind": "ingress",
+            "planets": [
+              "Sun"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "neutral",
+            "importance": 5.0,
+            "detail": "Moves into house 1: identity, energy and personal direction."
+          },
+          {
+            "event_date": "2026-10-24",
+            "display_label": "Venus cazimi · Sun conjunct Venus",
+            "technical_label": "Sun conjunct Venus",
+            "tier": "A",
+            "planets": [
+              "Sun",
+              "Venus"
+            ],
+            "houses": [
+              1,
+              1
+            ],
+            "action": "Choose what is worth more of your time, money or affection.",
+            "opportunity": false
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-25",
+        "date": "2026-10-25",
+        "date_label": "25 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-25",
+            "title": "Mercury stations retrograde",
+            "kind": "station",
+            "planets": [
+              "Mercury"
+            ],
+            "houses": [
+              1
+            ],
+            "polarity": "review",
+            "importance": 6.8,
+            "detail": "Intensifies house 1: identity, energy and personal direction.",
+            "registry_tier": "B+",
+            "registry_action": "Correct the detail before you repeat the decision.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Mercury stations retrograde"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-26",
+        "date": "2026-10-26",
+        "date_label": "26 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-26",
+            "title": "Full Moon in Taurus",
+            "kind": "lunation",
+            "planets": [
+              "Sun",
+              "Moon"
+            ],
+            "houses": [
+              7
+            ],
+            "polarity": "culmination",
+            "importance": 6.5,
+            "detail": "Brings visibility or culmination in house 7: relationships, clients, contracts and competitors.",
+            "registry_tier": "B+",
+            "registry_action": "Name what is complete, what needs an answer and what can now be released.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Full Moon in Taurus"
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Moon enters Taurus",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              7
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 7: relationships, clients, contracts and competitors."
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Sun square Pluto",
+            "kind": "aspect",
+            "planets": [
+              "Sun",
+              "Pluto"
+            ],
+            "houses": [
+              1,
+              4
+            ],
+            "aspect_name": "square",
+            "orb": 0.462565857169011,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 6.763481856478821,
+            "detail": "Exact within approximately 0.46°.",
+            "registry_tier": "B",
+            "registry_action": "Name the practical consequence, then choose the smallest move that improves the position.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Sun square Pluto"
+          },
+          {
+            "event_date": "2026-10-26",
+            "title": "Venus enters Libra",
+            "kind": "ingress",
+            "planets": [
+              "Venus"
+            ],
+            "houses": [
+              12
+            ],
+            "polarity": "neutral",
+            "importance": 6.2,
+            "detail": "Moves into house 12: rest, hidden matters, closure and psychological patterns.",
+            "registry_tier": "B+",
+            "registry_action": "Change the method that no longer fits the new conditions.",
+            "registry_opportunity": false,
+            "registry_technical_label": "Venus enters Libra"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-29",
+        "date": "2026-10-29",
+        "date_label": "29 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-29",
+            "title": "Moon enters Gemini",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              8
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 8: shared money, debt, tax, trust and obligations."
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-30",
+        "date": "2026-10-30",
+        "date_label": "30 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-30",
+            "title": "Venus trine True Node",
+            "kind": "aspect",
+            "planets": [
+              "Venus",
+              "True Node"
+            ],
+            "houses": [
+              12,
+              4
+            ],
+            "aspect_name": "trine",
+            "orb": 0.21902764686609544,
+            "applying_state": "exact",
+            "polarity": "opportunity",
+            "importance": 5.308019701017332,
+            "detail": "Exact within approximately 0.22°.",
+            "registry_tier": "B",
+            "registry_action": "Keep the useful lesson. Stop carrying the obsolete route.",
+            "registry_opportunity": true,
+            "registry_technical_label": "Venus trine True Node"
+          }
+        ]
+      },
+      {
+        "source_id": "monthly-day:2026-10-31",
+        "date": "2026-10-31",
+        "date_label": "31 October 2026",
+        "events": [
+          {
+            "event_date": "2026-10-31",
+            "title": "Mercury square Mars",
+            "kind": "aspect",
+            "planets": [
+              "Mercury",
+              "Mars"
+            ],
+            "houses": [
+              1,
+              10
+            ],
+            "aspect_name": "square",
+            "orb": 0.470860270827302,
+            "applying_state": "exact",
+            "polarity": "pressure",
+            "importance": 5.351904110244313,
+            "detail": "Exact within approximately 0.47°."
+          },
+          {
+            "event_date": "2026-10-31",
+            "title": "Moon enters Cancer",
+            "kind": "ingress",
+            "planets": [
+              "Moon"
+            ],
+            "houses": [
+              9
+            ],
+            "polarity": "neutral",
+            "importance": 1.6,
+            "detail": "Moves into house 9: travel, publishing, law, education and foreign markets."
+          }
+        ]
+      }
+    ],
     "story_skeleton": [
       {
         "id": "opening",
@@ -5328,5 +9741,5 @@
       }
     ]
   },
-  "base_hash": "258f2b44a732421a33271dcec993dbca7b911e5e62726829c8a49f36301a5b38"
+  "base_hash": "ab3e58bab5095b449643da232844433ecf86fef47c19df765931ad1213d24e4d"
 }
