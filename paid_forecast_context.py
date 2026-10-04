@@ -27,6 +27,11 @@ MONTHLY_BASE_SCHEMA_VERSION = "1.3"
 YEARLY_BASE_SCHEMA_VERSION = "1.0"
 DEFAULT_BASE_ROOT = Path(__file__).parent / "generated" / "paid_forecast_bases"
 
+# Paid Monthly pre-generates one reusable collective month in Luna's canonical
+# timezone. A reader's report/current timezone is separate from both this
+# storage basis and the birth timezone already resolved into the Natal Player.
+CANONICAL_MONTHLY_PREBUILT_TIMEZONE = "Australia/Sydney"
+
 
 def _json_value(value: Any) -> Any:
     if value is None or isinstance(value, (str, int, float, bool)):
@@ -423,21 +428,47 @@ def load_monthly_calculation_base(
     *,
     root: Path | str = DEFAULT_BASE_ROOT,
 ) -> dict[str, Any] | None:
-    path = monthly_base_path(sign, year, month, timezone_name, root=root)
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(value, dict):
-        return None
-    shared = value.get("shared_sky") or {}
-    if (
-        str(shared.get("sign") or "").casefold() != str(sign).casefold()
-        or str(shared.get("start") or "")[:7] != f"{int(year):04d}-{int(month):02d}"
-        or str(shared.get("timezone") or "") != str(timezone_name or "")
-    ):
-        return None
-    return value
+    """Load the prebuilt sign/month without confusing its storage clock with the reader clock.
+
+    First use an exact prebuilt base for the requested report timezone when one
+    exists. Otherwise reuse Luna's canonical Australia/Sydney prebuilt month.
+    The reader/report timezone remains separate in ``reader_context`` and in the
+    live deterministic personal overlay; the birth timezone has already been
+    resolved into the fixed Natal Player before this loader is called.
+    """
+    requested_timezone = str(timezone_name or "")
+    candidates = [requested_timezone]
+    if CANONICAL_MONTHLY_PREBUILT_TIMEZONE not in candidates:
+        candidates.append(CANONICAL_MONTHLY_PREBUILT_TIMEZONE)
+
+    for stored_timezone in candidates:
+        path = monthly_base_path(sign, year, month, stored_timezone, root=root)
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(value, dict):
+            continue
+
+        shared = value.get("shared_sky") or {}
+        if (
+            str(shared.get("sign") or "").casefold() != str(sign).casefold()
+            or str(shared.get("start") or "")[:7] != f"{int(year):04d}-{int(month):02d}"
+            or str(shared.get("timezone") or "") != stored_timezone
+        ):
+            continue
+
+        # Keep the canonical stored timezone intact because the 28–31 Daily
+        # briefs were built on that clock. Record the reader clock separately;
+        # app.py already uses it for personal activations and local-date checks.
+        shared = dict(shared)
+        shared["prebuilt_timezone"] = stored_timezone
+        shared["reader_timezone"] = requested_timezone
+        value = dict(value)
+        value["shared_sky"] = shared
+        return value
+
+    return None
 
 
 def load_yearly_calculation_base(
@@ -498,6 +529,7 @@ def natal_context(snapshot: Any) -> dict[str, Any]:
                 "evidence": str(getattr(item, "evidence", "")),
             }
             for item in (getattr(snapshot, "signatures", ()) or ())
+
         ],
         "dominant_element": str(getattr(snapshot, "dominant_element", "") or ""),
         "dominant_modality": str(getattr(snapshot, "dominant_modality", "") or ""),

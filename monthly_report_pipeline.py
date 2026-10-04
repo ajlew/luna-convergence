@@ -8,6 +8,7 @@ special-case renderer and guarantees like-for-like comparison across years.
 """
 
 from calendar import month_name
+from dataclasses import replace
 from datetime import date, timedelta
 from typing import Any
 
@@ -16,7 +17,7 @@ from concentration_theme import build_monthly_concentration_theme
 from monthly_narrative_v1 import build_monthly_narrative
 from synthesis import period_report
 
-MONTHLY_PIPELINE_VERSION = "1.4"
+MONTHLY_PIPELINE_VERSION = "1.5"
 
 
 def month_date_range(year: int, month: int) -> tuple[date, date]:
@@ -31,6 +32,33 @@ def month_date_range(year: int, month: int) -> tuple[date, date]:
     else:
         end = date(year, month + 1, 1) - timedelta(days=1)
     return start, end
+
+
+def _dedupe_key_dates(narrative: Any) -> Any:
+    """Render each resolved monthly date/event pair once.
+
+    Monthly arc construction can legitimately encounter the same structural
+    event through more than one beat. The customer-facing Key dates index is a
+    reference list, so duplicate date/evidence pairs add no information.
+    """
+    key_dates = tuple(getattr(narrative, "key_dates", ()) or ())
+    if not key_dates:
+        return narrative
+
+    seen: set[tuple[str, str]] = set()
+    unique = []
+    for item in key_dates:
+        date_key = " ".join(str(getattr(item, "date_label", "") or "").split()).casefold()
+        event_key = " ".join(str(getattr(item, "evidence", "") or "").split()).casefold()
+        identity = (date_key, event_key)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique.append(item)
+
+    if len(unique) == len(key_dates):
+        return narrative
+    return replace(narrative, key_dates=tuple(unique))
 
 
 def build_production_monthly_report(
@@ -61,6 +89,7 @@ def build_production_monthly_report(
         main_focus=main_focus,
         personal_question=personal_question,
     )
+    narrative = _dedupe_key_dates(narrative)
     return narrative, result
 
 
