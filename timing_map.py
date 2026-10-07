@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Iterable
 
-from astrology_engine import HOUSE_NAMES, positions_for_date
+from astrology_engine import HOUSE_NAMES, position_for_local_minute, positions_for_date
 from natal_snapshot import NatalSnapshot, NatalPosition
 from timing_insight import build_story_language
 from major_event_registry import major_sky_events, period_priority_signals, personalize_major_signals
@@ -177,6 +177,7 @@ class TransitHit:
     exact_date: date
     orb: float
     retrograde: bool
+    exact_time: str | None = None
 
 
 @dataclass(frozen=True)
@@ -236,6 +237,66 @@ def _target_longitudes(natal_longitude: float, aspect: str) -> tuple[float, ...]
     if abs(_wrap180(first - second)) < 1e-7:
         return (first,)
     return (first, second)
+
+
+def _refine_hit(
+    *,
+    transit_planet: str,
+    target_longitude: float,
+    timezone_name: str,
+    start_day: date,
+    start_minute: int,
+    end_day: date,
+    end_minute: int,
+) -> TransitHit:
+    """Refine a detected contact to the closest practical local minute.
+
+    The 365-day scan stays daily for speed. Only a small window around a
+    detected crossing or near-station minimum is resampled with Luna's existing
+    Swiss-Ephemeris-backed minute helper.
+    """
+    day_span = (end_day - start_day).days
+    first_offset = int(start_minute)
+    last_offset = day_span * 1440 + int(end_minute)
+    if last_offset < first_offset:
+        raise ValueError("end of refinement window must not precede start")
+
+    def sample(offset: int):
+        local_day = start_day + timedelta(days=offset // 1440)
+        minute_of_day = offset % 1440
+        position = position_for_local_minute(
+            local_day.isoformat(),
+            timezone_name,
+            minute_of_day,
+            transit_planet,
+        )
+        error = abs(_wrap180(position.longitude - target_longitude))
+        return error, local_day, minute_of_day, position
+
+    coarse_offsets = list(range(first_offset, last_offset + 1, 30))
+    if not coarse_offsets or coarse_offsets[-1] != last_offset:
+        coarse_offsets.append(last_offset)
+
+    coarse_candidates = [(sample(offset), offset) for offset in coarse_offsets]
+    (_, best_offset) = min(coarse_candidates, key=lambda item: item[0][0])
+
+    fine_start = max(first_offset, best_offset - 45)
+    fine_end = min(last_offset, best_offset + 45)
+    fine_candidates = [
+        (sample(offset), offset)
+        for offset in range(fine_start, fine_end + 1)
+    ]
+    (orb, local_day, minute_of_day, position), _ = min(
+        fine_candidates,
+        key=lambda item: item[0][0],
+    )
+
+    return TransitHit(
+        exact_date=local_day,
+        orb=round(orb, 4),
+        retrograde=bool(position.retrograde),
+        exact_time=f"{minute_of_day // 60:02d}:{minute_of_day % 60:02d}",
+    )
 
 
 def _periods_from_active(days: list[date], active: list[bool]) -> list[TransitPeriod]:
@@ -365,6 +426,7 @@ def _scan_story(
     aspect: str,
     days: list[date],
     transit_positions: dict[str, list],
+    timezone_name: str,
 ) -> TransitStory | None:
     allowed_orb = TRANSIT_ORBS[transit_planet]
     all_periods: list[TransitPeriod] = []
@@ -377,8 +439,8 @@ def _scan_story(
         all_periods.extend(_periods_from_active(days, active))
 
         # A sign change around the exact target captures direct and retrograde
-        # passes. The closer of the two sampled days is used as the exact-date
-        # label; Luna deliberately claims day-level, not minute-level, timing.
+        # passes. The daily scan identifies the small interval; the contact is
+        # then refined to the closest practical local minute.
         for index in range(len(days) - 1):
             e0, e1 = errors[index], errors[index + 1]
             if abs(e0) > 20 or abs(e1) > 20:
@@ -386,25 +448,34 @@ def _scan_story(
                 continue
             crossed = e0 == 0.0 or e1 == 0.0 or (e0 < 0 < e1) or (e1 < 0 < e0)
             if crossed:
-                choose = index if abs(e0) <= abs(e1) else index + 1
                 all_hits.append(
-                    TransitHit(
-                        exact_date=days[choose],
-                        orb=round(abs(errors[choose]), 3),
-                        retrograde=bool(positions[choose].retrograde),
+                    _refine_hit(
+                        transit_planet=transit_planet,
+                        target_longitude=target_longitude,
+                        timezone_name=timezone_name,
+                        start_day=days[index],
+                        start_minute=12 * 60,
+                        end_day=days[index + 1],
+                        end_minute=12 * 60,
                     )
                 )
 
         # A station can turn just short of a mathematical crossing. Retain a
         # very close local minimum so the timing map does not hide that peak.
+        # The daily sample is at noon, so search noon-before to noon-after to
+        # avoid losing a closest approach that falls near a midnight boundary.
         for index in range(1, len(days) - 1):
             current = abs(errors[index])
             if current <= 0.12 and current <= abs(errors[index - 1]) and current <= abs(errors[index + 1]):
                 all_hits.append(
-                    TransitHit(
-                        exact_date=days[index],
-                        orb=round(current, 3),
-                        retrograde=bool(positions[index].retrograde),
+                    _refine_hit(
+                        transit_planet=transit_planet,
+                        target_longitude=target_longitude,
+                        timezone_name=timezone_name,
+                        start_day=days[index - 1],
+                        start_minute=12 * 60,
+                        end_day=days[index + 1],
+                        end_minute=12 * 60,
                     )
                 )
 
@@ -462,8 +533,8 @@ def build_timing_map(
 
     The calculation is tropical/geocentric because both the NatalSnapshot and
     astrology_engine use Swiss Ephemeris geocentric planetary positions. The
-    report is day-level by design: exact-date labels are the closest local date
-    to an exact transit contact, not a claim about minute-level event timing.
+    broad annual scan is daily; detected contacts are then refined to the
+    closest practical local minute before the report is returned.
     """
     if max_stories < 3:
         raise ValueError("max_stories must be at least 3")
@@ -487,6 +558,7 @@ def build_timing_map(
                     aspect=aspect,
                     days=days,
                     transit_positions=transit_positions,
+                    timezone_name=timezone_name,
                 )
                 if story is not None:
                     stories.append(story)
