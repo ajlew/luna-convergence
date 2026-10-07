@@ -178,6 +178,8 @@ class TransitHit:
     orb: float
     retrograde: bool
     exact_time: str | None = None
+    pass_number: int = 1
+    pass_label: str = "Initial activation"
 
 
 @dataclass(frozen=True)
@@ -211,6 +213,14 @@ class TransitStory:
     @property
     def last_date(self) -> date:
         return max(period.end_date for period in self.periods)
+
+    @property
+    def pass_count(self) -> int:
+        return len(self.hits)
+
+    @property
+    def is_multi_pass(self) -> bool:
+        return len(self.hits) > 1
 
 
 @dataclass(frozen=True)
@@ -332,7 +342,10 @@ def _merge_periods(periods: Iterable[TransitPeriod], gap_days: int = 2) -> tuple
 
 
 def _dedupe_hits(hits: Iterable[TransitHit], minimum_gap_days: int = 3) -> tuple[TransitHit, ...]:
-    ordered = sorted(hits, key=lambda item: item.exact_date)
+    ordered = sorted(
+        hits,
+        key=lambda item: (item.exact_date, item.exact_time or ""),
+    )
     result: list[TransitHit] = []
     for hit in ordered:
         if result and abs((hit.exact_date - result[-1].exact_date).days) <= minimum_gap_days:
@@ -341,6 +354,54 @@ def _dedupe_hits(hits: Iterable[TransitHit], minimum_gap_days: int = 3) -> tuple
             continue
         result.append(hit)
     return tuple(result)
+
+
+def _label_transit_passes(hits: Iterable[TransitHit]) -> tuple[TransitHit, ...]:
+    """Order and label repeated exact hits as one transit arc.
+
+    The common three-pass sequence is:
+      direct     -> Initial activation
+      retrograde -> Retrograde return
+      direct     -> Final pass
+
+    A rolling 365-day report can begin or end in the middle of that sequence.
+    Therefore the labels are derived from the motion actually visible in the
+    calculated hits rather than inventing a missing pass outside the report.
+    """
+    ordered = sorted(
+        hits,
+        key=lambda item: (item.exact_date, item.exact_time or ""),
+    )
+    if not ordered:
+        return ()
+
+    labelled: list[TransitHit] = []
+    for index, hit in enumerate(ordered):
+        previous_hits = ordered[:index]
+        is_last = index == len(ordered) - 1
+
+        if index == 0:
+            label = "Retrograde return" if hit.retrograde else "Initial activation"
+        elif hit.retrograde:
+            label = "Retrograde return"
+        elif any(previous.retrograde for previous in previous_hits):
+            label = "Final pass" if is_last else "Direct return"
+        elif is_last:
+            label = "Final pass"
+        else:
+            label = "Return pass"
+
+        labelled.append(
+            TransitHit(
+                exact_date=hit.exact_date,
+                orb=hit.orb,
+                retrograde=hit.retrograde,
+                exact_time=hit.exact_time,
+                pass_number=index + 1,
+                pass_label=label,
+            )
+        )
+    return tuple(labelled)
 
 
 def _polarity(transit_planet: str, aspect: str) -> str:
@@ -479,7 +540,7 @@ def _scan_story(
                     )
                 )
 
-    hits = _dedupe_hits(all_hits)
+    hits = _label_transit_passes(_dedupe_hits(all_hits))
     periods = _merge_periods(all_periods)
     if not hits or not periods:
         return None
