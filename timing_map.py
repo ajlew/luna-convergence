@@ -245,6 +245,9 @@ class TransitStory:
     periods: tuple[TransitPeriod, ...]
     hits: tuple[TransitHit, ...]
     supporting_triggers: tuple[SupportingTrigger, ...] = ()
+    base_score: float | None = None
+    exactness_bonus: float = 0.0
+    overlap_count: int = 0
 
     @property
     def first_date(self) -> date:
@@ -706,6 +709,68 @@ def _story_score(transit_planet: str, target: NatalPosition, aspect: str, hit_co
     return round(score, 3)
 
 
+def _exactness_bonus(hits: Iterable[TransitHit]) -> float:
+    """Small ranking lift for genuinely exact contacts.
+
+    Step 3 refines hits to the closest practical local minute. Most true
+    crossings therefore land extremely close to 0°, while station-near misses
+    can remain a little wider. Exactness is a tie-breaker, not a replacement
+    for planet/target/aspect importance.
+    """
+    values = [abs(float(hit.orb)) for hit in hits]
+    if not values:
+        return 0.0
+    best = min(values)
+    closeness = max(0.0, 1.0 - min(best, 0.12) / 0.12)
+    return round(0.08 * closeness, 4)
+
+
+def _stories_cluster(left: TransitStory, right: TransitStory, window_days: int = 21) -> bool:
+    """Return True when two transit arcs peak in the same strategic window.
+
+    We use exact-pass proximity rather than broad active-window overlap because
+    slow-planet windows can last months. A 21-day peak window identifies a real
+    concentration without making the whole year one permanent cluster.
+    """
+    return any(
+        abs((left_hit.exact_date - right_hit.exact_date).days) <= window_days
+        for left_hit in left.hits
+        for right_hit in right.hits
+    )
+
+
+def _apply_step6_ranking_bonuses(stories: Iterable[TransitStory]) -> tuple[TransitStory, ...]:
+    """Finish Python-owned annual ranking before any LLM sees the year.
+
+    Base scoring already weights transit planet, natal target, aspect, angular
+    emphasis and repeated passes. Step 6 adds the two remaining build-plan
+    signals: exactness and overlapping peak clusters. Both are intentionally
+    modest so they refine the ranking rather than overpower the natal geometry.
+    """
+    source = tuple(stories)
+    ranked: list[TransitStory] = []
+    for story in source:
+        exact_bonus = _exactness_bonus(story.hits)
+        overlap_count = sum(
+            1
+            for other in source
+            if other is not story and _stories_cluster(story, other)
+        )
+        overlap_bonus = min(overlap_count, 3) * 0.04
+        base = float(story.score)
+        final_score = round(base * (1.0 + exact_bonus + overlap_bonus), 3)
+        ranked.append(
+            replace(
+                story,
+                score=final_score,
+                base_score=round(base, 3),
+                exactness_bonus=round(exact_bonus, 4),
+                overlap_count=overlap_count,
+            )
+        )
+    return tuple(ranked)
+
+
 def _milestone_headline(transit_planet: str, target_planet: str, aspect: str) -> str | None:
     if transit_planet == target_planet and aspect == "conjunction":
         return f"{transit_planet.upper()} RETURN"
@@ -837,6 +902,9 @@ def build_timing_map(
     """
     if max_stories < 3:
         raise ValueError("max_stories must be at least 3")
+    # Production is intentionally sparse. Explicit QA calls may request fewer,
+    # but no caller can push more than twelve annual transit arcs into the map.
+    max_stories = min(int(max_stories), 12)
     end_date = start_date + timedelta(days=364)
     days = [start_date + timedelta(days=offset) for offset in range(365)]
 
@@ -865,6 +933,12 @@ def build_timing_map(
                 )
                 if story is not None:
                     stories.append(story)
+
+    # Step 6: all ranking stays deterministic and Python-owned. The base score
+    # already carries planet/target/aspect/angular/repeated-pass importance;
+    # refine it with exactness and overlapping peak-cluster evidence before
+    # selecting the 8–12-ish arcs that can ever reach Luna Voice.
+    stories = list(_apply_step6_ranking_bonuses(stories))
 
     # Ranking is importance first, but reserve room for opportunity and named
     # life-cycle milestones. A year should not become a catalogue of pressure
