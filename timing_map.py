@@ -1,7 +1,7 @@
 from __future__ import annotations
 from luna_life_scenes import domain_command, human_focus, life_scene_line
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from typing import Iterable
 
@@ -12,6 +12,25 @@ from major_event_registry import major_sky_events, period_priority_signals, pers
 
 
 TRANSIT_PLANETS = ("Jupiter", "Saturn", "Uranus", "Neptune", "Pluto")
+
+# Fast planets never become top-level annual stories. They can only reinforce a
+# selected slow-planet arc as a short-lived supporting trigger. The Moon is
+# deliberately excluded from the annual trigger layer.
+FAST_TRIGGER_PLANETS = ("Sun", "Mercury", "Venus", "Mars")
+FAST_TRIGGER_WEIGHTS = {
+    "Sun": 1.15,
+    "Mercury": 1.00,
+    "Venus": 1.08,
+    "Mars": 1.22,
+}
+FAST_TRIGGER_ASPECT_WEIGHTS = {
+    "conjunction": 1.25,
+    "opposition": 1.18,
+    "square": 1.15,
+    "trine": 1.05,
+    "sextile": 1.00,
+}
+MAX_SUPPORTING_TRIGGERS = 3
 ASPECT_ANGLES = {
     "conjunction": 0.0,
     "sextile": 60.0,
@@ -189,6 +208,26 @@ class TransitPeriod:
 
 
 @dataclass(frozen=True)
+class SupportingTrigger:
+    trigger_planet: str
+    aspect: str
+    natal_target: str
+    exact_date: date
+    orb: float
+    retrograde: bool
+    exact_time: str | None = None
+    activates_pass_number: int | None = None
+
+    @property
+    def technical_label(self) -> str:
+        return f"{self.trigger_planet} {self.aspect} natal {self.natal_target}"
+
+    @property
+    def activation_label(self) -> str:
+        return f"{self.trigger_planet} activates the pattern"
+
+
+@dataclass(frozen=True)
 class TransitStory:
     transit_planet: str
     natal_target: str
@@ -205,6 +244,7 @@ class TransitStory:
     watch: str
     periods: tuple[TransitPeriod, ...]
     hits: tuple[TransitHit, ...]
+    supporting_triggers: tuple[SupportingTrigger, ...] = ()
 
     @property
     def first_date(self) -> date:
@@ -403,6 +443,204 @@ def _label_transit_passes(hits: Iterable[TransitHit]) -> tuple[TransitHit, ...]:
         )
     return tuple(labelled)
 
+
+
+def _date_in_periods(day: date, periods: Iterable[TransitPeriod]) -> bool:
+    return any(period.start_date <= day <= period.end_date for period in periods)
+
+
+def _dedupe_supporting_triggers(
+    triggers: Iterable[SupportingTrigger],
+    minimum_gap_days: int = 2,
+) -> tuple[SupportingTrigger, ...]:
+    """Remove duplicate detections of the same fast-planet contact."""
+    ordered = sorted(
+        triggers,
+        key=lambda item: (
+            item.trigger_planet,
+            item.aspect,
+            item.exact_date,
+            item.exact_time or "",
+        ),
+    )
+    result: list[SupportingTrigger] = []
+    for trigger in ordered:
+        comparable = next(
+            (
+                index
+                for index in range(len(result) - 1, -1, -1)
+                if result[index].trigger_planet == trigger.trigger_planet
+                and result[index].aspect == trigger.aspect
+                and abs((trigger.exact_date - result[index].exact_date).days) <= minimum_gap_days
+            ),
+            None,
+        )
+        if comparable is not None:
+            if trigger.orb < result[comparable].orb:
+                result[comparable] = trigger
+            continue
+        result.append(trigger)
+    return tuple(sorted(result, key=lambda item: (item.exact_date, item.exact_time or "")))
+
+
+def _select_supporting_triggers(
+    story: TransitStory,
+    triggers: Iterable[SupportingTrigger],
+    maximum: int = MAX_SUPPORTING_TRIGGERS,
+) -> tuple[SupportingTrigger, ...]:
+    """Keep only the strongest short-lived activators of one main transit arc.
+
+    Proximity to the main arc's exact passes leads the ranking. Planet/aspect
+    weights then break ties. We prefer different fast planets so Mercury does
+    not fill the card with several similar hits while Sun, Venus or Mars vanish.
+    """
+    if maximum <= 0 or not story.hits:
+        return ()
+
+    ranked: list[tuple[tuple, SupportingTrigger]] = []
+    for trigger in triggers:
+        if not _date_in_periods(trigger.exact_date, story.periods):
+            continue
+        nearest_hit = min(
+            story.hits,
+            key=lambda hit: abs((trigger.exact_date - hit.exact_date).days),
+        )
+        distance = abs((trigger.exact_date - nearest_hit.exact_date).days)
+        attached = replace(
+            trigger,
+            activates_pass_number=getattr(nearest_hit, "pass_number", None),
+        )
+        rank = (
+            distance,
+            -FAST_TRIGGER_WEIGHTS.get(trigger.trigger_planet, 0.0),
+            -FAST_TRIGGER_ASPECT_WEIGHTS.get(trigger.aspect, 0.0),
+            trigger.orb,
+            trigger.exact_date,
+            trigger.exact_time or "",
+        )
+        ranked.append((rank, attached))
+
+    ranked.sort(key=lambda item: item[0])
+    selected: list[SupportingTrigger] = []
+    used_planets: set[str] = set()
+
+    # First pass: diversity across Sun / Mercury / Venus / Mars.
+    for _, trigger in ranked:
+        if trigger.trigger_planet in used_planets:
+            continue
+        selected.append(trigger)
+        used_planets.add(trigger.trigger_planet)
+        if len(selected) >= maximum:
+            return tuple(sorted(selected, key=lambda item: (item.exact_date, item.exact_time or "")))
+
+    # Second pass: fill any remaining slots with the next strongest trigger.
+    for _, trigger in ranked:
+        if trigger in selected:
+            continue
+        selected.append(trigger)
+        if len(selected) >= maximum:
+            break
+
+    return tuple(sorted(selected, key=lambda item: (item.exact_date, item.exact_time or "")))
+
+
+def _supporting_triggers_for_story(
+    *,
+    story: TransitStory,
+    target: NatalPosition,
+    days: list[date],
+    trigger_positions: dict[str, list],
+    timezone_name: str,
+    maximum: int = MAX_SUPPORTING_TRIGGERS,
+) -> tuple[SupportingTrigger, ...]:
+    """Calculate fast-planet activators only inside one selected main arc.
+
+    This deliberately does not create Sun/Mercury/Venus/Mars annual stories.
+    The same five aspect geometries are scanned against the main arc's natal
+    target, but minute refinement is only performed when the daily crossing is
+    inside an active slow-planet window.
+    """
+    candidates: list[SupportingTrigger] = []
+
+    for trigger_planet in FAST_TRIGGER_PLANETS:
+        positions = trigger_positions[trigger_planet]
+        for aspect in ASPECT_ANGLES:
+            for target_longitude in _target_longitudes(target.longitude, aspect):
+                errors = [_wrap180(position.longitude - target_longitude) for position in positions]
+
+                for index in range(len(days) - 1):
+                    if not (
+                        _date_in_periods(days[index], story.periods)
+                        or _date_in_periods(days[index + 1], story.periods)
+                    ):
+                        continue
+                    e0, e1 = errors[index], errors[index + 1]
+                    if abs(e0) > 20 or abs(e1) > 20:
+                        continue
+                    crossed = e0 == 0.0 or e1 == 0.0 or (e0 < 0 < e1) or (e1 < 0 < e0)
+                    if not crossed:
+                        continue
+                    hit = _refine_hit(
+                        transit_planet=trigger_planet,
+                        target_longitude=target_longitude,
+                        timezone_name=timezone_name,
+                        start_day=days[index],
+                        start_minute=12 * 60,
+                        end_day=days[index + 1],
+                        end_minute=12 * 60,
+                    )
+                    if _date_in_periods(hit.exact_date, story.periods):
+                        candidates.append(
+                            SupportingTrigger(
+                                trigger_planet=trigger_planet,
+                                aspect=aspect,
+                                natal_target=target.planet,
+                                exact_date=hit.exact_date,
+                                orb=hit.orb,
+                                retrograde=hit.retrograde,
+                                exact_time=hit.exact_time,
+                            )
+                        )
+
+                # Fast planets can also turn just short of exact. Preserve a
+                # very close local minimum, mirroring the main transit scan.
+                for index in range(1, len(days) - 1):
+                    if not _date_in_periods(days[index], story.periods):
+                        continue
+                    current = abs(errors[index])
+                    if not (
+                        current <= 0.12
+                        and current <= abs(errors[index - 1])
+                        and current <= abs(errors[index + 1])
+                    ):
+                        continue
+                    hit = _refine_hit(
+                        transit_planet=trigger_planet,
+                        target_longitude=target_longitude,
+                        timezone_name=timezone_name,
+                        start_day=days[index - 1],
+                        start_minute=12 * 60,
+                        end_day=days[index + 1],
+                        end_minute=12 * 60,
+                    )
+                    if _date_in_periods(hit.exact_date, story.periods):
+                        candidates.append(
+                            SupportingTrigger(
+                                trigger_planet=trigger_planet,
+                                aspect=aspect,
+                                natal_target=target.planet,
+                                exact_date=hit.exact_date,
+                                orb=hit.orb,
+                                retrograde=hit.retrograde,
+                                exact_time=hit.exact_time,
+                            )
+                        )
+
+    return _select_supporting_triggers(
+        story,
+        _dedupe_supporting_triggers(candidates),
+        maximum=maximum,
+    )
 
 def _polarity(transit_planet: str, aspect: str) -> str:
     if aspect in {"square", "opposition"}:
@@ -608,6 +846,10 @@ def build_timing_map(
         planet: [positions[planet] for positions in daily_positions]
         for planet in TRANSIT_PLANETS
     }
+    trigger_positions = {
+        planet: [positions[planet] for positions in daily_positions]
+        for planet in FAST_TRIGGER_PLANETS
+    }
 
     stories: list[TransitStory] = []
     for target in _targets(snapshot):
@@ -666,6 +908,30 @@ def build_timing_map(
 
     selected = list(dict.fromkeys(selected))
     selected.sort(key=lambda item: (item.first_date, -item.score))
+
+    # Step 5: fast planets are calculated only after the main slow-planet arcs
+    # survive ranking. They are attached as supporting evidence and can never
+    # become top-level annual stories.
+    targets_by_name = {item.planet: item for item in _targets(snapshot)}
+    selected_with_triggers: list[TransitStory] = []
+    for story in selected:
+        target = targets_by_name.get(story.natal_target)
+        if target is None:
+            selected_with_triggers.append(story)
+            continue
+        selected_with_triggers.append(
+            replace(
+                story,
+                supporting_triggers=_supporting_triggers_for_story(
+                    story=story,
+                    target=target,
+                    days=days,
+                    trigger_positions=trigger_positions,
+                    timezone_name=timezone_name,
+                ),
+            )
+        )
+    selected = selected_with_triggers
 
     # Keep Luna's first reference frame solar: the reader's Sun sign is whole-sign
     # House 1 for shared-sky context.  Natal geometry below adds personal precision
