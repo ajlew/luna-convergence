@@ -39,6 +39,7 @@ VOICE_RULES = """Write one connected strategic story in second person.
 
 Rules:
 - Keep the reader at the centre of the story.
+- If reader_context is supplied, use the stated priority or question to decide emphasis only; never change the calculated chronology or invent astrology to answer it.
 - Preserve the supplied chronology from the beginning of the year window to the end.
 - Use only the astrology and deterministic interpretation supplied below.
 - Treat each Game as part of one unfolding year, not as an isolated horoscope entry.
@@ -181,9 +182,17 @@ def _voice_game(value: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _voice_source(packet: YearPacket | dict[str, Any]) -> dict[str, Any]:
+def _voice_source(
+    packet: YearPacket | dict[str, Any],
+    reader_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Keep the one voice call compact, chronological and reader-facing."""
     value = _packet_dict(packet)
+    context = {
+        key: str(val or "").strip()
+        for key, val in dict(reader_context or {}).items()
+        if str(val or "").strip()
+    }
     return {
         "period": value.get("period") or {},
         "natal_fingerprint": value.get("natal_fingerprint") or {},
@@ -194,11 +203,15 @@ def _voice_source(packet: YearPacket | dict[str, Any]) -> dict[str, Any]:
             for item in list(value.get("games") or [])
             if isinstance(item, dict)
         ],
+        "reader_context": context,
     }
 
 
-def build_year_ahead_prompt(packet: YearPacket | dict[str, Any]) -> str:
-    source = _voice_source(packet)
+def build_year_ahead_prompt(
+    packet: YearPacket | dict[str, Any],
+    reader_context: dict[str, Any] | None = None,
+) -> str:
+    source = _voice_source(packet, reader_context=reader_context)
     facts_json = json.dumps(
         source,
         ensure_ascii=False,
@@ -227,6 +240,7 @@ def _estimated_input_tokens(system_prompt: str, user_prompt: str) -> int:
 def _prepare_request(
     packet: YearPacket | dict[str, Any],
     preferred_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+    reader_context: dict[str, Any] | None = None,
 ) -> tuple[str, int, int]:
     """Size the single request before any provider call is made.
 
@@ -235,7 +249,7 @@ def _prepare_request(
     reducing only the completion allowance. It never retries and never drops
     calculated Games, passes or dates.
     """
-    prompt = build_year_ahead_prompt(packet)
+    prompt = build_year_ahead_prompt(packet, reader_context=reader_context)
     estimated_input = _estimated_input_tokens(SYSTEM_PROMPT, prompt)
 
     available = TARGET_TOTAL_TOKENS - estimated_input
@@ -273,6 +287,7 @@ def generate_year_ahead_voice(
     base_url: str,
     model: str,
     api_key: str,
+    reader_context: dict[str, Any] | None = None,
     max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> str:
@@ -300,6 +315,7 @@ def generate_year_ahead_voice(
     prompt, completion_tokens, _estimated_input = _prepare_request(
         packet,
         preferred_completion_tokens=max_completion_tokens,
+        reader_context=reader_context,
     )
     payload: dict[str, Any] = {
         "model": model,

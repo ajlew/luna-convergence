@@ -282,8 +282,15 @@ def render_year_ahead(
     base_url: str,
     model: str,
     api_key: str,
+    voice_prose: str | None = None,
+    voice_error: str = "",
 ) -> None:
-    """Render the calculated report first; voice is optional enrichment."""
+    """Render the calculated report first; voice is optional enrichment.
+
+    Paid Yearly can supply the already-generated prose so the screen and PDF
+    use the same single Luna call. Free Year Ahead keeps the existing cached
+    in-view voice behaviour by leaving voice_prose as None.
+    """
     stats = dict(packet.year_statistics or {})
 
     st.markdown(
@@ -297,13 +304,17 @@ def render_year_ahead(
 
     _render_year_strip(packet)
 
-    prose, error = _voice_once(
-        packet,
-        voice_enabled=voice_enabled,
-        base_url=base_url,
-        model=model,
-        api_key=api_key,
-    )
+    if voice_prose is None:
+        prose, error = _voice_once(
+            packet,
+            voice_enabled=voice_enabled,
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+        )
+    else:
+        prose = str(voice_prose or "").strip()
+        error = str(voice_error or "").strip()
 
     if prose:
         st.markdown("## Read the year")

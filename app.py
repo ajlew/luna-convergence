@@ -122,7 +122,9 @@ from timing_map import (
 
 
 from year_ahead import build_year_packet
+from year_ahead_voice import generate_year_ahead_voice
 from year_ahead_view import render_year_ahead
+from year_ahead_pdf import build_year_ahead_pdf, year_ahead_filename
 from major_event_registry import group_personal_activations, group_serialized_personal_activations, personalize_serialized_signals
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
@@ -165,8 +167,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.72"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Single Timeline"
+APP_VERSION = "v3.73"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Year Ahead Rebuild"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -716,13 +718,8 @@ def browser_local_date() -> date:
 
 
 def _rolling_year_end(start_date: date) -> date:
-    """Return the inclusive final day of a rolling 12-month window."""
-    try:
-        anniversary = start_date.replace(year=start_date.year + 1)
-    except ValueError:
-        # 29 February has no direct anniversary in a non-leap year.
-        anniversary = date(start_date.year + 1, 3, 1)
-    return anniversary - timedelta(days=1)
+    """Return day 365 of the selected rolling Year Ahead window."""
+    return start_date + timedelta(days=364)
 
 
 def _yearly_period_code(start_date: date, end_date: date | None = None) -> str:
@@ -3617,29 +3614,26 @@ def payment_success_page() -> None:
                 order_reference=order_reference,
             )
         elif product_code in {"YEAR", "YEARLY"}:
-            start_date, end_date, period_key = _yearly_period_window(period_code)
-            result = period_report(
-                sign,
-                start_date,
-                end_date,
-                timezone_name,
-                period_key,
-                transition_count=9,
-                nearest_city=nearest_city,
+            start_date, end_date, _period_key = _yearly_period_window(period_code)
+            product = _build_paid_year_ahead_product(
+                natal_profile_value=natal_profile_value,
+                start_date=start_date,
+                end_date=end_date,
+                timezone_name=timezone_name,
                 main_focus=main_focus,
+                personal_question=personal_question,
             )
-            if natal_profile_value:
-                result["natal_profile"] = natal_profile_value
-                result["natal_summary"] = natal_summary_value
-                result["natal_precision"] = natal_precision_value
-                _prepare_paid_yearly_personal_layer(result)
-            pdf_bytes = build_report_pdf(
-                result,
+            period_label = _yearly_period_label(start_date, end_date)
+            pdf_bytes = build_year_ahead_pdf(
+                product["packet"],
+                voice_prose=product["voice_prose"],
+                sign=sign,
+                label=period_label,
                 main_focus=main_focus,
                 personal_question=personal_question,
                 order_reference=order_reference,
             )
-            pdf_name = report_filename(result)
+            pdf_name = year_ahead_filename(sign, start_date, end_date)
             st.download_button(
                 "Download your personalised PDF",
                 data=pdf_bytes,
@@ -3653,8 +3647,10 @@ def payment_success_page() -> None:
                 attachment_bytes=pdf_bytes,
                 attachment_filename=pdf_name,
             )
-            _render_snapshot_yearly_report(
-                result,
+            _render_paid_year_ahead_product(
+                product,
+                label=period_label,
+                natal_precision=natal_precision_value,
                 order_reference=order_reference,
             )
         else:
@@ -4157,33 +4153,32 @@ def _owner_report_output(order: dict) -> dict:
         }
 
     if product_code in {"YEAR", "YEARLY"}:
-        start_date, end_date, period_key = _yearly_period_window(period_code)
-        result = period_report(
-            sign,
-            start_date,
-            end_date,
-            timezone_name,
-            period_key,
-            transition_count=9,
-            nearest_city=nearest_city,
+        start_date, end_date, _period_key = _yearly_period_window(period_code)
+        product = _build_paid_year_ahead_product(
+            natal_profile_value=str(order.get("natal_profile") or ""),
+            start_date=start_date,
+            end_date=end_date,
+            timezone_name=timezone_name,
             main_focus=main_focus,
+            personal_question=personal_question,
         )
-        if str(order.get("natal_profile") or ""):
-            result["natal_profile"] = str(order.get("natal_profile") or "")
-            result["natal_summary"] = str(order.get("natal_summary") or "")
-            result["natal_precision"] = str(order.get("natal_precision") or "")
-            _prepare_paid_yearly_personal_layer(result)
-        pdf_bytes = build_report_pdf(
-            result,
+        period_label = _yearly_period_label(start_date, end_date)
+        pdf_bytes = build_year_ahead_pdf(
+            product["packet"],
+            voice_prose=product["voice_prose"],
+            sign=sign,
+            label=period_label,
             main_focus=main_focus,
             personal_question=personal_question,
             order_reference=order_reference,
         )
         return {
             "product_code": product_code,
-            "result": result,
+            "product": product,
+            "period_label": period_label,
+            "natal_precision": str(order.get("natal_precision") or ""),
             "pdf": pdf_bytes,
-            "pdf_name": report_filename(result),
+            "pdf_name": year_ahead_filename(sign, start_date, end_date),
         }
 
     raise ValueError("Owner access received an unrecognised report type.")
@@ -4227,8 +4222,10 @@ def _render_owner_report(order: dict, key_context: str) -> None:
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
         )
     else:
-        _render_snapshot_yearly_report(
-            output["result"],
+        _render_paid_year_ahead_product(
+            output["product"],
+            label=str(output.get("period_label") or "Rolling 365 days"),
+            natal_precision=str(output.get("natal_precision") or ""),
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
         )
 
@@ -9504,11 +9501,142 @@ def _snapshot_from_encoded_natal_profile(profile_value: str, *, timezone_name: s
         sun_uncertain=(),
         moon_uncertain=(moon.sign,) if moon is not None else (),
         themes=(),
-        signatures=(),
+        signatures=tuple(_build_signatures(list(aspects), limit=4)),
         concentration_theme={},
         dominant_element=dominant_element,
         dominant_modality=dominant_modality,
     )
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_paid_year_ahead_voice(
+    packet_json: str,
+    reader_context_json: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+) -> dict:
+    """One cached Luna call for one finished paid Year Packet.
+
+    Errors are cached too, so a provider failure does not create an automatic
+    retry loop on Streamlit reruns. The deterministic paid report still renders.
+    """
+    try:
+        prose = generate_year_ahead_voice(
+            json.loads(packet_json),
+            base_url=base_url,
+            model=model,
+            api_key=_api_key,
+            reader_context=json.loads(reader_context_json),
+        )
+        return {"prose": prose, "error": ""}
+    except Exception as exc:
+        message = " ".join(str(exc or "Voice unavailable").split())[:700]
+        if _api_key:
+            message = message.replace(_api_key, "[redacted]")
+        return {"prose": "", "error": message}
+
+
+def _paid_year_ahead_voice(packet, *, main_focus: str, personal_question: str) -> tuple[str, str]:
+    if not _luna_voice_ready():
+        return "", "Luna Voice is not configured."
+    context = {
+        "main_priority": str(main_focus or "General overview").strip(),
+        "personal_question": str(personal_question or "").strip(),
+    }
+    result = _cached_paid_year_ahead_voice(
+        json.dumps(packet.to_dict(), ensure_ascii=False, sort_keys=True, default=str),
+        json.dumps(context, ensure_ascii=False, sort_keys=True),
+        LUNA_VOICE_BASE_URL,
+        LUNA_VOICE_MODEL,
+        LUNA_VOICE_API_KEY,
+    )
+    return str(result.get("prose") or ""), str(result.get("error") or "")
+
+
+def _build_paid_year_ahead_product(
+    *,
+    natal_profile_value: str,
+    start_date: date,
+    end_date: date,
+    timezone_name: str,
+    main_focus: str,
+    personal_question: str,
+) -> dict:
+    """Build the paid Year Ahead from the same deterministic architecture as the master plan."""
+    snapshot = _snapshot_from_encoded_natal_profile(
+        natal_profile_value,
+        timezone_name=timezone_name,
+    )
+    if snapshot is None:
+        raise ValueError("The paid Year Ahead is missing the derived natal geometry required for personal transits.")
+
+    timing_report = build_timing_map(
+        snapshot,
+        start_date=start_date,
+        timezone_name=timezone_name,
+        max_stories=10,
+    )
+    if timing_report.end_date != end_date:
+        raise ValueError(
+            "The paid Year Ahead period does not match the required rolling 365-day window."
+        )
+
+    packet = build_year_packet(snapshot, timing_report)
+    voice_prose, voice_error = _paid_year_ahead_voice(
+        packet,
+        main_focus=main_focus,
+        personal_question=personal_question,
+    )
+    return {
+        "snapshot": snapshot,
+        "timing_report": timing_report,
+        "packet": packet,
+        "voice_prose": voice_prose,
+        "voice_error": voice_error,
+    }
+
+
+def _render_paid_year_ahead_product(
+    product: dict,
+    *,
+    label: str,
+    natal_precision: str = "",
+    order_reference: str = "",
+) -> None:
+    """Render the paid customer product: natal signature -> year -> Games -> evidence."""
+    snapshot = product["snapshot"]
+    packet = product["packet"]
+
+    st.markdown('<section class="natal-shell paid-yearly-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Paid · Your Year Ahead</div>', unsafe_allow_html=True)
+    st.markdown('<div class="editorial-title">Your Year Ahead</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="natal-intro">{escape(label)} · Personal Transits & Timing. Calculated first, selected second, organised third, then narrated by Luna.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## Your natal signature")
+    _render_natal_signature_grid(snapshot)
+    if natal_precision:
+        st.caption(natal_precision)
+
+    st.markdown("## The year at a glance")
+    render_year_ahead(
+        packet,
+        voice_enabled=False,
+        base_url="",
+        model="",
+        api_key="",
+        voice_prose=str(product.get("voice_prose") or ""),
+        voice_error=str(product.get("voice_error") or ""),
+    )
+
+    st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
+    st.caption(LUNA_TRUST_DISCLOSURE)
+    if order_reference:
+        st.caption(f"Order reference · {order_reference}")
+    st.markdown('</section>', unsafe_allow_html=True)
 
 
 def _snapshot_natal_facts(snapshot) -> dict:
@@ -11295,161 +11423,6 @@ def _render_snapshot_monthly_report(
                 st.markdown(
                     f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
                 )
-        st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
-        st.caption(LUNA_TRUST_DISCLOSURE)
-
-    if order_reference:
-        st.caption(f"Order reference · {order_reference}")
-    st.markdown('</section>', unsafe_allow_html=True)
-
-def _render_snapshot_yearly_report(
-    result: dict,
-    *,
-    order_reference: str = "",
-) -> None:
-    """Render paid Year Ahead from the Snapshot baseline plus personal rolling transits."""
-    st.markdown('<section class="natal-shell paid-yearly-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Paid · Your Year Ahead</div>', unsafe_allow_html=True)
-
-    paid_snapshot = _snapshot_from_encoded_natal_profile(
-        str(result.get("natal_profile") or ""),
-        timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
-    )
-    timing_report = result.get("paid_timing_report")
-    if paid_snapshot is not None and timing_report is None:
-        paid_snapshot, timing_report = _prepare_paid_yearly_personal_layer(result)
-
-    label = str(result.get("label") or "Rolling 12 months")
-    st.markdown('<div class="editorial-title">Your year, in the order it actually happens</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="natal-intro">{escape(label)} · Start with the natal baseline, then follow the personal contacts in chronological order.</div>',
-        unsafe_allow_html=True,
-    )
-
-    if paid_snapshot is not None:
-        _render_snapshot_natal_core(
-            paid_snapshot,
-            precision_note=str(result.get("natal_precision") or ""),
-            show_evidence=False,
-        )
-
-    if timing_report is None:
-        st.error("Luna could not build the personal 12-month timing layer for this report.")
-        if order_reference:
-            st.caption(f"Order reference · {order_reference}")
-        st.markdown('</section>', unsafe_allow_html=True)
-        return
-
-    try:
-        display_end = date.fromisoformat(str(result.get("end") or ""))
-    except ValueError:
-        display_end = timing_report.end_date
-
-    st.markdown('<div class="eyebrow" style="margin-top:2.5rem">Your Year Ahead</div>', unsafe_allow_html=True)
-    st.markdown("## Read the year")
-    year_facts = _paid_yearly_timing_facts(timing_report)
-    guided_year = _guided_luna_copy("yearly", year_facts)
-    if guided_year:
-        _render_signature_style_story(guided_year, "Luna's strategic map")
-    else:
-        _render_voice_unavailable(facts_label="personal year-ahead calculation")
-
-    ranked = sorted(list(timing_report.stories), key=lambda story: (-float(story.score), story.first_date))
-    themes = ranked[:3]
-    if themes:
-        st.markdown("## Three themes organise the year")
-        st.caption("These are the highest-ranked personal patterns. They are themes, not three extra forecasts.")
-        for story in themes:
-            area = _timing_story_life_area(story)
-            st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading yearly-theme-reading">
-  <div class="natal-evidence">{escape(_timing_signal_type(story))} · {escape(story.polarity)}</div>
-  <h3>{escape(str(story.headline))}</h3>
-  <p>{escape(area)}</p>
-</div>""",
-                unsafe_allow_html=True,
-            )
-
-    strongest = ranked[:6]
-    if strongest:
-        st.markdown("## Your strongest personal transits")
-        st.caption("Six contacts only. Timing and action stay visible; raw calculation detail stays collapsed.")
-        transit_facts = {
-            "start_date": timing_report.start_date.isoformat(),
-            "end_date": display_end.isoformat(),
-            "timezone": timing_report.timezone_name,
-            "items": [
-                {
-                    "source_id": f"paid-year-transit:{index}",
-                    "transiting_planet": story.transit_planet,
-                    "aspect": story.aspect,
-                    "natal_target": story.natal_target,
-                    "natal_house": story.natal_house,
-                    "polarity": story.polarity,
-                    "score": round(story.score, 3),
-                    "active_periods": [{"start": period.start_date.isoformat(), "end": period.end_date.isoformat()} for period in story.periods],
-                    "exact_hits": [{"date": hit.exact_date.isoformat(), "orb": round(hit.orb, 3), "retrograde": hit.retrograde} for hit in story.hits],
-                }
-                for index, story in enumerate(strongest)
-            ],
-        }
-        # These chapters already contain calculated timing-map interpretation.
-        # Keep them immediate instead of making six more live voice requests
-        # after the natal chart.
-        for story in sorted(strongest, key=lambda item: item.first_date):
-            periods_label = " · ".join(_timing_range_label(item.start_date, item.end_date) for item in story.periods)
-            starts = _timing_story_start(story)
-            ends = _timing_story_end(story)
-            timing_line = (
-                f"Starts {_timing_date_label(starts) if starts else '—'} · "
-                f"Strongest {_timing_story_peak_label(story)} · "
-                f"Eases {_timing_date_label(ends) if ends else '—'}"
-            )
-            headline = str(story.headline)
-            body = str(story.summary)
-            st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading yearly-transit-reading">
-  <div class="natal-evidence">{escape(story.transit_planet)} {escape(story.aspect)} natal {escape(story.natal_target)} · active {escape(periods_label)}</div>
-  <h3>{escape(headline)}</h3>
-  <p>{escape(body)}</p>
-  <p><strong>Timing ·</strong> {escape(timing_line)}</p>
-</div>""",
-                unsafe_allow_html=True,
-            )
-
-    roadmap = _paid_yearly_roadmap(timing_report, display_end=display_end)
-    if roadmap:
-        st.markdown("## The year in twelve moves")
-        st.caption("This is a rolling roadmap from the selected start date—not a January-to-December calendar year. Each stage carries the previous stage forward.")
-        previous_signal = ""
-        for row in roadmap:
-            carry = f"<p><strong>Carry forward ·</strong> {escape(previous_signal)}</p>" if previous_signal else ""
-            st.markdown(
-                f"""<div class="natal-signature-reading report-flat-reading yearly-roadmap-reading">
-  <div class="natal-evidence">{escape(row['stage'])} · {escape(human_date(row['start']))} – {escape(human_date(row['end']))}</div>
-  <h3>{escape(row['headline'])}</h3>
-  <p><strong>Main signal ·</strong> {escape(row['signal'] + row['exact_label'])}</p>
-  <p>{escape(row['summary'])}</p>
-  {carry}
-</div>""",
-                unsafe_allow_html=True,
-            )
-            previous_signal = str(row["signal"])
-
-    # The strategic move belongs to Luna's voiced year reading above.
-    # Do not append deterministic timing-map actions as extra "Your move" advice.
-
-    with _luna_evidence_panel("Why Luna sees this · yearly calculations"):
-        st.markdown("**Calculated personal transits**")
-        for story in timing_report.stories:
-            periods = "; ".join(f"{human_date(period.start_date)}–{human_date(period.end_date)}" for period in story.periods)
-            st.markdown(f"- {story.transit_planet} {story.aspect} natal {story.natal_target} · {story.polarity} · {periods}")
-        shared = list(getattr(timing_report, "major_sky_events", ()) or ())
-        if shared:
-            st.markdown("**Shared-sky milestones inside your year**")
-            for item in shared[:12]:
-                if isinstance(item, dict):
-                    st.markdown(f"- {human_date(item.get('event_date'))} · {item.get('display_label', item.get('technical_label', 'Sky event'))}")
         st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
         st.caption(LUNA_TRUST_DISCLOSURE)
 
