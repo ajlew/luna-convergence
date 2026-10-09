@@ -12984,7 +12984,7 @@ def timing_map_page() -> None:
         '<div class="timing-intro">A personal timing map for the next 12 months. Luna compares your natal chart with Jupiter, Saturn, Uranus, Neptune and Pluto, then overlays eclipses, stations and key sky events inside your year. It shows when the strongest personal contacts start, peak and ease, where they become visible in ordinary life, and what decision they ask from you.</div>',
         unsafe_allow_html=True,
     )
-    st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
+    st.caption("Tropical geocentric astrology · exact-contact timing · symbolic interpretation, not a prediction or professional advice.")
 
     with st.container(border=True):
         st.markdown("### Tell Luna when you were born")
