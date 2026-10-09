@@ -118,6 +118,11 @@ from timing_map import (
     build_timing_map,
     month_intensity,
 )
+
+
+
+from year_ahead import build_year_packet
+from year_ahead_view import render_year_ahead
 from major_event_registry import group_personal_activations, group_serialized_personal_activations, personalize_serialized_signals
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
