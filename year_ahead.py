@@ -323,6 +323,19 @@ def _serialize_hit(hit: Any) -> dict[str, Any]:
         "time": str(getattr(hit, "exact_time", "") or ""),
         "retrograde": bool(getattr(hit, "retrograde", False)),
         "orb": round(float(getattr(hit, "orb", 0.0) or 0.0), 4),
+        "transit_position": {
+            "longitude": (
+                round(float(getattr(hit, "transit_longitude")), 6)
+                if getattr(hit, "transit_longitude", None) is not None
+                else None
+            ),
+            "sign": str(getattr(hit, "transit_sign", "") or ""),
+            "degree": (
+                round(float(getattr(hit, "transit_degree")), 6)
+                if getattr(hit, "transit_degree", None) is not None
+                else None
+            ),
+        },
     }
 
 
@@ -338,6 +351,19 @@ def _serialize_trigger(trigger: Any) -> dict[str, Any]:
         "activates_pass_number": getattr(trigger, "activates_pass_number", None),
         "technical_label": str(getattr(trigger, "technical_label", "") or ""),
         "activation_label": str(getattr(trigger, "activation_label", "") or ""),
+        "transit_position": {
+            "longitude": (
+                round(float(getattr(trigger, "transit_longitude")), 6)
+                if getattr(trigger, "transit_longitude", None) is not None
+                else None
+            ),
+            "sign": str(getattr(trigger, "transit_sign", "") or ""),
+            "degree": (
+                round(float(getattr(trigger, "transit_degree")), 6)
+                if getattr(trigger, "transit_degree", None) is not None
+                else None
+            ),
+        },
     }
 
 
@@ -348,6 +374,20 @@ def _serialize_story(story: TransitStory) -> dict[str, Any]:
         "aspect": str(story.aspect),
         "natal_target": str(story.natal_target),
         "natal_house": story.natal_house,
+        "natal_position": {
+            "longitude": (
+                round(float(story.natal_longitude), 6)
+                if getattr(story, "natal_longitude", None) is not None
+                else None
+            ),
+            "sign": str(getattr(story, "natal_sign", "") or ""),
+            "degree": (
+                round(float(story.natal_degree), 6)
+                if getattr(story, "natal_degree", None) is not None
+                else None
+            ),
+            "house": story.natal_house,
+        },
         "headline": str(story.headline),
         "polarity": str(story.polarity),
         "score": round(float(story.score), 4),
@@ -445,10 +485,73 @@ def build_year_games(report: TimingMapReport) -> tuple[YearGame, ...]:
 
 
 def _year_strip(report: TimingMapReport) -> tuple[dict[str, Any], ...]:
-    return tuple(
-        {"month": label, "intensity": float(value)}
-        for label, value in month_intensity(report)
-    )
+    """Return the one-screen annual strip used by both UI and Luna Voice.
+
+    Intensity comes from timing_map. Phase is also deterministic: retrograde
+    returns take precedence, then endings, then the strongest active arc's
+    polarity. This gives the strip the build-plan vocabulary of pressure,
+    opportunity, returns and endings without asking the model to classify it.
+    """
+    intensity_rows = list(month_intensity(report))
+    rows: list[dict[str, Any]] = []
+    cursor = date(report.start_date.year, report.start_date.month, 1)
+
+    for label, intensity in intensity_rows:
+        if cursor.month == 12:
+            next_month = date(cursor.year + 1, 1, 1)
+        else:
+            next_month = date(cursor.year, cursor.month + 1, 1)
+        month_start = max(report.start_date, cursor)
+        month_end = min(report.end_date, next_month.fromordinal(next_month.toordinal() - 1))
+
+        active = [
+            story for story in report.stories
+            if any(
+                period.start_date <= month_end and period.end_date >= month_start
+                for period in story.periods
+            )
+        ]
+        has_return = any(
+            hit.retrograde and month_start <= hit.exact_date <= month_end
+            for story in active
+            for hit in story.hits
+        )
+        has_ending = any(
+            month_start <= period.end_date <= month_end
+            for story in active
+            for period in story.periods
+        )
+
+        if has_return:
+            phase = "RETURN"
+        elif has_ending:
+            phase = "ENDING"
+        elif active:
+            dominant = max(active, key=lambda story: float(story.score))
+            polarity = str(dominant.polarity or "").lower()
+            if polarity == "opportunity":
+                phase = "OPPORTUNITY"
+            elif polarity == "pressure":
+                phase = "PRESSURE"
+            elif polarity == "structural":
+                phase = "STRUCTURAL"
+            else:
+                phase = "MIXED"
+        else:
+            phase = "QUIET"
+
+        rows.append(
+            {
+                "month": label,
+                "intensity": float(intensity),
+                "phase": phase,
+                "has_return": has_return,
+                "has_ending": has_ending,
+            }
+        )
+        cursor = next_month
+
+    return tuple(rows)
 
 
 def _statistics(report: TimingMapReport, games: Sequence[YearGame]) -> dict[str, Any]:

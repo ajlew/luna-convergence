@@ -199,6 +199,9 @@ class TransitHit:
     exact_time: str | None = None
     pass_number: int = 1
     pass_label: str = "Initial activation"
+    transit_longitude: float | None = None
+    transit_sign: str = ""
+    transit_degree: float | None = None
 
 
 @dataclass(frozen=True)
@@ -217,6 +220,9 @@ class SupportingTrigger:
     retrograde: bool
     exact_time: str | None = None
     activates_pass_number: int | None = None
+    transit_longitude: float | None = None
+    transit_sign: str = ""
+    transit_degree: float | None = None
 
     @property
     def technical_label(self) -> str:
@@ -248,6 +254,9 @@ class TransitStory:
     base_score: float | None = None
     exactness_bonus: float = 0.0
     overlap_count: int = 0
+    natal_longitude: float | None = None
+    natal_sign: str = ""
+    natal_degree: float | None = None
 
     @property
     def first_date(self) -> date:
@@ -349,6 +358,9 @@ def _refine_hit(
         orb=round(orb, 4),
         retrograde=bool(position.retrograde),
         exact_time=f"{minute_of_day // 60:02d}:{minute_of_day % 60:02d}",
+        transit_longitude=round(float(position.longitude), 6),
+        transit_sign=str(getattr(position, "sign", "") or ""),
+        transit_degree=round(float(getattr(position, "degree", 0.0) or 0.0), 6),
     )
 
 
@@ -435,11 +447,8 @@ def _label_transit_passes(hits: Iterable[TransitHit]) -> tuple[TransitHit, ...]:
             label = "Return pass"
 
         labelled.append(
-            TransitHit(
-                exact_date=hit.exact_date,
-                orb=hit.orb,
-                retrograde=hit.retrograde,
-                exact_time=hit.exact_time,
+            replace(
+                hit,
                 pass_number=index + 1,
                 pass_label=label,
             )
@@ -602,6 +611,9 @@ def _supporting_triggers_for_story(
                                 orb=hit.orb,
                                 retrograde=hit.retrograde,
                                 exact_time=hit.exact_time,
+                                transit_longitude=hit.transit_longitude,
+                                transit_sign=hit.transit_sign,
+                                transit_degree=hit.transit_degree,
                             )
                         )
 
@@ -636,6 +648,9 @@ def _supporting_triggers_for_story(
                                 orb=hit.orb,
                                 retrograde=hit.retrograde,
                                 exact_time=hit.exact_time,
+                                transit_longitude=hit.transit_longitude,
+                                transit_sign=hit.transit_sign,
+                                transit_degree=hit.transit_degree,
                             )
                         )
 
@@ -874,6 +889,9 @@ def _scan_story(
         watch=language.watch,
         periods=periods,
         hits=hits,
+        natal_longitude=round(float(target.longitude), 6),
+        natal_sign=str(getattr(target, "sign", "") or ""),
+        natal_degree=round(float(getattr(target, "degree", 0.0) or 0.0), 6),
     )
 
 

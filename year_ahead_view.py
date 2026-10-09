@@ -35,6 +35,51 @@ def _time_suffix(value: object) -> str:
     return f" · {text}" if text else ""
 
 
+def _position_label(value: object) -> str:
+    if not isinstance(value, dict):
+        return ""
+    sign = str(value.get("sign") or "").strip()
+    degree = value.get("degree")
+    longitude = value.get("longitude")
+    parts: list[str] = []
+    if degree is not None and sign:
+        parts.append(f"{float(degree):.2f}° {sign}")
+    elif sign:
+        parts.append(sign)
+    if longitude is not None:
+        parts.append(f"{float(longitude):.2f}° ecliptic")
+    return " · ".join(parts)
+
+
+def _render_year_strip(packet: YearPacket) -> None:
+    rows = [item for item in list(packet.year_strip or ()) if isinstance(item, dict)]
+    if not rows:
+        return
+
+    st.markdown("## Year strip")
+    st.caption("Intensity shows how concentrated the selected transit arcs are. The phase label tells you what kind of month it is.")
+    cells = []
+    for item in rows:
+        month = escape(str(item.get("month") or ""))
+        phase = escape(str(item.get("phase") or "QUIET"))
+        intensity = max(0.0, min(1.0, float(item.get("intensity") or 0.0)))
+        height = 6 + int(round(38 * intensity))
+        opacity = 0.18 + 0.82 * intensity
+        cells.append(
+            f'<div class="timing-month" style="min-width:0;text-align:center">'
+            f'<span>{month}</span>'
+            f'<i style="height:{height}px;opacity:{opacity:.2f}"></i>'
+            f'<strong style="display:block;font:500 9px Josefin Sans,sans-serif;'
+            f'letter-spacing:.03em">{phase}</strong></div>'
+        )
+    st.markdown(
+        '<div class="timing-strip" aria-label="Year Ahead timing strip">'
+        + "".join(cells)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def _paragraphs(value: object) -> list[str]:
     text = str(value or "").strip()
     if not text:
@@ -120,9 +165,11 @@ def _render_passes(primary: dict[str, Any]) -> None:
         motion = "retrograde" if bool(item.get("retrograde")) else "direct"
         when = _date_label(item.get("date")) + _time_suffix(item.get("time"))
         orb = float(item.get("orb") or 0.0)
+        position = _position_label(item.get("transit_position"))
+        position_text = f" · {escape(position)}" if position else ""
         st.markdown(
             f"- **Pass {number} — {escape(label)}:** {escape(when)} · "
-            f"{escape(motion)} · {orb:.2f}° orb"
+            f"{escape(motion)}{position_text} · {orb:.2f}° orb"
         )
 
 
@@ -137,7 +184,13 @@ def _render_triggers(primary: dict[str, Any]) -> None:
         when = _date_label(item.get("date")) + _time_suffix(item.get("time"))
         pass_number = item.get("activates_pass_number")
         pass_text = f" · activates Pass {pass_number}" if pass_number else ""
-        st.markdown(f"- {escape(label)} · **{escape(when)}**{escape(pass_text)}")
+        position = _position_label(item.get("transit_position"))
+        position_text = f" · {escape(position)}" if position else ""
+        orb = float(item.get("orb") or 0.0)
+        st.markdown(
+            f"- {escape(label)} · **{escape(when)}**{escape(pass_text)}"
+            f"{position_text} · {orb:.2f}° orb"
+        )
 
 
 def _render_game(game: Any) -> None:
@@ -183,6 +236,16 @@ def _render_game(game: Any) -> None:
                 else ""
             )
         )
+        natal_position = _position_label(primary.get("natal_position"))
+        if natal_position:
+            st.markdown(
+                f"**Natal {escape(str(primary.get('natal_target') or 'target'))}:** "
+                f"{escape(natal_position)}"
+            )
+        st.markdown(
+            f"**Active window:** {escape(_date_label(primary.get('start')))} → "
+            f"{escape(_date_label(primary.get('end')))}"
+        )
         _render_passes(primary)
         _render_triggers(primary)
 
@@ -190,7 +253,9 @@ def _render_game(game: Any) -> None:
             st.markdown("**Supporting transits**")
             for item in supporting:
                 label = str(item.get("technical_label") or "")
-                st.markdown(f"- **{escape(label)}**")
+                natal_position = _position_label(item.get("natal_position"))
+                natal_text = f" · natal {escape(natal_position)}" if natal_position else ""
+                st.markdown(f"- **{escape(label)}**{natal_text}")
                 for hit in list(item.get("passes") or []):
                     if not isinstance(hit, dict):
                         continue
@@ -199,9 +264,11 @@ def _render_game(game: Any) -> None:
                     motion = "retrograde" if bool(hit.get("retrograde")) else "direct"
                     when = _date_label(hit.get("date")) + _time_suffix(hit.get("time"))
                     orb = float(hit.get("orb") or 0.0)
+                    position = _position_label(hit.get("transit_position"))
+                    position_text = f" · {escape(position)}" if position else ""
                     st.markdown(
                         f"  - Pass {pass_number} — {escape(pass_label)}: "
-                        f"{escape(when)} · {escape(motion)} · {orb:.2f}° orb"
+                        f"{escape(when)} · {escape(motion)}{position_text} · {orb:.2f}° orb"
                     )
 
         st.markdown(f"**Risk:** {escape(str(game.risk))}")
@@ -227,6 +294,8 @@ def render_year_ahead(
 </div>""",
         unsafe_allow_html=True,
     )
+
+    _render_year_strip(packet)
 
     prose, error = _voice_once(
         packet,

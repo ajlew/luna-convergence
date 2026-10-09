@@ -1,0 +1,26 @@
+LUNA YEAR AHEAD — DEFINITION OF DONE
+
+READY AFTER THESE FILES ARE IN GITHUB AND THE APP.PY CLEANUP IS MADE:
+
+[PASS] Same Natal Snapshot feeds the product.
+[PASS] Selected start date produces a rolling 365-day map.
+[PASS] Transit-to-natal contacts calculated in Python.
+[PASS] Exact hits refined to local date/time.
+[PASS] Direct/retrograde state retained.
+[PASS] Repeated passes grouped and labelled in Python.
+[PASS] Production selection limited to the strongest annual arcs (app requests 10; engine caps at 12).
+[PASS] Sun/Mercury/Venus/Mars are supporting triggers only; Moon excluded from trigger layer.
+[PASS] Selected arcs cluster into approximately 3–5 Games.
+[PASS] One chronological Year Packet is built before voice.
+[PASS] Year strip now explicitly classifies PRESSURE / OPPORTUNITY / RETURN / ENDING / STRUCTURAL / QUIET.
+[PASS] Collapsed evidence includes natal position, exact transit position, orb, motion, pass label, time and house when known.
+[PASS] Unknown birth time does not invent ASC/MC/houses.
+[PASS] Voice packet removes ranking internals before provider call.
+[PASS] Token size is preflighted before provider call.
+[PASS] Exactly one plain-prose voice call.
+[PASS] No JSON response requirement.
+[PASS] No automatic voice retry loop.
+[PASS] Voice failure cannot suppress deterministic Games/evidence.
+[PASS] Old yearly summary + personal-events + yearly-transits bundle path is removed from app.py.
+
+TESTING SHOULD BEGIN ONLY AFTER replacing the four Python modules and making APP_FINAL_CLEANUP.txt.

@@ -98,15 +98,102 @@ def _packet_dict(packet: YearPacket | dict[str, Any]) -> dict[str, Any]:
     return value
 
 
+def _voice_story(value: dict[str, Any]) -> dict[str, Any]:
+    """Strip ranking/provenance internals before the creative call."""
+    passes = []
+    for item in list(value.get("passes") or []):
+        if not isinstance(item, dict):
+            continue
+        passes.append(
+            {
+                key: item.get(key)
+                for key in (
+                    "pass_number",
+                    "pass_label",
+                    "date",
+                    "time",
+                    "retrograde",
+                    "orb",
+                )
+            }
+        )
+
+    triggers = []
+    for item in list(value.get("triggers") or []):
+        if not isinstance(item, dict):
+            continue
+        triggers.append(
+            {
+                key: item.get(key)
+                for key in (
+                    "planet",
+                    "aspect",
+                    "natal_target",
+                    "date",
+                    "time",
+                    "retrograde",
+                    "orb",
+                    "activates_pass_number",
+                    "activation_label",
+                )
+            }
+        )
+
+    return {
+        "technical_label": value.get("technical_label"),
+        "natal_house": value.get("natal_house"),
+        "start": value.get("start"),
+        "end": value.get("end"),
+        "passes": passes,
+        "triggers": triggers,
+        "summary": value.get("summary"),
+        "move": value.get("move"),
+        "watch": value.get("watch"),
+    }
+
+
+def _voice_game(value: dict[str, Any]) -> dict[str, Any]:
+    primary = value.get("primary_transit")
+    supporting = value.get("supporting_transits")
+    return {
+        key: value.get(key)
+        for key in (
+            "number",
+            "title",
+            "strategic_frame",
+            "question",
+            "start_date",
+            "end_date",
+            "human_life_area",
+            "polarity",
+            "advantage",
+            "risk",
+            "move",
+            "dont",
+        )
+    } | {
+        "primary_transit": _voice_story(primary) if isinstance(primary, dict) else {},
+        "supporting_transits": [
+            _voice_story(item)
+            for item in list(supporting or [])
+            if isinstance(item, dict)
+        ],
+    }
+
+
 def _voice_source(packet: YearPacket | dict[str, Any]) -> dict[str, Any]:
-    """Keep the single voice request focused on reader-facing deterministic facts."""
+    """Keep the one voice call compact, chronological and reader-facing."""
     value = _packet_dict(packet)
     return {
         "period": value.get("period") or {},
         "natal_fingerprint": value.get("natal_fingerprint") or {},
         "year_statistics": value.get("year_statistics") or {},
         "year_strip": value.get("year_strip") or [],
-        "games": value.get("games") or [],
+        "games": [
+            _voice_game(item)
+            for item in list(value.get("games") or [])
+            if isinstance(item, dict)
+        ],
     }
 
 

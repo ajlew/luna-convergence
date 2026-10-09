@@ -1,0 +1,28 @@
+LUNA YEAR AHEAD — FINAL APP.PY CLEANUP
+
+The current GitHub app.py is already wired to:
+- build_year_packet
+- render_year_ahead
+- exact-contact timing
+and the old multi-call Year Ahead path is already removed.
+
+ONE final cleanup remains because year_ahead_view.py now owns the finished year strip.
+
+In timing_map_page(), immediately after:
+
+        render_year_ahead(
+            year_packet,
+            voice_enabled=_luna_voice_ready(),
+            base_url=LUNA_VOICE_BASE_URL,
+            model=LUNA_VOICE_MODEL,
+            api_key=LUNA_VOICE_API_KEY,
+        )
+
+DELETE these four lines:
+
+    st.markdown("### Transit intensity")
+    st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
+    st.markdown("### What kind of period is it?")
+    st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
+
+Do not change anything else in app.py for this final build.
