@@ -1,0 +1,79 @@
+LUNA YEAR AHEAD — STEP 10 — GITHUB ONLY
+
+1) Add this NEW root file:
+   year_ahead_view.py
+
+2) Edit root app.py in GitHub.
+
+A. Immediately after:
+
+from timing_map import (
+    build_timing_map,
+    month_intensity,
+)
+
+add:
+
+from year_ahead import build_year_packet
+from year_ahead_view import render_year_ahead
+
+
+B. In timing_map_page(), find the line:
+
+    yearly_facts = {
+
+Delete from that line through the OLD Year Ahead voice/personal-events/transit rendering
+AND the old timing-summary-grid block, stopping immediately BEFORE:
+
+    st.markdown("### Transit intensity")
+
+Replace that whole deleted block with:
+
+    if timing_snapshot is None:
+        st.error("Luna could not recover the natal snapshot for this Year Ahead.")
+    else:
+        year_packet = build_year_packet(timing_snapshot, report)
+        render_year_ahead(
+            year_packet,
+            voice_enabled=_luna_voice_ready(),
+            base_url=LUNA_VOICE_BASE_URL,
+            model=LUNA_VOICE_MODEL,
+            api_key=LUNA_VOICE_API_KEY,
+        )
+
+C. In timing_map_page(), change:
+
+    st.caption("Tropical geocentric astrology · day-level timing · symbolic interpretation, not a prediction or professional advice.")
+
+to:
+
+    st.caption("Tropical geocentric astrology · exact-contact timing · symbolic interpretation, not a prediction or professional advice.")
+
+
+WHAT THIS REMOVES FROM YEAR AHEAD ONLY
+
+- _guided_luna_copy("yearly", ...)
+- _guided_luna_collection("personal_events", ...)
+- _guided_luna_collection("yearly_transits", ...)
+- assemble_report_bundle(...) as a Year Ahead publication gate
+- separate post-story personal activation chapter
+- separate LLM transit chapters
+
+WHAT STEP 10 NOW DOES
+
+- deterministic Natal Signature still renders
+- deterministic year date range still renders
+- Python-owned major-game / turning-point / rule-change counts render
+- deterministic Games render whether voice works or not
+- exact Pass 1 / 2 / 3 dates and local times render
+- direct / retrograde state and orb render
+- fast-planet supporting triggers render under the relevant Game
+- existing year intensity strip remains
+- existing collapsed calculation evidence remains
+- existing Chart in Motion remains
+- ONE plain-prose Luna call optionally adds Read the Year
+- voice failure never suppresses the calculated report
+
+DO NOT alter timing_map.py for Step 10.
+DO NOT alter year_ahead.py for Step 10.
+DO NOT restore the old Year Ahead bundle-validation or multi-call voice path.
