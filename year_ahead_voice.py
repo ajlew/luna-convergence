@@ -23,6 +23,8 @@ from year_ahead import YearPacket
 YEAR_AHEAD_VOICE_VERSION = "1.0"
 DEFAULT_MAX_COMPLETION_TOKENS = 2800
 DEFAULT_TIMEOUT_SECONDS = 150
+TARGET_TOTAL_TOKENS = 7200
+MIN_COMPLETION_TOKENS = 1700
 
 
 SYSTEM_PROMPT = (
@@ -126,6 +128,41 @@ def build_year_ahead_prompt(packet: YearPacket | dict[str, Any]) -> str:
     )
 
 
+def _estimated_input_tokens(system_prompt: str, user_prompt: str) -> int:
+    """Conservative pre-provider estimate without adding a tokenizer dependency."""
+    characters = len(str(system_prompt or "")) + len(str(user_prompt or ""))
+    # ~4 characters/token is a common English approximation. Add a fixed
+    # message-envelope buffer so the Year Ahead never relies on the estimate
+    # being exact.
+    return max(1, (characters + 3) // 4) + 350
+
+
+def _prepare_request(
+    packet: YearPacket | dict[str, Any],
+    preferred_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+) -> tuple[str, int, int]:
+    """Size the single request before any provider call is made.
+
+    The YearPacket is already compact and selected by Python. This final
+    preflight protects the one-call architecture from an oversized request by
+    reducing only the completion allowance. It never retries and never drops
+    calculated Games, passes or dates.
+    """
+    prompt = build_year_ahead_prompt(packet)
+    estimated_input = _estimated_input_tokens(SYSTEM_PROMPT, prompt)
+
+    available = TARGET_TOTAL_TOKENS - estimated_input
+    completion_tokens = min(int(preferred_completion_tokens), available)
+
+    if completion_tokens < MIN_COMPLETION_TOKENS:
+        raise RuntimeError(
+            "Year Ahead voice preflight could not fit the finished Year Packet "
+            "inside the configured single-call token budget."
+        )
+
+    return prompt, completion_tokens, estimated_input
+
+
 def _clean_plain_prose(value: Any) -> str:
     """Transport cleanup only; do not editorially re-write the provider response."""
     text = str(value or "").strip()
@@ -173,7 +210,10 @@ def generate_year_ahead_voice(
     if not api_key:
         raise ValueError("Year Ahead voice API key is not configured.")
 
-    prompt = build_year_ahead_prompt(packet)
+    prompt, completion_tokens, _estimated_input = _prepare_request(
+        packet,
+        preferred_completion_tokens=max_completion_tokens,
+    )
     payload: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -181,7 +221,7 @@ def generate_year_ahead_voice(
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.58,
-        "max_completion_tokens": int(max_completion_tokens),
+        "max_completion_tokens": int(completion_tokens),
     }
 
     if model.startswith("openai/gpt-oss"):
