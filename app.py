@@ -13075,10 +13075,6 @@ def timing_map_page() -> None:
             model=LUNA_VOICE_MODEL,
             api_key=LUNA_VOICE_API_KEY,
         )
-    st.markdown("### Transit intensity")
-    st.markdown(_timing_strip_html(report), unsafe_allow_html=True)
-    st.markdown("### What kind of period is it?")
-    st.markdown(_timing_signal_strip(report), unsafe_allow_html=True)
 
     # Keep the raw event/transit lists available as evidence, but do not let
     # them dominate the customer-facing Year Ahead reading.
