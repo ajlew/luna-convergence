@@ -1,0 +1,63 @@
+FRESH PAID YEARLY - DO NOT TOUCH PAID MONTHLY
+
+New files:
+- paid_yearly_editorial.py
+- paid_yearly_report.py
+
+They intentionally do NOT modify app.py yet.
+
+The final paid flow will be:
+
+snapshot + build_timing_map + build_year_packet
+        ↓
+generate_paid_yearly_editorial(...)   # ONE provider call
+        ↓
+render_paid_yearly_report(...)
+        ↓
+same canonical _render_snapshot_natal_core(...) used by Paid Monthly
+
+When wiring into app.py, pass these existing app functions/constants into the
+new renderer instead of duplicating them:
+
+render_natal_core=_render_snapshot_natal_core
+evidence_panel=_luna_evidence_panel
+trust_statement=LUNA_TRUST_STATEMENT
+trust_disclosure=LUNA_TRUST_DISCLOSURE
+
+The customer-facing structure becomes:
+
+EDITORIAL HEADLINE
+deck
+
+Your natal signature
+Read the pattern
+Natal chart
+Your strengths
+(all rendered by the SAME function Paid Monthly uses)
+
+Read the year
+(long continuous annual article)
+
+Your year map
+(compact navigation only)
+
+The major issues of your year
+Issue 01 - substantial Luna chapter
+Timing
+Pass 1 / return / final pass
+Trigger dates
+Supporting slow arcs
+
+Issue 02...
+Issue 03...
+Issue 04...
+
+What the year leaves you with
+
+Key dates
+
+Why Luna sees this · chart evidence
+(collapsed)
+
+No "Game card" is the paid report.
+No separate annual dashboard replaces the reading.
