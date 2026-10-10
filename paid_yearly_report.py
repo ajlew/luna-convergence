@@ -20,7 +20,7 @@ from paid_yearly_editorial import PaidYearlyEditorial
 from year_ahead import YearPacket
 
 
-PAID_YEARLY_REPORT_VERSION = "1.1-human-year-map"
+PAID_YEARLY_REPORT_VERSION = "1.2-human-first-voice"
 
 
 def _packet_dict(packet: YearPacket | dict[str, Any]) -> dict[str, Any]:
@@ -152,38 +152,88 @@ def _human_pass_label(
     return "Next contact"
 
 
-def _pass_stage_copy(label: str) -> str:
-    return {
-        "First contact": (
-            "This is where the story first becomes exact. "
-            "Notice what becomes harder to leave vague."
-        ),
-        "Returns": (
-            "The same story comes back for review. "
-            "Treat it as a continuation, not a separate event."
-        ),
-        "Final contact": (
-            "This is the final exact contact in the sequence. "
-            "What has been tested can now be judged with more perspective."
-        ),
-        "Exact contact": (
-            "This is the clearest exact contact inside this story's active window."
-        ),
-        "Next contact": (
-            "The same story becomes exact again, adding another stage to the sequence."
-        ),
-    }.get(label, "")
+def _pass_stage_copy(
+    label: str,
+    game: dict[str, Any] | None = None,
+) -> str:
+    game = dict(game or {})
+    story_name = " ".join(
+        str(game.get("title") or _human_story_label(game) or "this story").split()
+    )
+    life_area = _human_story_label(game).lower()
+    move = " ".join(str(game.get("move") or "").split()).rstrip(".")
+    risk = " ".join(str(game.get("risk") or "").split()).rstrip(".")
+
+    if label == "First contact":
+        base = (
+            f"This is where {story_name.lower()} stops being background and becomes a live choice. "
+            f"Notice what is now too concrete to leave vague."
+        )
+    elif label == "Returns":
+        base = (
+            f"The same {life_area} question comes back for review. "
+            "Treat the return as evidence about what did or did not hold after the first contact."
+        )
+    elif label == "Final contact":
+        base = (
+            "This is the last exact contact in the sequence. "
+            "Decide what has proved sustainable and make that the new baseline."
+        )
+    elif label == "Exact contact":
+        base = (
+            f"This is the clearest exact contact in {story_name.lower()}. "
+            "Judge the situation by what is actually happening rather than by anticipation."
+        )
+    else:
+        base = (
+            f"{story_name} becomes exact again. "
+            "Use the repetition to see what has changed since the previous contact."
+        )
+
+    if move:
+        return f"{base} Your move here: {move}."
+    if risk:
+        return f"{base} Watch for {risk.lower()}."
+    return base
 
 
-def _human_trigger_label(row: dict[str, Any]) -> str:
+def _human_trigger_label(
+    row: dict[str, Any],
+    game: dict[str, Any] | None = None,
+) -> str:
     planet = str(
         row.get("planet")
         or row.get("trigger_planet")
         or ""
     ).strip()
-    if planet:
-        return f"{planet} brings this story back into focus."
-    return "A faster-moving trigger brings this story back into focus."
+    life_area = _human_story_label(game or {}).lower()
+
+    meanings = {
+        "Sun": (
+            "The Sun makes this story more visible. "
+            "What was background is harder to ignore, so notice what now needs a clear position."
+        ),
+        "Mercury": (
+            "Mercury turns this story into a conversation, message, decision or detail that needs naming. "
+            "Use the moment to clarify terms rather than assume understanding."
+        ),
+        "Venus": (
+            "Venus brings value, reciprocity, attraction or relationship terms into the foreground. "
+            "Notice what feels balanced enough to keep and what does not."
+        ),
+        "Mars": (
+            "Mars adds urgency, initiative or friction. "
+            "Act deliberately; speed is useful only when it serves the larger story."
+        ),
+    }
+
+    base = meanings.get(
+        planet,
+        "A faster-moving contact brings this story back into focus."
+    )
+    if game:
+        return f"In {life_area}, {base[0].lower() + base[1:]}"
+    return base
 
 
 def _strongest_date(story: dict[str, Any], fallback: object) -> str:
@@ -416,6 +466,7 @@ def _strongest_round_label(row: dict[str, Any]) -> str:
 
 def _month_by_month_rows(
     packet: dict[str, Any],
+    editorial: PaidYearlyEditorial | None = None,
 ) -> list[dict[str, str]]:
     rounds = [
         row
@@ -436,15 +487,21 @@ def _month_by_month_rows(
         number = int(row.get("dominant_game_number") or 0)
         game = games.get(number)
 
+        month_voice = (
+            editorial.month_for(int(row.get("number") or 0))
+            if editorial is not None
+            else None
+        )
         output.append(
             {
                 "month": str(row.get("label") or ""),
                 "phase": _human_phase(row.get("phase")),
-                "story": (
-                    str(row.get("dominant_game_title") or "")
-                    or _human_story_label(game)
+                "story": _human_story_label(game),
+                "focus": (
+                    str(month_voice.focus).strip()
+                    if month_voice is not None and str(month_voice.focus or "").strip()
+                    else _monthly_focus(row)
                 ),
-                "focus": _monthly_focus(row),
                 "strongest": _strongest_round_label(row),
             }
         )
@@ -452,8 +509,11 @@ def _month_by_month_rows(
     return output
 
 
-def _render_month_by_month(packet: dict[str, Any]) -> None:
-    rows = _month_by_month_rows(packet)
+def _render_month_by_month(
+    packet: dict[str, Any],
+    editorial: PaidYearlyEditorial | None = None,
+) -> None:
+    rows = _month_by_month_rows(packet, editorial)
     if not rows:
         return
 
@@ -580,10 +640,18 @@ def _render_story(
     if issue is not None and issue.paragraphs:
         st.markdown(
             '<div class="natal-signature-reading paid-monthly-longform paid-monthly-article">'
-            + _story_paragraphs(issue.paragraphs)
+            + _story_paragraphs(issue.paragraphs[:1])
             + "</div>",
             unsafe_allow_html=True,
         )
+        if len(issue.paragraphs) > 1:
+            st.markdown("### What this may look like")
+            st.markdown(
+                '<div class="natal-signature-reading paid-monthly-longform paid-monthly-article">'
+                + _story_paragraphs(issue.paragraphs[1:])
+                + "</div>",
+                unsafe_allow_html=True,
+            )
     else:
         summary = str(primary.get("summary") or "")
         if summary:
@@ -679,7 +747,7 @@ def _render_story(
                 f'{escape(when)} · '
                 f'{escape(motion.upper())}'
                 f"</div>"
-                f"<p>{escape(_pass_stage_copy(label))}</p>"
+                f"<p>{escape(_pass_stage_copy(label, game))}</p>"
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -696,7 +764,7 @@ def _render_story(
             st.markdown(
                 '<div class="natal-signature-reading paid-key-date">'
                 f'<div class="natal-evidence">{escape(when)}</div>'
-                f"<p>{escape(_human_trigger_label(row))}</p>"
+                f"<p>{escape(_human_trigger_label(row, game))}</p>"
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -764,7 +832,7 @@ def _key_moments(packet: dict[str, Any]) -> None:
                 (
                     raw_date,
                     _date_label(raw_date),
-                    _human_trigger_label(trigger),
+                    _human_trigger_label(trigger, game),
                 )
             )
 
@@ -880,7 +948,7 @@ def render_paid_yearly_report(
         )
 
     _render_year_map(value)
-    _render_month_by_month(value)
+    _render_month_by_month(value, editorial)
 
     st.markdown("## The major stories of your year")
     st.caption(
