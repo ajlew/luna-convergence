@@ -1,10 +1,18 @@
 name: Generate paid forecast calculation bases
-run-name: Paid forecast bases · ${{ inputs.product || 'monthly' }} · ${{ inputs.date || 'next month' }}
+run-name: Paid forecast bases · ${{ inputs.product || 'scheduled' }} · ${{ inputs.date || 'automatic period' }}
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/generate-paid-forecast-bases.yml'
+      - 'scripts/generate_paid_forecast_bases.py'
+      - 'yearly_prebuilt_base.py'
   schedule:
-    # 25th of each month: prepare all 12 sign bases for next month.
+    # 25th of each month: prepare all 12 Paid Monthly sign bases for next month.
     - cron: '30 10 25 * *'
+    # 00:30 AEST / 01:30 AEDT: ensure the current month's 12 Yearly horizons exist.
+    - cron: '30 14 * * *'
   workflow_dispatch:
     inputs:
       product:
@@ -12,9 +20,9 @@ on:
         required: true
         type: choice
         options: [monthly, yearly]
-        default: monthly
+        default: yearly
       date:
-        description: Monthly = any YYYY-MM-DD in target month; Yearly = rolling start date. Blank monthly means next month.
+        description: Monthly = target month; Yearly = any date in target start month
         required: false
         type: string
       sign:
@@ -31,6 +39,11 @@ on:
         required: false
         default: Sydney
         type: string
+      force:
+        description: Rewrite an existing Yearly horizon
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,8 +61,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install existing app dependencies
         run: python -m pip install -r requirements.txt
+
       - name: Build deterministic bases
         shell: bash
         env:
@@ -58,19 +73,32 @@ jobs:
           REQUEST_SIGN: ${{ inputs.sign }}
           REQUEST_TIMEZONE: ${{ inputs.timezone }}
           REQUEST_CITY: ${{ inputs.city }}
+          REQUEST_FORCE: ${{ inputs.force }}
           EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           product="$REQUEST_PRODUCT"
-          if [ -z "$product" ]; then product=monthly; fi
           timezone="$REQUEST_TIMEZONE"
-          if [ -z "$timezone" ]; then timezone="Australia/Sydney"; fi
           city="$REQUEST_CITY"
+
+          if [ -z "$timezone" ]; then timezone="Australia/Sydney"; fi
           if [ -z "$city" ]; then city="Sydney"; fi
+
+          if [ -z "$product" ]; then
+            case "$SCHEDULE" in
+              '30 10 25 * *') product=monthly ;;
+              '30 14 * * *') product=yearly ;;
+              *) product=yearly ;;
+            esac
+          fi
 
           args=(--product "$product" --timezone "$timezone" --city "$city")
           if [ -n "$REQUEST_DATE" ]; then args+=(--date "$REQUEST_DATE"); fi
           if [ -n "$REQUEST_SIGN" ]; then args+=(--sign "$REQUEST_SIGN"); fi
+          if [ "$REQUEST_FORCE" = "true" ]; then args+=(--force); fi
+
           python scripts/generate_paid_forecast_bases.py "${args[@]}"
+
       - name: Commit bases
         shell: bash
         run: |
