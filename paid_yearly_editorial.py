@@ -31,7 +31,7 @@ import requests
 from year_ahead import YearPacket
 
 
-PAID_YEARLY_EDITORIAL_VERSION = "1.1-human-first"
+PAID_YEARLY_EDITORIAL_VERSION = "1.2-provider-fit"
 DEFAULT_TIMEOUT_SECONDS = 180
 TARGET_TOTAL_TOKENS = 5350
 PREFERRED_COMPLETION_TOKENS = 2500
@@ -585,6 +585,72 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
     )
 
 
+def build_paid_yearly_ultra_prompt(material: dict[str, Any]) -> str:
+    """Provider-fit fallback prompt.
+
+    Same editorial contract as the full prompt, but stripped of repeated explanation.
+    Used only after the YearPacket itself has already been ultra-compacted.
+    """
+    issues = list(material.get("major_issues") or [])
+    months = list(material.get("monthly_rounds") or [])
+
+    month_markers = "\n".join(
+        f"<<MONTH:{int(item.get('number') or index)}>>"
+        for index, item in enumerate(months, start=1)
+    )
+    issue_markers = "\n".join(
+        f"<<ISSUE:{int(item.get('number') or index)}>>"
+        for index, item in enumerate(issues, start=1)
+    )
+
+    return (
+        "Write Luna's finished PAID PERSONAL YEAR AHEAD from CALCULATED YEAR below. "
+        "Python owns every astrology fact, date, pass, ranking, boundary and monthly story. "
+        "Do not calculate, repair, rank or invent anything.\n\n"
+
+        "VOICE: direct second person, adult, strategic, human-first. Start with lived "
+        "situations, choices and consequences, not transit names. Technical astrology may "
+        "support meaning after the human point is clear. Preserve agency; no fate or mystical padding.\n\n"
+
+        "TIMING: do not print raw ISO dates or active-window ranges in READ_YEAR/ISSUE prose. "
+        "Use month names or neutral phrases such as 'later in the year'. Do not use season "
+        "names unless local season data is supplied. Never invent or alter a year.\n\n"
+
+        "NATAL: if natal_resonance exists, use it only as a familiar lifelong lens. "
+        "Do not claim a transit activates a natal aspect unless the supplied target proves it.\n\n"
+
+        "CHRONOLOGY: one forward-moving year. First contact, retrograde return and final "
+        "contact are stages of one developing story. Fast-planet contacts are supporting moments.\n\n"
+
+        "MONTHS: write one unique 12-22 word strategic sentence per MONTH marker. "
+        "Do not repeat title/date/phase. If consecutive months share a story, show progression "
+        "rather than restarting it.\n\n"
+
+        "ISSUES: 2 substantial paragraphs per ISSUE. Paragraph 1: what changes in ordinary "
+        "life. Paragraph 2: concrete manifestations, risk/trade-off and how the pass sequence "
+        "changes the decision. Use the supplied life_area/strategic_frame/risk/move; do not "
+        "import relationship, money or career language into the wrong life area.\n\n"
+
+        "SIZE: READ_YEAR about 500-650 words in 5-6 paragraphs; each ISSUE about 140-190 "
+        "words; CLOSING about 80-110 words. Be dense, not repetitive.\n\n"
+
+        "PLAIN TEXT ONLY. Use these exact markers on their own lines. No Markdown, bullets, "
+        "JSON or code fences:\n"
+        "<<HEADLINE>>\n"
+        "<<DECK>>\n"
+        "<<READ_YEAR>>\n"
+        f"{month_markers}\n"
+        f"{issue_markers}\n"
+        "<<CLOSING>>\n\n"
+
+        "Silently check: no invented dates, no season names, no duplicate monthly sentence, "
+        "no report-meta language, and every example fits its life area.\n\n"
+
+        "CALCULATED YEAR:\n"
+        + json.dumps(material, ensure_ascii=False, separators=(",", ":"), default=str)
+    )
+
+
 def _estimate_tokens(text: str) -> int:
     try:
         import tiktoken
@@ -713,7 +779,7 @@ def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
             return prompt, PREFERRED_COMPLETION_TOKENS, estimated_input
 
     compact = _ultra_compact_paid_yearly_material(material)
-    prompt = build_paid_yearly_prompt(compact)
+    prompt = build_paid_yearly_ultra_prompt(compact)
     estimated_input = math.ceil(
         (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 100) * 1.15
     )
