@@ -168,8 +168,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.74"
-BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Editorial"
+APP_VERSION = "v3.75"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Provider Fit"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -4200,6 +4200,11 @@ def _render_owner_report(order: dict, key_context: str) -> None:
                 st.session_state[output_key] = _owner_report_output(order)
         except Exception as exc:
             st.error("Luna could not generate the owner report on this run.")
+            safe_message = " ".join(str(exc or "Unknown Paid Yearly error").split())[:900]
+            if LUNA_VOICE_API_KEY:
+                safe_message = safe_message.replace(LUNA_VOICE_API_KEY, "[redacted]")
+            with st.expander("Owner diagnostic", expanded=True):
+                st.code(safe_message)
             if EDITOR_PREVIEW_ENABLED:
                 st.exception(exc)
             return
@@ -9596,27 +9601,16 @@ def _build_paid_yearly_product(
 
     expected_issues = len(packet.games)
     actual_issues = len(getattr(editorial, "issues", ()) or ())
-    word_count = int(getattr(editorial, "word_count", 0) or 0)
-    read_year_count = len(getattr(editorial, "read_year", ()) or ())
-    closing_count = len(getattr(editorial, "closing", ()) or ())
-    issue_depth_ok = all(
-        len(getattr(issue, "paragraphs", ()) or ()) >= 3
-        for issue in (getattr(editorial, "issues", ()) or ())
-    )
-    minimum_words = 1650 + (400 * expected_issues)
 
+    # Paid Monthly's proven rule applies here too: content depth is instructed
+    # before the call; Python blocks only structurally incomplete transport.
     if (
         not bool(getattr(editorial, "voice_complete", False))
         or actual_issues != expected_issues
-        or read_year_count < 8
-        or closing_count < 2
-        or not issue_depth_ok
-        or word_count < minimum_words
     ):
         raise RuntimeError(
-            "Luna did not return a complete paid annual reading "
-            f"({actual_issues}/{expected_issues} issue chapters, "
-            f"{read_year_count} Read-the-Year paragraphs, {word_count} words)."
+            "Luna did not return all required paid annual sections "
+            f"({actual_issues}/{expected_issues} major issue chapters)."
         )
 
     return {

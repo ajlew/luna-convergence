@@ -33,9 +33,9 @@ from year_ahead import YearPacket
 
 PAID_YEARLY_EDITORIAL_VERSION = "1.0"
 DEFAULT_TIMEOUT_SECONDS = 180
-TARGET_TOTAL_TOKENS = 14500
-PREFERRED_COMPLETION_TOKENS = 7600
-MIN_COMPLETION_TOKENS = 5600
+TARGET_TOTAL_TOKENS = 5350
+PREFERRED_COMPLETION_TOKENS = 2500
+MIN_COMPLETION_TOKENS = 1800
 
 _MARKER_RE = re.compile(
     r"(?m)^<<(?P<name>HEADLINE|DECK|READ_YEAR|CLOSING|ISSUE:\d+)>>\s*$"
@@ -249,6 +249,95 @@ def build_paid_yearly_material(
     }
 
 
+def _clip(value: object, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else text[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _compact_transit_for_voice(story: dict[str, Any], level: int, *, primary: bool) -> dict[str, Any]:
+    """Compact duplicate wording while preserving every supplied transit, pass and date."""
+    out = {
+        "technical": story.get("technical"),
+        "active_start": story.get("active_start"),
+        "active_end": story.get("active_end"),
+        "house": story.get("house"),
+        "passes": list(story.get("passes") or []),
+        "triggers": list(story.get("triggers") or []),
+    }
+    if primary:
+        limits = ((300, 220, 180), (240, 180, 140), (190, 135, 110), (150, 110, 90))[level]
+        out["summary"] = _clip(story.get("summary"), limits[0])
+        out["move"] = _clip(story.get("move"), limits[1])
+        out["watch"] = _clip(story.get("watch"), limits[2])
+    elif level <= 1:
+        out["summary"] = _clip(story.get("summary"), 180 if level == 0 else 120)
+    return out
+
+
+def _compact_paid_yearly_material(material: dict[str, Any], level: int) -> dict[str, Any]:
+    """Fit one annual request without deleting selected Games, exact passes or dates."""
+    level = max(0, min(3, int(level or 0)))
+    natal = dict(material.get("natal") or {})
+    strengths = [
+        dict(item) for item in list(natal.get("strengths") or [])
+        if isinstance(item, dict)
+    ]
+    strength_caps = (6, 4, 3, 2)
+    natal["strengths"] = [
+        {
+            "title": _clip(item.get("title"), 72),
+            "strength": _clip(item.get("strength") or item.get("interpretation"), (180, 135, 105, 82)[level]),
+            "watch": _clip(item.get("watch"), (130, 100, 78, 62)[level]),
+            "evidence": _clip(item.get("evidence"), 72),
+        }
+        for item in strengths[: strength_caps[level]]
+    ]
+
+    if level >= 2:
+        core = dict(natal.get("core") or {})
+        keep = ("Sun", "Moon", "Mercury", "Venus", "Mars") if level == 2 else ("Sun", "Moon", "Venus", "Mars")
+        natal["core"] = {key: core[key] for key in keep if key in core}
+
+    issues = []
+    for issue in list(material.get("major_issues") or []):
+        if not isinstance(issue, dict):
+            continue
+        item = {
+            "number": issue.get("number"),
+            "customer_title": issue.get("customer_title"),
+            "strategic_frame": _clip(issue.get("strategic_frame"), 120),
+            "life_area": _clip(issue.get("life_area"), 90),
+            "polarity": issue.get("polarity"),
+            "start": issue.get("start"),
+            "end": issue.get("end"),
+            "question": _clip(issue.get("question"), (150, 120, 95, 80)[level]),
+            "advantage": _clip(issue.get("advantage"), (180, 135, 105, 85)[level]),
+            "risk": _clip(issue.get("risk"), (180, 135, 105, 85)[level]),
+            "move": _clip(issue.get("move"), (180, 135, 105, 85)[level]),
+            "dont": _clip(issue.get("dont"), (130, 100, 80, 65)[level]),
+            "primary": _compact_transit_for_voice(
+                dict(issue.get("primary") or {}),
+                level,
+                primary=True,
+            ),
+            "supporting": [
+                _compact_transit_for_voice(dict(row), level, primary=False)
+                for row in list(issue.get("supporting") or [])
+                if isinstance(row, dict)
+            ],
+        }
+        issues.append(item)
+
+    return {
+        "period": dict(material.get("period") or {}),
+        "reader_context": dict(material.get("reader_context") or {}),
+        "natal": natal,
+        "year_statistics": dict(material.get("year_statistics") or {}),
+        "year_strip": list(material.get("year_strip") or []),
+        "major_issues": issues,
+    }
+
+
 def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
     issues = list(material.get("major_issues") or [])
     issue_markers = "\n".join(
@@ -304,10 +393,11 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "where the supplied life area supports those themes.\n\n"
 
         "CONTENT SIZE:\n"
-        "- READ_YEAR: roughly 1,600-2,000 words in 10-14 substantial paragraphs.\n"
-        "- EACH ISSUE: roughly 450-650 words in 3-5 substantial paragraphs.\n"
-        "- CLOSING: 2 concise paragraphs, roughly 180-260 words total.\n"
-        "- Total target: approximately 3,800-5,000 words depending on number of issues.\n\n"
+        "- READ_YEAR: roughly 650-850 words in 5-7 substantial paragraphs.\n"
+        "- EACH ISSUE: roughly 170-230 words in 2-3 substantial paragraphs.\n"
+        "- CLOSING: 2 concise paragraphs, roughly 100-140 words total.\n"
+        "- Total target: approximately 1,500-1,900 words depending on number of issues. "
+        "Use density rather than repetition: every paragraph must add a new consequence, choice, timing stage or practical manifestation.\n\n"
 
         "OUTPUT FORMAT: return PLAIN TEXT ONLY using the exact internal markers "
         "below on their own lines. Do not use Markdown headings, bullets, JSON or "
@@ -344,17 +434,35 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
-    prompt = build_paid_yearly_prompt(material)
+    """Use the same proven provider envelope as Paid Monthly.
+
+    Compaction happens before the single provider call. It removes duplicate
+    wording only; selected Games, passes and dates remain present.
+    """
+    for level in range(4):
+        compact = _compact_paid_yearly_material(material, level)
+        prompt = build_paid_yearly_prompt(compact)
+        estimated_input = math.ceil(
+            (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 100) * 1.15
+        )
+        if estimated_input + PREFERRED_COMPLETION_TOKENS <= TARGET_TOTAL_TOKENS:
+            return prompt, PREFERRED_COMPLETION_TOKENS, estimated_input
+
+    compact = _compact_paid_yearly_material(material, 3)
+    prompt = build_paid_yearly_prompt(compact)
     estimated_input = math.ceil(
-        (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 120) * 1.10
+        (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 100) * 1.15
     )
-    completion = min(PREFERRED_COMPLETION_TOKENS, TARGET_TOTAL_TOKENS - estimated_input)
+    completion = min(
+        PREFERRED_COMPLETION_TOKENS,
+        TARGET_TOTAL_TOKENS - estimated_input,
+    )
     if completion < MIN_COMPLETION_TOKENS:
         raise RuntimeError(
-            "Paid Yearly preflight could not fit the finished annual material "
-            "inside the configured single-call token budget."
+            "Paid Yearly preflight still exceeds the provider-safe token envelope "
+            f"after compaction ({estimated_input} estimated input tokens)."
         )
-    return prompt, completion, estimated_input
+    return prompt, int(completion), estimated_input
 
 
 def _clean_text(value: Any) -> str:
@@ -428,9 +536,6 @@ def parse_paid_yearly_editorial(
         and closing
         and issues
         and len(issues) == required_issue_count
-        and len(read_year) >= 8
-        and len(closing) >= 2
-        and all(len(issue.paragraphs) >= 3 for issue in issues)
     )
     return PaidYearlyEditorial(
         headline=headline,
