@@ -106,6 +106,24 @@ def _pass_rows(story: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _strongest_date(story: dict[str, Any], fallback: object) -> str:
+    passes = _pass_rows(story)
+    if not passes:
+        return _date_label(fallback)
+    peak = min(
+        passes,
+        key=lambda row: (
+            float(row.get("orb", 99.0) or 99.0),
+            str(row.get("date") or ""),
+            str(row.get("time") or ""),
+        ),
+    )
+    value = _date_label(peak.get("date"))
+    if peak.get("time"):
+        value += f" · {peak.get('time')}"
+    return value
+
+
 def _render_issue(
     game: dict[str, Any],
     editorial: PaidYearlyEditorial,
@@ -150,7 +168,7 @@ def _render_issue(
     timing_html = (
         '<div class="timing-phase-grid">'
         f'<div><span>Begins</span><strong>{escape(_date_label(game.get("start_date")))}</strong></div>'
-        f'<div><span>Main issue</span><strong>{escape(str(game.get("strategic_frame") or game.get("polarity") or ""))}</strong></div>'
+        f'<div><span>Strongest</span><strong>{escape(_strongest_date(primary, game.get("start_date")))}</strong></div>'
         f'<div><span>Eases</span><strong>{escape(_date_label(game.get("end_date")))}</strong></div>'
         "</div>"
     )
@@ -222,47 +240,48 @@ def _key_dates(packet: dict[str, Any]) -> None:
         row for row in list(packet.get("games") or [])
         if isinstance(row, dict)
     ]:
-        stories = [dict(game.get("primary_transit") or {})] + [
-            row for row in list(game.get("supporting_transits") or [])
+        story = dict(game.get("primary_transit") or {})
+        technical = str(story.get("technical_label") or game.get("title") or "")
+
+        for hit in _pass_rows(story):
+            raw_date = str(hit.get("date") or "")[:10]
+            if not raw_date:
+                continue
+            number = int(hit.get("pass_number") or 1)
+            label = str(hit.get("pass_label") or f"Pass {number}")
+            rows.append(
+                (
+                    raw_date,
+                    _date_label(raw_date),
+                    f"{technical} · Pass {number} · {label}",
+                )
+            )
+
+        for trigger in [
+            row for row in list(story.get("triggers") or [])
             if isinstance(row, dict)
-        ]
-        for story in stories:
-            technical = str(story.get("technical_label") or "")
-            for hit in _pass_rows(story):
-                raw_date = str(hit.get("date") or "")[:10]
-                if not raw_date:
-                    continue
-                number = int(hit.get("pass_number") or 1)
-                label = str(hit.get("pass_label") or f"Pass {number}")
-                rows.append(
-                    (
-                        raw_date,
-                        _date_label(raw_date),
-                        f"{technical} · Pass {number} · {label}",
-                    )
-                )
-            for trigger in [
-                row for row in list(story.get("triggers") or [])
-                if isinstance(row, dict)
-            ]:
-                raw_date = str(trigger.get("date") or "")[:10]
-                if not raw_date:
-                    continue
-                label = str(
-                    trigger.get("activation_label")
-                    or trigger.get("technical_label")
-                    or "Supporting trigger"
-                )
-                rows.append((raw_date, _date_label(raw_date), label))
+        ]:
+            raw_date = str(trigger.get("date") or "")[:10]
+            if not raw_date:
+                continue
+            label = str(
+                trigger.get("activation_label")
+                or trigger.get("technical_label")
+                or "Supporting trigger"
+            )
+            rows.append((raw_date, _date_label(raw_date), label))
 
     if not rows:
         return
 
     st.markdown("## Key dates")
-    st.caption("Quick reference only — the interpretation is already above.")
+    st.caption(
+        "Quick reference only — the interpretation is already above. "
+        "This index keeps the primary exact contacts and their trigger dates."
+    )
 
     seen = set()
-    for sort_key, date_text, label in sorted(rows, key=lambda row: (row[0], row[2])):
+    for sort_key, date_text, label in sorted(rows, key=lambda row: (row[0], row[2]))[:20]:
         key = (sort_key, label)
         if key in seen:
             continue

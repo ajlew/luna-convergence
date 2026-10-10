@@ -122,9 +122,10 @@ from timing_map import (
 
 
 from year_ahead import build_year_packet
-from year_ahead_voice import generate_year_ahead_voice
 from year_ahead_view import render_year_ahead
-from year_ahead_pdf import build_year_ahead_pdf, year_ahead_filename
+from paid_yearly_editorial import generate_paid_yearly_editorial
+from paid_yearly_report import render_paid_yearly_report
+from paid_yearly_pdf import build_paid_yearly_pdf, paid_yearly_filename
 from major_event_registry import group_personal_activations, group_serialized_personal_activations, personalize_serialized_signals
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
@@ -167,8 +168,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.73"
-BUILD_LABEL = f"Luna {APP_VERSION} — Paid Year Ahead Rebuild"
+APP_VERSION = "v3.74"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Editorial"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -3615,7 +3616,7 @@ def payment_success_page() -> None:
             )
         elif product_code in {"YEAR", "YEARLY"}:
             start_date, end_date, _period_key = _yearly_period_window(period_code)
-            product = _build_paid_year_ahead_product(
+            product = _build_paid_yearly_product(
                 natal_profile_value=natal_profile_value,
                 start_date=start_date,
                 end_date=end_date,
@@ -3624,16 +3625,17 @@ def payment_success_page() -> None:
                 personal_question=personal_question,
             )
             period_label = _yearly_period_label(start_date, end_date)
-            pdf_bytes = build_year_ahead_pdf(
-                product["packet"],
-                voice_prose=product["voice_prose"],
+            pdf_bytes = build_paid_yearly_pdf(
+                snapshot=product["snapshot"],
+                packet=product["packet"],
+                editorial=product["editorial"],
                 sign=sign,
                 label=period_label,
                 main_focus=main_focus,
                 personal_question=personal_question,
                 order_reference=order_reference,
             )
-            pdf_name = year_ahead_filename(sign, start_date, end_date)
+            pdf_name = paid_yearly_filename(sign, start_date, end_date)
             st.download_button(
                 "Download your personalised PDF",
                 data=pdf_bytes,
@@ -3647,7 +3649,7 @@ def payment_success_page() -> None:
                 attachment_bytes=pdf_bytes,
                 attachment_filename=pdf_name,
             )
-            _render_paid_year_ahead_product(
+            _render_paid_yearly_product(
                 product,
                 label=period_label,
                 natal_precision=natal_precision_value,
@@ -4154,7 +4156,7 @@ def _owner_report_output(order: dict) -> dict:
 
     if product_code in {"YEAR", "YEARLY"}:
         start_date, end_date, _period_key = _yearly_period_window(period_code)
-        product = _build_paid_year_ahead_product(
+        product = _build_paid_yearly_product(
             natal_profile_value=str(order.get("natal_profile") or ""),
             start_date=start_date,
             end_date=end_date,
@@ -4163,9 +4165,10 @@ def _owner_report_output(order: dict) -> dict:
             personal_question=personal_question,
         )
         period_label = _yearly_period_label(start_date, end_date)
-        pdf_bytes = build_year_ahead_pdf(
-            product["packet"],
-            voice_prose=product["voice_prose"],
+        pdf_bytes = build_paid_yearly_pdf(
+            snapshot=product["snapshot"],
+            packet=product["packet"],
+            editorial=product["editorial"],
             sign=sign,
             label=period_label,
             main_focus=main_focus,
@@ -4178,7 +4181,7 @@ def _owner_report_output(order: dict) -> dict:
             "period_label": period_label,
             "natal_precision": str(order.get("natal_precision") or ""),
             "pdf": pdf_bytes,
-            "pdf_name": year_ahead_filename(sign, start_date, end_date),
+            "pdf_name": paid_yearly_filename(sign, start_date, end_date),
         }
 
     raise ValueError("Owner access received an unrecognised report type.")
@@ -4222,7 +4225,7 @@ def _render_owner_report(order: dict, key_context: str) -> None:
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
         )
     else:
-        _render_paid_year_ahead_product(
+        _render_paid_yearly_product(
             output["product"],
             label=str(output.get("period_label") or "Rolling 365 days"),
             natal_precision=str(output.get("natal_precision") or ""),
@@ -9509,52 +9512,42 @@ def _snapshot_from_encoded_natal_profile(profile_value: str, *, timezone_name: s
 
 
 @st.cache_data(show_spinner=False, ttl=86400)
-def _cached_paid_year_ahead_voice(
+def _cached_paid_yearly_editorial(
     packet_json: str,
-    reader_context_json: str,
+    natal_profile_value: str,
+    timezone_name: str,
+    main_focus: str,
+    personal_question: str,
     base_url: str,
     model: str,
     _api_key: str,
-) -> dict:
-    """One cached Luna call for one finished paid Year Packet.
+):
+    """One cached successful Paid Yearly editorial call.
 
-    Errors are cached too, so a provider failure does not create an automatic
-    retry loop on Streamlit reruns. The deterministic paid report still renders.
+    Exceptions are not converted to cached fallback output. A failed owner/customer
+    run must be explicitly generated again; there is no automatic retry loop.
     """
-    try:
-        prose = generate_year_ahead_voice(
-            json.loads(packet_json),
-            base_url=base_url,
-            model=model,
-            api_key=_api_key,
-            reader_context=json.loads(reader_context_json),
-        )
-        return {"prose": prose, "error": ""}
-    except Exception as exc:
-        message = " ".join(str(exc or "Voice unavailable").split())[:700]
-        if _api_key:
-            message = message.replace(_api_key, "[redacted]")
-        return {"prose": "", "error": message}
-
-
-def _paid_year_ahead_voice(packet, *, main_focus: str, personal_question: str) -> tuple[str, str]:
-    if not _luna_voice_ready():
-        return "", "Luna Voice is not configured."
-    context = {
-        "main_priority": str(main_focus or "General overview").strip(),
-        "personal_question": str(personal_question or "").strip(),
-    }
-    result = _cached_paid_year_ahead_voice(
-        json.dumps(packet.to_dict(), ensure_ascii=False, sort_keys=True, default=str),
-        json.dumps(context, ensure_ascii=False, sort_keys=True),
-        LUNA_VOICE_BASE_URL,
-        LUNA_VOICE_MODEL,
-        LUNA_VOICE_API_KEY,
+    snapshot = _snapshot_from_encoded_natal_profile(
+        natal_profile_value,
+        timezone_name=timezone_name,
     )
-    return str(result.get("prose") or ""), str(result.get("error") or "")
+    if snapshot is None:
+        raise ValueError(
+            "The paid Yearly natal geometry could not be reconstructed."
+        )
+
+    return generate_paid_yearly_editorial(
+        json.loads(packet_json),
+        snapshot=snapshot,
+        main_focus=main_focus,
+        personal_question=personal_question,
+        base_url=base_url,
+        model=model,
+        api_key=_api_key,
+    )
 
 
-def _build_paid_year_ahead_product(
+def _build_paid_yearly_product(
     *,
     natal_profile_value: str,
     start_date: date,
@@ -9563,13 +9556,15 @@ def _build_paid_year_ahead_product(
     main_focus: str,
     personal_question: str,
 ) -> dict:
-    """Build the paid Year Ahead from the same deterministic architecture as the master plan."""
+    """Build Paid Yearly: deterministic year first, then one complete editorial call."""
     snapshot = _snapshot_from_encoded_natal_profile(
         natal_profile_value,
         timezone_name=timezone_name,
     )
     if snapshot is None:
-        raise ValueError("The paid Year Ahead is missing the derived natal geometry required for personal transits.")
+        raise ValueError(
+            "The paid Year Ahead is missing the derived natal geometry required for personal transits."
+        )
 
     timing_report = build_timing_map(
         snapshot,
@@ -9583,60 +9578,75 @@ def _build_paid_year_ahead_product(
         )
 
     packet = build_year_packet(snapshot, timing_report)
-    voice_prose, voice_error = _paid_year_ahead_voice(
-        packet,
-        main_focus=main_focus,
-        personal_question=personal_question,
+    if not _luna_voice_ready():
+        raise RuntimeError(
+            "Luna Voice is not configured, so the paid Yearly report has not been published."
+        )
+
+    editorial = _cached_paid_yearly_editorial(
+        json.dumps(packet.to_dict(), ensure_ascii=False, sort_keys=True, default=str),
+        natal_profile_value,
+        timezone_name,
+        str(main_focus or "General overview"),
+        str(personal_question or ""),
+        LUNA_VOICE_BASE_URL,
+        LUNA_VOICE_MODEL,
+        LUNA_VOICE_API_KEY,
     )
+
+    expected_issues = len(packet.games)
+    actual_issues = len(getattr(editorial, "issues", ()) or ())
+    word_count = int(getattr(editorial, "word_count", 0) or 0)
+    read_year_count = len(getattr(editorial, "read_year", ()) or ())
+    closing_count = len(getattr(editorial, "closing", ()) or ())
+    issue_depth_ok = all(
+        len(getattr(issue, "paragraphs", ()) or ()) >= 3
+        for issue in (getattr(editorial, "issues", ()) or ())
+    )
+    minimum_words = 1650 + (400 * expected_issues)
+
+    if (
+        not bool(getattr(editorial, "voice_complete", False))
+        or actual_issues != expected_issues
+        or read_year_count < 8
+        or closing_count < 2
+        or not issue_depth_ok
+        or word_count < minimum_words
+    ):
+        raise RuntimeError(
+            "Luna did not return a complete paid annual reading "
+            f"({actual_issues}/{expected_issues} issue chapters, "
+            f"{read_year_count} Read-the-Year paragraphs, {word_count} words)."
+        )
+
     return {
         "snapshot": snapshot,
         "timing_report": timing_report,
         "packet": packet,
-        "voice_prose": voice_prose,
-        "voice_error": voice_error,
+        "editorial": editorial,
     }
 
 
-def _render_paid_year_ahead_product(
+def _render_paid_yearly_product(
     product: dict,
     *,
     label: str,
     natal_precision: str = "",
     order_reference: str = "",
 ) -> None:
-    """Render the paid customer product: natal signature -> year -> Games -> evidence."""
-    snapshot = product["snapshot"]
-    packet = product["packet"]
-
-    st.markdown('<section class="natal-shell paid-yearly-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Paid · Your Year Ahead</div>', unsafe_allow_html=True)
-    st.markdown('<div class="editorial-title">Your Year Ahead</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="natal-intro">{escape(label)} · Personal Transits & Timing. Calculated first, selected second, organised third, then narrated by Luna.</div>',
-        unsafe_allow_html=True,
+    """Render the Paid Monthly-style Yearly report."""
+    render_paid_yearly_report(
+        snapshot=product["snapshot"],
+        packet=product["packet"],
+        editorial=product["editorial"],
+        label=label,
+        natal_precision=natal_precision,
+        order_reference=order_reference,
+        render_natal_core=_render_snapshot_natal_core,
+        evidence_panel=_luna_evidence_panel,
+        trust_statement=LUNA_TRUST_STATEMENT,
+        trust_disclosure=LUNA_TRUST_DISCLOSURE,
     )
-
-    st.markdown("## Your natal signature")
-    _render_natal_signature_grid(snapshot)
-    if natal_precision:
-        st.caption(natal_precision)
-
-    st.markdown("## The year at a glance")
-    render_year_ahead(
-        packet,
-        voice_enabled=False,
-        base_url="",
-        model="",
-        api_key="",
-        voice_prose=str(product.get("voice_prose") or ""),
-        voice_error=str(product.get("voice_error") or ""),
-    )
-
-    st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
-    st.caption(LUNA_TRUST_DISCLOSURE)
-    if order_reference:
-        st.caption(f"Order reference · {order_reference}")
-    st.markdown('</section>', unsafe_allow_html=True)
 
 
 def _snapshot_natal_facts(snapshot) -> dict:

@@ -420,7 +420,18 @@ def parse_paid_yearly_editorial(
     )
     word_count = len(re.findall(r"\b[\w'-]+\b", all_text))
 
-    required_present = bool(headline and deck and read_year and issues)
+    required_issue_count = len(list(expected_issue_numbers or ())) or len(issue_numbers)
+    required_present = bool(
+        headline
+        and deck
+        and read_year
+        and closing
+        and issues
+        and len(issues) == required_issue_count
+        and len(read_year) >= 8
+        and len(closing) >= 2
+        and all(len(issue.paragraphs) >= 3 for issue in issues)
+    )
     return PaidYearlyEditorial(
         headline=headline,
         deck=deck,
