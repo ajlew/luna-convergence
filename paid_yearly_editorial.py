@@ -502,11 +502,12 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "'the second Game', 'this report', 'the packet' or similar report-meta language. "
         "Technical facts may be mentioned sparingly after the human meaning is clear.\n\n"
 
-        "DATE RULE: exact timing is rendered separately by Python. In READ_YEAR and "
-        "ISSUE prose, DO NOT print raw ISO dates such as 2027-02-27 and do not restate "
-        "active-window date ranges. You may say 'late February', 'in July', 'as spring "
-        "turns', or similar broad timing only when supported by the supplied chronology. "
-        "Never invent or alter a year.\n\n"
+        "DATE / LOCALISATION RULE: exact timing is rendered separately by Python. In "
+        "READ_YEAR and ISSUE prose, DO NOT print raw ISO dates such as 2027-02-27 and do "
+        "not restate active-window date ranges. Use month names, 'later in the year', "
+        "'in the second half of the year' or similar neutral timing only when supported "
+        "by the supplied chronology. Do NOT use spring, summer, autumn/fall or winter "
+        "unless a local season is explicitly supplied. Never invent or alter a year.\n\n"
 
         "NATAL BRIDGE: natal.strengths describe lifelong patterns. If an issue contains "
         "natal_resonance, connect that supplied natal pattern to the current story as a "
@@ -526,13 +527,19 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "reader's chosen start date. For each MONTH marker write ONE distinct 12-24 word "
         "strategic sentence. Do not repeat the Game title, date or phase label because "
         "the interface already shows them. Make the sentence specific to that round's "
-        "phase and supplied focus. Never reuse the same sentence in two months.\n\n"
+        "phase and supplied focus. When consecutive rounds share the same dominant_game_number, "
+        "treat them as stages of one continuing story: the later line must show what has "
+        "changed, what is being tested, revisited, consolidated or settled since the previous "
+        "round. Never restart the story from zero and never reuse the same sentence in two months.\n\n"
 
         "MAJOR STORY CHAPTERS: for each ISSUE marker, write 2-3 substantial paragraphs. "
         "Paragraph 1 = what is changing in human terms. Paragraphs 2-3 = concrete ways "
         "this may show up in ordinary life, the trade-off/risk, and how the sequence of "
-        "passes changes the decision. Do not repeat the customer title at the start. "
-        "Do not recite the active-window dates; the interface renders timing separately.\n\n"
+        "passes changes the decision. Treat the supplied life_area, strategic_frame, risk "
+        "and move as the customer-facing context for this story; do not drag relationship, "
+        "chemistry, money or career language into a different life area merely because a "
+        "planet is associated with those themes. Do not repeat the customer title at the "
+        "start. Do not recite active-window dates; the interface renders timing separately.\n\n"
 
         "READER CONTEXT: the customer's priority/question may influence emphasis only "
         "when the supplied astrology supports it. Do not force an answer.\n\n"
@@ -569,8 +576,9 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "Final strategic synthesis: what to protect, pursue, stop carrying and carry forward.\n\n"
 
         "Before returning, silently check: chronology is forward-moving; no raw ISO dates "
-        "appear in prose; no supplied story title is redundantly repeated at the start of "
-        "its own chapter; and no monthly sentence is duplicated.\n\n"
+        "appear in prose; no season name appears unless local season data was supplied; no "
+        "supplied story title is redundantly repeated at the start of its own chapter; no "
+        "monthly sentence is duplicated; and every example belongs to the stated life area.\n\n"
 
         "CALCULATED YEAR:\n"
         + json.dumps(material, ensure_ascii=False, separators=(",", ":"), default=str)

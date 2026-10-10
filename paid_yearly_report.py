@@ -197,6 +197,23 @@ def _pass_stage_copy(
     return base
 
 
+def _trigger_domain(game: dict[str, Any] | None) -> str:
+    area = str((game or {}).get("human_life_area") or "").lower()
+    if any(word in area for word in ("identity", "personal direction", "energy")):
+        return "identity"
+    if any(word in area for word in ("relationship", "agreement", "client", "competitor")):
+        return "relationship"
+    if any(word in area for word in ("career", "reputation", "authority", "public direction")):
+        return "career"
+    if any(word in area for word in ("shared money", "money", "debt", "tax", "obligation")):
+        return "money"
+    if any(word in area for word in ("home", "family", "private life", "root")):
+        return "home"
+    if any(word in area for word in ("work routine", "wellbeing", "health", "daily obligation", "service")):
+        return "work"
+    return "general"
+
+
 def _human_trigger_label(
     row: dict[str, Any],
     game: dict[str, Any] | None = None,
@@ -206,20 +223,124 @@ def _human_trigger_label(
         or row.get("trigger_planet")
         or ""
     ).strip()
-    life_area = _human_story_label(game or {}).lower()
+    domain = _trigger_domain(game)
 
-    meanings = {
+    copy = {
+        ("identity", "Sun"): (
+            "The Sun makes your position more visible. "
+            "What you stand for, refuse or take responsibility for is harder for others to miss."
+        ),
+        ("identity", "Mercury"): (
+            "Mercury turns the identity question into a conversation, decision or message. "
+            "Say what the boundary actually is rather than hoping it is understood."
+        ),
+        ("identity", "Venus"): (
+            "Venus highlights presentation, self-worth and how easily other people respond to you. "
+            "Notice which responses support the person you are trying to become."
+        ),
+        ("identity", "Mars"): (
+            "Mars pushes the boundary into action. "
+            "Use the extra force to defend a clear limit, not to turn firmness into conflict."
+        ),
+
+        ("relationship", "Sun"): (
+            "The Sun makes the relationship terms more visible. "
+            "What was background is harder to ignore, so notice what now needs a clear position."
+        ),
+        ("relationship", "Mercury"): (
+            "Mercury puts the terms into words. "
+            "Use the moment for the conversation, message or detail that removes an avoidable assumption."
+        ),
+        ("relationship", "Venus"): (
+            "Venus foregrounds reciprocity, affection, fairness and value. "
+            "Notice whether the agreement still feels balanced enough to keep."
+        ),
+        ("relationship", "Mars"): (
+            "Mars adds pressure to the agreement. "
+            "Act directly, but do not let urgency negotiate the terms for you."
+        ),
+
+        ("career", "Sun"): (
+            "The Sun increases professional visibility. "
+            "A role, result or ambition is easier to see, so be clear about the position you want to occupy."
+        ),
+        ("career", "Mercury"): (
+            "Mercury brings a professional conversation, contract, pitch or decision into focus. "
+            "Clarify scope and responsibility before the opportunity grows."
+        ),
+        ("career", "Venus"): (
+            "Venus highlights professional support, reputation, money or alliances. "
+            "Notice who values the work enough to back it in practical terms."
+        ),
+        ("career", "Mars"): (
+            "Mars increases urgency, competition or delivery pressure. "
+            "Move when the workload and ownership are clear enough to support the push."
+        ),
+
+        ("money", "Sun"): (
+            "The Sun makes the obligation more visible. "
+            "Put the cost, ownership and responsibility where everyone can see them."
+        ),
+        ("money", "Mercury"): (
+            "Mercury brings the numbers, terms or paperwork into focus. "
+            "Use the moment to verify what is owed, owned or promised."
+        ),
+        ("money", "Venus"): (
+            "Venus brings value and exchange into focus. "
+            "Check whether the price, benefit and responsibility still feel proportionate."
+        ),
+        ("money", "Mars"): (
+            "Mars increases pressure around cost or obligation. "
+            "Act on the clearest liability first rather than spreading effort across every concern."
+        ),
+
+        ("home", "Sun"): (
+            "The Sun makes the private foundation more visible. "
+            "Notice what home or family life needs in order to carry the rest of the year."
+        ),
+        ("home", "Mercury"): (
+            "Mercury brings a practical home or family conversation into focus. "
+            "Name the responsibility instead of letting it remain assumed."
+        ),
+        ("home", "Venus"): (
+            "Venus highlights comfort, harmony and shared value at home. "
+            "Notice what genuinely improves the private foundation and what only smooths over tension."
+        ),
+        ("home", "Mars"): (
+            "Mars adds urgency to a home or family issue. "
+            "Use the energy to solve the practical problem without turning it into a wider fight."
+        ),
+
+        ("work", "Sun"): (
+            "The Sun makes the workload and routine more visible. "
+            "Notice which repeated demand now needs a clearer structure."
+        ),
+        ("work", "Mercury"): (
+            "Mercury brings scheduling, instructions or a practical detail into focus. "
+            "Clarify the process before adding more work to it."
+        ),
+        ("work", "Venus"): (
+            "Venus highlights what makes the routine easier to sustain. "
+            "Notice where cooperation or a better arrangement reduces unnecessary friction."
+        ),
+        ("work", "Mars"): (
+            "Mars raises the pace. "
+            "Use the extra drive on the highest-value task instead of proving you can absorb every demand."
+        ),
+    }
+
+    fallback = {
         "Sun": (
             "The Sun makes this story more visible. "
             "What was background is harder to ignore, so notice what now needs a clear position."
         ),
         "Mercury": (
-            "Mercury turns this story into a conversation, message, decision or detail that needs naming. "
-            "Use the moment to clarify terms rather than assume understanding."
+            "Mercury turns the story into a conversation, decision or detail that needs naming. "
+            "Clarify what matters rather than assume understanding."
         ),
         "Venus": (
-            "Venus brings value, reciprocity, attraction or relationship terms into the foreground. "
-            "Notice what feels balanced enough to keep and what does not."
+            "Venus brings value, reciprocity and preference into the foreground. "
+            "Notice what feels balanced enough to keep."
         ),
         "Mars": (
             "Mars adds urgency, initiative or friction. "
@@ -227,13 +348,50 @@ def _human_trigger_label(
         ),
     }
 
-    base = meanings.get(
+    return copy.get((domain, planet), fallback.get(
         planet,
         "A faster-moving contact brings this story back into focus."
-    )
-    if game:
-        return f"In {life_area}, {base[0].lower() + base[1:]}"
-    return base
+    ))
+
+
+def _key_trigger_label(
+    row: dict[str, Any],
+    game: dict[str, Any] | None = None,
+) -> str:
+    planet = str(
+        row.get("planet")
+        or row.get("trigger_planet")
+        or "Trigger"
+    ).strip()
+    domain = _trigger_domain(game)
+
+    short = {
+        ("identity", "Sun"): "visibility and personal position come into focus",
+        ("identity", "Mercury"): "a boundary, message or decision needs words",
+        ("identity", "Venus"): "presentation and self-worth come into focus",
+        ("identity", "Mars"): "a personal boundary needs action",
+        ("relationship", "Sun"): "the relationship terms become harder to ignore",
+        ("relationship", "Mercury"): "the terms need a conversation or clarification",
+        ("relationship", "Venus"): "reciprocity and fairness come into focus",
+        ("relationship", "Mars"): "friction or urgency tests the agreement",
+        ("career", "Sun"): "professional visibility rises",
+        ("career", "Mercury"): "a professional decision, pitch or detail needs clarity",
+        ("career", "Venus"): "support, reputation and value come into focus",
+        ("career", "Mars"): "pressure to act or deliver increases",
+        ("money", "Mercury"): "numbers, paperwork or terms need checking",
+        ("money", "Venus"): "value and exchange come into focus",
+        ("money", "Mars"): "cost or obligation needs action",
+        ("home", "Mercury"): "a home or family responsibility needs naming",
+        ("home", "Venus"): "comfort and shared value come into focus",
+        ("home", "Mars"): "a practical home issue needs action",
+        ("work", "Mercury"): "scheduling or process needs clarification",
+        ("work", "Venus"): "cooperation can make the routine easier to sustain",
+        ("work", "Mars"): "the pace increases; prioritise deliberately",
+    }.get((domain, planet))
+
+    if short:
+        return f"{planet} · {short}"
+    return f"{planet} · supporting trigger"
 
 
 def _strongest_date(story: dict[str, Any], fallback: object) -> str:
@@ -427,6 +585,32 @@ def _render_year_map(packet: dict[str, Any]) -> None:
     )
 
 
+def _month_stage_label(
+    row: dict[str, Any],
+    *,
+    same_story_as_previous: bool = False,
+) -> str:
+    phase = _human_phase(row.get("phase"))
+
+    if phase == "RETURN":
+        return "REVISIT"
+    if phase == "ENDING":
+        return "CLOSE THE LOOP"
+    if phase == "POWER SHIFT":
+        return "LEVERAGE SHIFTS"
+    if phase == "STRUCTURE":
+        return "SEE WHAT HOLDS" if same_story_as_previous else "BUILD THE STRUCTURE"
+    if phase == "DECISION":
+        return "TEST THE CHOICE" if same_story_as_previous else "MAKE THE CHOICE"
+    if phase == "OPENING":
+        return "BUILD ON IT" if same_story_as_previous else "THE OPENING"
+    if phase == "CHANGE":
+        return "ADJUST"
+    if phase == "QUIETER GROUND":
+        return "CONSOLIDATE"
+    return phase
+
+
 def _monthly_focus(row: dict[str, Any]) -> str:
     base = " ".join(str(row.get("focus") or "").split())
     phase = _human_phase(row.get("phase"))
@@ -483,9 +667,16 @@ def _month_by_month_rows(
         return []
 
     output: list[dict[str, str]] = []
+    previous_game_number: int | None = None
+
     for row in rounds:
         number = int(row.get("dominant_game_number") or 0)
         game = games.get(number)
+        same_story_as_previous = bool(
+            previous_game_number
+            and number
+            and number == previous_game_number
+        )
 
         month_voice = (
             editorial.month_for(int(row.get("number") or 0))
@@ -495,7 +686,10 @@ def _month_by_month_rows(
         output.append(
             {
                 "month": str(row.get("label") or ""),
-                "phase": _human_phase(row.get("phase")),
+                "phase": _month_stage_label(
+                    row,
+                    same_story_as_previous=same_story_as_previous,
+                ),
                 "story": _human_story_label(game),
                 "focus": (
                     str(month_voice.focus).strip()
@@ -505,6 +699,7 @@ def _month_by_month_rows(
                 "strongest": _strongest_round_label(row),
             }
         )
+        previous_game_number = number
 
     return output
 
@@ -519,7 +714,7 @@ def _render_month_by_month(
 
     st.markdown("## Your year, one month at a time")
     st.caption(
-        "Twelve rolling monthly rounds from your chosen start date — a navigation layer, not twelve separate horoscopes."
+        "Twelve stages of the same evolving year. When a story continues across several months, the label shows what changes next."
     )
 
     cards: list[str] = []
@@ -832,7 +1027,7 @@ def _key_moments(packet: dict[str, Any]) -> None:
                 (
                     raw_date,
                     _date_label(raw_date),
-                    _human_trigger_label(trigger, game),
+                    _key_trigger_label(trigger, game),
                 )
             )
 

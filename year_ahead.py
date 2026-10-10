@@ -457,6 +457,142 @@ def _cluster_life_area(cluster: Sequence[TransitStory]) -> str:
     return max(weighted.items(), key=lambda item: item[1])[0] if weighted else "personal direction"
 
 
+def _guidance_for_life_area(
+    life_area: str,
+    primary: TransitStory,
+    definition: GameDefinition,
+) -> dict[str, str]:
+    """Keep deterministic advice aligned with the story's actual natal life area.
+
+    The Game definition still helps cluster the evidence, but customer-facing
+    guidance should not inherit relationship, money or chemistry language when
+    the calculated story is really about identity, career, home or another domain.
+    """
+    area = str(life_area or "").lower()
+
+    move = str(getattr(primary, "move", "") or "").strip()
+    risk = str(getattr(primary, "watch", "") or "").strip()
+
+    if any(word in area for word in ("identity", "personal direction", "energy")):
+        return {
+            "strategic_frame": "Define your position clearly",
+            "question": "What are you willing to carry, and what now needs a clearer boundary?",
+            "advantage": "Clear limits make your role, capacity and priorities easier for other people to read.",
+            "risk": risk or "A useful boundary can harden into rigidity if every request starts to feel like a threat.",
+            "move": move or "Make one limit explicit, then watch what changes when other people have to respond to it.",
+            "dont": "Do not confuse firmness with carrying everything alone.",
+        }
+
+    if any(word in area for word in ("relationship", "agreement", "client", "competitor")):
+        return {
+            "strategic_frame": "Make the terms explicit",
+            "question": "Which expectations, responsibilities or terms need to be said out loud?",
+            "advantage": "Clear terms make reciprocity and responsibility easier to test in real conditions.",
+            "risk": risk or "Leaving important terms implied gives resentment and mixed expectations too much room.",
+            "move": move or "State the expectation clearly and ask for the other person's terms before committing more.",
+            "dont": "Do not call ambiguity freedom when an agreement actually needs definition.",
+        }
+
+    if any(word in area for word in ("career", "reputation", "authority", "public direction")):
+        return {
+            "strategic_frame": "Make the opportunity fit your capacity",
+            "question": "Which opportunity is worth taking once ownership, workload and consequences are visible?",
+            "advantage": "Visible scope, ownership and capacity let opportunity become sustainable rather than merely impressive.",
+            "risk": risk or "Visibility can create pressure to promise more than the structure underneath can carry.",
+            "move": move or "Put the owner, cost, deadline and capacity next to the opportunity before you expand it.",
+            "dont": "Do not mistake visibility, praise or access for available capacity.",
+        }
+
+    if any(word in area for word in ("shared money", "money", "debt", "tax", "obligation")):
+        return {
+            "strategic_frame": "Make obligations visible",
+            "question": "Who owns, pays, owes or carries the downside if this commitment grows?",
+            "advantage": "Clear cost and responsibility reduce hidden exposure before the commitment becomes harder to unwind.",
+            "risk": risk or "Unclear ownership or cost can make a reasonable opportunity more expensive than it first appears.",
+            "move": move or "Write down the cost, owner, obligation and exit before agreeing to carry more.",
+            "dont": "Do not commit while the financial or practical downside is still vague.",
+        }
+
+    if any(word in area for word in ("home", "family", "private life", "root")):
+        return {
+            "strategic_frame": "Protect the foundation",
+            "question": "What does your private life need in order to carry the rest of the year?",
+            "advantage": "Clear responsibilities at home protect the foundation supporting work, relationships and recovery.",
+            "risk": risk or "Public demands can quietly consume the private structure that makes them possible.",
+            "move": move or "Protect one non-negotiable piece of the private foundation before adding another external demand.",
+            "dont": "Do not let the visible win hollow out the life that has to support it.",
+        }
+
+    if any(word in area for word in ("work routine", "wellbeing", "health", "daily obligation", "service")):
+        return {
+            "strategic_frame": "Build a repeatable rhythm",
+            "question": "Which routine makes the workload sustainable rather than merely possible?",
+            "advantage": "A repeatable structure protects energy and makes commitments easier to judge honestly.",
+            "risk": risk or "Pushing through a temporary surge can disguise a routine that is not sustainable.",
+            "move": move or "Turn the recurring demand into a visible routine, limit or hand-off before increasing the load.",
+            "dont": "Do not use a short burst of endurance as proof that the pace is sustainable.",
+        }
+
+    if any(word in area for word in ("travel", "study", "publishing", "law", "belief", "international")):
+        return {
+            "strategic_frame": "Choose the opening deliberately",
+            "question": "Which wider option is worth the time, cost and commitment it actually requires?",
+            "advantage": "Clear criteria help you distinguish a genuine expansion from an attractive distraction.",
+            "risk": risk or "A wider horizon can scatter effort if every possibility is treated as equally important.",
+            "move": move or "Choose the opening that still makes sense after time, cost and follow-through are made visible.",
+            "dont": "Do not collect options faster than you can test them.",
+        }
+
+    if any(word in area for word in ("communication", "learning", "sibling")):
+        return {
+            "strategic_frame": "Get the important fact into the open",
+            "question": "What needs to be said, written or clarified before the decision can be sound?",
+            "advantage": "Clear information reduces avoidable ambiguity and improves the quality of the next decision.",
+            "risk": risk or "Assumptions can become commitments before anyone notices what was never actually agreed.",
+            "move": move or "Ask the direct question and put the answer in writing before the stakes rise.",
+            "dont": "Do not let a convincing story substitute for complete information.",
+        }
+
+    if any(word in area for word in ("romance", "creativity", "pleasure", "children", "entrepreneur")):
+        return {
+            "strategic_frame": "Let consistency decide what grows",
+            "question": "What deserves more investment once enthusiasm meets timing and responsibility?",
+            "advantage": "Consistency separates a promising spark from something that can actually be developed.",
+            "risk": risk or "Intensity can make a possibility look more mature than the evidence supports.",
+            "move": move or "Give the promising option enough time to prove consistency before increasing the commitment.",
+            "dont": "Do not promote chemistry, excitement or possibility into certainty too early.",
+        }
+
+    if any(word in area for word in ("friend", "network", "audience", "alliance", "long-term goal")):
+        return {
+            "strategic_frame": "Choose the alliances that are mutual",
+            "question": "Which people or networks still move value, information and responsibility both ways?",
+            "advantage": "Mutual contribution makes alliances more useful and durable as the year gets busier.",
+            "risk": risk or "Access can look valuable even when the exchange has become one-sided.",
+            "move": move or "Put more energy into the alliances that reciprocate information, effort or opportunity.",
+            "dont": "Do not confuse proximity to opportunity with a genuinely mutual alliance.",
+        }
+
+    if any(word in area for word in ("rest", "closure", "retreat", "hidden")):
+        return {
+            "strategic_frame": "Create room to finish what is ending",
+            "question": "What needs less input from you so the next stage has somewhere to begin?",
+            "advantage": "Space and limits make closure more deliberate and protect attention for what is actually next.",
+            "risk": risk or "Keeping every unfinished thread alive can turn recovery into another obligation.",
+            "move": move or "Remove one recurring drain before adding a new commitment.",
+            "dont": "Do not fill every quiet space simply because it is available.",
+        }
+
+    return {
+        "strategic_frame": str(definition.title),
+        "question": str(definition.question),
+        "advantage": str(definition.advantage),
+        "risk": risk or str(definition.risk),
+        "move": move or str(definition.do_line),
+        "dont": str(definition.dont_line),
+    }
+
+
 def _build_game(
     number: int,
     cluster: Sequence[TransitStory],
@@ -472,13 +608,19 @@ def _build_game(
     supporting = ordered[1:]
     definition = _best_definition(cluster)
     start, end = _cluster_dates(cluster)
+    life_area = _cluster_life_area(cluster)
+    guidance = _guidance_for_life_area(
+        life_area,
+        primary,
+        definition,
+    )
 
     return YearGame(
         number=number,
         key=definition.key,
         title=str(primary.headline),
-        strategic_frame=str(definition.title),
-        question=str(definition.question),
+        strategic_frame=guidance["strategic_frame"],
+        question=guidance["question"],
         start_date=start,
         end_date=end,
         start_state=(
@@ -491,7 +633,7 @@ def _build_game(
             if end > report_end
             else "ends_inside_year"
         ),
-        human_life_area=_cluster_life_area(cluster),
+        human_life_area=life_area,
         polarity=_cluster_polarity(cluster),
         score=round(_cluster_strength(cluster), 4),
         primary_transit=_serialize_story(
@@ -507,10 +649,10 @@ def _build_game(
             )
             for item in supporting
         ),
-        advantage=str(definition.advantage),
-        risk=str(definition.risk),
-        move=str(definition.do_line),
-        dont=str(definition.dont_line),
+        advantage=guidance["advantage"],
+        risk=guidance["risk"],
+        move=guidance["move"],
+        dont=guidance["dont"],
     )
 
 
