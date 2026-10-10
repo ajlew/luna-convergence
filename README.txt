@@ -1,13 +1,26 @@
-Luna Convergence v3.17 Google Ads base-tag hotfix
+LUNA PAID YEARLY — HUMAN LANGUAGE / YEAR MAP UPDATE
 
-Replace app.py only.
+Replace ONLY this root file:
+    /paid_yearly_report.py
 
-Adds Google Ads destination AW-18379683881 alongside the existing GA4 destination G-TE5HPKV94D.
-Existing Daily renderer hotfix remains preserved.
+No app.py change is required.
+No Paid Monthly file is changed.
+No calculation engine is changed.
+No pre-generation workflow is changed.
+No LLM architecture is changed.
 
-Optional Streamlit secret:
-GOOGLE_ADS_ID = "AW-18379683881"
+Customer-facing changes:
+- "Your year map" -> "How your year unfolds"
+- "Intensity" -> "Year rhythm"
+- no P1/P2/P3 labels in the main visual map
+- pass labels become First contact / Returns / Final contact
+- "Major issues" -> "The major stories of your year"
+- "Major issue 01" -> "Story 01"
+- adds The year at a glance
+- adds Your year, month by month
+- adds human trigger language
+- limits reader-facing supporting arcs to two
+- adds Why Luna sees this under every story
+- "Key dates" -> "Key moments"
 
-If omitted, app.py defaults to AW-18379683881.
-
-This connects the base Google Ads tag only. A purchase conversion event/label is a separate next step.
+The technical evidence still retains Pass numbers, exact time, D/R state and orb.
