@@ -1,0 +1,358 @@
+PAID YEARLY — FINAL INTEGRATION INTO CURRENT GITHUB app.py
+
+Current GitHub state verified before this file was written:
+- paid_yearly_editorial.py EXISTS
+- paid_yearly_report.py EXISTS
+- app.py is Luna v3.73 Paid Year Ahead Rebuild
+- paid_yearly_pdf.py does NOT yet exist
+
+FIRST:
+Add paid_yearly_pdf.py from this package to the repository root.
+
+THEN edit the CURRENT root app.py as follows.
+
+============================================================
+1. IMPORTS
+============================================================
+
+Find:
+
+from year_ahead_pdf import build_year_ahead_pdf, year_ahead_filename
+
+Immediately AFTER it add:
+
+from paid_yearly_editorial import generate_paid_yearly_editorial
+from paid_yearly_report import render_paid_yearly_report
+from paid_yearly_pdf import build_paid_yearly_pdf, paid_yearly_filename
+
+
+============================================================
+2. BUILD LABEL
+============================================================
+
+Find:
+
+APP_VERSION = "v3.73"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Year Ahead Rebuild"
+
+Replace with:
+
+APP_VERSION = "v3.74"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Editorial"
+
+
+============================================================
+3. REPLACE THE OLD PAID YEARLY VOICE/RENDER BLOCK
+============================================================
+
+Find the block beginning:
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_paid_year_ahead_voice(
+
+Delete from that decorator through the END of:
+
+def _render_paid_year_ahead_product(...)
+
+Stop immediately BEFORE:
+
+def _snapshot_natal_facts(
+
+Replace the whole deleted block with:
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _cached_paid_yearly_editorial(
+    packet_json: str,
+    natal_profile_value: str,
+    timezone_name: str,
+    main_focus: str,
+    personal_question: str,
+    base_url: str,
+    model: str,
+    _api_key: str,
+) -> dict:
+    """One cached Paid Yearly call. Provider failures are cached too."""
+    snapshot = _snapshot_from_encoded_natal_profile(
+        natal_profile_value,
+        timezone_name=timezone_name,
+    )
+    if snapshot is None:
+        return {
+            "editorial": None,
+            "error": "The paid Yearly natal geometry could not be reconstructed.",
+        }
+
+    try:
+        editorial = generate_paid_yearly_editorial(
+            json.loads(packet_json),
+            snapshot=snapshot,
+            main_focus=main_focus,
+            personal_question=personal_question,
+            base_url=base_url,
+            model=model,
+            api_key=_api_key,
+        )
+    except Exception as exc:
+        message = " ".join(str(exc or "Paid Yearly voice unavailable").split())[:700]
+        if _api_key:
+            message = message.replace(_api_key, "[redacted]")
+        return {"editorial": None, "error": message}
+
+    return {"editorial": editorial, "error": ""}
+
+
+def _build_paid_yearly_product(
+    *,
+    natal_profile_value: str,
+    start_date: date,
+    end_date: date,
+    timezone_name: str,
+    main_focus: str,
+    personal_question: str,
+) -> dict:
+    """Build the finished paid Yearly product from deterministic astrology + one Luna article."""
+    snapshot = _snapshot_from_encoded_natal_profile(
+        natal_profile_value,
+        timezone_name=timezone_name,
+    )
+    if snapshot is None:
+        raise ValueError(
+            "The paid Year Ahead is missing the derived natal geometry required for personal transits."
+        )
+
+    timing_report = build_timing_map(
+        snapshot,
+        start_date=start_date,
+        timezone_name=timezone_name,
+        max_stories=10,
+    )
+    if timing_report.end_date != end_date:
+        raise ValueError(
+            "The paid Year Ahead period does not match the required rolling 365-day window."
+        )
+
+    packet = build_year_packet(snapshot, timing_report)
+
+    if not _luna_voice_ready():
+        raise RuntimeError(
+            "Luna Voice is not configured, so the paid Yearly report has not been published."
+        )
+
+    cached = _cached_paid_yearly_editorial(
+        json.dumps(packet.to_dict(), ensure_ascii=False, sort_keys=True, default=str),
+        natal_profile_value,
+        timezone_name,
+        str(main_focus or "General overview"),
+        str(personal_question or ""),
+        LUNA_VOICE_BASE_URL,
+        LUNA_VOICE_MODEL,
+        LUNA_VOICE_API_KEY,
+    )
+    editorial = cached.get("editorial")
+    editorial_error = str(cached.get("error") or "")
+
+    expected_issues = len(packet.games)
+    actual_issues = len(getattr(editorial, "issues", ()) or ()) if editorial is not None else 0
+    word_count = int(getattr(editorial, "word_count", 0) or 0) if editorial is not None else 0
+
+    # Paid Monthly does not knowingly publish a broken story. Paid Yearly follows
+    # the same principle: no tiny dashboard fallback is delivered as the paid product.
+    if (
+        editorial is None
+        or not bool(getattr(editorial, "voice_complete", False))
+        or actual_issues != expected_issues
+        or word_count < 2600
+    ):
+        detail = editorial_error or (
+            "Luna did not return the complete long-form annual reading "
+            f"({actual_issues}/{expected_issues} issue chapters, {word_count} words)."
+        )
+        raise RuntimeError(detail)
+
+    return {
+        "snapshot": snapshot,
+        "timing_report": timing_report,
+        "packet": packet,
+        "editorial": editorial,
+    }
+
+
+def _render_paid_yearly_product(
+    product: dict,
+    *,
+    label: str,
+    natal_precision: str = "",
+    order_reference: str = "",
+) -> None:
+    render_paid_yearly_report(
+        snapshot=product["snapshot"],
+        packet=product["packet"],
+        editorial=product["editorial"],
+        label=label,
+        natal_precision=natal_precision,
+        order_reference=order_reference,
+        render_natal_core=_render_snapshot_natal_core,
+        evidence_panel=_luna_evidence_panel,
+        trust_statement=LUNA_TRUST_STATEMENT,
+        trust_disclosure=LUNA_TRUST_DISCLOSURE,
+    )
+
+
+============================================================
+4. PAID POST-STRIPE FULFILMENT
+============================================================
+
+Inside the existing:
+
+elif product_code in {"YEAR", "YEARLY"}:
+
+replace the complete branch body with:
+
+        elif product_code in {"YEAR", "YEARLY"}:
+            start_date, end_date, _period_key = _yearly_period_window(period_code)
+            product = _build_paid_yearly_product(
+                natal_profile_value=natal_profile_value,
+                start_date=start_date,
+                end_date=end_date,
+                timezone_name=timezone_name,
+                main_focus=main_focus,
+                personal_question=personal_question,
+            )
+            period_label = _yearly_period_label(start_date, end_date)
+            pdf_bytes = build_paid_yearly_pdf(
+                snapshot=product["snapshot"],
+                packet=product["packet"],
+                editorial=product["editorial"],
+                sign=sign,
+                label=period_label,
+                main_focus=main_focus,
+                personal_question=personal_question,
+                order_reference=order_reference,
+            )
+            pdf_name = paid_yearly_filename(sign, start_date, end_date)
+            st.download_button(
+                "Download your personalised PDF",
+                data=pdf_bytes,
+                file_name=pdf_name,
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"paid-pdf-{session_id}",
+            )
+            _email_paid_report(
+                session,
+                attachment_bytes=pdf_bytes,
+                attachment_filename=pdf_name,
+            )
+            _render_paid_yearly_product(
+                product,
+                label=period_label,
+                natal_precision=natal_precision_value,
+                order_reference=order_reference,
+            )
+
+
+============================================================
+5. OWNER PREVIEW OUTPUT
+============================================================
+
+Inside def _owner_report_output(order: dict), find:
+
+    if product_code in {"YEAR", "YEARLY"}:
+
+Replace that complete YEAR/YEARLY block with:
+
+    if product_code in {"YEAR", "YEARLY"}:
+        start_date, end_date, _period_key = _yearly_period_window(period_code)
+        product = _build_paid_yearly_product(
+            natal_profile_value=str(order.get("natal_profile") or ""),
+            start_date=start_date,
+            end_date=end_date,
+            timezone_name=timezone_name,
+            main_focus=main_focus,
+            personal_question=personal_question,
+        )
+        period_label = _yearly_period_label(start_date, end_date)
+        pdf_bytes = build_paid_yearly_pdf(
+            snapshot=product["snapshot"],
+            packet=product["packet"],
+            editorial=product["editorial"],
+            sign=sign,
+            label=period_label,
+            main_focus=main_focus,
+            personal_question=personal_question,
+            order_reference=order_reference,
+        )
+        return {
+            "product_code": product_code,
+            "product": product,
+            "period_label": period_label,
+            "natal_precision": str(order.get("natal_precision") or ""),
+            "pdf": pdf_bytes,
+            "pdf_name": paid_yearly_filename(sign, start_date, end_date),
+        }
+
+
+============================================================
+6. OWNER PREVIEW RENDER
+============================================================
+
+Inside def _render_owner_report(...), find the ELSE branch that currently calls:
+
+        _render_paid_year_ahead_product(
+
+Replace that call with:
+
+        _render_paid_yearly_product(
+            output["product"],
+            label=str(output.get("period_label") or "Rolling 365 days"),
+            natal_precision=str(output.get("natal_precision") or ""),
+            order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
+        )
+
+
+============================================================
+WHAT THIS DOES
+============================================================
+
+Paid Monthly remains untouched.
+
+Paid Yearly becomes:
+
+EDITORIAL HEADLINE
+short deck
+
+Your natal signature
+Read the pattern
+Natal chart
+Your strengths
+  -> exact same canonical renderer Paid Monthly uses
+
+READ THE YEAR
+  -> 1,600-2,000 word continuous annual article
+
+YOUR YEAR MAP
+  -> quick navigation only, not the product
+
+THE MAJOR ISSUES OF YOUR YEAR
+
+Major issue 01
+  -> 450-650 word Luna chapter
+  -> Begins / Strongest / Eases
+  -> Pass 1 / retrograde return / final pass
+  -> trigger dates
+  -> supporting slow arcs
+
+Major issue 02...
+Major issue 03...
+Major issue 04...
+
+WHAT THE YEAR LEAVES YOU WITH
+
+KEY DATES
+
+WHY LUNA SEES THIS · CHART EVIDENCE
+  -> collapsed technical proof
+
+The paid report is NOT published if Luna returns a tiny/incomplete annual story.
+There is NO automatic retry loop.
+A manual regeneration is required after a failed owner run.
