@@ -87,12 +87,18 @@ def _human_phase(value: object) -> str:
     phase = str(value or "QUIET").upper()
     return {
         "OPPORTUNITY": "OPENING",
-        "PRESSURE": "PRESSURE",
+        "PRESSURE": "DECISION",
         "STRUCTURAL": "STRUCTURE",
         "MIXED": "CHANGE",
+        "DECISION": "DECISION",
+        "POWER_SHIFT": "POWER SHIFT",
+        "OPENING": "OPENING",
+        "STRUCTURE": "STRUCTURE",
+        "CHANGE": "CHANGE",
         "RETURN": "RETURN",
         "ENDING": "ENDING",
         "QUIET": "QUIETER GROUND",
+        "QUIETER_GROUND": "QUIETER GROUND",
     }.get(phase, phase.replace("_", " "))
 
 
@@ -313,9 +319,22 @@ def _render_year_map(packet: dict[str, Any]) -> None:
                 f'title="{escape(title, quote=True)} · {escape(_date_label(trigger_date), quote=True)}"></div>'
             )
 
+        edge_notes = []
+        if str(game.get("start_state") or "") == "already_active":
+            edge_notes.append("already active")
+        if str(game.get("end_state") or "") == "continues_beyond_year":
+            edge_notes.append("continues beyond")
+        edge_note = (
+            '<small style="display:block;font-weight:400;opacity:.62;margin-top:3px">'
+            + escape(" · ".join(edge_notes))
+            + '</small>'
+            if edge_notes
+            else ""
+        )
+
         lane_html.append(
             '<div class="luna-year-lane">'
-            f'<div class="luna-year-label">{escape(_human_story_label(game))}</div>'
+            f'<div class="luna-year-label">{escape(_human_story_label(game))}{edge_note}</div>'
             '<div class="luna-year-track">'
             f'<div class="luna-year-bar" style="left:{left:.2f}%;width:{width:.2f}%"></div>'
             + "".join(triggers)
@@ -358,104 +377,77 @@ def _render_year_map(packet: dict[str, Any]) -> None:
     )
 
 
+def _monthly_focus(row: dict[str, Any]) -> str:
+    base = " ".join(str(row.get("focus") or "").split())
+    phase = _human_phase(row.get("phase"))
+
+    lead = {
+        "OPENING": "Use the opening deliberately.",
+        "DECISION": "Make the choice explicit.",
+        "STRUCTURE": "Build around what has proved workable.",
+        "POWER SHIFT": "Notice where the leverage has changed.",
+        "CHANGE": "Stay flexible while the pattern changes.",
+        "RETURN": "Revisit what was not fully settled.",
+        "ENDING": "Close the loop deliberately.",
+        "QUIETER GROUND": "Use the quieter stretch to consolidate.",
+    }.get(phase, "")
+
+    if not base:
+        return lead
+    if not lead:
+        return base
+    return f"{lead} {base}"
+
+
+def _strongest_round_label(row: dict[str, Any]) -> str:
+    raw = str(row.get("strongest_date") or "").strip()
+    if not raw:
+        return ""
+
+    kind = str(row.get("strongest_kind") or "")
+    kind_label = {
+        "return": "Returns",
+        "exact_contact": "Exact contact",
+        "trigger": "Trigger",
+    }.get(kind, "Turning point")
+
+    return f"{_date_label(raw)} · {kind_label}"
+
+
 def _month_by_month_rows(
     packet: dict[str, Any],
 ) -> list[dict[str, str]]:
-    period = dict(packet.get("period") or {})
-    start = _parse_date(period.get("start"))
-    end = _parse_date(period.get("end"))
-    strip = [
+    rounds = [
         row
-        for row in list(packet.get("year_strip") or [])
+        for row in list(packet.get("monthly_rounds") or [])
         if isinstance(row, dict)
     ]
-    games = [
-        row
-        for row in list(packet.get("games") or [])
-        if isinstance(row, dict)
-    ]
-    if start is None or end is None:
+    games = {
+        int(game.get("number") or 0): game
+        for game in list(packet.get("games") or [])
+        if isinstance(game, dict)
+    }
+
+    if not rounds:
         return []
 
-    cursor = date(start.year, start.month, 1)
     output: list[dict[str, str]] = []
-
-    for strip_row in strip:
-        next_month = _next_month(cursor)
-        month_start = max(start, cursor)
-        month_end = min(end, next_month - timedelta(days=1))
-
-        active: list[dict[str, Any]] = []
-        for game in games:
-            game_start = _parse_date(game.get("start_date"))
-            game_end = _parse_date(game.get("end_date"))
-            if (
-                game_start is not None
-                and game_end is not None
-                and game_start <= month_end
-                and game_end >= month_start
-            ):
-                active.append(game)
-
-        dominant = (
-            max(
-                active,
-                key=lambda row: float(row.get("score") or 0.0),
-            )
-            if active
-            else None
-        )
-
-        strongest = ""
-        if dominant is not None:
-            primary = dict(dominant.get("primary_transit") or {})
-            passes = _pass_rows(primary)
-            candidates = []
-            for hit_index, hit in enumerate(passes):
-                hit_date = _parse_date(hit.get("date"))
-                if (
-                    hit_date is not None
-                    and month_start <= hit_date <= month_end
-                ):
-                    candidates.append(
-                        (
-                            float(hit.get("orb", 99.0) or 99.0),
-                            hit_date,
-                            hit_index,
-                            hit,
-                        )
-                    )
-            if candidates:
-                _orb, hit_date, hit_index, hit = min(
-                    candidates,
-                    key=lambda item: (item[0], item[1]),
-                )
-                strongest = (
-                    f"{_date_label(hit_date)} · "
-                    f"{_human_pass_label(hit, hit_index, len(passes))}"
-                )
-
-        focus = ""
-        if dominant is not None:
-            primary = dict(dominant.get("primary_transit") or {})
-            focus = str(
-                dominant.get("move")
-                or primary.get("move")
-                or ""
-            ).strip()
-        else:
-            focus = "Fewer major contacts rise above Luna's threshold here."
+    for row in rounds:
+        number = int(row.get("dominant_game_number") or 0)
+        game = games.get(number)
 
         output.append(
             {
-                "month": cursor.strftime("%B %Y"),
-                "phase": _human_phase(strip_row.get("phase")),
-                "story": _human_story_label(dominant),
-                "focus": focus,
-                "strongest": strongest,
+                "month": str(row.get("label") or ""),
+                "phase": _human_phase(row.get("phase")),
+                "story": (
+                    str(row.get("dominant_game_title") or "")
+                    or _human_story_label(game)
+                ),
+                "focus": _monthly_focus(row),
+                "strongest": _strongest_round_label(row),
             }
         )
-        cursor = next_month
 
     return output
 
@@ -465,9 +457,9 @@ def _render_month_by_month(packet: dict[str, Any]) -> None:
     if not rows:
         return
 
-    st.markdown("## Your year, month by month")
+    st.markdown("## Your year, one month at a time")
     st.caption(
-        "A quick navigation layer — not twelve separate horoscopes."
+        "Twelve rolling monthly rounds from your chosen start date — a navigation layer, not twelve separate horoscopes."
     )
 
     cards: list[str] = []
@@ -640,12 +632,25 @@ def _render_story(
             unsafe_allow_html=True,
         )
 
+    start_state = str(game.get("start_state") or "")
+    end_state = str(game.get("end_state") or "")
+    start_label = (
+        "Already active"
+        if start_state == "already_active"
+        else "Begins"
+    )
+    end_label = (
+        "Continues beyond your year"
+        if end_state == "continues_beyond_year"
+        else "Eases"
+    )
+
     st.markdown("### Timing")
     st.markdown(
         '<div class="timing-phase-grid">'
-        f'<div><span>Begins</span><strong>{escape(_date_label(game.get("start_date")))}</strong></div>'
+        f'<div><span>{escape(start_label)}</span><strong>{escape(_date_label(game.get("start_date")))}</strong></div>'
         f'<div><span>Strongest</span><strong>{escape(_strongest_date(primary, game.get("start_date")))}</strong></div>'
-        f'<div><span>Eases</span><strong>{escape(_date_label(game.get("end_date")))}</strong></div>'
+        f'<div><span>{escape(end_label)}</span><strong>{escape(_date_label(game.get("end_date")))}</strong></div>'
         "</div>",
         unsafe_allow_html=True,
     )

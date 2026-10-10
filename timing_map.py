@@ -895,6 +895,167 @@ def _scan_story(
     )
 
 
+
+BOUNDARY_GAP_DAYS = 2
+BOUNDARY_SCAN_LIMIT_DAYS = 900
+
+
+def _story_active_on_day(
+    story: TransitStory,
+    target: NatalPosition,
+    day: date,
+    timezone_name: str,
+    cache: dict[date, dict],
+) -> bool:
+    """Return whether the slow transit is inside its allowed natal orb on one day."""
+    positions = cache.get(day)
+    if positions is None:
+        positions = positions_for_date(day, timezone_name)
+        cache[day] = positions
+
+    position = positions.get(story.transit_planet)
+    if position is None:
+        return False
+
+    allowed_orb = TRANSIT_ORBS[story.transit_planet]
+    return any(
+        abs(_wrap180(float(position.longitude) - target_longitude)) <= allowed_orb
+        for target_longitude in _target_longitudes(target.longitude, story.aspect)
+    )
+
+
+def _extend_boundary_period(
+    *,
+    story: TransitStory,
+    target: NatalPosition,
+    timezone_name: str,
+    report_start: date,
+    report_end: date,
+    cache: dict[date, dict],
+) -> TransitStory:
+    """Recover the true active-window edges when a 365-day scan clips a transit.
+
+    The customer still receives exactly the selected rolling 365-day product.
+    This helper only looks outside that display window far enough to determine
+    whether a selected slow-planet transit was already active or continues after
+    the report. Gaps of up to two days are treated the same way as _merge_periods.
+    """
+    periods = list(story.periods or ())
+    if not periods:
+        return story
+
+    first = periods[0]
+    last = periods[-1]
+
+    extended_first = first
+    if first.start_date == report_start:
+        earliest_active = report_start
+        inactive_streak = 0
+        cursor = report_start - timedelta(days=1)
+
+        for _ in range(BOUNDARY_SCAN_LIMIT_DAYS):
+            if _story_active_on_day(
+                story,
+                target,
+                cursor,
+                timezone_name,
+                cache,
+            ):
+                earliest_active = cursor
+                inactive_streak = 0
+            else:
+                inactive_streak += 1
+                if inactive_streak > BOUNDARY_GAP_DAYS:
+                    break
+            cursor -= timedelta(days=1)
+
+        extended_first = TransitPeriod(
+            earliest_active,
+            first.end_date,
+        )
+
+    extended_last = last
+    if last.end_date == report_end:
+        latest_active = report_end
+        inactive_streak = 0
+        cursor = report_end + timedelta(days=1)
+
+        for _ in range(BOUNDARY_SCAN_LIMIT_DAYS):
+            if _story_active_on_day(
+                story,
+                target,
+                cursor,
+                timezone_name,
+                cache,
+            ):
+                latest_active = cursor
+                inactive_streak = 0
+            else:
+                inactive_streak += 1
+                if inactive_streak > BOUNDARY_GAP_DAYS:
+                    break
+            cursor += timedelta(days=1)
+
+        extended_last = TransitPeriod(
+            last.start_date,
+            latest_active,
+        )
+
+    if len(periods) == 1:
+        periods = [
+            TransitPeriod(
+                extended_first.start_date,
+                extended_last.end_date,
+            )
+        ]
+    else:
+        periods[0] = extended_first
+        periods[-1] = extended_last
+
+    return replace(
+        story,
+        periods=tuple(periods),
+    )
+
+
+def _extend_selected_story_boundaries(
+    stories: Iterable[TransitStory],
+    *,
+    targets_by_name: dict[str, NatalPosition],
+    timezone_name: str,
+    report_start: date,
+    report_end: date,
+) -> tuple[TransitStory, ...]:
+    """Extend only selected slow-planet arcs that touch a report edge."""
+    cache: dict[date, dict] = {}
+    extended: list[TransitStory] = []
+
+    for story in stories:
+        target = targets_by_name.get(story.natal_target)
+        if (
+            target is None
+            or (
+                story.first_date != report_start
+                and story.last_date != report_end
+            )
+        ):
+            extended.append(story)
+            continue
+
+        extended.append(
+            _extend_boundary_period(
+                story=story,
+                target=target,
+                timezone_name=timezone_name,
+                report_start=report_start,
+                report_end=report_end,
+                cache=cache,
+            )
+        )
+
+    return tuple(extended)
+
+
 def _targets(snapshot: NatalSnapshot) -> tuple[NatalPosition, ...]:
     values = list(snapshot.positions)
     if snapshot.ascendant is not None:
@@ -1001,10 +1162,24 @@ def build_timing_map(
     selected = list(dict.fromkeys(selected))
     selected.sort(key=lambda item: (item.first_date, -item.score))
 
+    # Paid Year Ahead needs truthful edges. The first 365-day scan deliberately
+    # selects/ranks only what belongs to the requested year; after selection we
+    # recover the true slow-transit boundary for any chosen arc clipped by the
+    # report start/end. This does not widen the customer's report period.
+    targets_by_name = {item.planet: item for item in _targets(snapshot)}
+    selected = list(
+        _extend_selected_story_boundaries(
+            selected,
+            targets_by_name=targets_by_name,
+            timezone_name=timezone_name,
+            report_start=start_date,
+            report_end=end_date,
+        )
+    )
+
     # Step 5: fast planets are calculated only after the main slow-planet arcs
     # survive ranking. They are attached as supporting evidence and can never
     # become top-level annual stories.
-    targets_by_name = {item.planet: item for item in _targets(snapshot)}
     selected_with_triggers: list[TransitStory] = []
     for story in selected:
         target = targets_by_name.get(story.natal_target)

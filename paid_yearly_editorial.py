@@ -198,6 +198,8 @@ def _issue_material(game: dict[str, Any]) -> dict[str, Any]:
         "polarity": str(game.get("polarity") or ""),
         "start": str(game.get("start_date") or ""),
         "end": str(game.get("end_date") or ""),
+        "start_state": str(game.get("start_state") or ""),
+        "end_state": str(game.get("end_state") or ""),
         "question": str(game.get("question") or ""),
         "advantage": str(game.get("advantage") or ""),
         "risk": str(game.get("risk") or ""),
@@ -206,7 +208,7 @@ def _issue_material(game: dict[str, Any]) -> dict[str, Any]:
         "primary": _transit_material(primary) if isinstance(primary, dict) else {},
         "supporting": [
             _transit_material(row)
-            for row in list(supporting or [])
+            for row in list(supporting or [])[:2]
             if isinstance(row, dict)
         ],
     }
