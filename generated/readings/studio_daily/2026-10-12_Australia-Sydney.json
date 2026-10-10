@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-12",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-12 · Moon square Pluto · exact today · approximately 8:08 am AEDT"
+      ],
+      "life_areas": [],
+      "facts_hash": "920bd4fd4affd1f1a31cc5ed66b315087fe3da9086ab108b284d68850e7278ab",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "ACT NOW: The Moon’s sharp square to Pluto at 8 08 am urges you to confront hidden fears, turning tension into courage—write down one fear you’ll face today.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

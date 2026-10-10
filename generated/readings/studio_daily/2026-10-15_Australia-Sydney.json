@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-15",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-15 · Sun sextile Jupiter · opening"
+      ],
+      "life_areas": [],
+      "facts_hash": "45de6b338a1c4a260d46141a375ee1f510e099498181f5e40ece546f9c7902af",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "LOOK OUT—today’s Sun sextile Jupiter invites you to stretch your horizon. This gentle alignment signals a boost in optimism and generosity, a cosmic nudge to say yes to new opportunities. The Sun, your core identity, pairs with Jupiter, the planet of expansion, so feel your confidence swell and your curiosity widen. In practical terms, this means your day could start with an unexpected invitation: a colleague offers a project that stretches your skill set, or a friend invites you to join a workshop you’d usually skip. The symbolic meaning is simple: the universe is giving you permission to grow, to explore beyond your usual limits. Embrace that invitation by replying affirmatively, and in turn, you’ll reinforce your own sense of possibility. Take action now: email that colleague, sign up for the workshop, or simply plan a short walk outside to clear your mind and absorb the day’s optimism.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

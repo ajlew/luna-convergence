@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-17",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-17 · Pluto stations direct · pivot"
+      ],
+      "life_areas": [],
+      "facts_hash": "3c60775f0221bb5b7d3d9ed761526ddedeee9c6d002150ab9320168901304c5c",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Stand tall as Pluto flips its orbit, signalling a deep reset—embrace new beginnings, let old patterns dissolve. Record one bold change today.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

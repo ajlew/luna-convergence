@@ -1,0 +1,28 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_weekly",
+      "period": "2026-10-12",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-12 · Moon square Pluto · exact today · approximately 8:08 am AEDT",
+        "2026-10-13 · Mars trine Saturn · applying · 1.77° orb at closest approach",
+        "2026-10-14 · Sun sextile Jupiter · applying · 0.67° orb at closest approach",
+        "2026-10-15 · Sun sextile Jupiter · opening",
+        "2026-10-16 · Mars trine Saturn · opening",
+        "2026-10-17 · Pluto stations direct · pivot",
+        "2026-10-18 · Venus square Pluto · applying · 0.99° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "d70d0f8913489e9b9086152c4fd3abc52e6c0493668ec2a80f353fa722d92cea",
+      "voice_version": "plain-text-1",
+      "writing_revision": "weekly-full-week-2",
+      "voice_body": "LOOK INWARD TODAY, MONDAY, as the Moon’s sharp edge against Pluto forces you to confront hidden fears—feel the tug of old habits and let them surface. By Tuesday, Mars and Saturn align, granting disciplined energy to reshape that discomfort into purposeful action. Wednesday’s Sun-Jupiter sextile opens a window of optimism; use it to set a clear, achievable goal. On Thursday, the opening sextile invites celebration of progress—share a small victory. Friday’s Mars-Saturn trine keeps momentum steady; review and tweak your plan. Saturday’s Pluto pivot signals a turning point—embrace the change, not the resistance. Sunday’s Venus-Pluto square reminds you to balance desire with realism; pause, reflect, and adjust. \n\nWrite down one concrete step—such as scheduling a brief, focused work block—to move the week forward.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

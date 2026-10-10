@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_meaning",
+      "period": "2026-10-14",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-14 · Sun sextile Jupiter · applying · 0.67° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "dc8e57ff6995d8a4ced94f7b3b465e5323017408961c1e8c98eaba297719da54",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "EXPAND YOUR HORIZONS TODAY. The Sun’s gentle sextile to Jupiter signals a warm invitation to broaden your view—think of a sunrise that stretches across the horizon, promising new possibilities. This supportive alignment nudges you toward optimism, encouraging you to take a bold, yet measured step: schedule a meeting to pitch a fresh idea or enroll in a course that excites you. Let the day’s expansive energy guide your action.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

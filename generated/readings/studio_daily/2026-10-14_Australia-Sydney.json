@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-14",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-14 · Sun sextile Jupiter · applying · 0.67° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "b1de6950c25063b37ca3ac60647aeaafefbd9063517883042ee0a1b83f95511f",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Embrace the generous light of Sun sextile Jupiter today—your optimism fuels growth, your curiosity invites learning. Let curiosity guide you: ask a stranger for a recommendation on a book or skill and act on it.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

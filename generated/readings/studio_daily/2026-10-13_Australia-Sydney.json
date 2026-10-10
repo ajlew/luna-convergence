@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-13",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-13 · Mars trine Saturn · applying · 1.77° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "92c15dbf3ee25ba25592a3a3dcac03210abb15b5cfec02f18ee22ac117a191f6",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "CHALLENGE YOUR ENERGY: Mars trine Saturn on 13 Oct 2026 signals disciplined drive meeting steady support—use this to launch a focused, structured project today.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}
