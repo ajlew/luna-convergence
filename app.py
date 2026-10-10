@@ -126,6 +126,7 @@ from year_ahead_view import render_year_ahead
 from paid_yearly_editorial import generate_paid_yearly_editorial
 from paid_yearly_report import render_paid_yearly_report
 from paid_yearly_pdf import build_paid_yearly_pdf, paid_yearly_filename
+from yearly_prebuilt_base import load_prebuilt_yearly_horizon, compact_yearly_shared_context
 from major_event_registry import group_personal_activations, group_serialized_personal_activations, personalize_serialized_signals
 from order_capture import (
     MONTHLY_FOCUS_CHOICES,
@@ -168,8 +169,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.75"
-BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Provider Fit"
+APP_VERSION = "v3.76"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Prebuilt Horizon"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -9519,6 +9520,7 @@ def _snapshot_from_encoded_natal_profile(profile_value: str, *, timezone_name: s
 @st.cache_data(show_spinner=False, ttl=86400)
 def _cached_paid_yearly_editorial(
     packet_json: str,
+    shared_year_json: str,
     natal_profile_value: str,
     timezone_name: str,
     main_focus: str,
@@ -9546,6 +9548,7 @@ def _cached_paid_yearly_editorial(
         snapshot=snapshot,
         main_focus=main_focus,
         personal_question=personal_question,
+        shared_year_context=json.loads(shared_year_json) if shared_year_json else {},
         base_url=base_url,
         model=model,
         api_key=_api_key,
@@ -9571,6 +9574,25 @@ def _build_paid_yearly_product(
             "The paid Year Ahead is missing the derived natal geometry required for personal transits."
         )
 
+    sun_sign = _monthly_sun_sign_from_snapshot(snapshot)
+    prebuilt_base = load_prebuilt_yearly_horizon(
+        sun_sign,
+        start_date,
+        timezone_name,
+    )
+    if prebuilt_base is None:
+        raise RuntimeError(
+            "The automated GitHub Paid Yearly base is not available for this start month yet. "
+            "Run 'Generate paid forecast calculation bases' for product=yearly, then regenerate the owner report."
+        )
+
+    shared_year_context = compact_yearly_shared_context(
+        prebuilt_base,
+        start_date=start_date,
+        end_date=end_date,
+        limit=8,
+    )
+
     timing_report = build_timing_map(
         snapshot,
         start_date=start_date,
@@ -9590,6 +9612,7 @@ def _build_paid_yearly_product(
 
     editorial = _cached_paid_yearly_editorial(
         json.dumps(packet.to_dict(), ensure_ascii=False, sort_keys=True, default=str),
+        json.dumps(shared_year_context, ensure_ascii=False, sort_keys=True, default=str),
         natal_profile_value,
         timezone_name,
         str(main_focus or "General overview"),
@@ -9618,6 +9641,7 @@ def _build_paid_yearly_product(
         "timing_report": timing_report,
         "packet": packet,
         "editorial": editorial,
+        "prebuilt_year_base_hash": str(prebuilt_base.get("base_hash") or ""),
     }
 
 

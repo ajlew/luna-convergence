@@ -218,6 +218,7 @@ def build_paid_yearly_material(
     snapshot: Any | None = None,
     main_focus: str = "",
     personal_question: str = "",
+    shared_year_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     value = _packet_dict(packet)
     year_strip = []
@@ -241,6 +242,7 @@ def build_paid_yearly_material(
         "natal": _snapshot_material(snapshot, value),
         "year_statistics": dict(value.get("year_statistics") or {}),
         "year_strip": year_strip,
+        "shared_year": dict(shared_year_context or {}),
         "major_issues": [
             _issue_material(game)
             for game in list(value.get("games") or [])
@@ -328,7 +330,7 @@ def _compact_paid_yearly_material(material: dict[str, Any], level: int) -> dict[
         }
         issues.append(item)
 
-    return {
+    output = {
         "period": dict(material.get("period") or {}),
         "reader_context": dict(material.get("reader_context") or {}),
         "natal": natal,
@@ -336,6 +338,9 @@ def _compact_paid_yearly_material(material: dict[str, Any], level: int) -> dict[
         "year_strip": list(material.get("year_strip") or []),
         "major_issues": issues,
     }
+    if level <= 1 and material.get("shared_year"):
+        output["shared_year"] = dict(material.get("shared_year") or {})
+    return output
 
 
 def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
@@ -433,12 +438,92 @@ def _estimate_tokens(text: str) -> int:
         return max(1, math.ceil(len(str(text or "")) / 4.0))
 
 
-def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
-    """Use the same proven provider envelope as Paid Monthly.
+def _ultra_compact_paid_yearly_material(material: dict[str, Any]) -> dict[str, Any]:
+    """Last pre-call compression: keep every major issue and primary pass/date."""
+    natal = dict(material.get("natal") or {})
+    core = dict(natal.get("core") or {})
+    natal_min = {
+        "birth_time_known": bool(natal.get("birth_time_known")),
+        "core": {
+            key: core[key]
+            for key in ("Sun", "Moon", "Venus", "Mars")
+            if key in core
+        },
+        "dominant_element": natal.get("dominant_element"),
+        "dominant_modality": natal.get("dominant_modality"),
+        "strengths": [
+            {
+                "title": _clip(item.get("title"), 64),
+                "strength": _clip(item.get("strength") or item.get("interpretation"), 82),
+                "evidence": _clip(item.get("evidence"), 64),
+            }
+            for item in list(natal.get("strengths") or [])[:2]
+            if isinstance(item, dict)
+        ],
+    }
 
-    Compaction happens before the single provider call. It removes duplicate
-    wording only; selected Games, passes and dates remain present.
-    """
+    issues = []
+    for issue in list(material.get("major_issues") or []):
+        if not isinstance(issue, dict):
+            continue
+        primary = dict(issue.get("primary") or {})
+        issues.append(
+            {
+                "number": issue.get("number"),
+                "customer_title": _clip(issue.get("customer_title"), 72),
+                "strategic_frame": _clip(issue.get("strategic_frame"), 92),
+                "life_area": _clip(issue.get("life_area"), 72),
+                "start": issue.get("start"),
+                "end": issue.get("end"),
+                "primary": {
+                    "technical": primary.get("technical"),
+                    "active_start": primary.get("active_start"),
+                    "active_end": primary.get("active_end"),
+                    "house": primary.get("house"),
+                    "passes": [
+                        {
+                            "pass_number": row.get("pass_number"),
+                            "pass_label": row.get("pass_label"),
+                            "date": row.get("date"),
+                            "time": row.get("time"),
+                            "retrograde": bool(row.get("retrograde")),
+                        }
+                        for row in list(primary.get("passes") or [])
+                        if isinstance(row, dict)
+                    ],
+                    "triggers": [
+                        {
+                            "planet": row.get("planet"),
+                            "date": row.get("date"),
+                            "label": _clip(row.get("label"), 72),
+                            "activates_pass_number": row.get("activates_pass_number"),
+                        }
+                        for row in list(primary.get("triggers") or [])[:2]
+                        if isinstance(row, dict)
+                    ],
+                },
+                "supporting": [
+                    {
+                        "technical": row.get("technical"),
+                        "active_start": row.get("active_start"),
+                        "active_end": row.get("active_end"),
+                    }
+                    for row in list(issue.get("supporting") or [])[:2]
+                    if isinstance(row, dict)
+                ],
+            }
+        )
+
+    return {
+        "period": dict(material.get("period") or {}),
+        "reader_context": dict(material.get("reader_context") or {}),
+        "natal": natal_min,
+        "major_issues": issues,
+    }
+
+
+def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
+    """Fit one Paid Yearly call inside the same safe envelope proven by Paid Monthly."""
     for level in range(4):
         compact = _compact_paid_yearly_material(material, level)
         prompt = build_paid_yearly_prompt(compact)
@@ -448,7 +533,7 @@ def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
         if estimated_input + PREFERRED_COMPLETION_TOKENS <= TARGET_TOTAL_TOKENS:
             return prompt, PREFERRED_COMPLETION_TOKENS, estimated_input
 
-    compact = _compact_paid_yearly_material(material, 3)
+    compact = _ultra_compact_paid_yearly_material(material)
     prompt = build_paid_yearly_prompt(compact)
     estimated_input = math.ceil(
         (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 100) * 1.15
@@ -460,7 +545,7 @@ def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
     if completion < MIN_COMPLETION_TOKENS:
         raise RuntimeError(
             "Paid Yearly preflight still exceeds the provider-safe token envelope "
-            f"after compaction ({estimated_input} estimated input tokens)."
+            f"after ultra compaction ({estimated_input} estimated input tokens)."
         )
     return prompt, int(completion), estimated_input
 
@@ -554,6 +639,7 @@ def generate_paid_yearly_editorial(
     snapshot: Any | None = None,
     main_focus: str = "",
     personal_question: str = "",
+    shared_year_context: dict[str, Any] | None = None,
     base_url: str,
     model: str,
     api_key: str,
@@ -568,6 +654,7 @@ def generate_paid_yearly_editorial(
         snapshot=snapshot,
         main_focus=main_focus,
         personal_question=personal_question,
+        shared_year_context=shared_year_context,
     )
     prompt, completion_tokens, _estimated_input = _prepare_request(material)
     issue_numbers = [
