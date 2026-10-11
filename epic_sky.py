@@ -46,3 +46,77 @@ def load_approved(monday: date, cards: list[dict]):
 
 def to_script(data):
     return '\n\n'.join(f"{date.fromisoformat(d['date']):%A %d %B} — {d['title']}\n{d['event']}\n\n{d['body']}\n\nYour move: {d['move']}" for d in data['days'])
+
+# On-demand generation. One plain-text provider call; no background job or retries.
+import re
+import requests
+
+
+def generation_prompt(cards):
+    if len(cards) != 7:
+        raise ValueError('Epic Sky requires seven authoritative daily cards.')
+    base = prompt_from_cards(cards)
+    return (base + '\n\nOUTPUT FORMAT (repeat exactly 7 times, with DAY 1 through DAY 7):\n'
+            'DAY 1\nTITLE: A vivid mythic title\nSTORY: 70–110 words of unrhymed, distinct epic prose.\nYOUR MOVE: One short imperative.\n'
+            'DAY 2\nTITLE: ...\nSTORY: ...\nYOUR MOVE: ...\n'
+            'Continue through DAY 7. Use the dates and aspects only in the authoritative input, '
+            'and DO NOT insert dates or technical aspect labels inside the creative STORY. '
+            'The application supplies dates and aspect captions from calculations. '
+            'Never include markdown tables, extra DAY markers, or a prologue.\n')
+
+
+def parse_generation(response_text, cards, monday):
+    """Accept only seven structurally complete chapters; source all event labels from Python."""
+    if len(cards) != 7 or any(not c.get('date') or not c.get('event') for c in cards):
+        raise ValueError('Seven fully dated calculated events are required.')
+    text = str(response_text or '').strip()
+    starts = list(re.finditer(r'(?im)^\s*DAY\s+([1-7])\s*[:.\-]?\s*$', text))
+    if len(starts) != 7 or [int(x.group(1)) for x in starts] != list(range(1, 8)):
+        raise ValueError('Groq must return exactly DAY 1 through DAY 7. Nothing published.')
+    days = []
+    for i, heading in enumerate(starts):
+        fragment = text[heading.end():starts[i+1].start() if i < 6 else len(text)].strip()
+        match = re.fullmatch(r'(?is)TITLE:\s*(.+?)\s*STORY:\s*(.+?)\s*YOUR MOVE:\s*(.+)', fragment)
+        if not match:
+            raise ValueError(f'DAY {i+1} missing TITLE, STORY or YOUR MOVE.')
+        title, body, move = (v.strip() for v in match.groups())
+        if not title or not body or not move or len(body.split()) < 40:
+            raise ValueError(f'DAY {i+1} is incomplete.')
+        if re.search(r'(?i)\b(?:conjunction|opposition|sextile|square|trine)\b', body):
+            raise ValueError(f'DAY {i+1} contains unchecked technical aspect claims.')
+        days.append({'date': cards[i]['date'], 'event': cards[i]['event'],
+                     'title': title, 'body': body, 'move': move})
+    return {'product': 'epic_sky', 'period': monday.isoformat(), 'timezone': 'Australia/Sydney',
+            'status': 'generated_draft', 'days': days}
+
+
+def generate_week(monday, cards, *, base_url, model, api_key, post=None):
+    """Explicit button action only. Exactly one Groq-compatible request."""
+    if not (base_url and model and api_key):
+        raise ValueError('Configure LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL and LUNA_VOICE_API_KEY.')
+    if post is None:
+        post = requests.post
+    payload = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': 'You write mythic prose from verified sky facts. Never calculate astrology. Output exactly the requested seven-section plain-text format.'},
+            {'role': 'user', 'content': generation_prompt(cards)},
+        ],
+        'temperature': 0.6,
+        'max_completion_tokens': 2700,
+    }
+    if str(model).startswith('openai/gpt-oss'):
+        payload['reasoning_effort'] = 'low'
+        payload['include_reasoning'] = False
+    try:
+        response = post(f'{base_url.rstrip("/")}/chat/completions',
+                        headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                        json=payload, timeout=150)
+        response.raise_for_status()
+        result = response.json()['choices'][0]
+        if result.get('finish_reason') == 'length':
+            raise ValueError('Groq ended at the token limit; nothing published.')
+        data = parse_generation(result['message']['content'], cards, monday)
+    except (requests.RequestException, KeyError, IndexError, TypeError, ValueError) as exc:
+        raise RuntimeError(f'Epic Sky generation failed: {exc}') from exc
+    return data

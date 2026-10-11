@@ -5120,25 +5120,46 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
         else:
             st.caption("No separate card event selected from the calculated sky for this day.")
 
-    # Optional mythic layer. Saved editorial copy only; opening Studio does not call a model.
-    from epic_sky import load_approved as _epic_load, prompt_from_cards as _epic_prompt, to_script as _epic_script
+    # Optional mythic layer: an explicit Studio button invokes one Groq call.
+    from epic_sky import (load_approved as _epic_load, prompt_from_cards as _epic_prompt,
+                          to_script as _epic_script, generate_week as _epic_generate)
     with st.expander("Luna’s Epic Sky · seven mythic chapters", expanded=False):
-        st.caption("Optional Greek-inspired creative interpretation. Calculated sky cards remain authoritative; no new astronomy or personal houses are inferred.")
+        st.caption("Optional mythic interpretation; seven calculated sky cards remain authoritative. Generation is a manual button click, not a public-page background API call.")
         _epic_cards = master_packet.get("sky_cards", [])
-        _epic = _epic_load(monday, _epic_cards)
+        _epic_key = f"epic-sky-generated-{monday.isoformat()}"
+        _epic = st.session_state.get(_epic_key) or _epic_load(monday, _epic_cards)
+        if st.button("Generate Epic Sky for this week", key=f"epic-generate-{monday}",
+                     disabled=len(_epic_cards) != 7, type="primary"):
+            if not all((LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY)):
+                st.error("Luna voice is not configured. Check LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL and LUNA_VOICE_API_KEY in Streamlit secrets.")
+            else:
+                with st.spinner("Writing seven mythic episodes from the calculated sky…"):
+                    try:
+                        _epic = _epic_generate(monday, _epic_cards,
+                            base_url=LUNA_VOICE_BASE_URL, model=LUNA_VOICE_MODEL,
+                            api_key=LUNA_VOICE_API_KEY)
+                        st.session_state[_epic_key] = _epic
+                        st.success("Seven chapters generated. Review before publishing.")
+                    except RuntimeError as _epic_error:
+                        st.error(str(_epic_error))
         if _epic:
-            for _chapter in _epic["days"]:
-                _day = date.fromisoformat(_chapter["date"])
+            if _epic.get('status') == 'generated_draft':
+                st.info("Draft for review. This is not automatically published or saved to the repository.")
+            for _chapter in _epic['days']:
+                _day = date.fromisoformat(_chapter['date'])
                 st.markdown(f"#### {_day:%A %d %B} · {_chapter['title']}")
-                st.caption(_chapter["event"])
-                st.write(_chapter["body"])
+                st.caption(_chapter['event'])
+                st.write(_chapter['body'])
                 st.markdown(f"**Your move:** {_chapter['move']}")
             st.download_button("Download Epic Sky script", _epic_script(_epic),
-                               file_name=f"luna-epic-sky-{monday}.txt", mime="text/plain", key="epic-sky-script")
+                               file_name=f"luna-epic-sky-{monday}.txt", mime="text/plain", key=f"epic-sky-script-{monday}")
+            st.download_button("Download Epic Sky JSON", json.dumps(_epic, ensure_ascii=False, indent=2),
+                               file_name=f"{monday.isoformat()}_Australia-Sydney.json", mime="application/json",
+                               key=f"epic-sky-json-{monday}")
         else:
-            st.info("No approved Epic Sky script is saved for this week. Generate a draft with your local LLM, then review it against the calculated sky before publishing.")
-        st.download_button("Download local LLM Epic Sky prompt", _epic_prompt(_epic_cards),
-                           file_name=f"luna-epic-prompt-{monday}.txt", mime="text/plain", key="epic-sky-prompt")
+            st.info("No script has been generated for this week yet. Select Generate Epic Sky for this week.")
+        st.download_button("Download Epic Sky prompt (optional)", _epic_prompt(_epic_cards),
+                           file_name=f"luna-epic-prompt-{monday}.txt", mime="text/plain", key=f"epic-sky-prompt-{monday}")
 
     from luna_reading_style import meaning_html
     st.markdown("### Day-by-day astrological breakdown")
