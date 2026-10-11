@@ -296,6 +296,48 @@ def _year_map(packet: dict[str, Any], styles) -> list:
     ]
 
 
+
+def _monthly_chapter_pages(packet: dict[str, Any], editorial: PaidYearlyEditorial | None, styles) -> list:
+    """Twelve stand-alone printed monthly chapters from the existing YearPacket.
+
+    Layout only: do not calculate astrology or make a provider call. Each
+    chapter starts on a new A4 page, while oversized contents flow naturally.
+    """
+    rounds = [r for r in (packet.get("monthly_rounds") or []) if isinstance(r, dict)]
+    games = {int(g.get("number") or 0): g for g in (packet.get("games") or []) if isinstance(g, dict)}
+    if not rounds:
+        return []
+    out = [PageBreak(), Paragraph("Your year, one month at a time", styles["h1"]),
+           Paragraph("Each chapter is one stage of your rolling year. Dates and themes come from your calculated transits.", styles["small"])]
+    for index, month in enumerate(rounds, start=1):
+        if index > 1:
+            out.append(PageBreak())
+        game = games.get(int(month.get("dominant_game_number") or 0), {})
+        editorial_month = editorial.month_for(index) if editorial is not None else None
+        focus = str(getattr(editorial_month, "focus", "") or month.get("focus") or "").strip()
+        out.extend([
+            Paragraph(f"MONTH {index:02d} / {_xml(month.get('label') or '')}", styles["label"]),
+            Paragraph(_xml(month.get("dominant_game_title") or "A quieter chapter"), styles["h1"]),
+            Paragraph(f"<b>Period:</b> {_xml(str(month.get('phase') or '').replace('_', ' ').title())}", styles["small"]),
+        ])
+        if focus:
+            out.extend([Paragraph("Luna's focus", styles["h3"]), Paragraph(_xml(focus), styles["body"])])
+        if month.get("strongest_date"):
+            out.extend([
+                Paragraph("Key moment", styles["h3"]),
+                Paragraph(_xml(_date_label(month["strongest_date"])) + " - " + _xml(month.get("strongest_label") or month.get("strongest_kind") or "Calculated contact"), styles["body"]),
+            ])
+        if game:
+            out.append(Paragraph("The longer story at work", styles["h3"]))
+            primary = game.get("primary_transit") or {}
+            if primary.get("technical_label"):
+                out.append(Paragraph(_xml(primary["technical_label"]), styles["body"]))
+            for support in (game.get("supporting_transits") or [])[:2]:
+                if isinstance(support, dict) and support.get("technical_label"):
+                    out.append(Paragraph(_xml(support["technical_label"]), styles["small"]))
+            out.append(Paragraph("Explore the full Major Issue chapter for pass-by-pass interpretation and technical evidence.", styles["small"]))
+    return out
+
 def _position(value: object) -> str:
     if not isinstance(value, dict):
         return ""
@@ -590,6 +632,7 @@ def build_paid_yearly_pdf(
         ))
 
     story += _year_map(value, styles)
+    story += _monthly_chapter_pages(value, editorial, styles)
 
     story.append(PageBreak())
     story.append(Paragraph("The major issues of your year", styles["h1"]))

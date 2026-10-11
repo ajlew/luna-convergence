@@ -1,0 +1,21 @@
+Luna Convergence consolidated targeted patch
+
+Replace app.py and paid_yearly_pdf.py in the project root.
+monthly_transit_view.py already exists in the supplied project and is unchanged.
+
+Paid Monthly:
+- Enlarges the completion token budget toward the existing 1350-1600 word target.
+- The completion budget is constrained to a conservative total request window.
+- Captures finish_reason and token usage in owner diagnostics on unsuccessful responses.
+- Rejects incomplete responses without another Groq call.
+- Requires a complete usable voice response BEFORE creating or emailing a PDF.
+- Reuses the validated voice response for on-page Read the month without another call.
+
+Paid Year Ahead:
+- Includes previous PDF pagination patch: one new A4 chapter per month, with overflow pages.
+
+Validation performed: py_compile for 3 modules; PDF-related pytest tests.
+Limitations:
+- Live Groq behaviour cannot be verified without the configured private API.
+- Activation charts have been inspected in code but not interactively opened in running Streamlit.
+- PDF still uses existing monthly PDF content pipeline; paid voice is verified for delivery readiness, not inserted as a new PDF chapter.

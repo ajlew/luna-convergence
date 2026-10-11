@@ -3591,6 +3591,20 @@ def payment_success_page() -> None:
                 except ValueError:
                     _report_start = None
                 result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
+            # Paid checkout: verify the story before creating a PDF or emailing it.
+            paid_snapshot_for_story = _snapshot_from_encoded_natal_profile(
+                str(result.get("natal_profile") or ""),
+                timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+            )
+            verified_story = _paid_monthly_longform(narrative, result, paid_snapshot_for_story)
+            if not verified_story.get("voice_complete") or not verified_story.get("paragraphs"):
+                st.error("Your Paid Monthly narrative is not ready. No incomplete PDF has been sent.")
+                diagnostic = _voice_error("paid_monthly_story_weave")
+                if _admin_access_unlocked() and diagnostic:
+                    with st.expander("Owner diagnostic"):
+                        st.caption(diagnostic)
+                return
+            result["_verified_paid_monthly_story"] = verified_story
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -4142,6 +4156,18 @@ def _owner_report_output(order: dict) -> dict:
             except ValueError:
                 _report_start = None
             result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
+        # Never offer an owner PDF before the paid narrative has completed.
+        preview_snapshot = _snapshot_from_encoded_natal_profile(
+            str(result.get("natal_profile") or ""),
+            timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+        )
+        verified_story = _paid_monthly_longform(narrative, result, preview_snapshot)
+        if not verified_story.get("voice_complete") or not verified_story.get("paragraphs"):
+            raise RuntimeError(
+                "Paid Monthly is not ready for PDF delivery: "
+                + str(_voice_error("paid_monthly_story_weave") or "no complete narrative returned")
+            )
+        result["_verified_paid_monthly_story"] = verified_story
         pdf_bytes = build_report_pdf(
             result,
             main_focus=main_focus,
@@ -11094,8 +11120,10 @@ def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
     creative prompt until the request fits safely below the observed provider
     ceiling.
     """
-    target_total = 5350
-    preferred_completion = 2500
+    # 1,350-1,600 English words generally need more than 2,500 output tokens.
+    # Budget 3,900 completion tokens within a conservatively capped 8k request.
+    target_total = 7900
+    preferred_completion = 3900
 
     for level in range(4):
         prompt = _paid_monthly_weave_prompt(facts, compact_level=level)
@@ -11108,8 +11136,14 @@ def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
     # the remaining safe budget to the prose, with a useful minimum.
     prompt = _paid_monthly_weave_prompt(facts, compact_level=3)
     buffered_input, _ = _paid_monthly_preflight_tokens(prompt, 0)
-    completion_tokens = max(1900, min(preferred_completion, target_total - buffered_input))
-    return prompt, completion_tokens, buffered_input, 3
+    remaining = target_total - buffered_input
+    if remaining < 3200:
+        raise RuntimeError(
+            f"Paid Monthly packet is too large for an untruncated story: "
+            f"estimated input {buffered_input} tokens, remaining {remaining}. "
+            "No provider request was sent."
+        )
+    return prompt, min(preferred_completion, remaining), buffered_input, 3
 
 
 @st.cache_data(show_spinner=False, ttl=1800)
@@ -11172,12 +11206,21 @@ def _cached_paid_monthly_weave(
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise RuntimeError("Voice provider returned no usable prose.") from exc
 
-    if str(choice.get("finish_reason") or "") == "length":
-        raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
+    finish_reason = str(choice.get("finish_reason") or "unknown")
+    usage = response.json().get("usage") or {}
+    completion_used = usage.get("completion_tokens", "unknown")
+    if finish_reason not in {"stop", "eos"}:
+        raise RuntimeError(
+            f"Paid Monthly provider finish_reason={finish_reason}; "
+            f"completion_tokens={completion_used}; completion_limit={max_completion_tokens}; "
+            f"estimated_input_tokens={_estimated_input_tokens}; compact_level={_compact_level}. "
+            "Story not deliverable."
+        )
 
     clean = _paid_monthly_clean_plain_story(body)
     if not clean:
         raise RuntimeError("Voice provider returned an empty Paid Monthly story.")
+    # The word target remains a prompt goal, not a second provider call or style gate.
     return clean
 
 
@@ -11478,8 +11521,10 @@ def _render_snapshot_monthly_report(
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Read the month")
-    with st.spinner("Luna is weaving the calculated month around your natal chart…"):
-        longform = _paid_monthly_longform(narrative, result, paid_snapshot)
+    longform = result.get("_verified_paid_monthly_story")
+    if not isinstance(longform, dict):
+        with st.spinner("Luna is weaving the calculated month around your natal chart…"):
+            longform = _paid_monthly_longform(narrative, result, paid_snapshot)
     paid_context = dict(longform.get("context") or {})
 
     story_paragraphs = [
