@@ -1,0 +1,58 @@
+{
+  "product": "epic_sky",
+  "period": "2026-10-12",
+  "timezone": "Australia/Sydney",
+  "status": "approved",
+  "note": "Creative interpretation of saved Studio sky cards; not independently verified astronomical events.",
+  "days": [
+    {
+      "date": "2026-10-12",
+      "event": "Moon square Pluto · exact today · approximately 8:08 am AEDT",
+      "title": "The Torch at the Underworld Gate",
+      "body": "Selene reached the gate beneath the earth with a torch that could not banish every shadow. Hades waited without drawing his sword. He offered neither comfort nor a way around the question. What was hidden would remain hidden unless someone dared name it. The exact square marks the point of confrontation: feeling presses against control, and neither can simply command the other. The gates did not open through force. They opened when the traveller admitted what the dark had kept safe from examination.",
+      "move": "Name one fear without letting it rule the decision."
+    },
+    {
+      "date": "2026-10-13",
+      "event": "Mars trine Saturn · applying · 1.77° orb at closest approach",
+      "title": "The Warrior Before the Stone Wall",
+      "body": "Ares came to the old wall with the speed of a charging horse. Cronus, keeper of seasons and limits, measured each stone before allowing it to move. Their trine was approaching, not yet a finished deed. The warrior saw that courage spent all at once might break the gate and leave no strength for what followed. So he set his shield beside the mason and learned the weight of patient work. The contest changed: not whether to act, but how to make action endure.",
+      "move": "Choose one demanding task and give it a workable sequence."
+    },
+    {
+      "date": "2026-10-14",
+      "event": "Sun sextile Jupiter · applying · 0.67° orb at closest approach",
+      "title": "The Road Offered to the Traveller",
+      "body": "Helios sent light across the road as Zeus looked down from the high places. Their sextile approached like an invitation, not a royal order. A traveller at the crossroads could see another path beyond the familiar ridge, but the gods would not walk it for him. The road was broad enough for hope and narrow enough to require a choice. There was no promise of reward carved in the stones. There was only the advantage of seeing farther than yesterday and deciding which provision to carry.",
+      "move": "Choose one opportunity worth testing in the real world."
+    },
+    {
+      "date": "2026-10-15",
+      "event": "Sun sextile Jupiter · opening",
+      "title": "Beyond the First Ridge",
+      "body": "The traveller had crossed the first ridge under the light of Helios. Zeus had not placed treasure in his hands; the opening had merely given him a clearer horizon. Yesterday was the approach. Today is what follows when a door is noticed and a foot is placed through it. Behind him lay the crossroads, where possibilities had seemed endless. Ahead lay one particular road with weather, distance and the work of walking. The gods could lend a favourable view, but not the discipline of arrival.",
+      "move": "Turn yesterday’s possibility into one measured commitment."
+    },
+    {
+      "date": "2026-10-16",
+      "event": "Mars trine Saturn · opening",
+      "title": "The Wall That Became a Bridge",
+      "body": "Ares returned to the wall he once would have struck in anger. Cronus pointed to the stones now laid in order: the obstruction had become the foundation of a crossing. Their earlier alliance was opening into its consequence. No trumpet announced a victory. The bridge held because each small effort had been fitted to the next. The warrior learned that restraint was not surrender and that force was worth more when it served a design. Even the old keeper of time allowed himself to admire the work.",
+      "move": "Finish the useful structure you began before seeking another battle."
+    },
+    {
+      "date": "2026-10-17",
+      "event": "Pluto stations direct · pivot",
+      "title": "The Lord Turns His Throne",
+      "body": "Deep below the courts of daylight, Hades turned his attention toward the road ahead. His station marked a pivot in the sky, not a guarantee that the earth above would obey. The dead kept their counsel; the living still had choices to make. Yet a matter that had seemed suspended could now be considered from a different direction. The king offered no prophecy and no pardon. He asked only that the traveller distinguish what could be changed from what must be carried with honesty.",
+      "move": "Revisit one unresolved matter and choose your next deliberate step."
+    },
+    {
+      "date": "2026-10-18",
+      "event": "Venus square Pluto · applying · 0.99° orb at closest approach",
+      "title": "The Price of the Golden Gift",
+      "body": "Aphrodite brought a golden gift to the border of Hades’ realm. The king admired its beauty, then asked whether a gift still belonged to its giver once freely offered. Their square was approaching: desire moved toward a difficult meeting with power, fear and possession. What had seemed like devotion could become a demand for obedience if neither side spoke plainly. The goddess did not cast the gold away. She weighed it, considered its price, and refused to call a bargain love merely because it glittered.",
+      "move": "Say what is freely offered and what must never be demanded."
+    }
+  ]
+}
