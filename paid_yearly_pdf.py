@@ -7,8 +7,9 @@ It consumes the SAME Natal Snapshot, YearPacket and one PaidYearlyEditorial
 used by the web report. It performs no astrology calculations and no LLM call.
 """
 
-from datetime import date
+from datetime import date, datetime, timedelta
 from io import BytesIO
+import math
 import re
 from typing import Any
 
@@ -20,6 +21,8 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     BaseDocTemplate,
     Flowable,
+    Image,
+    KeepTogether,
     Frame,
     HRFlowable,
     PageBreak,
@@ -84,8 +87,8 @@ def _styles() -> dict[str, ParagraphStyle]:
             spaceAfter=7 * mm, uppercase=True,
         ),
         "hero": ParagraphStyle(
-            "Hero", parent=base["Title"], fontName="Times-Bold",
-            fontSize=29, leading=31, textColor=colors.black,
+            "Hero", parent=base["Title"], fontName="Times-Roman",
+            fontSize=30, leading=34, textColor=colors.black,
             spaceAfter=4 * mm,
         ),
         "deck": ParagraphStyle(
@@ -94,13 +97,13 @@ def _styles() -> dict[str, ParagraphStyle]:
             spaceAfter=7 * mm,
         ),
         "h1": ParagraphStyle(
-            "H1", parent=base["Heading1"], fontName="Times-Bold",
-            fontSize=22, leading=25, spaceBefore=6 * mm, spaceAfter=4 * mm,
+            "H1", parent=base["Heading1"], fontName="Times-Roman",
+            fontSize=21, leading=25, spaceBefore=6 * mm, spaceAfter=4 * mm,
             textColor=colors.black,
         ),
         "h2": ParagraphStyle(
-            "H2", parent=base["Heading2"], fontName="Times-Bold",
-            fontSize=16.5, leading=19.5, spaceBefore=5 * mm, spaceAfter=2.5 * mm,
+            "H2", parent=base["Heading2"], fontName="Times-Roman",
+            fontSize=16.5, leading=20, spaceBefore=5 * mm, spaceAfter=2.5 * mm,
             textColor=colors.black, keepWithNext=True,
         ),
         "h3": ParagraphStyle(
@@ -109,8 +112,8 @@ def _styles() -> dict[str, ParagraphStyle]:
             textColor=colors.black, keepWithNext=True,
         ),
         "body": ParagraphStyle(
-            "Body", parent=base["BodyText"], fontName="Times-Roman",
-            fontSize=10.5, leading=15.6, textColor=colors.HexColor("#151515"),
+            "Body", parent=base["BodyText"], fontName="Helvetica",
+            fontSize=9.4, leading=15, textColor=colors.HexColor("#151515"),
             spaceAfter=3.1 * mm,
         ),
         "small": ParagraphStyle(
@@ -129,8 +132,8 @@ def _styles() -> dict[str, ParagraphStyle]:
             textColor=colors.HexColor("#333333"),
         ),
         "issue": ParagraphStyle(
-            "Issue", parent=base["Heading1"], fontName="Times-Bold",
-            fontSize=21, leading=23, spaceBefore=3 * mm, spaceAfter=3 * mm,
+            "Issue", parent=base["Heading1"], fontName="Times-Roman",
+            fontSize=21, leading=25, spaceBefore=3 * mm, spaceAfter=3 * mm,
             textColor=colors.black,
         ),
     }
@@ -216,22 +219,48 @@ def _read_pattern(snapshot: Any, styles) -> list:
     return story
 
 
-def _natal_chart(snapshot: Any, styles) -> list:
-    """Embed the same natal wheel used on the web when svglib is available."""
+def _svg_image(svg_text: str, max_width: float, max_height: float):
+    """Render the canonical SVG as an in-memory image for predictable A4 printing.
+
+    The web SVG remains authoritative. Never recalculate its positions here.
+    """
     try:
-        from svglib.svglib import svg2rlg
-        drawing = svg2rlg(BytesIO(natal_wheel_svg(snapshot, size=760).encode("utf-8")))
-        if drawing is None:
-            return []
-        max_width = PAGE_WIDTH - 2 * MARGIN_X
-        max_height = 92 * mm
-        scale = min(max_width / float(drawing.width), max_height / float(drawing.height))
-        drawing.width *= scale
-        drawing.height *= scale
-        drawing.scale(scale, scale)
-        return [Spacer(1, 4 * mm), drawing, Spacer(1, 2 * mm)]
+        import cairosvg
+        from PIL import Image as PILImage
+        # Web SVG uses responsive percentage width; printed media needs explicit pixel dimensions.
+        svg_text = re.sub(r'<svg[^>]*>', '<svg xmlns="http://www.w3.org/2000/svg" width="760" height="760" viewBox="0 0 760 760">', svg_text, count=1)
+        png = cairosvg.svg2png(bytestring=svg_text.encode("utf-8"), output_width=1400, background_color="white")
+        pil = PILImage.open(BytesIO(png))
+        width, height = pil.size
+        scale = min(max_width / width, max_height / height)
+        result = Image(BytesIO(png), width=width * scale, height=height * scale)
+        result.hAlign = 'CENTER'
+        return result
     except Exception:
-        return []
+        try:
+            from svglib.svglib import svg2rlg
+            drawing = svg2rlg(BytesIO(svg_text.encode("utf-8")))
+            if drawing is None:
+                return None
+            scale = min(max_width / drawing.width, max_height / drawing.height)
+            drawing.width *= scale
+            drawing.height *= scale
+            drawing.scale(scale, scale)
+            return drawing
+        except Exception:
+            return None
+
+
+def _natal_chart(snapshot: Any, styles) -> list:
+    """Print the exact natal wheel SVG already used by the live site."""
+    try:
+        graphic = _svg_image(natal_wheel_svg(snapshot, size=760),
+                             PAGE_WIDTH - 2*MARGIN_X, 100*mm)
+        if graphic is not None:
+            return [Spacer(1, 3*mm), graphic, Spacer(1, 3*mm)]
+    except Exception:
+        pass
+    return [Paragraph("Natal chart graphic unavailable; chart evidence remains in the report.", styles['small'])]
 
 
 def _strengths(snapshot: Any, styles) -> list:
@@ -266,38 +295,161 @@ def _strengths(snapshot: Any, styles) -> list:
     return story
 
 
+class _YearTimeline(Flowable):
+    """Printable analogue of the website's multi-lane Year Map."""
+    def __init__(self, packet):
+        super().__init__()
+        self.packet = packet
+        self.width = PAGE_WIDTH-2*MARGIN_X
+        self.games = [g for g in packet.get('games', []) if isinstance(g,dict)]
+        self.months = [m for m in packet.get('year_strip', []) if isinstance(m,dict)]
+        self.height = 29*mm + max(1,len(self.games))*18*mm
+
+    def draw(self):
+        c=self.canv
+        margin_label=37*mm
+        left=margin_label
+        track_w=self.width-left-3*mm
+        period=self.packet.get('period',{})
+        try:
+            start=date.fromisoformat(str(period.get('start'))[:10]); end=date.fromisoformat(str(period.get('end'))[:10]); total=max(1,(end-start).days)
+        except Exception:
+            return
+        c.setFillColor(colors.HexColor('#555555'))
+        c.setFont('Helvetica',6.2)
+        for idx,mo in enumerate(self.months[:12]):
+            x=left+track_w*(idx+.5)/12
+            label=str(mo.get('month') or '').upper()[:6]
+            c.drawCentredString(x,self.height-9*mm,label)
+        for ix,g in enumerate(self.games):
+            y=self.height-(20+18*ix)*mm
+            title=str(g.get('title') or 'Major game')
+            if len(title)>21: title=title[:20]+'…'
+            c.setFillColor(colors.HexColor('#222222'))
+            c.setFont('Helvetica-Bold',7.1)
+            c.drawString(0,y+2*mm,title)
+            c.setFillColor(colors.HexColor('#eeeeed'))
+            c.roundRect(left,y,track_w,6*mm,2*mm,fill=1,stroke=0)
+            try:
+                a=date.fromisoformat(str(g.get('start_date'))[:10]); b=date.fromisoformat(str(g.get('end_date'))[:10]);
+                aa=max(start,a); bb=min(end,b)
+                if bb>=aa:
+                    xa=left+track_w*max(0,(aa-start).days)/total
+                    xb=left+track_w*min(total,(bb-start).days)/total
+                    c.setFillColor(colors.HexColor('#666666'))
+                    c.roundRect(xa,y+1*mm,max(2*mm,xb-xa),4*mm,1.7*mm,fill=1,stroke=0)
+            except Exception: pass
+            primary=g.get('primary_transit') or {}
+            for hit in primary.get('passes',[]) or []:
+                try:
+                    dt=date.fromisoformat(str(hit.get('date'))[:10]);
+                    if start<=dt<=end:
+                        x=left+track_w*(dt-start).days/total
+                        c.setFillColor(colors.black); c.circle(x,y+3*mm,1.6*mm,stroke=0,fill=1)
+                except Exception: pass
+        ry=8*mm
+        c.setFillColor(colors.HexColor('#555555')); c.setFont('Helvetica-Bold',7)
+        c.drawString(0,ry+3*mm,'MONTHLY RHYTHM')
+        for i,mo in enumerate(self.months[:12]):
+            val=float(mo.get('intensity') or mo.get('score') or 0)
+            if val<=0: val=1
+            h=min(9*mm,2*mm+val*mm/5)
+            x=left+track_w*(i+.2)/12
+            c.setFillColor(colors.HexColor('#666666'))
+            c.rect(x,ry,track_w*.55/12,h,fill=1,stroke=0)
+
+
 def _year_map(packet: dict[str, Any], styles) -> list:
-    rows = [row for row in list(packet.get("year_strip") or []) if isinstance(row, dict)]
-    if not rows:
+    if not packet.get('games'):
         return []
-    cells = []
-    for row in rows:
-        month = str(row.get("month") or "")
-        phase = str(row.get("phase") or "QUIET")
-        cells.append(Paragraph(f"<b>{_xml(month)}</b><br/>{_xml(phase)}", styles["center"]))
-    width = (PAGE_WIDTH - 2 * MARGIN_X) / len(cells)
-    table = Table([cells], colWidths=[width] * len(cells))
-    table.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.4, colors.black),
-        ("INNERGRID", (0, 0), (-1, -1), 0.2, colors.HexColor("#bcbcbc")),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0.7 * mm),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0.7 * mm),
-        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
-    ]))
-    return [
-        Paragraph("Your year map", styles["h2"]),
-        Paragraph(
-            "Quick reference only. The interpretation is already in Read the year.",
-            styles["small"],
-        ),
-        table,
-    ]
+    return [Paragraph('How your year unfolds',styles['h2']),
+            Paragraph('Each lane shows an important story; dots mark exact contacts. All dates come from your calculated transits.',styles['small']),
+            _YearTimeline(packet)]
 
 
 
-def _monthly_chapter_pages(packet: dict[str, Any], editorial: PaidYearlyEditorial | None, styles) -> list:
+
+class _MonthContacts(Flowable):
+    """Compact timeline of actual pass dates in this rolling month, not an invented chart."""
+    def __init__(self, month, game):
+        super().__init__()
+        self.month=month; self.game=game
+        self.width=PAGE_WIDTH-2*MARGIN_X; self.height=23*mm
+    def draw(self):
+        c=self.canv
+        a=str(self.month.get('start_date') or self.month.get('start') or '')[:10]
+        b=str(self.month.get('end_date') or self.month.get('end') or '')[:10]
+        try:
+            start=date.fromisoformat(a); end=date.fromisoformat(b)
+        except Exception: return
+        total=max(1,(end-start).days)
+        x0=10*mm; w=self.width-20*mm; y=10*mm
+        c.setLineWidth(1); c.setStrokeColor(colors.HexColor('#bcbcbc')); c.line(x0,y,x0+w,y)
+        c.setFillColor(colors.HexColor('#666666')); c.setFont('Helvetica',7)
+        c.drawString(x0,3*mm,start.strftime('%d %b'))
+        c.drawRightString(x0+w,3*mm,end.strftime('%d %b'))
+        primary=self.game.get('primary_transit') or {}
+        for hit in primary.get('passes',[]) or []:
+            try:
+                d=date.fromisoformat(str(hit.get('date'))[:10]);
+                if start<=d<=end:
+                    x=x0+w*(d-start).days/total
+                    c.setFillColor(colors.black); c.circle(x,y,2.4*mm,stroke=0,fill=1)
+                    c.setFont('Helvetica',6.5); c.drawCentredString(x,y+4*mm,d.strftime('%d %b'))
+            except Exception: pass
+
+class _YearMonthlyActivation(Flowable):
+    """Compact per-month natal activation from the precomputed YearPacket."""
+    def __init__(self, snapshot, game):
+        super().__init__()
+        self.snapshot=snapshot
+        self.game=game
+        self.width=PAGE_WIDTH-2*MARGIN_X
+        self.height=70*mm
+
+    def draw(self):
+        c=self.canv
+        center=self.width/2
+        cy=33*mm
+        outer=29*mm
+        c.setStrokeColor(colors.HexColor('#aaa'))
+        c.setLineWidth(.7)
+        c.circle(center,cy,outer,stroke=1,fill=0)
+        c.circle(center,cy,outer*.75,stroke=1,fill=0)
+        positions={str(p.planet):float(p.longitude) for p in getattr(self.snapshot,'positions',())}
+        for i in range(12):
+            a=math.radians(i*30-90)
+            c.setStrokeColor(colors.HexColor('#c8c8c8'))
+            c.line(center+outer*.75*math.cos(a),cy+outer*.75*math.sin(a),center+outer*math.cos(a),cy+outer*math.sin(a))
+        for name, lon in positions.items():
+            a=math.radians(lon-90)
+            r=outer*.61
+            x,y=center+r*math.cos(a),cy+r*math.sin(a)
+            c.setFont('Helvetica',5.4)
+            c.setFillColor(colors.HexColor('#666'))
+            c.drawCentredString(x,y,name[:3].upper())
+        contacts=[self.game.get('primary_transit') or {}]+list(self.game.get('supporting_transits') or [])[:2]
+        seen=set()
+        for item in contacts:
+            target=str(item.get('natal_target') or '')
+            if target in seen or target not in positions:continue
+            seen.add(target)
+            a=math.radians(positions[target]-90)
+            x,y=center+outer*.85*math.cos(a),cy+outer*.85*math.sin(a)
+            c.setStrokeColor(colors.HexColor('#8872a8'))
+            c.setLineWidth(1.1)
+            c.line(center,cy,x,y)
+            c.setFillColor(colors.HexColor('#d2c5e7'))
+            c.circle(x,y,2.7*mm,stroke=0,fill=1)
+        c.setFillColor(colors.black)
+        c.setFont('Helvetica',7)
+        c.drawCentredString(center,cy-3*mm,'LUNA')
+        c.setFillColor(colors.HexColor('#555'))
+        c.setFont('Helvetica',6.6)
+        c.drawCentredString(center,1*mm,'Natal reference and selected game activations - calculated positions only')
+
+
+def _monthly_chapter_pages(packet: dict[str, Any], editorial: PaidYearlyEditorial | None, styles, snapshot=None) -> list:
     """Twelve stand-alone printed monthly chapters from the existing YearPacket.
 
     Layout only: do not calculate astrology or make a provider call. Each
@@ -328,6 +480,8 @@ def _monthly_chapter_pages(packet: dict[str, Any], editorial: PaidYearlyEditoria
                 Paragraph(_xml(_date_label(month["strongest_date"])) + " - " + _xml(month.get("strongest_label") or month.get("strongest_kind") or "Calculated contact"), styles["body"]),
             ])
         if game:
+            out.append(Paragraph("Personal transit timeline", styles["h3"]))
+            out.append(_MonthContacts(month,game))
             out.append(Paragraph("The longer story at work", styles["h3"]))
             primary = game.get("primary_transit") or {}
             if primary.get("technical_label"):
@@ -335,6 +489,9 @@ def _monthly_chapter_pages(packet: dict[str, Any], editorial: PaidYearlyEditoria
             for support in (game.get("supporting_transits") or [])[:2]:
                 if isinstance(support, dict) and support.get("technical_label"):
                     out.append(Paragraph(_xml(support["technical_label"]), styles["small"]))
+            if snapshot is not None:
+                out.append(Paragraph("Your natal activation", styles["h3"]))
+                out.append(_YearMonthlyActivation(snapshot, game))
             out.append(Paragraph("Explore the full Major Issue chapter for pass-by-pass interpretation and technical evidence.", styles["small"]))
     return out
 
@@ -613,7 +770,7 @@ def build_paid_yearly_pdf(
     if str(personal_question or "").strip():
         story.append(Paragraph(f"<b>Your question:</b> {_xml(personal_question)}", styles["small"]))
     if order_reference:
-        story.append(Paragraph(f"Order reference: {_xml(order_reference)}", styles["small"]))
+        story.append(Paragraph(f"<b>Order reference:</b> {_xml(order_reference)}", styles["small"]))
 
     story += _natal_signature(snapshot, styles)
     story += _read_pattern(snapshot, styles)
@@ -632,14 +789,8 @@ def build_paid_yearly_pdf(
         ))
 
     story += _year_map(value, styles)
-    story += _monthly_chapter_pages(value, editorial, styles)
+    story += _monthly_chapter_pages(value, editorial, styles, snapshot=snapshot)
 
-    story.append(PageBreak())
-    story.append(Paragraph("The major issues of your year", styles["h1"]))
-    story.append(Paragraph(
-        "These are the strongest selected personal transit arcs. Each chapter gives the human situation first and the exact timing underneath.",
-        styles["small"],
-    ))
     for game in games:
         story += _issue_flowables(game, editorial, styles)
 

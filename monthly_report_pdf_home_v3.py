@@ -2,6 +2,7 @@ from __future__ import annotations
 from solar_cycle import solar_gate_label
 
 import base64
+import math
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -160,6 +161,68 @@ def _date_label(value: str) -> str:
     return f"{parsed.strftime('%B')} {parsed.day}"
 
 
+def _profile_natal_wheel(profile: object) -> str:
+    """Render the customer's stored natal positions without recalculating the ephemeris.
+
+    No birth time/angles are inferred: the stored payload explicitly controls
+    whether an Ascendant line is drawn.
+    """
+    from natal_snapshot import decode_natal_profile, NATAL_PROFILE_ORDER
+    decoded = decode_natal_profile(str(profile or ""))
+    values = decoded.get("p") or []
+    if not values:
+        return ""
+    size, cx, cy, radius = 420, 210, 210, 161
+    signs = ("ARI", "TAU", "GEM", "CAN", "LEO", "VIR", "LIB", "SCO", "SAG", "CAP", "AQU", "PIS")
+    pieces = [f'<svg viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Natal positions calculated for this birth chart">',
+              '<circle cx="210" cy="210" r="161" stroke="#151515" stroke-width="1" fill="none"/>',
+              '<circle cx="210" cy="210" r="124" stroke="#aaa" stroke-width="0.6" fill="none"/>']
+    def xy(degree, r):
+        a = math.radians(float(degree) - 90)
+        return cx + r*math.cos(a), cy + r*math.sin(a)
+    for i, label in enumerate(signs):
+        x1,y1 = xy(i*30,124);x2,y2=xy(i*30,161)
+        xt,yt=xy(i*30+15,145)
+        pieces.append(f'<path d="M{x1:.2f} {y1:.2f} L{x2:.2f} {y2:.2f}" stroke="#bbb" stroke-width=".65"/><text x="{xt:.2f}" y="{yt:.2f}" font-size="8" text-anchor="middle" fill="#555">{label}</text>')
+    for idx,degree in enumerate(values):
+        x,y=xy(degree,112-(idx%3)*10)
+        label=str(NATAL_PROFILE_ORDER[idx])[:3].upper()
+        pieces.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="9.3" fill="white" stroke="#777" stroke-width=".6"/><text x="{x:.2f}" y="{y+2.8:.2f}" text-anchor="middle" font-size="7" font-weight="600" fill="#222">{label}</text>')
+    angles = decoded.get("a") or []
+    if decoded.get("t") and angles and angles[0] is not None:
+        ax,ay=xy(angles[0],161); bx,by=xy(angles[0],122)
+        pieces.append(f'<path d="M{ax:.2f} {ay:.2f} L{bx:.2f} {by:.2f}" stroke="#111" stroke-width="2.2"/>')
+    pieces.append('<text x="210" y="203" text-anchor="middle" font-family="Georgia,serif" font-size="16" fill="#111">LUNA</text><text x="210" y="221" text-anchor="middle" font-size="7" fill="#777">NATAL REFERENCE</text></svg>')
+    return "".join(pieces)
+
+
+def _profile_activation_wheel(profile: object, natal_overlay: dict) -> str:
+    """Highlight computed natal targets touched by the selected monthly contacts."""
+    from natal_snapshot import decode_natal_profile, NATAL_PROFILE_ORDER
+    decoded = decode_natal_profile(str(profile or ""))
+    positions = dict(zip(NATAL_PROFILE_ORDER, decoded.get("p") or []))
+    angles = decoded.get("a") or []
+    if len(angles) >= 2:
+        if angles[0] is not None: positions["Ascendant"] = angles[0]
+        if angles[1] is not None: positions["Midheaven"] = angles[1]
+    activations = list(natal_overlay.get("activations") or [])
+    if not positions or not activations:
+        return ""
+    pieces = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" role="img" aria-label="Natal targets activated by this month">',
+              '<circle cx="210" cy="210" r="161" fill="none" stroke="#aaa"/>',
+              '<circle cx="210" cy="210" r="122" fill="none" stroke="#ddd"/>']
+    for index, item in enumerate(activations[:6]):
+        target = str(item.get("target") or "")
+        if target not in positions: continue
+        angle = math.radians(float(positions[target])-90)
+        x,y=210+139*math.cos(angle),210+139*math.sin(angle)
+        pieces.append(f'<line x1="210" y1="210" x2="{x:.2f}" y2="{y:.2f}" stroke="#b5a2d2" stroke-width="1.5"/>')
+        pieces.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="12" fill="#dbd1ef" stroke="#9987b5"/>')
+        pieces.append(f'<text x="{x:.2f}" y="{y+3:.2f}" text-anchor="middle" font-size="8" fill="#353046">{_safe(target[:3].upper())}</text>')
+    pieces.append('<text x="210" y="210" text-anchor="middle" font-family="Georgia,serif" font-size="16" fill="#111">YOUR CHART</text><text x="210" y="228" text-anchor="middle" font-size="8" fill="#777">MONTHLY ACTIVATION</text></svg>')
+    return "".join(pieces)
+
+
 def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -> str:
     report_right = f"{narrative.sign} / {narrative.label}"
     snapshot = dict(narrative.snapshot_rows)
@@ -238,6 +301,14 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     natal_overlay = dict(result.get("natal_overlay") or {})
     natal_page = ""
     if natal_overlay:
+        natal_chart_svg = _profile_natal_wheel(result.get("natal_profile"))
+        activation_svg = _profile_activation_wheel(result.get("natal_profile"), natal_overlay)
+        natal_chart_html = (
+            '<div class="monthly-chart-pair">'
+            + '<div class="natal-chart-print"><div class="mono-label">Your natal reference</div>' + natal_chart_svg + '</div>'
+            + '<div class="natal-chart-print"><div class="mono-label">Personal activation</div>' + (activation_svg or '<p>No tight activation selected.</p>') + '</div>'
+            + '</div><p class="chart-caveat">Natal positions and selected personal contacts are derived from the same stored monthly evidence. Unknown birth time never supplies angles.</p>'
+        ) if natal_chart_svg else ""
         activation_cards = []
         for item in natal_overlay.get("activations") or []:
             signature = str(item.get("signature") or "").strip()
@@ -273,6 +344,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 <div class="eyebrow">Personal natal overlay</div>
 <h1 class="section-title">Where this month touches your chart</h1>
 <p class="hero-subtitle narrow">{_safe(natal_overlay.get('summary'))}</p>
+{natal_chart_html}
 {f'<div class="evidence-line">{_safe(natal_meta)}</div>' if natal_meta else ''}
 <div class="chapter-list">{''.join(activation_cards)}</div>
 """
@@ -602,6 +674,11 @@ p {{ margin:0 0 3.2mm; font:400 8.2pt/1.48 'Josefin Sans'; }}
 .best-move strong {{ font:500 8.2pt/1.4 'Josefin Sans'; }}
 .best-move.wide {{ margin-top:7mm; grid-template-columns:36mm 1fr; }}
 .best-move.wide strong p {{ margin:0 0 2mm; }}
+.monthly-chart-pair {{ display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:start;margin-top:4mm; }}
+.chart-caveat {{font-size:6.3pt;color:#666;}}
+.natal-chart-print {{ text-align:center; margin:4mm auto 6mm; max-width:108mm; }}
+.natal-chart-print svg {{ width:100%; height:auto; display:block; }}
+.natal-chart-print p {{ font-size:6pt; color:#666; }}
 .chapter-list {{ display:grid; gap:4mm; }}
 .chapter-row {{ display:grid; grid-template-columns:14mm 1fr; gap:5mm; border:.45pt solid var(--black); padding:4.5mm 5mm; min-height:55mm; }}
 .chapter-row.black-feature {{ background:var(--black); color:white; }}
