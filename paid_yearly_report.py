@@ -9,7 +9,7 @@ the year as human stories, timing and choices.
 Public API is unchanged:
     render_paid_yearly_report(...)
 """
-
+import re
 from datetime import date, timedelta
 from html import escape
 from typing import Any, Callable, ContextManager
