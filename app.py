@@ -125,6 +125,7 @@ from year_ahead import build_year_packet
 from year_ahead_view import render_year_ahead
 from paid_yearly_editorial import generate_paid_yearly_editorial
 from paid_yearly_report import render_paid_yearly_report
+from monthly_transit_view import monthly_overlay_rows, yearly_month_stories, slow_planet_summary, SLOW_PLANETS
 from paid_yearly_pdf import build_paid_yearly_pdf, paid_yearly_filename
 from yearly_prebuilt_base import load_prebuilt_yearly_horizon, compact_yearly_shared_context
 from major_event_registry import group_personal_activations, group_serialized_personal_activations, personalize_serialized_signals
@@ -9645,6 +9646,24 @@ def _build_paid_yearly_product(
     }
 
 
+def _render_paid_yearly_month_activation(product: dict, start: str, end: str) -> None:
+    """Use the existing Timing Map wheel on the selected paid-year monthly window."""
+    report = product.get("timing_report")
+    snapshot = product.get("snapshot")
+    if report is None or snapshot is None:
+        st.caption("Activation chart unavailable for this report.")
+        return
+    stories = yearly_month_stories(report, start, end)
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown("**Natal reference**")
+        st.markdown(natal_wheel_svg(snapshot, size=620), unsafe_allow_html=True)
+    with right:
+        st.markdown("**Activation layer**")
+        st.markdown(_timing_activation_wheel_svg(report, "Month", size=620, stories_override=stories), unsafe_allow_html=True)
+    st.caption("Colour shows selected personal activity, not good or bad. Exact contacts are listed above.")
+
+
 def _render_paid_yearly_product(
     product: dict,
     *,
@@ -9664,6 +9683,8 @@ def _render_paid_yearly_product(
         evidence_panel=_luna_evidence_panel,
         trust_statement=LUNA_TRUST_STATEMENT,
         trust_disclosure=LUNA_TRUST_DISCLOSURE,
+        timing_report=product.get("timing_report"),
+        activation_chart=lambda start, end: _render_paid_yearly_month_activation(product, start, end),
     )
 
 
@@ -11485,6 +11506,39 @@ def _render_snapshot_monthly_report(
                 unsafe_allow_html=True,
             )
 
+    # Read-only extra depth from the already-computed Paid Monthly natal overlay.
+    st.markdown("## Explore your month’s astrology")
+    with st.expander("Slower planets · personal transits · natal activation", expanded=False):
+        personal_rows = monthly_overlay_rows(result)
+        st.markdown("#### Slower planets")
+        for planet in SLOW_PLANETS:
+            matches = [item for item in personal_rows if planet.casefold() in item["contact"].casefold()]
+            if matches:
+                st.markdown(f'**{planet}** · ' + "; ".join(row["contact"] for row in matches[:2]))
+            else:
+                st.caption(f'{planet} · No listed personal activation this month')
+        st.markdown("#### Calculated personal contacts")
+        if personal_rows:
+            for item in personal_rows:
+                st.markdown(f'- {item["date"]} · {item["contact"]}')
+        else:
+            st.caption("No personal natal contacts are available in this report's calculated overlay.")
+        if paid_snapshot is not None:
+            year, month, _ = monthly_period_from_result(result, narrative)
+            month_events = _monthly_canonical_events(narrative, result)
+            if month_events:
+                st.markdown("#### Your natal activation")
+                left, right = st.columns(2, gap="large")
+                with left:
+                    st.markdown("**Natal reference**")
+                    st.markdown(natal_wheel_svg(paid_snapshot, size=620), unsafe_allow_html=True)
+                with right:
+                    st.markdown("**Activation layer**")
+                    st.markdown(_monthly_activation_wheel_svg(result, month_events, "whole", size=620), unsafe_allow_html=True)
+                st.caption("This is Luna's existing Monthly activation-wheel renderer, using calculated monthly events.")
+            else:
+                st.caption("No calculated monthly activation events available for this chart.")
+
     # Key Dates are now a compact reference index only. The full interpretation
     # already appears in Read the month and is not repeated here.
     key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
@@ -12265,12 +12319,12 @@ def _timing_motion_summary(report, mode: str, stories: list) -> str:
 
 
 
-def _timing_activation_wheel_svg(report, mode: str, size: int = 620) -> str:
+def _timing_activation_wheel_svg(report, mode: str, size: int = 620, *, stories_override=None) -> str:
     """
     Restrained activation layer. Colour encodes activity only:
     shaded sectors = activated houses, violet = natal target, orange = transiting planet.
     """
-    stories = _timing_active_stories(report, mode)
+    stories = list(stories_override) if stories_override is not None else _timing_active_stories(report, mode)
     width = height = int(size)
     cx = cy = width / 2
     outer = width * 0.39

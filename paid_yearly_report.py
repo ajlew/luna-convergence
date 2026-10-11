@@ -18,6 +18,7 @@ import streamlit as st
 
 from paid_yearly_editorial import PaidYearlyEditorial
 from year_ahead import YearPacket
+from monthly_transit_view import yearly_month_stories, yearly_month_rows, slow_planet_summary
 
 
 PAID_YEARLY_REPORT_VERSION = "1.3-final-web-polish"
@@ -757,6 +758,9 @@ def _month_by_month_rows(
 def _render_month_by_month(
     packet: dict[str, Any],
     editorial: PaidYearlyEditorial | None = None,
+    *,
+    timing_report: Any = None,
+    activation_chart: Callable[..., None] | None = None,
 ) -> None:
     rows = _month_by_month_rows(packet, editorial)
     if not rows:
@@ -767,28 +771,36 @@ def _render_month_by_month(
         "Twelve stages of the same evolving year. When a story continues across several months, the label shows what changes next."
     )
 
-    cards: list[str] = []
-    for row in rows:
-        strongest = (
-            f'<div class="natal-evidence">{escape(row["strongest"])}</div>'
-            if row.get("strongest")
-            else ""
-        )
-        cards.append(
-            '<div class="natal-signature-reading paid-key-date">'
-            f'<div class="natal-evidence">{escape(row["month"])} · {escape(row["phase"])}</div>'
-            f'<h3>{escape(row["story"])}</h3>'
-            f'<p>{escape(row["focus"])}</p>'
-            + strongest
-            + "</div>"
-        )
-
-    st.markdown(
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">'
-        + "".join(cards)
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+    rounds = [r for r in (packet.get("monthly_rounds") or []) if isinstance(r, dict)]
+    for index, row in enumerate(rows):
+        period = rounds[index] if index < len(rounds) else {}
+        caption = f'{row["month"]} · {row["phase"]} · {row["story"]}'
+        with st.expander(caption, expanded=False):
+            st.markdown(f'**Luna’s focus:** {row["focus"]}')
+            if row.get("strongest"):
+                st.caption(f'Key moment · {row["strongest"]}')
+            stories = yearly_month_stories(timing_report, period.get("start"), period.get("end"))
+            contact_rows = yearly_month_rows(stories, period.get("start"), period.get("end"))
+            st.markdown("#### Slower planets this period")
+            for planet, entries in slow_planet_summary(contact_rows):
+                if entries:
+                    st.markdown(f'**{planet}** · ' + "; ".join(e["contact"] for e in entries[:2]))
+                else:
+                    st.caption(f'{planet} · No selected personal contact in this period')
+            st.markdown("#### Important personal transits")
+            if contact_rows:
+                for contact in contact_rows:
+                    line = f'**{contact["contact"]}** · {contact["phase"]}'
+                    if contact["exact"]:
+                        line += f' · {contact["exact"]}'
+                    st.markdown(line)
+                    if contact["summary"]:
+                        st.caption(contact["summary"])
+            else:
+                st.caption("No selected long-running personal contacts in this period.")
+            if activation_chart is not None and timing_report is not None:
+                st.markdown("#### Your natal activation")
+                activation_chart(period.get("start"), period.get("end"))
 
 
 def _render_game_evidence(game: dict[str, Any]) -> None:
@@ -1215,6 +1227,8 @@ def render_paid_yearly_report(
     evidence_panel: Callable[[str], ContextManager[Any]] | None = None,
     trust_statement: str = "",
     trust_disclosure: str = "",
+    timing_report: Any = None,
+    activation_chart: Callable[..., None] | None = None,
 ) -> None:
     """Render Paid Yearly using human story language rather than engine language."""
     value = _packet_dict(packet)
@@ -1276,7 +1290,7 @@ def render_paid_yearly_report(
         )
 
     _render_year_map(value)
-    _render_month_by_month(value, editorial)
+    _render_month_by_month(value, editorial, timing_report=timing_report, activation_chart=activation_chart)
 
     st.markdown("## The major stories of your year")
     st.caption(
