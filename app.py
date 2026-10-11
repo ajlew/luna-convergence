@@ -169,8 +169,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.76"
-BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Prebuilt Horizon"
+APP_VERSION = "v3.77"
+BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Final Web Polish"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -9880,6 +9880,157 @@ def _render_snapshot_natal_evidence(snapshot) -> None:
             st.markdown(f"- {aspect.planet1} {aspect.name} {aspect.planet2} · {aspect.orb:.2f}° orb")
 
 
+
+_NATAL_CORE_THREAD_ROLES = {
+    "Sun": ("direction", "conscious direction, identity and what you are trying to become"),
+    "Moon": ("instinct", "instinctive needs, emotional habits and the way you respond before thinking"),
+    "Mercury": ("thinking", "thinking, language, information and how you make sense of what is happening"),
+    "Venus": ("values", "values, attraction, reciprocity and what feels worth choosing or keeping"),
+    "Mars": ("action", "action, drive, assertion and how you go after what you want"),
+    "Jupiter": ("expansion", "growth, confidence, opportunity and the urge to make life larger"),
+    "Saturn": ("structure", "structure, limits, responsibility and what has to work in practice"),
+    "Uranus": ("change", "change, freedom, disruption and the need to do something differently"),
+    "Neptune": ("imagination", "imagination, ideals, intuition and what you sense could be possible"),
+    "Pluto": ("power", "power, intensity, deep change and what cannot stay superficial"),
+    "Ascendant": ("presentation", "presentation, approach and the way you meet the world"),
+    "Midheaven": ("public direction", "public direction, reputation and the role you are building toward"),
+}
+
+_NATAL_CORE_ASPECT_SYMBOLS = {
+    "conjunction": "☌",
+    "sextile": "✶",
+    "square": "□",
+    "trine": "△",
+    "opposition": "☍",
+}
+
+
+def _render_snapshot_core_thread(
+    snapshot,
+    *,
+    year_bridge: str = "",
+) -> None:
+    """Explain the strongest natal aspect in plain English with visible proof."""
+    aspects = list(getattr(snapshot, "aspects", ()) or ())
+    if not aspects:
+        _render_guided_luna_story(
+            _snapshot_natal_fallback_story(snapshot),
+            "Luna reads the whole chart",
+        )
+        return
+
+    strongest = aspects[0]
+    p1 = str(getattr(strongest, "planet1", "") or "")
+    p2 = str(getattr(strongest, "planet2", "") or "")
+    aspect_name = str(getattr(strongest, "name", "") or "").lower()
+    if not p1 or not p2:
+        _render_guided_luna_story(
+            _snapshot_natal_fallback_story(snapshot),
+            "Luna reads the whole chart",
+        )
+        return
+
+    short1, meaning1 = _NATAL_CORE_THREAD_ROLES.get(
+        p1,
+        (p1.lower(), f"the part of the chart represented by {p1}"),
+    )
+    short2, meaning2 = _NATAL_CORE_THREAD_ROLES.get(
+        p2,
+        (p2.lower(), f"the part of the chart represented by {p2}"),
+    )
+
+    if aspect_name == "square":
+        aspect_explanation = (
+            "A square means these two functions do not always move easily together. "
+            "They can pull in different directions until you learn how to use both deliberately. "
+            f"The productive expression is to give {short2} enough {short1} to become workable "
+            f"without letting {short1} crush {short2}."
+        )
+    elif aspect_name == "opposition":
+        aspect_explanation = (
+            "An opposition places these two functions at opposite ends of the same axis. "
+            "The work is not choosing one permanently, but learning when each side is needed "
+            "and how to stop one from cancelling the other."
+        )
+    elif aspect_name == "conjunction":
+        aspect_explanation = (
+            "A conjunction blends these two functions so closely that they often arrive together. "
+            "The strength comes from using that concentration consciously instead of assuming "
+            "the two needs are always identical."
+        )
+    elif aspect_name == "trine":
+        aspect_explanation = (
+            "A trine links these two functions with relatively little friction. "
+            "Because the connection can feel natural, its value is greatest when you use it deliberately "
+            "rather than taking it for granted."
+        )
+    elif aspect_name == "sextile":
+        aspect_explanation = (
+            "A sextile creates a workable connection between these two functions. "
+            "It behaves more like an available capacity than an automatic result: "
+            "it becomes useful when you actively put the two together."
+        )
+    else:
+        aspect_explanation = (
+            "This aspect describes a recurring relationship between these two parts of the chart. "
+            "Treat it as a pattern to recognise and work with rather than a fixed verdict about who you are."
+        )
+
+    positions = {
+        str(getattr(item, "planet", "") or ""): item
+        for item in (getattr(snapshot, "positions", ()) or ())
+    }
+
+    def position_text(planet: str) -> str:
+        item = positions.get(planet)
+        if item is None:
+            return planet
+        degree = float(getattr(item, "degree", 0.0) or 0.0)
+        sign = str(getattr(item, "sign", "") or "")
+        return f"{planet} {degree:.2f}° {sign}".strip()
+
+    symbol = _NATAL_CORE_ASPECT_SYMBOLS.get(aspect_name, aspect_name)
+    orb = float(getattr(strongest, "orb", 0.0) or 0.0)
+    evidence = (
+        f"Calculated from your natal chart · "
+        f"{position_text(p1)} {symbol} {position_text(p2)} · {orb:.2f}° orb"
+    )
+
+    st.markdown(
+        f'<div class="natal-evidence">'
+        f'{escape(("STRONGEST NATAL PATTERN · " + p1 + " " + aspect_name + " " + p2).upper())}'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"### The core thread: {escape(short1.title())} meets {escape(short2)}"
+    )
+    st.markdown(
+        '<div class="natal-signature-reading paid-monthly-longform paid-monthly-article">'
+        f"<p><strong>{escape(p1)} {escape(aspect_name)} {escape(p2)}</strong> is the "
+        "highest-ranked calculated aspect in your natal chart. "
+        f"{escape(p1)} describes {escape(meaning1)}; "
+        f"{escape(p2)} describes {escape(meaning2)}.</p>"
+        f"<p>{escape(aspect_explanation)}</p>"
+        "<p>Think of this as a recurring capacity to work with, not a character flaw "
+        "or a prediction. The useful question is how consciously you can use both sides "
+        "when the pattern appears.</p>"
+        f'<div class="natal-evidence" style="margin-top:14px">{escape(evidence)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption("Natal aspect — part of the birth chart, not a current transit.")
+
+    if str(year_bridge or "").strip():
+        st.markdown("#### Why this matters this year")
+        st.markdown(
+            '<div class="natal-signature-reading">'
+            f"<p>{escape(str(year_bridge).strip())}</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+
 def _render_snapshot_natal_core(
     snapshot,
     *,
@@ -9889,6 +10040,8 @@ def _render_snapshot_natal_core(
     show_evidence: bool = True,
     use_live_voice: bool = True,
     use_live_signature_moves: bool = True,
+    show_core_thread: bool = False,
+    core_thread_year_bridge: str = "",
 ) -> None:
     """Canonical Snapshot body shared by free Natal and both paid personal reports."""
     if snapshot is None:
@@ -9901,14 +10054,20 @@ def _render_snapshot_natal_core(
     # interpretation here and reserve Luna's live voice for Read the month.
     guided_natal = (
         _guided_luna_copy("natal", _snapshot_natal_facts(snapshot))
-        if use_live_voice
+        if use_live_voice and not show_core_thread
         else None
     )
     st.markdown("## Read the pattern")
-    _render_guided_luna_story(
-        guided_natal or _snapshot_natal_fallback_story(snapshot),
-        "Luna reads the whole chart",
-    )
+    if show_core_thread:
+        _render_snapshot_core_thread(
+            snapshot,
+            year_bridge=core_thread_year_bridge,
+        )
+    else:
+        _render_guided_luna_story(
+            guided_natal or _snapshot_natal_fallback_story(snapshot),
+            "Luna reads the whole chart",
+        )
 
     if birth_confirmation_html:
         st.markdown(birth_confirmation_html, unsafe_allow_html=True)

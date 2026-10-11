@@ -20,7 +20,7 @@ from paid_yearly_editorial import PaidYearlyEditorial
 from year_ahead import YearPacket
 
 
-PAID_YEARLY_REPORT_VERSION = "1.2-human-first-voice"
+PAID_YEARLY_REPORT_VERSION = "1.3-final-web-polish"
 
 
 def _packet_dict(packet: YearPacket | dict[str, Any]) -> dict[str, Any]:
@@ -157,36 +157,39 @@ def _pass_stage_copy(
     game: dict[str, Any] | None = None,
 ) -> str:
     game = dict(game or {})
-    story_name = " ".join(
-        str(game.get("title") or _human_story_label(game) or "this story").split()
+    life_area = (
+        _human_story_label(game)
+        .lower()
+        .replace(" & ", " and ")
+        .strip()
     )
-    life_area = _human_story_label(game).lower()
+    story_phrase = f"your {life_area} story" if life_area else "this story"
     move = " ".join(str(game.get("move") or "").split()).rstrip(".")
     risk = " ".join(str(game.get("risk") or "").split()).rstrip(".")
 
     if label == "First contact":
         base = (
-            f"This is where {story_name.lower()} stops being background and becomes a live choice. "
-            f"Notice what is now too concrete to leave vague."
+            f"This is where {story_phrase} stops being background and becomes a live choice. "
+            "Notice what is now too concrete to leave vague."
         )
     elif label == "Returns":
         base = (
-            f"The same {life_area} question comes back for review. "
+            f"The same {life_area or 'underlying'} question comes back for review. "
             "Treat the return as evidence about what did or did not hold after the first contact."
         )
     elif label == "Final contact":
         base = (
-            "This is the last exact contact in the sequence. "
+            f"This is the final exact contact in {story_phrase}. "
             "Decide what has proved sustainable and make that the new baseline."
         )
     elif label == "Exact contact":
         base = (
-            f"This is the clearest exact contact in {story_name.lower()}. "
+            f"This is the clearest exact contact in {story_phrase}. "
             "Judge the situation by what is actually happening rather than by anticipation."
         )
     else:
         base = (
-            f"{story_name} becomes exact again. "
+            f"{story_phrase.capitalize()} becomes exact again. "
             "Use the repetition to see what has changed since the previous contact."
         )
 
@@ -214,9 +217,54 @@ def _trigger_domain(game: dict[str, Any] | None) -> str:
     return "general"
 
 
+
+def _trigger_stage(
+    row: dict[str, Any],
+    primary: dict[str, Any],
+) -> str:
+    trigger_date = _parse_date(row.get("date"))
+    pass_dates = sorted(
+        hit_date
+        for hit_date in (
+            _parse_date(hit.get("date"))
+            for hit in _pass_rows(primary)
+            if isinstance(hit, dict)
+        )
+        if hit_date is not None
+    )
+    if trigger_date is None or not pass_dates:
+        return ""
+    if trigger_date < pass_dates[0]:
+        return "before"
+    if trigger_date > pass_dates[-1]:
+        return "after"
+    if trigger_date in pass_dates:
+        return "exact"
+    return "between"
+
+
+def _trigger_stage_note(stage: str) -> str:
+    return {
+        "before": (
+            "Treat this as an early clue about what the coming exact contact is asking you to notice."
+        ),
+        "between": (
+            "Use this moment to test what changed after the last exact contact before the story becomes exact again."
+        ),
+        "after": (
+            "Notice whether your response now reflects what the exact contact has already made clear."
+        ),
+        "exact": (
+            "This lands with an exact contact, so the supporting trigger and the main story peak together."
+        ),
+    }.get(stage, "")
+
+
 def _human_trigger_label(
     row: dict[str, Any],
     game: dict[str, Any] | None = None,
+    *,
+    stage: str = "",
 ) -> str:
     planet = str(
         row.get("planet")
@@ -348,10 +396,12 @@ def _human_trigger_label(
         ),
     }
 
-    return copy.get((domain, planet), fallback.get(
+    base = copy.get((domain, planet), fallback.get(
         planet,
         "A faster-moving contact brings this story back into focus."
     ))
+    stage_note = _trigger_stage_note(stage)
+    return f"{base} {stage_note}".strip()
 
 
 def _key_trigger_label(
@@ -956,10 +1006,11 @@ def _render_story(
         st.markdown("### Moments that bring it into focus")
         for row in triggers[:4]:
             when = _date_label(row.get("date"))
+            stage = _trigger_stage(row, primary)
             st.markdown(
                 '<div class="natal-signature-reading paid-key-date">'
                 f'<div class="natal-evidence">{escape(when)}</div>'
-                f"<p>{escape(_human_trigger_label(row, game))}</p>"
+                f"<p>{escape(_human_trigger_label(row, game, stage=stage))}</p>"
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -1074,169 +1125,82 @@ def _render_evidence_body(
 
 
 
-_NATAL_ROLE_LANGUAGE = {
-    "Sun": (
-        "direction",
-        "conscious direction, identity and what you are trying to become",
-    ),
-    "Moon": (
-        "instinct",
-        "instinctive needs, emotional habits and the way you respond before thinking",
-    ),
-    "Mercury": (
-        "thinking",
-        "thinking, language, information and how you make sense of what is happening",
-    ),
-    "Venus": (
-        "values",
-        "values, attraction, reciprocity and what feels worth choosing or keeping",
-    ),
-    "Mars": (
-        "action",
-        "action, drive, assertion and how you go after what you want",
-    ),
-    "Jupiter": (
-        "expansion",
-        "growth, confidence, opportunity and the urge to make life larger",
-    ),
-    "Saturn": (
-        "structure",
-        "structure, limits, responsibility and what has to work in practice",
-    ),
-    "Uranus": (
-        "change",
-        "change, freedom, disruption and the need to do something differently",
-    ),
-    "Neptune": (
-        "imagination",
-        "imagination, ideals, intuition and what you sense could be possible",
-    ),
-    "Pluto": (
-        "power",
-        "power, intensity, deep change and what cannot stay superficial",
-    ),
-    "Ascendant": (
-        "presentation",
-        "presentation, approach and the way you meet the world",
-    ),
-    "Midheaven": (
-        "public direction",
-        "public direction, reputation and the role you are building toward",
-    ),
-}
-
-_NATAL_ASPECT_SYMBOLS = {
-    "conjunction": "☌",
-    "sextile": "✶",
-    "square": "□",
-    "trine": "△",
-    "opposition": "☍",
+_CORE_THREAD_YEAR_LANGUAGE = {
+    "Sun": "conscious direction and identity",
+    "Moon": "instinctive needs and emotional response",
+    "Mercury": "thinking, information and communication",
+    "Venus": "values, reciprocity and relationship choices",
+    "Mars": "action, assertion and how you use force",
+    "Jupiter": "growth, confidence and expansion",
+    "Saturn": "structure, limits and responsibility",
+    "Uranus": "change, freedom and disruption",
+    "Neptune": "imagination, ideals and uncertainty",
+    "Pluto": "power, intensity and deep change",
+    "Ascendant": "identity, presentation and personal direction",
+    "Midheaven": "career, reputation and public direction",
 }
 
 
-def _render_core_thread_explainer(snapshot: Any) -> None:
-    """Explain the strongest natal aspect in plain language and show its source."""
+def _core_thread_year_bridge(
+    snapshot: Any,
+    packet: dict[str, Any],
+) -> str:
+    """Explain why the strongest natal pattern is relevant without inventing activation."""
     aspects = list(getattr(snapshot, "aspects", ()) or ())
     if not aspects:
-        return
+        return ""
 
     strongest = aspects[0]
-    p1 = str(getattr(strongest, "planet1", "") or "")
-    p2 = str(getattr(strongest, "planet2", "") or "")
+    natal_planets = [
+        str(getattr(strongest, "planet1", "") or ""),
+        str(getattr(strongest, "planet2", "") or ""),
+    ]
+    natal_planets = [planet for planet in natal_planets if planet]
+    if not natal_planets:
+        return ""
+
+    games = [
+        row
+        for row in list(packet.get("games") or [])
+        if isinstance(row, dict)
+    ]
+    counts = {planet: 0 for planet in natal_planets}
+
+    for game in games:
+        stories = [dict(game.get("primary_transit") or {})] + [
+            dict(row)
+            for row in list(game.get("supporting_transits") or [])
+            if isinstance(row, dict)
+        ]
+        story_text = " ".join(
+            " ".join(
+                [
+                    str(story.get("transiting_planet") or ""),
+                    str(story.get("natal_target") or ""),
+                    str(story.get("technical_label") or ""),
+                ]
+            )
+            for story in stories
+        )
+        for planet in natal_planets:
+            if re.search(rf"\b{re.escape(planet)}\b", story_text, flags=re.IGNORECASE):
+                counts[planet] += 1
+
+    planet, count = max(counts.items(), key=lambda item: item[1])
+    if count <= 0:
+        return ""
+
+    p1, p2 = natal_planets[0], natal_planets[-1]
     aspect_name = str(getattr(strongest, "name", "") or "").lower()
-    if not p1 or not p2:
-        return
+    theme = _CORE_THREAD_YEAR_LANGUAGE.get(planet, planet.lower())
+    total = max(1, len(games))
 
-    short1, meaning1 = _NATAL_ROLE_LANGUAGE.get(
-        p1,
-        (p1.lower(), f"the part of the chart represented by {p1}"),
+    return (
+        f"{planet} appears in {count} of your {total} major annual "
+        f"{'story' if total == 1 else 'stories'}. That does not mean those transits recreate "
+        f"your natal {p1} {aspect_name} {p2}. It means one side of that lifelong pattern — "
+        f"{theme} — is especially prominent in the timing selected for this year."
     )
-    short2, meaning2 = _NATAL_ROLE_LANGUAGE.get(
-        p2,
-        (p2.lower(), f"the part of the chart represented by {p2}"),
-    )
-
-    if aspect_name == "square":
-        aspect_explanation = (
-            "A square means these two functions do not always move easily together. "
-            "They can pull in different directions until you learn how to use both deliberately. "
-            f"The productive expression is to give {short2} enough {short1} to become workable "
-            f"without letting {short1} crush {short2}."
-        )
-    elif aspect_name == "opposition":
-        aspect_explanation = (
-            "An opposition places these two functions at opposite ends of the same axis. "
-            "The work is not choosing one permanently, but learning when each side is needed "
-            "and how to stop one from cancelling the other."
-        )
-    elif aspect_name == "conjunction":
-        aspect_explanation = (
-            "A conjunction blends these two functions so closely that they often arrive together. "
-            "The strength comes from using that concentration consciously instead of assuming "
-            "the two needs are always identical."
-        )
-    elif aspect_name == "trine":
-        aspect_explanation = (
-            "A trine links these two functions with relatively little friction. "
-            "Because the connection can feel natural, its value is greatest when you use it "
-            "deliberately rather than taking it for granted."
-        )
-    elif aspect_name == "sextile":
-        aspect_explanation = (
-            "A sextile creates a workable connection between these two functions. "
-            "It behaves more like an available capacity than an automatic result: "
-            "it becomes useful when you actively put the two together."
-        )
-    else:
-        aspect_explanation = (
-            "This aspect describes a recurring relationship between these two parts of the chart. "
-            "Treat it as a pattern to recognise and work with rather than a fixed verdict about who you are."
-        )
-
-    positions = {
-        str(getattr(item, "planet", "") or ""): item
-        for item in (getattr(snapshot, "positions", ()) or ())
-    }
-
-    def position_text(planet: str) -> str:
-        item = positions.get(planet)
-        if item is None:
-            return planet
-        degree = float(getattr(item, "degree", 0.0) or 0.0)
-        sign = str(getattr(item, "sign", "") or "")
-        return f"{planet} {degree:.2f}° {sign}".strip()
-
-    symbol = _NATAL_ASPECT_SYMBOLS.get(aspect_name, aspect_name)
-    orb = float(getattr(strongest, "orb", 0.0) or 0.0)
-    evidence = (
-        f"Calculated from your natal chart · "
-        f"{position_text(p1)} {symbol} {position_text(p2)} · {orb:.2f}° orb"
-    )
-
-    st.markdown(
-        f'<div class="natal-evidence">'
-        f'{escape(("STRONGEST NATAL PATTERN · " + p1 + " " + aspect_name + " " + p2).upper())}'
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"## The core thread: {escape(short1.title())} meets {escape(short2)}"
-    )
-    st.markdown(
-        '<div class="natal-signature-reading paid-monthly-longform paid-monthly-article">'
-        f"<p><strong>{escape(p1)} {escape(aspect_name)} {escape(p2)}</strong> "
-        "is the highest-ranked calculated aspect in your natal chart. "
-        f"{escape(p1)} describes {escape(meaning1)}; "
-        f"{escape(p2)} describes {escape(meaning2)}.</p>"
-        f"<p>{escape(aspect_explanation)}</p>"
-        "<p>Think of this as a recurring capacity to work with, not a character flaw "
-        "or a prediction. The useful question is how consciously you can use both sides "
-        "when the pattern appears.</p>"
-        f'<div class="natal-evidence" style="margin-top:14px">{escape(evidence)}</div>'
-        "</div>",
-        unsafe_allow_html=True,
-    )
-    st.caption("Natal aspect — part of the birth chart, not a current transit.")
 
 
 def render_paid_yearly_report(
@@ -1278,20 +1242,17 @@ def render_paid_yearly_report(
         unsafe_allow_html=True,
     )
 
-    # Reuse the exact Natal Player presentation used by Paid Monthly.
+    # Reuse the canonical Natal Player presentation, but replace the generic
+    # Paid-Yearly "Read the pattern" fallback with the explanatory Core Thread.
     render_natal_core(
         snapshot,
         precision_note=str(natal_precision or ""),
         show_evidence=False,
         use_live_voice=False,
         use_live_signature_moves=False,
+        show_core_thread=True,
+        core_thread_year_bridge=_core_thread_year_bridge(snapshot, value),
     )
-
-    st.markdown(
-        '<div class="section-spacer"></div>',
-        unsafe_allow_html=True,
-    )
-    _render_core_thread_explainer(snapshot)
 
     st.markdown(
         '<div class="section-spacer"></div>',

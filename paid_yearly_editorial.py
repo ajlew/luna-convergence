@@ -902,6 +902,34 @@ def _strip_repeated_title(text: str, title: str) -> str:
     return pattern.sub("", value, count=1).strip()
 
 
+
+def _ensure_issue_paragraphs(
+    paragraphs: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Recover the two-part story shape if the provider omitted a blank line."""
+    cleaned = tuple(
+        " ".join(str(item or "").split()).strip()
+        for item in paragraphs
+        if str(item or "").strip()
+    )
+    if len(cleaned) >= 2 or not cleaned:
+        return cleaned
+
+    sentences = [
+        " ".join(item.split()).strip()
+        for item in re.split(r"(?<=[.!?])\s+", cleaned[0])
+        if str(item or "").strip()
+    ]
+    if len(sentences) < 2:
+        return cleaned
+
+    split_at = max(1, min(len(sentences) - 1, len(sentences) // 2))
+    return (
+        " ".join(sentences[:split_at]).strip(),
+        " ".join(sentences[split_at:]).strip(),
+    )
+
+
 def parse_paid_yearly_editorial(
     value: Any,
     *,
@@ -972,7 +1000,9 @@ def parse_paid_yearly_editorial(
         )
 
     for number in issue_numbers:
-        raw_paragraphs = _paragraphs(sections.get(f"ISSUE:{int(number)}", ""))
+        raw_paragraphs = _ensure_issue_paragraphs(
+            _paragraphs(sections.get(f"ISSUE:{int(number)}", ""))
+        )
         cleaned: list[str] = []
         for index, paragraph in enumerate(raw_paragraphs):
             paragraph = safe(paragraph)
