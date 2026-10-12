@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.78"
-BUILD_LABEL = f"Luna {APP_VERSION} — Shared HTML Print and Year Rhythm"
+APP_VERSION = "v3.79"
+BUILD_LABEL = f"Luna {APP_VERSION} — Print Overflow and Shortcut Icon Fix"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -13601,9 +13601,13 @@ def luna_shortcut_help() -> None:
             )
         with desktop:
             st.markdown(
-                "**Chrome / Edge:** Open the browser menu and select Create shortcut, "
-                "Install this site as an app, or the equivalent option your version shows. "
-                "You can also bookmark Luna with **Ctrl+D** (Windows) or **Cmd+D** (Mac)."
+                "**Google Chrome:** Open Luna, select **⋮ More → Cast, save, and share** "
+                "(sometimes **Save and share**) → **Create shortcut…** → name it **Luna Convergence** → **Create**.\n\n"
+                "**Microsoft Edge:** Select **⋯ Settings and more → Apps → Install this site as an app** "
+                "when available.\n\n"
+                "If your shortcut still shows the Streamlit logo, remove the old shortcut, refresh Luna, "
+                "and create it again. Chrome and Windows may cache the old icon. "
+                "For a bookmark use **Ctrl+D** (Windows) or **Cmd+D** (Mac)."
             )
 
 

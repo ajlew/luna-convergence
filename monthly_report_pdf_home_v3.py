@@ -223,6 +223,20 @@ def _profile_activation_wheel(profile: object, natal_overlay: dict) -> str:
     return "".join(pieces)
 
 
+def _optional_timing_strip(snapshot: dict) -> str:
+    """Never print paid-report label boxes without a verified value."""
+    items = []
+    for label, key in (("The opening", "Strongest window"),
+                       ("The reality check", "Second turning point")):
+        value = str(snapshot.get(key) or "").strip()
+        if value and value.lower() not in {"none", "n/a", "not available", "null", "unknown"}:
+            items.append(f'<div class="trust-item"><b>{label}</b><br>{_safe(value)}</div>')
+    if not items:
+        return ""
+    css_class = "trust-strip two" if len(items) == 2 else "trust-strip one"
+    return f'<div class="{css_class}">{"".join(items)}</div>'
+
+
 def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -> str:
     report_right = f"{narrative.sign} / {narrative.label}"
     snapshot = dict(narrative.snapshot_rows)
@@ -290,10 +304,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
   </aside>
 </div>
 <div class="best-move wide"><span>{_safe(narrative.focus_title)}</span><strong>{focus_html}</strong></div>
-<div class="trust-strip two">
-  <div class="trust-item"><b>The opening</b><br>{_safe(snapshot.get('Strongest window', ''))}</div>
-  <div class="trust-item"><b>The reality check</b><br>{_safe(snapshot.get('Second turning point', ''))}</div>
-</div>
+{_optional_timing_strip(snapshot)}
 {concentration_html}
 """
 
@@ -363,6 +374,10 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 </article>
 """
         )
+    horizon_has_content = bool(horizon_cards or any(
+        str(horizon.get(key) or "").strip()
+        for key in ("problem", "if_ignored", "highest_leverage_move", "timing")
+    ))
     horizon_page = f"""
 <div class="eyebrow">Problem / consequence / timing</div>
 <h1 class="section-title">What needs attention now</h1>
@@ -592,8 +607,9 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     ]
     if natal_page:
         page_bodies.append((natal_page, ""))
+    if horizon_has_content:
+        page_bodies.append((horizon_page, ""))
     page_bodies.extend([
-        (horizon_page, ""),
         (page3_body, ""),
         (page4_body, ""),
         (page5_body, ""),
@@ -618,6 +634,25 @@ html, body {{ margin:0; padding:0; background:#e9e9e6; color:var(--ink); font-fa
 body {{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }}
 .page {{ width:210mm; height:297mm; position:relative; overflow:hidden; background:var(--white); padding:13mm 16mm 14mm; break-after:page; page-break-after:always; }}
 .page:last-child {{ break-after:auto; page-break-after:auto; }}
+/* Allow overlong content to flow onto additional paper sheets instead of
+   being silently cropped by the fixed-height print-page container. */
+@media print {{
+  /* Each editorial section begins on a clean sheet, but long content is
+     permitted to continue on the next physical page without clipping. */
+  .page {{ width:auto; height:auto; min-height:0; overflow:visible;
+           padding:13mm 16mm 14mm; break-before:page;
+           break-after:auto; page-break-after:auto; }}
+  .page:first-of-type {{ break-before:auto; }}
+  .page-content {{ break-inside:auto; }}
+  .chapter-row, .card, .date-card, .monthly-chart-pair, .natal-chart-print,
+  .horizon-card, .trust-strip, .reading-card {{ break-inside:avoid-page; }}
+  .page-footer {{ position:relative; left:auto; right:auto; bottom:auto;
+                  margin-top:8mm; break-inside:avoid; }}
+  thead {{ display:table-header-group; }}
+  tr {{ break-inside:avoid-page; }}
+  h1, h2, h3 {{ break-after:avoid-page; }}
+}}
+
 .page-content {{ position:relative; z-index:1; }}
 .brand-row {{ display:flex; align-items:center; justify-content:space-between; min-height:10mm; padding:0 0 3mm; }}
 .brand-lockup {{ display:flex; align-items:center; gap:2.7mm; }}
@@ -659,6 +694,7 @@ p {{ margin:0 0 3.2mm; font:400 8.2pt/1.48 'Josefin Sans'; }}
 .field strong {{ font:500 7pt 'Josefin Sans'; }}
 .trust-strip {{ display:grid; grid-template-columns:repeat(4,1fr); margin-top:6mm; border-top:.45pt solid var(--black); border-left:.45pt solid var(--black); }}
 .trust-strip.two {{ grid-template-columns:1fr 1fr; margin-top:5mm; }}
+.trust-strip.one {{ grid-template-columns:1fr; margin-top:5mm; }}
 .trust-strip.solar-strip {{ grid-template-columns:repeat(3,1fr); }}
 .trust-item {{ min-height:10mm; border-right:.45pt solid var(--black); border-bottom:.45pt solid var(--black); padding:2.5mm; font:500 4.6pt/1.4 'IBM Plex Mono'; text-transform:uppercase; }}
 .trust-item b {{ font-weight:600; }}
