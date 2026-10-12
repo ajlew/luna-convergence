@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.79"
-BUILD_LABEL = f"Luna {APP_VERSION} — Print Overflow and Shortcut Icon Fix"
+APP_VERSION = "v3.82"
+BUILD_LABEL = f"Luna {APP_VERSION} — Native PDF Fallback and Print Fixes"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 

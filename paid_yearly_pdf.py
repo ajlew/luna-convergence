@@ -727,7 +727,10 @@ def build_paid_yearly_pdf(
             label=label, main_focus=main_focus, personal_question=personal_question,
             order_reference=order_reference)
         return render_yearly_html_pdf(html)
-    except ImportError:
+    except (ImportError, OSError) as exc:
+        # Linux Streamlit hosts can lack the native GLib/Pango dependencies
+        # required by WeasyPrint. Do not block paid/owner report delivery.
+        # Render the established ReportLab Year Ahead PDF instead.
         pass
     styles = _styles()
     output = BytesIO()

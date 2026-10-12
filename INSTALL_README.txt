@@ -26,3 +26,14 @@ LOCAL VALIDATION
 
 OUTSTANDING PRODUCT WORK
 Editorial text quality/deduplication and narrative/evidence selection semantics are separate from the print fixes and are not claimed resolved by this release.
+
+
+Native PDF dependency fix: WeasyPrint is optional on Streamlit Cloud. If libgobject/GLib is unavailable, Year Ahead falls back to the existing ReportLab PDF renderer. Downloadable print HTML is still available. No Linux packages.txt changes are required for the fallback.
+
+v3.82 deployment steps:
+1. Replace the files from v3.81 with this ZIP (full cumulative package).
+2. Keep existing unlisted repository modules and secret settings.
+3. Streamlit Cloud: reboot/redeploy app so it re-installs requirements.
+4. Confirm footer Build reads Luna v3.82; if it still reads v3.79, the replacement app.py has not deployed.
+5. Retry the Owner Year Ahead report. With no WeasyPrint native libraries, PDF uses stable ReportLab fallback; optional print-ready HTML remains downloadable.
+6. Monthly uses its existing HTML->browser->ReportLab fallback path.
