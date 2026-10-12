@@ -719,6 +719,16 @@ def build_paid_yearly_pdf(
     order_reference: str = "",
 ) -> bytes:
     value = _packet_dict(packet)
+    # Use the same HTML/CSS design language as Paid Monthly for print output.
+    # Fall back to the previous ReportLab renderer only if the HTML engine is absent.
+    try:
+        from yearly_print_html import build_yearly_print_html, render_yearly_html_pdf
+        html = build_yearly_print_html(snapshot=snapshot, packet=value, editorial=editorial,
+            label=label, main_focus=main_focus, personal_question=personal_question,
+            order_reference=order_reference)
+        return render_yearly_html_pdf(html)
+    except ImportError:
+        pass
     styles = _styles()
     output = BytesIO()
 

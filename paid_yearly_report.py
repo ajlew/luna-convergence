@@ -593,7 +593,7 @@ def _render_year_map(packet: dict[str, Any]) -> None:
 
         lane_html.append(
             '<div class="luna-year-lane">'
-            f'<div class="luna-year-label">{escape(_human_story_label(game))}{edge_note}</div>'
+            f'<div class="luna-year-label">{escape(str(game.get("title") or _human_story_label(game)).title())}{edge_note}</div>'
             '<div class="luna-year-track">'
             f'<div class="luna-year-bar" style="left:{left:.2f}%;width:{width:.2f}%"></div>'
             + "".join(triggers)
@@ -601,25 +601,42 @@ def _render_year_map(packet: dict[str, Any]) -> None:
             + "</div></div>"
         )
 
-    rhythm_cells: list[str] = []
-    for row in rows:
-        intensity = max(
-            0.0,
-            min(1.0, float(row.get("intensity") or 0.0)),
-        )
-        height = 5 + int(round(30 * intensity))
-        rhythm_cells.append(
-            '<div class="luna-year-rhythm-cell">'
-            f'<i class="luna-year-rhythm-bar" '
-            f'style="height:{height}px;opacity:{0.25 + 0.75 * intensity:.2f}"></i>'
-            f'<small>{escape(_human_phase(row.get("phase")))}</small>'
-            "</div>"
-        )
+    # The graph is grounded in precomputed year_strip.intensity (not an invented sine wave).
+    intensity_values = [max(0.0, min(1.0, float(r.get("intensity") or 0))) for r in rows]
+    from yearly_print_html import smooth_wave_path
+    wave_points = smooth_wave_path([
+        (24 + (i * 728 / max(1, len(rows) - 1)), 104 - val * 76)
+        for i, val in enumerate(intensity_values)
+    ])
+    wave_dots = "".join(
+        f'<circle cx="{24 + (i * 728 / max(1, len(rows) - 1)):.1f}" '
+        f'cy="{104 - val * 76:.1f}" r="3"/>'
+        for i, val in enumerate(intensity_values)
+    )
+    wave_labels = "".join(
+        f'<text x="{24 + (i * 728 / max(1, len(rows) - 1)):.1f}" y="126" '
+        f'text-anchor="middle">{escape(str(row.get("month") or ""))}</text>'
+        for i, row in enumerate(rows)
+    )
+    wave_html = (
+        '<div class="luna-year-rhythm" style="display:block">'
+        '<div class="luna-year-label" style="margin-bottom:8px">Your year’s rhythm</div>'
+        '<svg viewBox="0 0 780 140" role="img" '
+        'aria-label="Calculated monthly concentration of selected personal transits" '
+        'style="display:block;width:100%;height:auto">'
+        '<line x1="24" x2="752" y1="104" y2="104" stroke="#ddd"/>'
+        f'<path d="{wave_points}" fill="none" stroke="currentColor" '
+        'stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'
+        + wave_dots + wave_labels + '</svg>'
+        '<p style="font-size:11px;opacity:.7;margin:4px 0 0">'
+        'Higher points mean more selected astrological activity, not a prediction of better or worse events.</p></div>'
+    )
 
     st.markdown("## How your year unfolds")
     st.caption(
-        "Each line is one major story. Dots mark exact contacts; smaller ticks mark supporting triggers. "
-        "Year rhythm shows how concentrated the selected personal activity is each month."
+        "Your year moves through several overlapping stories. The bars show when each story "
+        "comes into focus; the dots show its turning points. The wave below shows when the "
+        "sky is busier and when it leaves more breathing room."
     )
     st.markdown(
         css
@@ -628,10 +645,8 @@ def _render_year_map(packet: dict[str, Any]) -> None:
         + month_html
         + "</div></div>"
         + "".join(lane_html)
-        + '<div class="luna-year-rhythm"><div class="luna-year-label">Year rhythm</div>'
-        + '<div class="luna-year-rhythm-grid">'
-        + "".join(rhythm_cells)
-        + "</div></div></div></div>",
+        + wave_html
+        + "</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -774,7 +789,7 @@ def _render_month_by_month(
     rounds = [r for r in (packet.get("monthly_rounds") or []) if isinstance(r, dict)]
     for index, row in enumerate(rows):
         period = rounds[index] if index < len(rounds) else {}
-        caption = f'{row["month"]} · {row["phase"]} · {row["story"]}'
+        caption = f'{row["month"]} · {row["phase"].title()} · {row["story"]}'
         with st.expander(caption, expanded=False):
             st.markdown(f'**Luna’s focus:** {row["focus"]}')
             if row.get("strongest"):

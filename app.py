@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.77"
-BUILD_LABEL = f"Luna {APP_VERSION} — Paid Yearly Final Web Polish"
+APP_VERSION = "v3.78"
+BUILD_LABEL = f"Luna {APP_VERSION} — Shared HTML Print and Year Rhythm"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -2121,7 +2121,7 @@ label,
 
 [data-testid="stExpander"] summary {
     font-family:"IBM Plex Mono", "Courier New", monospace;
-    text-transform:uppercase;
+    text-transform:none;
     font-size:.72rem;
 }
 
@@ -2415,6 +2415,7 @@ hr {
     }
 
     .brand-row,
+    .st-key-luna-shortcut-help,
     .top-nav,
     .mobile-nav,
     .solar-year-wave-wrap,
@@ -2950,7 +2951,7 @@ def complete_report_print_button(
   const button = document.getElementById("luna-complete-print-{safe_id}");
   const status = document.getElementById("luna-complete-print-status-{safe_id}");
   button.addEventListener("click", () => {{
-    status.textContent = "Preparing complete reportâ€¦";
+    status.textContent = "Preparing complete report...";
     try {{
       if (window.parent.__lunaPrintCompleteReport) {{
         window.parent.__lunaPrintCompleteReport();
@@ -3591,20 +3592,6 @@ def payment_success_page() -> None:
                 except ValueError:
                     _report_start = None
                 result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
-            # Paid checkout: verify the story before creating a PDF or emailing it.
-            paid_snapshot_for_story = _snapshot_from_encoded_natal_profile(
-                str(result.get("natal_profile") or ""),
-                timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
-            )
-            verified_story = _paid_monthly_longform(narrative, result, paid_snapshot_for_story)
-            if not verified_story.get("voice_complete") or not verified_story.get("paragraphs"):
-                st.error("Your Paid Monthly narrative is not ready. No incomplete PDF has been sent.")
-                diagnostic = _voice_error("paid_monthly_story_weave")
-                if _admin_access_unlocked() and diagnostic:
-                    with st.expander("Owner diagnostic"):
-                        st.caption(diagnostic)
-                return
-            result["_verified_paid_monthly_story"] = verified_story
             pdf_bytes = build_report_pdf(
                 result,
                 main_focus=main_focus,
@@ -4156,28 +4143,22 @@ def _owner_report_output(order: dict) -> dict:
             except ValueError:
                 _report_start = None
             result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
-        # Never offer an owner PDF before the paid narrative has completed.
-        preview_snapshot = _snapshot_from_encoded_natal_profile(
-            str(result.get("natal_profile") or ""),
-            timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
-        )
-        verified_story = _paid_monthly_longform(narrative, result, preview_snapshot)
-        if not verified_story.get("voice_complete") or not verified_story.get("paragraphs"):
-            raise RuntimeError(
-                "Paid Monthly is not ready for PDF delivery: "
-                + str(_voice_error("paid_monthly_story_weave") or "no complete narrative returned")
-            )
-        result["_verified_paid_monthly_story"] = verified_story
         pdf_bytes = build_report_pdf(
             result,
             main_focus=main_focus,
             personal_question=personal_question,
             order_reference=order_reference,
         )
+        from monthly_report_pdf_home_v3 import build_monthly_homepage_html
+        print_html = build_monthly_homepage_html(
+            result, main_focus=main_focus, personal_question=personal_question,
+            order_reference=order_reference,
+        )
         return {
             "product_code": product_code,
             "narrative": narrative,
             "result": result,
+            "print_html": print_html,
             "pdf": pdf_bytes,
             "pdf_name": report_filename(result),
         }
@@ -4203,9 +4184,17 @@ def _owner_report_output(order: dict) -> dict:
             personal_question=personal_question,
             order_reference=order_reference,
         )
+        from yearly_print_html import build_yearly_print_html
+        print_html = build_yearly_print_html(
+            snapshot=product["snapshot"], packet=product["packet"].to_dict() if hasattr(product["packet"], "to_dict") else product["packet"],
+            editorial=product["editorial"], label=period_label,
+            main_focus=main_focus, personal_question=personal_question,
+            order_reference=order_reference,
+        )
         return {
             "product_code": product_code,
             "product": product,
+            "print_html": print_html,
             "period_label": period_label,
             "natal_precision": str(order.get("natal_precision") or ""),
             "pdf": pdf_bytes,
@@ -4251,6 +4240,15 @@ def _render_owner_report(order: dict, key_context: str) -> None:
         use_container_width=True,
         key=f"{key_context}-owner-pdf-{str(order.get('product_code') or '').lower()}",
     )
+    if output.get("print_html"):
+        st.download_button(
+            "Download print-ready HTML (open in browser → Print)",
+            data=output["print_html"],
+            file_name=output["pdf_name"].replace(".pdf", ".html"),
+            mime="text/html",
+            use_container_width=True,
+            key=f"{key_context}-owner-html-{str(order.get('product_code') or '').lower()}",
+        )
     if output["product_code"] == "MONTHLY":
         _render_snapshot_monthly_report(
             output["narrative"],
@@ -5145,6 +5143,47 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
                 st.caption(str(card["technical"]))
         else:
             st.caption("No separate card event selected from the calculated sky for this day.")
+
+    # Optional mythic layer: an explicit Studio button invokes one Groq call.
+    from epic_sky import (load_approved as _epic_load, prompt_from_cards as _epic_prompt,
+                          to_script as _epic_script, generate_week as _epic_generate)
+    with st.expander("Luna’s Epic Sky · seven mythic chapters", expanded=False):
+        st.caption("Optional mythic interpretation; seven calculated sky cards remain authoritative. Generation is a manual button click, not a public-page background API call.")
+        _epic_cards = master_packet.get("sky_cards", [])
+        _epic_key = f"epic-sky-generated-{monday.isoformat()}"
+        _epic = st.session_state.get(_epic_key) or _epic_load(monday, _epic_cards)
+        if st.button("Generate Epic Sky for this week", key=f"epic-generate-{monday}",
+                     disabled=len(_epic_cards) != 7, type="primary"):
+            if not all((LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY)):
+                st.error("Luna voice is not configured. Check LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL and LUNA_VOICE_API_KEY in Streamlit secrets.")
+            else:
+                with st.spinner("Writing seven mythic episodes from the calculated sky…"):
+                    try:
+                        _epic = _epic_generate(monday, _epic_cards,
+                            base_url=LUNA_VOICE_BASE_URL, model=LUNA_VOICE_MODEL,
+                            api_key=LUNA_VOICE_API_KEY)
+                        st.session_state[_epic_key] = _epic
+                        st.success("Seven chapters generated. Review before publishing.")
+                    except RuntimeError as _epic_error:
+                        st.error(str(_epic_error))
+        if _epic:
+            if _epic.get('status') == 'generated_draft':
+                st.info("Draft for review. This is not automatically published or saved to the repository.")
+            for _chapter in _epic['days']:
+                _day = date.fromisoformat(_chapter['date'])
+                st.markdown(f"#### {_day:%A %d %B} · {_chapter['title']}")
+                st.caption(_chapter['event'])
+                st.write(_chapter['body'])
+                st.markdown(f"**Your move:** {_chapter['move']}")
+            st.download_button("Download Epic Sky script", _epic_script(_epic),
+                               file_name=f"luna-epic-sky-{monday}.txt", mime="text/plain", key=f"epic-sky-script-{monday}")
+            st.download_button("Download Epic Sky JSON", json.dumps(_epic, ensure_ascii=False, indent=2),
+                               file_name=f"{monday.isoformat()}_Australia-Sydney.json", mime="application/json",
+                               key=f"epic-sky-json-{monday}")
+        else:
+            st.info("No script has been generated for this week yet. Select Generate Epic Sky for this week.")
+        st.download_button("Download Epic Sky prompt (optional)", _epic_prompt(_epic_cards),
+                           file_name=f"luna-epic-prompt-{monday}.txt", mime="text/plain", key=f"epic-sky-prompt-{monday}")
 
     from luna_reading_style import meaning_html
     st.markdown("### Day-by-day astrological breakdown")
@@ -11120,10 +11159,8 @@ def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
     creative prompt until the request fits safely below the observed provider
     ceiling.
     """
-    # 1,350-1,600 English words generally need more than 2,500 output tokens.
-    # Budget 3,900 completion tokens within a conservatively capped 8k request.
-    target_total = 7900
-    preferred_completion = 3900
+    target_total = 5350
+    preferred_completion = 2500
 
     for level in range(4):
         prompt = _paid_monthly_weave_prompt(facts, compact_level=level)
@@ -11136,14 +11173,8 @@ def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
     # the remaining safe budget to the prose, with a useful minimum.
     prompt = _paid_monthly_weave_prompt(facts, compact_level=3)
     buffered_input, _ = _paid_monthly_preflight_tokens(prompt, 0)
-    remaining = target_total - buffered_input
-    if remaining < 3200:
-        raise RuntimeError(
-            f"Paid Monthly packet is too large for an untruncated story: "
-            f"estimated input {buffered_input} tokens, remaining {remaining}. "
-            "No provider request was sent."
-        )
-    return prompt, min(preferred_completion, remaining), buffered_input, 3
+    completion_tokens = max(1900, min(preferred_completion, target_total - buffered_input))
+    return prompt, completion_tokens, buffered_input, 3
 
 
 @st.cache_data(show_spinner=False, ttl=1800)
@@ -11206,21 +11237,12 @@ def _cached_paid_monthly_weave(
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise RuntimeError("Voice provider returned no usable prose.") from exc
 
-    finish_reason = str(choice.get("finish_reason") or "unknown")
-    usage = response.json().get("usage") or {}
-    completion_used = usage.get("completion_tokens", "unknown")
-    if finish_reason not in {"stop", "eos"}:
-        raise RuntimeError(
-            f"Paid Monthly provider finish_reason={finish_reason}; "
-            f"completion_tokens={completion_used}; completion_limit={max_completion_tokens}; "
-            f"estimated_input_tokens={_estimated_input_tokens}; compact_level={_compact_level}. "
-            "Story not deliverable."
-        )
+    if str(choice.get("finish_reason") or "") == "length":
+        raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
 
     clean = _paid_monthly_clean_plain_story(body)
     if not clean:
         raise RuntimeError("Voice provider returned an empty Paid Monthly story.")
-    # The word target remains a prompt goal, not a second provider call or style gate.
     return clean
 
 
@@ -11521,10 +11543,8 @@ def _render_snapshot_monthly_report(
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Read the month")
-    longform = result.get("_verified_paid_monthly_story")
-    if not isinstance(longform, dict):
-        with st.spinner("Luna is weaving the calculated month around your natal chart…"):
-            longform = _paid_monthly_longform(narrative, result, paid_snapshot)
+    with st.spinner("Luna is weaving the calculated month around your natal chart…"):
+        longform = _paid_monthly_longform(narrative, result, paid_snapshot)
     paid_context = dict(longform.get("context") or {})
 
     story_paragraphs = [
@@ -13563,7 +13583,32 @@ email displayed during checkout or in the report-delivery message.
     )
 
 
+def luna_shortcut_help() -> None:
+    """Non-intrusive shortcut instructions for all supported devices.
+
+    Streamlit page_icon sets the browser favicon. A true installable PWA
+    also needs host-controlled manifest and icons, so we do not promise it.
+    """
+    with st.container(key="luna-shortcut-help"):
+      with st.expander("Add Luna to your device", expanded=False):
+        st.caption("Keep Luna one tap away. No app store required.")
+        mobile, desktop = st.tabs(["Phone or tablet", "Desktop or laptop"])
+        with mobile:
+            st.markdown(
+                "**iPhone / iPad (Safari):** Tap Share → Add to Home Screen → Add.\n\n"
+                "**Android (Chrome):** Tap the three-dot menu → Add to Home screen "
+                "(or Install app, when offered)."
+            )
+        with desktop:
+            st.markdown(
+                "**Chrome / Edge:** Open the browser menu and select Create shortcut, "
+                "Install this site as an app, or the equivalent option your version shows. "
+                "You can also bookmark Luna with **Ctrl+D** (Windows) or **Cmd+D** (Mac)."
+            )
+
+
 def footer() -> None:
+    luna_shortcut_help()
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.divider()
     st.markdown(

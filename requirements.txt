@@ -8,3 +8,6 @@ pillow>=10.4
 reportlab>=4.2,<5
 svglib>=1.5,<3
 gunicorn>=23,<24
+
+# Paid report HTML/CSS A4 print rendering (shared visual design)
+weasyprint>=62,<69
