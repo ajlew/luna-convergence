@@ -31,7 +31,7 @@ import requests
 from year_ahead import YearPacket
 
 
-PAID_YEARLY_EDITORIAL_VERSION = "1.2-provider-fit"
+PAID_YEARLY_EDITORIAL_VERSION = "1.3-reader-value"
 DEFAULT_TIMEOUT_SECONDS = 180
 TARGET_TOTAL_TOKENS = 5350
 PREFERRED_COMPLETION_TOKENS = 2500
@@ -553,7 +553,7 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "DEPTH / BUDGET:\n"
         "- READ_YEAR: roughly 550-700 words in 5-7 substantial paragraphs.\n"
         "- EACH ISSUE: roughly 160-210 words in 2-3 substantial paragraphs.\n"
-        "- EACH MONTH: one 12-24 word sentence.\n"
+        "- EACH MONTH: two substantive sentences, 35-48 words total, no duplicated advice.\n"
         "- CLOSING: roughly 90-120 words in 1-2 paragraphs.\n"
         "- Use density rather than repetition. Every paragraph must add a new consequence, "
         "choice, stage or manifestation.\n\n"
@@ -569,7 +569,7 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "<<READ_YEAR>>\n"
         "The connected annual narrative.\n"
         f"{month_markers}\n"
-        "For each MONTH marker write exactly one short strategic sentence for that supplied round.\n"
+        "For each MONTH marker write two grounded sentences: a possible everyday scenario tied to that month's supplied transits, followed by a practical decision or watch-out. Show how the story evolves; do not introduce unsupported dates or guarantees.\n"
         f"{issue_markers}\n"
         "For each ISSUE marker write the substantial human-first interpretation for that supplied story.\n"
         "<<CLOSING>>\n"
@@ -622,7 +622,7 @@ def build_paid_yearly_ultra_prompt(material: dict[str, Any]) -> str:
         "CHRONOLOGY: one forward-moving year. First contact, retrograde return and final "
         "contact are stages of one developing story. Fast-planet contacts are supporting moments.\n\n"
 
-        "MONTHS: write one unique 12-22 word strategic sentence per MONTH marker. "
+        "MONTHS: write two unique sentences (30-45 words) per MONTH marker: one plausible manifestation and one actionable choice/check. "
         "Do not repeat title/date/phase. If consecutive months share a story, show progression "
         "rather than restarting it.\n\n"
 

@@ -1,3 +1,22 @@
+LUNA CONVERGENCE v3.85 — CUMULATIVE READER-VALUE UPDATE
+
+Install this one ZIP over the repository root; it retains bundled v3.79-v3.84 improvements including PDF printing, natal activation visualizations, shortcut instructions, Saturn stone icon, native-library fallback, and Epic Sky JSON.
+
+WHAT CHANGED
+- The Paid Year Ahead Groq editorial prompt now requests two grounded month-specific sentences, connecting a plausible situation to an actual choice or watch-out. Months continuing one story must show progression, not restart it.
+- Each monthly printed HTML chapter separates "What this month brings into focus" from "Your decision" when distinct sentences are available; older single-sentence editorial still renders without invented filler.
+- Annual stories remain in the same one-call voice service and preserve their calculated technical evidence and original dates.
+- The Year Ahead SVG timeline now allocates more room to long transit labels and reduces font size, so labels do not run through bars.
+- Includes a non-mutating diagnostic helper flagging unsupported raw ISO dates in generated editorial; does NOT silently rewrite unsupported statements or assume all prose chronology is validated.
+
+LIMITATIONS / VERIFICATION
+- The richer month copy requires a NEW Groq generation; cached existing reports will retain old one-sentence month copy. Redeploy and generate a fresh owner report.
+- Provider token/length caps still apply. This update does not create an extra Groq call or guarantee a complete expanded paragraph per month.
+- This is an incremental editorial quality improvement, not the full long-form transit intelligence architecture described in the reference document. The remaining work includes verified provenance for every natural-language transit pass and linked natal-activation narrative.
+- No live Groq/Stripe/customer flow has been verified locally.
+
+DEPLOYMENT: Copy extracted files with directories intact and redeploy. Confirm footer reads v3.85. Keep unlisted existing project modules. Use owner report on a fresh date/profile and check content/printing.
+
 LUNA CONVERGENCE v3.84 — CUMULATIVE UPDATE
 
 Includes v3.79–v3.83 changes and all bundled assets. Install this ZIP alone over your existing project root. Do not delete other files in your repository.

@@ -87,7 +87,7 @@ def _transit_timeline(round_: dict, game: dict) -> str:
     rows = _active_transits(game, a, b)
     if not rows:
         return '<p class="quiet">No major selected personal transit is active in this chapter.</p>'
-    width = 760; label_width = 220; chart_left = 230; chart_width = 510
+    width = 760; chart_left = 285; chart_width = 455
     span = max(1, (b-a).days)
     height = 58 + 45*len(rows)
     svg = [f'<svg class="month-timeline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Calculated personal transit windows and exact dates">']
@@ -100,7 +100,7 @@ def _transit_timeline(round_: dict, game: dict) -> str:
         t_end = _iso_date(transit.get('end')) or b
         left = chart_left+chart_width*max(0,(max(a,t_start)-a).days)/span
         right = chart_left+chart_width*min(span,(min(b,t_end)-a).days)/span
-        svg.append(f'<text x="0" y="{y+5}">{e(name[:37])}</text>')
+        svg.append(f'<text x="0" y="{y+5}" style="font-size:10px">{e(name[:46])}</text>')
         svg.append(f'<rect x="{chart_left}" y="{y-7}" width="{chart_width}" height="14" rx="5" fill="#f0efed"/>')
         svg.append(f'<rect x="{left:.1f}" y="{y-3}" width="{max(3,right-left):.1f}" height="6" rx="3" fill="#333"/>')
         for hit in transit.get('passes') or []:
@@ -236,6 +236,41 @@ def _evidence_appendix(games: list[dict]) -> str:
             f'They are not predictions of specific life events.</p>{"".join(detail)}</section>')
 
 
+def _month_editorial_parts(focus: str) -> tuple[str, str]:
+    """Preserve model prose but display the possibility and the decision separately.
+
+    The report must never invent events/dates to pad a short provider response.
+    """
+    import re
+    text = " ".join(str(focus or "").split())
+    if not text:
+        return "", ""
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z])", text, maxsplit=1)
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    return text, ""
+
+
+def _yearly_editorial_date_warnings(editorial: Any, packet: dict) -> list[str]:
+    """Flag hard-dated claims that lack support without silently changing source prose."""
+    import re
+    allowed = set()
+    for game in packet.get('games', []):
+        for tr in [game.get('primary_transit') or {}, *(game.get('supporting_transits') or [])]:
+            for hit in tr.get('passes') or []:
+                day = _iso_date(hit.get('date')) if isinstance(hit, dict) else None
+                if day: allowed.add(day.isoformat())
+    prose = list(getattr(editorial, 'read_year', ()) or ())
+    for issue in getattr(editorial, 'issues', ()) or ():
+        prose.extend(getattr(issue, 'paragraphs', ()) or ())
+    warnings=[]
+    for paragraph in prose:
+        for literal in re.findall(r'\b(?:19|20)\d{2}-\d{2}-\d{2}\b', str(paragraph)):
+            if literal not in allowed:
+                warnings.append(literal)
+    return sorted(set(warnings))
+
+
 def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, label: str, main_focus: str = '', personal_question: str = '', order_reference: str = '') -> str:
     from monthly_report_pdf_home_v3 import FONT_IMPORT, _font_face_css
     from natal_snapshot import natal_wheel_svg
@@ -275,10 +310,12 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
             f'<span class="quiet">{e(d(t.get("start")))} – {e(d(t.get("end")))}</span></li>'
             for t in transit_rows
         )
+        scenario, decision = _month_editorial_parts(row['focus'])
         month_cards.append(
             f'<section class="month page"><div class="eyebrow">Month {i+1:02d} / {e(row["month"])}</div>'
             f'<h2>{e(theme.title())}</h2><p class="meta">{e(row["phase"])} · {e(row["story"].replace(" And "," and "))}</p>'
-            f'<h3>Luna’s focus</h3><p>{e(row["focus"])}</p>'
+            f'<h3>What this month brings into focus</h3><p>{e(scenario)}</p>'
+            + (f'<h3>Your decision</h3><p>{e(decision)}</p>' if decision else '')
             + (f'<div class="callout"><strong>Key moment</strong><p>{e(row["strongest"])}</p></div>'
                 if row.get('strongest') else '')
             + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused)}'
