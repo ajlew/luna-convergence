@@ -1,3 +1,21 @@
+LUNA CONVERGENCE v3.84 — CUMULATIVE UPDATE
+
+Includes v3.79–v3.83 changes and all bundled assets. Install this ZIP alone over your existing project root. Do not delete other files in your repository.
+
+v3.84 YEAR AHEAD CHANGES
+- Print HTML activation wheels label zodiac sectors and unique natal targets rather than anonymous overlapping dots.
+- Exact transiting markers and connecting lines are drawn only when a dated, stored ecliptic longitude exists for the relevant chapter. Otherwise the chart explicitly explains that only natal target positions are plotted. No transit position is invented.
+- Monthly print layout uses smaller chart sizing, avoids splitting the chart and its legend, and retains A4 page-break rules.
+- Footer version label updated to v3.84.
+
+Important: Story prose is not automatically rewritten. Narration vs transit-pass chronology remains subject to editorial review. Monthly report and older ReportLab fallback remain as in v3.83. If native Linux PDF dependencies are unavailable, Year Ahead falls back to ReportLab; the printed HTML is the richer chart format.
+
+DEPLOYMENT
+Copy files into repository root including assets/ and packages.txt. Redeploy Streamlit and verify Luna v3.84 appears in footer. Generate Year Ahead owner report, download HTML, and print from Chrome with Paper=A4 and Scale=100%. Browser full-page screenshot is NOT paginated A4.
+
+LOCAL TESTS
+4 existing Year Ahead/activation tests passed against extracted base repository modules; generated a 19-page synthetic HTML-derived PDF and inspected monthly chart page. This is not a live production report validation.
+
 LUNA CONVERGENCE v3.81 — CUMULATIVE PRINT AND SHORTCUT UPDATE
 
 INCLUDES ALL CHANGES FROM v3.79 AND v3.80. Install this ZIP alone.

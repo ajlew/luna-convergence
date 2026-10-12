@@ -114,56 +114,87 @@ def _transit_timeline(round_: dict, game: dict) -> str:
     return ''.join(svg)
 
 
-def _month_activation_svg(snapshot: Any, transits: list[dict]) -> str:
-    """A per-month activation map from stored transit targets, never guessed events.
+def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None, end: Any = None) -> str:
+    """Labelled chart of computed natal targets and *verified* transit exact points.
 
-    Violet = natal target longitude; orange = transiting position at a recorded
-    exact contact if present. The diagram stays empty if no exact pass is in
-    this month, rather than inventing sky positions.
+    Chart never infers an ambiguous longitude from an aspect name. Passes are
+    filtered to the chapter window. A natal target appears once even when
+    multiple transits contact it; each contact has a distinct keyed legend.
     """
     from math import cos, sin, radians
     if not transits:
         return '<p class="quiet">No selected personal activation in this period.</p>'
     natal = {str(p.planet).casefold(): p for p in (getattr(snapshot, 'positions', ()) or ())}
-    for key, item in [('ascendant', getattr(snapshot, 'ascendant', None)), ('midheaven', getattr(snapshot, 'midheaven', None))]:
-        if item is not None: natal[key] = item
-    cx=cy=155; outer=125; inner=86
-    def pt(deg: float, r: float):
-        a=radians(deg-90)
-        return cx+r*cos(a),cy+r*sin(a)
-    out=['<svg class="activation-wheel" viewBox="0 0 310 310" role="img" aria-label="Calculated natal targets contacted by selected transits">',
-         f'<circle cx="{cx}" cy="{cy}" r="{outer}" fill="none" stroke="#b6b6b6"/>',
-         f'<circle cx="{cx}" cy="{cy}" r="{inner}" fill="none" stroke="#dddddd"/>']
-    for index in range(12):
-        x1,y1=pt(index*30,inner);x2,y2=pt(index*30,outer)
-        out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#dddddd"/>')
-    rows=[]; used=set()
-    for t in transits:
-        label=str(t.get('technical_label') or '')
-        target=str(t.get('natal_target') or '').strip()
+    for key in ('ascendant', 'midheaven'):
+        value = getattr(snapshot, key, None)
+        if value is not None:
+            natal[key] = value
+    def point(deg, radius):
+        angle = radians((float(deg) % 360) - 90)
+        return (155 + radius*cos(angle), 155 + radius*sin(angle))
+    out = ['<svg class="activation-wheel" viewBox="0 0 310 310" role="img" aria-label="Zodiac positions of natal targets and verified transiting contacts">',
+           '<circle cx="155" cy="155" r="121" fill="none" stroke="#aaa"/>',
+           '<circle cx="155" cy="155" r="84" fill="none" stroke="#d9d9d9"/>']
+    zodiac = ('Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces')
+    for i, sign in enumerate(zodiac):
+        x1,y1=point(i*30,84); x2,y2=point(i*30,121)
+        tx,ty=point(i*30+15,133)
+        out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#ddd"/>')
+        out.append(f'<text class="zodiac-label" x="{tx:.1f}" y="{ty:.1f}" text-anchor="middle" dominant-baseline="middle">{sign[:3]}</text>')
+    begin,end_day=_iso_date(start),_iso_date(end)
+    plotted=set(); contact_lines=[]; shown=set(); legend=[]
+    for transit in transits:
+        label=str(transit.get('technical_label') or 'Calculated transit')
+        target=str(transit.get('natal_target') or '').strip()
         if not target:
-            for key in natal:
-                if ('natal '+key) in label.casefold(): target=key; break
+            for name in natal:
+                if 'natal '+name in label.casefold(): target=name;break
         key=target.casefold().replace('natal ','')
         n=natal.get(key)
         if n is None: continue
-        ident=(label,key)
-        if ident in used:continue
-        used.add(ident)
-        x,y=pt(float(n.longitude)%360,outer-14)
-        out.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="#725aca" stroke="white" stroke-width="1"/>')
-        # Longitude at the exact pass is available in some packets; do not
-        # manufacture a transiting position when that field is absent.
-        hit=next((v for v in (t.get('passes') or []) if isinstance(v,dict) and v.get('transit_longitude') is not None),None)
-        if hit is not None:
-            tx,ty=pt(float(hit['transit_longitude'])%360,outer+5)
-            out.append(f'<line x1="{tx:.1f}" y1="{ty:.1f}" x2="{x:.1f}" y2="{y:.1f}" stroke="#8f80ce" stroke-width="1.5"/>')
-            out.append(f'<circle cx="{tx:.1f}" cy="{ty:.1f}" r="5" fill="#e58b40"/>')
-        rows.append(f'<li>{e(label)} → natal {e(target)}</li>')
-    out.append('</svg>')
-    if not rows:
-        return '<p class="quiet">No natal targets available to plot for the selected contacts.</p>'
-    return '<div class="activation-layout"><div>'+''.join(out)+'</div><div><p class="quiet">Purple markers identify the natal points contacted in this chapter. Orange markers appear only when an exact transiting longitude is supplied.</p><ul class="activation-contacts">'+''.join(rows)+'</ul></div></div>'
+        longitude=float(n.longitude)%360
+        if key not in plotted:
+            plotted.add(key)
+            x,y=point(longitude,103)
+            # Short outward radial tick makes overlapping positions legible.
+            out.append(f'<circle class="natal-marker" cx="{x:.1f}" cy="{y:.1f}" r="5" fill="#725aca"/>')
+            lx,ly=point(longitude,117)
+            out.append(f'<text class="planet-label" x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">{e(key[:3].upper())}</text>')
+        for hit in transit.get('passes') or []:
+            if not isinstance(hit,dict): continue
+            day=_iso_date(hit.get('date'))
+            if begin and (day is None or day<begin): continue
+            if end_day and (day is None or day>end_day): continue
+            longitude_raw=hit.get('transit_longitude')
+            if longitude_raw is None:
+                longitude_raw=hit.get('transit_ecliptic_longitude')
+            if longitude_raw is None:continue
+            try: moving=float(longitude_raw)%360
+            except (TypeError,ValueError):continue
+            id_=(label,str(day),moving)
+            if id_ in shown:continue
+            shown.add(id_)
+            tx,ty=point(moving,74);nx,ny=point(longitude,103)
+            out.append(f'<line class="aspect-line" x1="{tx:.1f}" y1="{ty:.1f}" x2="{nx:.1f}" y2="{ny:.1f}"/>')
+            out.append(f'<circle class="transit-marker" cx="{tx:.1f}" cy="{ty:.1f}" r="5" fill="#e58b40"/>')
+            planet=label.split(' ',1)[0]
+            legend.append(f'<li><strong>{e(planet)}</strong> → {e(target)} · {e(d(day))} (exact)</li>')
+        if label not in contact_lines:contact_lines.append(label)
+    out.append('<text class="chart-centre" x="155" y="151" text-anchor="middle">NATAL</text>')
+    out.append('<text class="chart-centre-small" x="155" y="166" text-anchor="middle">ACTIVATIONS</text></svg>')
+    if not plotted:
+        return '<p class="quiet">No calculated natal target positions for this chapter.</p>'
+    contacts=''.join(f'<li>{e(line)}</li>' for line in contact_lines)
+    if legend:
+        explanation='Purple: natal positions. Orange: verified exact transits within this chapter. Lines join the contacted natal point.'
+    else:
+        explanation='Purple: natal positions contacted during this chapter. Exact transit markers are omitted where no verified transit longitude was recorded.'
+    exact_block = ('<p class="quiet">Verified exact contacts</p><ul class="activation-contacts">' + ''.join(legend) + '</ul>') if legend else ''
+    return (f'<div class="activation-layout"><div>{"".join(out)}</div>'
+            f'<div class="activation-description"><p class="quiet">{e(explanation)}</p>'
+            f'<ul class="activation-contacts">{contacts}</ul>'
+            + exact_block
+            + '</div></div>')
 
 
 def _evidence_appendix(games: list[dict]) -> str:
@@ -246,14 +277,14 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
         )
         month_cards.append(
             f'<section class="month page"><div class="eyebrow">Month {i+1:02d} / {e(row["month"])}</div>'
-            f'<h2>{e(theme.title())}</h2><p class="meta">{e(row["phase"])} · {e(row["story"])}</p>'
+            f'<h2>{e(theme.title())}</h2><p class="meta">{e(row["phase"])} · {e(row["story"].replace(" And "," and "))}</p>'
             f'<h3>Luna’s focus</h3><p>{e(row["focus"])}</p>'
             + (f'<div class="callout"><strong>Key moment</strong><p>{e(row["strongest"])}</p></div>'
                 if row.get('strongest') else '')
             + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused)}'
                f'<ul class="contacts">{contacts}</ul>' if focused else
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
-            + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows)}' if focused else '')
+            + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
             + '<p class="quiet">For the complete pass-by-pass interpretation, see the relevant major story below.</p>'
             + '</section>'
         )
@@ -278,18 +309,18 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
 @page {size:A4;margin:17mm 17mm 18mm}
 *{box-sizing:border-box}body{font-family:'Josefin Sans',Arial,sans-serif;color:#141414;font-size:11pt;line-height:1.48;margin:0}
 h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h1{font-size:33pt;margin:0 0 10mm}h2{font-size:25pt;margin:0 0 5mm}h3{font-size:12pt;margin:6mm 0 2mm}p{margin:0 0 4mm}small,.quiet{color:#666}.eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:9mm}
-.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.month-timeline circle,.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:120mm}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
+.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.month-timeline circle,.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
 @media screen{body{max-width:820px;margin:auto;padding:25px}.page{padding-top:30px;border-top:1px solid #ddd;margin-top:50px}}
 
 .month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
 .month-timeline circle{fill:#111}
-.activation-layout{display:grid;grid-template-columns:105mm 1fr;gap:5mm;align-items:center;break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:105mm;height:auto}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
+.activation-layout{display:grid;grid-template-columns:70mm 1fr;gap:6mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:70mm;height:auto}.activation-wheel .zodiac-label{font:7px Arial,sans-serif;fill:#777}.activation-wheel .planet-label{font:bold 8px Arial,sans-serif;fill:#382a76}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
 .transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}
 .smallfact{margin-top:2mm;font-size:8pt;color:#555}
-@media print{.page{break-before:page}.month,.issue{break-before:page}}
+@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0}}
 '''
     intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><h2>Your strengths</h2>{strengths}</section>'
     overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. These bars show when each one comes into focus, while the wave shows when the selected transits become more active or leave room to breathe. A higher point means more concentrated astrological activity, not a predicted outcome.</p><div class="lanes">{_strips(packet)}</div><h3>Your annual rhythm</h3>{_wave(packet)}</section>'
