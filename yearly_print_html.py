@@ -26,7 +26,8 @@ def _strips(packet: dict) -> str:
         a=date.fromisoformat(str(g.get('start_date') or start)[:10]); b=date.fromisoformat(str(g.get('end_date') or end)[:10])
         left=max(0,min(100,100*(a-start).days/span)); right=max(left,min(100,100*(b-start).days/span))
         title=g.get('title') or str(g.get('human_life_area') or 'A major story')
-        parts.append(f'<div class="lane"><div><strong>{e(str(title).title())}</strong><small>{e(str(g.get('human_life_area') or 'A major story'))}</small></div><div class="track"><span style="left:{left:.1f}%;width:{max(1,right-left):.1f}%"></span></div></div>')
+        area_label = e(str(g.get('human_life_area') or 'A major story'))
+        parts.append(f'<div class="lane"><div><strong>{e(str(title).title())}</strong><small>{area_label}</small></div><div class="track"><span style="left:{left:.1f}%;width:{max(1,right-left):.1f}%"></span></div></div>')
     return ''.join(parts)
 
 
