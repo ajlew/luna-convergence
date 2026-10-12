@@ -37,3 +37,11 @@ v3.82 deployment steps:
 4. Confirm footer Build reads Luna v3.82; if it still reads v3.79, the replacement app.py has not deployed.
 5. Retry the Owner Year Ahead report. With no WeasyPrint native libraries, PDF uses stable ReportLab fallback; optional print-ready HTML remains downloadable.
 6. Monthly uses its existing HTML->browser->ReportLab fallback path.
+
+v3.83 NATAL CHART / ACTIVATION PRINT CORRECTION
+- Keeps all v3.79–v3.82 application, Epic Sky, Monthly, shortcut and Saturn stone artwork changes.
+- Fixes HTML global SVG circle rule that filled the natal outline with black.
+- Monthly Year Ahead HTML pages display chart targets selected from each actual monthly transit window.
+- A purple point is a known natal longitude. An orange point is displayed ONLY if the packet contains the transit's exact longitude; no inferred locations are fabricated. The month list explains which transits contact which targets.
+- packages.txt and WeasyPrint in requirements.txt enable HTML-to-PDF generation on Linux deployments supporting apt system packages. Streamlit Cloud must install packages.txt; reboot the app after deployment. If these packages cannot be installed, the previous ReportLab fallback remains and will NOT show the HTML activation maps. Download the HTML and Print > Save as PDF for the full design.
+- This does not certify Groq editorial chronology, nor does it replace the website's own interactive activation renderer. Those are separate implementation paths.

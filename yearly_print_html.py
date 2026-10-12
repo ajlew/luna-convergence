@@ -52,7 +52,7 @@ def _wave(packet: dict) -> str:
     xy=[(35+i* (730/max(1,n-1)),105-78*v) for i,v in enumerate(vals)]
     path=smooth_wave_path(xy)
     labels=''.join(f'<text x="{x:.1f}" y="128" text-anchor="middle">{e(str(r.get("month") or ""))}</text>' for (x,_),r in zip(xy,rows))
-    circles=''.join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" />' for x,y in xy)
+    circles=''.join(f'<circle class="rhythm-dot" cx="{x:.1f}" cy="{y:.1f}" r="3" />' for x,y in xy)
     return f'<svg viewBox="0 0 800 145" role="img" aria-label="Monthly activity concentration based on calculated selected transits"><line x1="35" y1="105" x2="765" y2="105" stroke="#ddd"/><path d="{path}" fill="none" stroke="#151515" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>{circles}{labels}</svg>'
 
 
@@ -112,6 +112,58 @@ def _transit_timeline(round_: dict, game: dict) -> str:
             svg.append(f'<circle cx="{x:.1f}" cy="{y}" r="5" fill="#0f0f0f"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
     svg.append('</svg>')
     return ''.join(svg)
+
+
+def _month_activation_svg(snapshot: Any, transits: list[dict]) -> str:
+    """A per-month activation map from stored transit targets, never guessed events.
+
+    Violet = natal target longitude; orange = transiting position at a recorded
+    exact contact if present. The diagram stays empty if no exact pass is in
+    this month, rather than inventing sky positions.
+    """
+    from math import cos, sin, radians
+    if not transits:
+        return '<p class="quiet">No selected personal activation in this period.</p>'
+    natal = {str(p.planet).casefold(): p for p in (getattr(snapshot, 'positions', ()) or ())}
+    for key, item in [('ascendant', getattr(snapshot, 'ascendant', None)), ('midheaven', getattr(snapshot, 'midheaven', None))]:
+        if item is not None: natal[key] = item
+    cx=cy=155; outer=125; inner=86
+    def pt(deg: float, r: float):
+        a=radians(deg-90)
+        return cx+r*cos(a),cy+r*sin(a)
+    out=['<svg class="activation-wheel" viewBox="0 0 310 310" role="img" aria-label="Calculated natal targets contacted by selected transits">',
+         f'<circle cx="{cx}" cy="{cy}" r="{outer}" fill="none" stroke="#b6b6b6"/>',
+         f'<circle cx="{cx}" cy="{cy}" r="{inner}" fill="none" stroke="#dddddd"/>']
+    for index in range(12):
+        x1,y1=pt(index*30,inner);x2,y2=pt(index*30,outer)
+        out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#dddddd"/>')
+    rows=[]; used=set()
+    for t in transits:
+        label=str(t.get('technical_label') or '')
+        target=str(t.get('natal_target') or '').strip()
+        if not target:
+            for key in natal:
+                if ('natal '+key) in label.casefold(): target=key; break
+        key=target.casefold().replace('natal ','')
+        n=natal.get(key)
+        if n is None: continue
+        ident=(label,key)
+        if ident in used:continue
+        used.add(ident)
+        x,y=pt(float(n.longitude)%360,outer-14)
+        out.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="#725aca" stroke="white" stroke-width="1"/>')
+        # Longitude at the exact pass is available in some packets; do not
+        # manufacture a transiting position when that field is absent.
+        hit=next((v for v in (t.get('passes') or []) if isinstance(v,dict) and v.get('transit_longitude') is not None),None)
+        if hit is not None:
+            tx,ty=pt(float(hit['transit_longitude'])%360,outer+5)
+            out.append(f'<line x1="{tx:.1f}" y1="{ty:.1f}" x2="{x:.1f}" y2="{y:.1f}" stroke="#8f80ce" stroke-width="1.5"/>')
+            out.append(f'<circle cx="{tx:.1f}" cy="{ty:.1f}" r="5" fill="#e58b40"/>')
+        rows.append(f'<li>{e(label)} → natal {e(target)}</li>')
+    out.append('</svg>')
+    if not rows:
+        return '<p class="quiet">No natal targets available to plot for the selected contacts.</p>'
+    return '<div class="activation-layout"><div>'+''.join(out)+'</div><div><p class="quiet">Purple markers identify the natal points contacted in this chapter. Orange markers appear only when an exact transiting longitude is supplied.</p><ul class="activation-contacts">'+''.join(rows)+'</ul></div></div>'
 
 
 def _evidence_appendix(games: list[dict]) -> str:
@@ -201,6 +253,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
             + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused)}'
                f'<ul class="contacts">{contacts}</ul>' if focused else
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
+            + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows)}' if focused else '')
             + '<p class="quiet">For the complete pass-by-pass interpretation, see the relevant major story below.</p>'
             + '</section>'
         )
@@ -225,13 +278,13 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
 @page {size:A4;margin:17mm 17mm 18mm}
 *{box-sizing:border-box}body{font-family:'Josefin Sans',Arial,sans-serif;color:#141414;font-size:11pt;line-height:1.48;margin:0}
 h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h1{font-size:33pt;margin:0 0 10mm}h2{font-size:25pt;margin:0 0 5mm}h3{font-size:12pt;margin:6mm 0 2mm}p{margin:0 0 4mm}small,.quiet{color:#666}.eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:9mm}
-.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}svg circle{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:120mm}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
+.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.month-timeline circle,.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:120mm}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
 @media screen{body{max-width:820px;margin:auto;padding:25px}.page{padding-top:30px;border-top:1px solid #ddd;margin-top:50px}}
 
 .month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
 .month-timeline circle{fill:#111}
-.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
+.activation-layout{display:grid;grid-template-columns:105mm 1fr;gap:5mm;align-items:center;break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:105mm;height:auto}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
 .transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}

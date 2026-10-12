@@ -11,3 +11,5 @@ gunicorn>=23,<24
 
 # HTML export is always available. WeasyPrint PDF rendering is optional:
 # install separately only with the necessary system libraries.
+# Browser-style HTML/PDF renderer (OS libraries installed from packages.txt).
+weasyprint>=62,<69
