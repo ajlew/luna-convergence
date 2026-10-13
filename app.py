@@ -11604,7 +11604,33 @@ def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str 
     title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
     label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
     intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
+    # Restore the original v3.92 deterministic natal foundation and signature
+    # strengths; render it in the same document on screen, HTML and PDF.
+    natal_pattern = ""
+    natal_strengths = []
+    if snap is not None:
+        natal_story = _snapshot_natal_fallback_story(snap)
+        if isinstance(natal_story, dict):
+            natal_pattern = " ".join(str(part) for part in (
+                natal_story.get("opening"), *(natal_story.get("story") or [])
+            ) if part)
+        elif isinstance(natal_story, str):
+            natal_pattern = natal_story
+        signatures = list(getattr(snap, "signatures", ()) or ())
+        if not signatures:
+            signatures = list(_build_signatures(list(getattr(snap, "aspects", ()) or ()), limit=6))
+        for signature in signatures[:6]:
+            strength = str(getattr(signature, "strength", "") or "").strip()
+            watch = str(getattr(signature, "watch", "") or "").strip()
+            remember = strength + (" Watch for " + watch[:1].lower() + watch[1:] if watch else "")
+            natal_strengths.append({
+                "title": str(getattr(signature, "title", "Natal signature") or "Natal signature"),
+                "text": str(getattr(signature, "text", "") or ""),
+                "evidence": str(getattr(signature, "evidence", "Calculated natal aspect") or "Calculated natal aspect"),
+                "remember": remember.strip(),
+            })
     return {"title": title, "label": label, "intro": intro,
+            "natal_pattern": natal_pattern, "natal_strengths": natal_strengths,
             "paragraphs": list(story.get("paragraphs") or []),
             "natal_svg": natal_svg, "activation_svg": activation_svg,
             "contacts": personal, "key_dates": date_rows, "evidence": evidence,

@@ -19,6 +19,10 @@ CSS = r'''
 .luna-monthly .wheels{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
 .luna-monthly .wheels svg{display:block;max-width:100%;height:auto;max-height:300px}
 .luna-monthly .kicker{display:block;color:#555;margin-bottom:6px}
+ .luna-monthly .strength-card{border-top:1px solid #d7d7d7;padding:13px 0;break-inside:avoid-page}
+.luna-monthly .strength-card h3{font:500 21px 'Bodoni Moda',Georgia,serif;margin:3px 0 8px}
+.luna-monthly .strength-card p{margin:0 0 7px}
+.luna-monthly .strength-card .strength-meta{font-size:12px;color:#555}
 .luna-monthly .event{border-bottom:1px solid #d7d7d7;padding:11px 0;break-inside:avoid}
 .luna-monthly .event b{font-size:14px}.luna-monthly .event span{font-size:12px;color:#555;display:block;margin-top:3px}
 .luna-monthly .muted{font-size:12px;color:#555}.luna-monthly .story p{font-size:15px;line-height:1.65}
@@ -34,12 +38,26 @@ def _clean_paragraph(text):
     # Do not silently rewrite speculative astrology claims. Report validation belongs upstream.
     return escape(text)
 
-def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', activation_svg='', contacts=(), key_dates=(), evidence=(), reference='', full_document=True):
+def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', activation_svg='', contacts=(), key_dates=(), evidence=(), reference='', natal_pattern='', natal_strengths=(), full_document=True):
     if not paragraphs:
         raise ValueError('Paid Monthly export requires a completed story.')
     story = ''.join(f'<p>{_clean_paragraph(p)}</p>' for p in paragraphs if str(p).strip())
     if not story:
         raise ValueError('Paid Monthly export requires nonempty story paragraphs.')
+    natal_html = ''
+    if natal_pattern or natal_strengths:
+        natal_html = '<section class="block natal-baseline"><h2>Your natal foundation</h2>'
+        if natal_pattern:
+            natal_html += f'<h3>Read the pattern</h3><p>{_clean_paragraph(natal_pattern)}</p>'
+        if natal_strengths:
+            natal_html += '<h2>Your strengths</h2><p class="muted">The strongest capacities in your natal pattern when you use them deliberately.</p>'
+            for item in natal_strengths[:6]:
+                natal_html += ('<article class="strength-card">'
+                               f'<span class="kicker">{escape(str(item.get("evidence") or "Calculated natal aspect"))}</span>'
+                               f'<h3>{escape(str(item.get("title") or "Natal signature"))}</h3>'
+                               f'<p>{escape(str(item.get("text") or ""))}</p>'
+                               f'<p class="strength-meta">{escape(str(item.get("remember") or ""))}</p></article>')
+        natal_html += '</section>'
     wheels = ''
     if natal_svg or activation_svg:
         wheels = '<section class="block"><h2>Your natal activation</h2><div class="wheels">'
@@ -67,7 +85,7 @@ def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', 
     content = (f'<article class="luna-monthly"><div class="topline"><b>Luna Convergence</b><span>{escape(str(label))}</span></div>'
                f'<span class="kicker" style="margin-top:22px">Your personal Monthly</span>'
                f'<h1>{escape(str(title))}</h1><p class="deck">{escape(str(intro))}</p>'
-               f'<section class="block story"><h2>Read the month</h2>{story}</section>'
+               f'{natal_html}<section class="block story"><h2>Read the month</h2>{story}</section>'
                f'{wheels}{contacts_html}{dates_html}{evidence_html}'
                f'<footer>Symbolic astrology, not professional advice. '
                f'{"Order reference · " + escape(str(reference)) if reference else ""}</footer></article>')
