@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.95"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Failure Diagnostics"
+APP_VERSION = "v3.91"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Restore + A4 Print"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -3601,7 +3601,7 @@ def payment_success_page() -> None:
             )
             monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
             if not monthly_story.get("voice_complete"):
-                raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
+                raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld.")
             from monthly_shared_view import build_monthly_shared_html, html_to_pdf
             shared_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
             pdf_bytes = html_to_pdf(shared_html)
@@ -4155,7 +4155,7 @@ def _owner_report_output(order: dict) -> dict:
         )
         monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
         if not monthly_story.get("voice_complete"):
-            raise RuntimeError("Paid Monthly story was not completed; owner export withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
+            raise RuntimeError("Paid Monthly story was not completed; owner export withheld.")
         from monthly_shared_view import build_monthly_shared_html, html_to_pdf
         print_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
         pdf_bytes = html_to_pdf(print_html)
@@ -10003,6 +10003,55 @@ _NATAL_CORE_ASPECT_SYMBOLS = {
 }
 
 
+def _monthly_natal_pattern(snapshot) -> str:
+    """Build a specific, evidence-grounded natal reading without any extra LLM call.
+
+    Aspect/planet data come from the current natal snapshot; no customer facts
+    or predetermined aspect results are embedded in this function.
+    """
+    aspects = list(getattr(snapshot, "aspects", ()) or ())
+    if not aspects:
+        return ""  # Do not invent an aspect when the calculation contains none.
+    strongest = aspects[0]
+    p1 = str(getattr(strongest, "planet1", "") or "").strip()
+    p2 = str(getattr(strongest, "planet2", "") or "").strip()
+    kind = str(getattr(strongest, "name", "") or "").strip().lower()
+    if not p1 or not p2 or not kind:
+        return ""
+    role1, meaning1 = _NATAL_CORE_THREAD_ROLES.get(p1, (p1.lower(), p1.lower()))
+    role2, meaning2 = _NATAL_CORE_THREAD_ROLES.get(p2, (p2.lower(), p2.lower()))
+    if kind == "square":
+        interpretation = (f"These needs can pull against one another: {role1} asks for one response while "
+                          f"{role2} asks for another. Give both a place in the decision rather than treating "
+                          f"one as a problem to eliminate.")
+    elif kind == "opposition":
+        interpretation = (f"The two needs sit on opposite sides of a recurring decision. "
+                          f"Notice when you swing entirely toward {role1} or {role2}; "
+                          f"the practical strength is knowing when each is required.")
+    elif kind == "conjunction":
+        interpretation = (f"These two functions often arrive together. Their closeness can be useful, "
+                          f"but it also makes it worth separating what {role1} needs from what {role2} needs.")
+    elif kind == "trine":
+        interpretation = (f"These functions tend to support one another. The advantage is not an "
+                          f"automatic outcome: use the ease between {role1} and {role2} deliberately.")
+    elif kind == "sextile":
+        interpretation = (f"There is a practical opening between these functions, especially when you "
+                          f"make an active choice to connect {role1} with {role2}.")
+    else:
+        interpretation = (f"The calculated {kind} links these functions. Its significance depends "
+                          f"on how {role1} and {role2} operate together in your choices.")
+    positions = {str(getattr(p, "planet", "") or ""): p for p in (getattr(snapshot, "positions", ()) or ())}
+    def placement(planet):
+        item = positions.get(planet)
+        return f"{planet} in {item.sign}" if item is not None and getattr(item, "sign", None) else planet
+    orb = getattr(strongest, "orb", None)
+    orb_detail = f" (orb {float(orb):.2f}°)" if orb is not None else ""
+    return (f"{placement(p1)} describes {meaning1}; {placement(p2)} describes {meaning2}. "
+            f"Their calculated {kind}{orb_detail} is the strongest ranked natal contact. "
+            f"{interpretation} "
+            f"Notice where this interplay appears in your own decisions; the chart describes a pattern to examine, not a guaranteed life event.")
+
+
 def _render_snapshot_core_thread(
     snapshot,
     *,
@@ -11609,13 +11658,7 @@ def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str 
     natal_pattern = ""
     natal_strengths = []
     if snap is not None:
-        natal_story = _snapshot_natal_fallback_story(snap)
-        if isinstance(natal_story, dict):
-            natal_pattern = " ".join(str(part) for part in (
-                natal_story.get("opening"), *(natal_story.get("story") or [])
-            ) if part)
-        elif isinstance(natal_story, str):
-            natal_pattern = natal_story
+        natal_pattern = _monthly_natal_pattern(snap)
         signatures = list(getattr(snap, "signatures", ()) or ())
         if not signatures:
             signatures = list(_build_signatures(list(getattr(snap, "aspects", ()) or ()), limit=6))
