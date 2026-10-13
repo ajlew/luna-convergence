@@ -10004,41 +10004,73 @@ _NATAL_CORE_ASPECT_SYMBOLS = {
 
 
 def _monthly_natal_pattern(snapshot) -> str:
-    """Present the natal engine's calculated signature interpretation, not a second template.
+    """Synthesize the calculated whole natal chart, not the first strength card.
 
-    The same signature evidence used in Your strengths is the source. No aspect,
-    zodiac, person, or monthly outcome is selected by hard-coded example.
+    Interpretive roles and aspect geometry are stable rules; every sign,
+    planet, aspect and weighting is read from the actual natal snapshot.
     """
-    aspects = list(getattr(snapshot, "aspects", ()) or ())
-    signatures = list(getattr(snapshot, "signatures", ()) or ())
-    if not signatures and aspects:
-        signatures = list(_build_signatures(aspects, limit=6))
-    if not signatures:
+    positions = {str(getattr(p, "planet", "")): p for p in (getattr(snapshot, "positions", ()) or ())}
+    if not positions:
         return ""
-    strongest = aspects[0] if aspects else None
-    selected = None
-    if strongest is not None:
-        first = str(getattr(strongest, "planet1", "") or "").lower()
-        second = str(getattr(strongest, "planet2", "") or "").lower()
-        aspect = str(getattr(strongest, "name", "") or "").lower()
-        for candidate in signatures:
-            evidence = str(getattr(candidate, "evidence", "") or "").lower()
-            if all(token in evidence for token in (first, second, aspect)):
-                selected = candidate
-                break
-    if selected is None:
-        selected = signatures[0]
-    main = " ".join(str(getattr(selected, "text", "") or "").split())
-    strength = " ".join(str(getattr(selected, "strength", "") or "").split())
-    watch = " ".join(str(getattr(selected, "watch", "") or "").split())
-    if not main:
-        return ""  # Do not substitute a generic or invented personality story.
-    sentences = [main]
-    if strength and strength.casefold() not in main.casefold():
-        sentences.append(strength)
-    if watch and watch.casefold() not in (main + " " + strength).casefold():
-        sentences.append("Watch for " + watch[:1].lower() + watch[1:])
-    return " ".join(sentences)
+    sun = positions.get("Sun")
+    moon = positions.get("Moon")
+    mercury = positions.get("Mercury")
+    venus = positions.get("Venus")
+    mars = positions.get("Mars")
+    asc = getattr(snapshot, "ascendant", None)
+    aspects = list(getattr(snapshot, "aspects", ()) or ())
+    aspects.sort(key=lambda a: (float(getattr(a, "orb", 360)), -float(getattr(a, "strength", 0))))
+    lines = []
+    if sun and moon:
+        lines.append(
+            f"Your Sun in {sun.sign} describes your conscious direction; your Moon in {moon.sign} "
+            "describes what you need and how you respond instinctively. "
+            "The two belong to the same person: what you set out to do and what you need to feel secure "
+            "may not always ask for the same thing."
+        )
+    elif sun:
+        lines.append(f"Your Sun in {sun.sign} anchors your conscious direction and identity.")
+    elif moon:
+        lines.append(f"Your Moon in {moon.sign} describes your instinctive needs and responses.")
+    if asc and getattr(snapshot, "birth_time_known", False):
+        lines.append(
+            f"With {asc.sign} rising, the way you first meet a situation can look different "
+            "from what you are weighing privately."
+        )
+    mind_and_choices = []
+    if mercury:
+        mind_and_choices.append(f"Mercury in {mercury.sign} shapes how you think and communicate")
+    if venus:
+        mind_and_choices.append(f"Venus in {venus.sign} describes what you value in connection")
+    if mars:
+        mind_and_choices.append(f"Mars in {mars.sign} describes how you act when something matters")
+    if mind_and_choices:
+        lines.append("; ".join(mind_and_choices) + ". Read those functions together rather than as isolated sign labels.")
+    if aspects:
+        first = aspects[0]
+        p1, p2 = str(first.planet1), str(first.planet2)
+        role1 = _NATAL_CORE_THREAD_ROLES.get(p1, (p1.lower(), p1.lower()))[0]
+        role2 = _NATAL_CORE_THREAD_ROLES.get(p2, (p2.lower(), p2.lower()))[0]
+        relation = str(first.name).lower()
+        if relation in ("square", "opposition"):
+            dynamics = f"The recurring tension asks you to balance {role1} with {role2}, rather than let either cancel the other."
+        elif relation in ("trine", "sextile"):
+            dynamics = f"The connection makes {role1} and {role2} easier to combine; using that capacity deliberately matters more than simply having it."
+        else:
+            dynamics = f"The connection brings {role1} and {role2} into the same decisions."
+        lines.append(
+            f"The closest calculated natal aspect is {p1} {relation} {p2} "
+            f"({float(first.orb):.1f}° orb). {dynamics} "
+            "This is one strand of your chart, not your entire identity."
+        )
+    element = str(getattr(snapshot, "dominant_element", "") or "").strip()
+    modality = str(getattr(snapshot, "dominant_modality", "") or "").strip()
+    if element and modality:
+        lines.append(
+            f"Across the calculated chart, {element} and {modality} have the greatest overall weighting. "
+            "That describes the balance of placements, not the element or modality of your Sun sign."
+        )
+    return " ".join(lines)
 
 
 def _render_snapshot_core_thread(

@@ -17,6 +17,8 @@ CSS = r'''
 .luna-monthly .topline{border-bottom:1px solid #111;padding-bottom:12px;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
 .luna-monthly .deck{font-size:17px}.luna-monthly .block{padding-top:12px;border-top:1px solid #cfcfcf;margin-top:22px}
 .luna-monthly .wheels{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.luna-monthly .natal-whole-chart{max-width:450px;margin:20px auto 6px;break-inside:avoid-page}
+.luna-monthly .natal-whole-chart svg{display:block;width:100%;height:auto;max-height:420px}
 .luna-monthly .wheels svg{display:block;max-width:100%;height:auto;max-height:300px}
 .luna-monthly .kicker{display:block;color:#555;margin-bottom:6px}
  .luna-monthly .strength-card{border-top:1px solid #d7d7d7;padding:13px 0;break-inside:avoid-page}
@@ -57,11 +59,14 @@ def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', 
                                f'<h3>{escape(str(item.get("title") or "Natal signature"))}</h3>'
                                f'<p>{escape(str(item.get("text") or ""))}</p>'
                                f'<p class="strength-meta">{escape(str(item.get("remember") or ""))}</p></article>')
-        natal_html += '</section>'
+        if natal_svg:
+            natal_html += ('<div class="natal-whole-chart"><span class="kicker">Your whole natal chart</span>'
+                           + natal_svg + '</div>')
+        natal_html += '</section>' 
     wheels = ''
-    if natal_svg or activation_svg:
+    if activation_svg:
         wheels = '<section class="block"><h2>Your natal activation</h2><div class="wheels">'
-        for caption, svg in [('Natal reference', natal_svg), ('Monthly activation', activation_svg)]:
+        for caption, svg in [('Monthly activation', activation_svg)]:
             if svg:
                 wheels += f'<div><span class="kicker">{caption}</span>{svg}</div>'
         wheels += '</div></section>'
