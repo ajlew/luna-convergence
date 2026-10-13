@@ -3600,8 +3600,8 @@ def payment_success_page() -> None:
                 timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
             )
             monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
-            if not monthly_story.get("voice_complete"):
-                raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld.")
+            if not monthly_story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(monthly_story.get("paragraphs") or []))[0]:
+                raise RuntimeError("Paid Monthly did not return a complete interpretation; PDF and delivery were withheld.")
             from monthly_shared_view import build_monthly_shared_html, html_to_pdf
             shared_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
             pdf_bytes = html_to_pdf(shared_html)
@@ -4154,8 +4154,8 @@ def _owner_report_output(order: dict) -> dict:
             timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
         )
         monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
-        if not monthly_story.get("voice_complete"):
-            raise RuntimeError("Paid Monthly story was not completed; owner export withheld.")
+        if not monthly_story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(monthly_story.get("paragraphs") or []))[0]:
+            raise RuntimeError("Paid Monthly did not return a complete interpretation; owner export withheld.")
         from monthly_shared_view import build_monthly_shared_html, html_to_pdf
         print_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
         pdf_bytes = html_to_pdf(print_html)
@@ -10004,52 +10004,41 @@ _NATAL_CORE_ASPECT_SYMBOLS = {
 
 
 def _monthly_natal_pattern(snapshot) -> str:
-    """Build a specific, evidence-grounded natal reading without any extra LLM call.
+    """Present the natal engine's calculated signature interpretation, not a second template.
 
-    Aspect/planet data come from the current natal snapshot; no customer facts
-    or predetermined aspect results are embedded in this function.
+    The same signature evidence used in Your strengths is the source. No aspect,
+    zodiac, person, or monthly outcome is selected by hard-coded example.
     """
     aspects = list(getattr(snapshot, "aspects", ()) or ())
-    if not aspects:
-        return ""  # Do not invent an aspect when the calculation contains none.
-    strongest = aspects[0]
-    p1 = str(getattr(strongest, "planet1", "") or "").strip()
-    p2 = str(getattr(strongest, "planet2", "") or "").strip()
-    kind = str(getattr(strongest, "name", "") or "").strip().lower()
-    if not p1 or not p2 or not kind:
+    signatures = list(getattr(snapshot, "signatures", ()) or ())
+    if not signatures and aspects:
+        signatures = list(_build_signatures(aspects, limit=6))
+    if not signatures:
         return ""
-    role1, meaning1 = _NATAL_CORE_THREAD_ROLES.get(p1, (p1.lower(), p1.lower()))
-    role2, meaning2 = _NATAL_CORE_THREAD_ROLES.get(p2, (p2.lower(), p2.lower()))
-    if kind == "square":
-        interpretation = (f"These needs can pull against one another: {role1} asks for one response while "
-                          f"{role2} asks for another. Give both a place in the decision rather than treating "
-                          f"one as a problem to eliminate.")
-    elif kind == "opposition":
-        interpretation = (f"The two needs sit on opposite sides of a recurring decision. "
-                          f"Notice when you swing entirely toward {role1} or {role2}; "
-                          f"the practical strength is knowing when each is required.")
-    elif kind == "conjunction":
-        interpretation = (f"These two functions often arrive together. Their closeness can be useful, "
-                          f"but it also makes it worth separating what {role1} needs from what {role2} needs.")
-    elif kind == "trine":
-        interpretation = (f"These functions tend to support one another. The advantage is not an "
-                          f"automatic outcome: use the ease between {role1} and {role2} deliberately.")
-    elif kind == "sextile":
-        interpretation = (f"There is a practical opening between these functions, especially when you "
-                          f"make an active choice to connect {role1} with {role2}.")
-    else:
-        interpretation = (f"The calculated {kind} links these functions. Its significance depends "
-                          f"on how {role1} and {role2} operate together in your choices.")
-    positions = {str(getattr(p, "planet", "") or ""): p for p in (getattr(snapshot, "positions", ()) or ())}
-    def placement(planet):
-        item = positions.get(planet)
-        return f"{planet} in {item.sign}" if item is not None and getattr(item, "sign", None) else planet
-    orb = getattr(strongest, "orb", None)
-    orb_detail = f" (orb {float(orb):.2f}°)" if orb is not None else ""
-    return (f"{placement(p1)} describes {meaning1}; {placement(p2)} describes {meaning2}. "
-            f"Their calculated {kind}{orb_detail} is the strongest ranked natal contact. "
-            f"{interpretation} "
-            f"Notice where this interplay appears in your own decisions; the chart describes a pattern to examine, not a guaranteed life event.")
+    strongest = aspects[0] if aspects else None
+    selected = None
+    if strongest is not None:
+        first = str(getattr(strongest, "planet1", "") or "").lower()
+        second = str(getattr(strongest, "planet2", "") or "").lower()
+        aspect = str(getattr(strongest, "name", "") or "").lower()
+        for candidate in signatures:
+            evidence = str(getattr(candidate, "evidence", "") or "").lower()
+            if all(token in evidence for token in (first, second, aspect)):
+                selected = candidate
+                break
+    if selected is None:
+        selected = signatures[0]
+    main = " ".join(str(getattr(selected, "text", "") or "").split())
+    strength = " ".join(str(getattr(selected, "strength", "") or "").split())
+    watch = " ".join(str(getattr(selected, "watch", "") or "").split())
+    if not main:
+        return ""  # Do not substitute a generic or invented personality story.
+    sentences = [main]
+    if strength and strength.casefold() not in main.casefold():
+        sentences.append(strength)
+    if watch and watch.casefold() not in (main + " " + strength).casefold():
+        sentences.append("Watch for " + watch[:1].lower() + watch[1:])
+    return " ".join(sentences)
 
 
 def _render_snapshot_core_thread(
@@ -11194,6 +11183,32 @@ def _paid_monthly_clean_plain_story(value: object) -> str:
     return re.sub(r"\*{1,3}|_{2,3}|`+", "", text).strip()
 
 
+def _paid_monthly_publishable_prose(value: object) -> tuple[bool, str]:
+    """Reject refusals/error messages as paid editorial; never fake an interpretation.
+
+    This is a minimal safety/completeness gate, not a second LLM or
+    heuristic rewriting process. It never modifies accepted prose.
+    """
+    text = _paid_monthly_clean_plain_story(value)
+    compact = " ".join(text.casefold().split())
+    if not compact:
+        return False, "empty provider response"
+    import re as _re
+    rejection = (
+        r"(?:i(?:'|’)?m sorry|i am sorry)[,. ]+(?:but )?(?:i |we )?(?:can(?:not|'t|’t)|won(?:not|'t|’t))\b",
+        r"(?:i |we )(?:can(?:not|'t|’t)|won(?:not|'t|’t))\s+(?:help|assist|comply|fulfil|fulfill|provide|generate|write)\b",
+        r"(?:as an ai|as a language model|i cannot fulfill|i can't fulfill|i’m unable|i am unable)\b",
+        r"(?:this request violates|i must decline|unable to assist|cannot help with that)\b",
+    )
+    if any(_re.search(pattern, compact) for pattern in rejection):
+        return False, "provider returned a refusal instead of a monthly interpretation"
+    # A one-line apology or service message cannot meet a paid article contract.
+    if len(compact.split()) < 120:
+        return False, "provider returned an incomplete monthly interpretation"
+    return True, ""
+
+
+
 def _paid_monthly_estimated_tokens(text: str) -> int:
     """Estimate request tokens with tiktoken when available, otherwise safely approximate."""
     try:
@@ -11303,8 +11318,9 @@ def _cached_paid_monthly_weave(
         raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
 
     clean = _paid_monthly_clean_plain_story(body)
-    if not clean:
-        raise RuntimeError("Voice provider returned an empty Paid Monthly story.")
+    publishable, reason = _paid_monthly_publishable_prose(clean)
+    if not publishable:
+        raise RuntimeError("Paid Monthly response rejected: " + reason)
     return clean
 
 
@@ -11373,6 +11389,10 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         _record_voice_error("paid_monthly_story_weave", exc)
         return _paid_monthly_weave_fallback(facts)
 
+    publishable, reason = _paid_monthly_publishable_prose(body)
+    if not publishable:
+        _record_voice_error("paid_monthly_story_weave", "Paid Monthly response rejected: " + reason)
+        return _paid_monthly_weave_fallback(facts)
     paragraphs = _paid_monthly_story_paragraphs(body)
     if not paragraphs:
         _record_voice_error("paid_monthly_story_weave", "Voice provider returned no usable prose.")
@@ -11689,7 +11709,7 @@ def _render_snapshot_monthly_report(narrative, result: dict, *, order_reference:
             timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
         )
         story = _paid_monthly_longform(narrative, result, snap)
-    if not story.get("voice_complete"):
+    if not story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(story.get("paragraphs") or []))[0]:
         st.error("Luna could not complete this Monthly report. Please try again.")
         return
     from monthly_shared_view import build_monthly_shared_html
