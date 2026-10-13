@@ -55,12 +55,14 @@ def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', 
         raise ValueError('Paid Monthly export requires nonempty story paragraphs.')
     natal_html = ''
     if natal_pattern or natal_signature or natal_recurring or natal_strengths:
-        natal_html = '<section class="block natal-baseline"><h2>Your natal foundation</h2>'
+        natal_html = '<section class="block natal-baseline">'
         if natal_signature:
             natal_html += '<h2>Your natal signature</h2><div class="natal-signature">'
             for label, value in natal_signature:
                 natal_html += f'<div><span>{escape(str(label))}</span><strong>{escape(str(value))}</strong></div>'
             natal_html += '</div>'
+        else:
+            natal_html += '<h2>Your natal foundation</h2>'
         if natal_recurring or natal_pattern:
             natal_html += '<h2>Read the pattern</h2>'
             if natal_recurring:

@@ -1,16 +1,12 @@
-# Luna v3.99 — Monthly baseline preservation
+# Luna v3.100 — Monthly heading tidy-up
 
-Apply `app.py` over the repository with the latest approved Monthly signature renderer. Do not replace `monthly_shared_view.py`.
+Apply over the repository containing v3.99 and the shared Paid Monthly renderer.
 
-## Changes (only app.py)
-1. `APP_VERSION = "v3.99"` and corresponding visible build label.
-2. Monthly report header period resolves from the selected report start date, rather than a narrative field name such as `Midheaven`.
-3. Existing calculated Key Dates, including the birthday, display chronologically.
+Changes:
+- `monthly_shared_view.py`: display exactly one natal section heading. When a six-field natal signature exists, use `Your natal signature`; otherwise retain `Your natal foundation`. All fields, narrative, strengths, charts and exports remain intact.
+- `app.py`: explicitly update `APP_VERSION` from `v3.99` to `v3.100`.
+- `test_v3100_monthly_headings.py`: offline regression tests.
 
-## Protected / unchanged
-The natal signature, strongest recurring pattern, natal strengths, natal wheel, activation chart, actual story, prompts, provider, shared HTML/PDF renderer, checkout, and Year Ahead.
+No changes to provider configuration, writing prompts, natal calculations, Year Ahead, checkout, or PDF rendering mechanics. No Groq requests made.
 
-## Deferred, not silently changed
-The introductory `price/payment/purchase` wording comes from the generated narrative. Fixing it properly requires validating/updating editorial inputs; this release does **not** rewrite customer copy. Any apparent sky date mismatch remains for a separate evidence audit.
-
-Installation: replace only `app.py`, rerun Streamlit, and verify footer `v3.99`. No Groq calls required to inspect a saved report.
+Offline results: 3 targeted tests passed, Python compilation passed. Live Streamlit remains unverified.
