@@ -170,7 +170,7 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.89"
+APP_VERSION = "v3.91"
 BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Restore + A4 Print"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
@@ -3595,11 +3595,18 @@ def payment_success_page() -> None:
                 except ValueError:
                     _report_start = None
                 result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
-            pdf_bytes = build_report_pdf(
-                result,
-                main_focus=main_focus,
-                personal_question=personal_question,
-                order_reference=order_reference,
+            paid_snapshot = _snapshot_from_encoded_natal_profile(
+                str(result.get("natal_profile") or ""),
+                timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
+            )
+            monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
+            if not monthly_story.get("voice_complete"):
+                raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld.")
+            from monthly_report_pdf_home_v3 import build_monthly_homepage_pdf
+            pdf_bytes = build_monthly_homepage_pdf(
+                result, main_focus=main_focus,
+                personal_question=personal_question, order_reference=order_reference,
+                story=monthly_story,
             )
             pdf_name = report_filename(result)
             st.download_button(
@@ -3616,9 +3623,8 @@ def payment_success_page() -> None:
                 attachment_filename=pdf_name,
             )
             _render_snapshot_monthly_report(
-                narrative,
-                result,
-                order_reference=order_reference,
+                narrative, result, order_reference=order_reference,
+                prebuilt_story=monthly_story,
             )
         elif product_code in {"YEAR", "YEARLY"}:
             start_date, end_date, _period_key = _yearly_period_window(period_code)
@@ -4146,18 +4152,25 @@ def _owner_report_output(order: dict) -> dict:
             except ValueError:
                 _report_start = None
             result["birthday_date"] = _monthly_birthday_date_from_profile(natal_profile_value, _report_start)
-        pdf_bytes = build_report_pdf(
-            result,
-            main_focus=main_focus,
-            personal_question=personal_question,
-            order_reference=order_reference,
+        paid_snapshot = _snapshot_from_encoded_natal_profile(
+            str(result.get("natal_profile") or ""),
+            timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
         )
-        from monthly_report_pdf_home_v3 import build_monthly_homepage_html
+        monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
+        if not monthly_story.get("voice_complete"):
+            raise RuntimeError("Paid Monthly story was not completed; owner export withheld.")
+        from monthly_report_pdf_home_v3 import build_monthly_homepage_pdf, build_monthly_homepage_html
+        pdf_bytes = build_monthly_homepage_pdf(
+            result, main_focus=main_focus,
+            personal_question=personal_question, order_reference=order_reference,
+            story=monthly_story,
+        )
         print_html = build_monthly_homepage_html(
             result, main_focus=main_focus, personal_question=personal_question,
-            order_reference=order_reference,
+            order_reference=order_reference, story=monthly_story,
         )
         return {
+            "story": monthly_story,
             "product_code": product_code,
             "narrative": narrative,
             "result": result,
@@ -4257,6 +4270,7 @@ def _render_owner_report(order: dict, key_context: str) -> None:
             output["narrative"],
             output["result"],
             order_reference=str(order.get("reference") or "OWNER-PREVIEW"),
+            prebuilt_story=output.get("story"),
         )
     else:
         _render_paid_yearly_product(
@@ -11526,6 +11540,7 @@ def _render_snapshot_monthly_report(
     result: dict,
     *,
     order_reference: str = "",
+    prebuilt_story: dict | None = None,
 ) -> None:
     """Paid Monthly: natal baseline, one integrated long-form month, then compact dates/evidence."""
     st.markdown('<section class="natal-shell paid-monthly-shell">', unsafe_allow_html=True)
@@ -11552,7 +11567,7 @@ def _render_snapshot_monthly_report(
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
     st.markdown("## Read the month")
     with st.spinner("Luna is weaving the calculated month around your natal chart…"):
-        longform = _paid_monthly_longform(narrative, result, paid_snapshot)
+        longform = prebuilt_story if prebuilt_story is not None else _paid_monthly_longform(narrative, result, paid_snapshot)
     paid_context = dict(longform.get("context") or {})
 
     story_paragraphs = [
@@ -11579,6 +11594,20 @@ def _render_snapshot_monthly_report(
                 unsafe_allow_html=True,
             )
 
+    # Show both chart wheels in the regular paid report, not behind a closed expander.
+    if paid_snapshot is not None:
+        month_events = _monthly_canonical_events(narrative, result)
+        st.markdown("## Your natal activation")
+        left, right = st.columns(2, gap="large")
+        with left:
+            st.markdown("**Natal reference**")
+            st.markdown(natal_wheel_svg(paid_snapshot, size=620), unsafe_allow_html=True)
+        with right:
+            st.markdown("**Monthly activation**")
+            if month_events:
+                st.markdown(_monthly_activation_wheel_svg(result, month_events, "whole", size=620), unsafe_allow_html=True)
+            else:
+                st.caption("No calculated monthly activation events available for this chart.")
     # Read-only extra depth from the already-computed Paid Monthly natal overlay.
     st.markdown("## Explore your month’s astrology")
     with st.expander("Slower planets · personal transits · natal activation", expanded=False):
@@ -11596,22 +11625,6 @@ def _render_snapshot_monthly_report(
                 st.markdown(f'- {item["date"]} · {item["contact"]}')
         else:
             st.caption("No personal natal contacts are available in this report's calculated overlay.")
-        if paid_snapshot is not None:
-            year, month, _ = monthly_period_from_result(result, narrative)
-            month_events = _monthly_canonical_events(narrative, result)
-            if month_events:
-                st.markdown("#### Your natal activation")
-                left, right = st.columns(2, gap="large")
-                with left:
-                    st.markdown("**Natal reference**")
-                    st.markdown(natal_wheel_svg(paid_snapshot, size=620), unsafe_allow_html=True)
-                with right:
-                    st.markdown("**Activation layer**")
-                    st.markdown(_monthly_activation_wheel_svg(result, month_events, "whole", size=620), unsafe_allow_html=True)
-                st.caption("This is Luna's existing Monthly activation-wheel renderer, using calculated monthly events.")
-            else:
-                st.caption("No calculated monthly activation events available for this chart.")
-
     # Key Dates are now a compact reference index only. The full interpretation
     # already appears in Read the month and is not repeated here.
     key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]

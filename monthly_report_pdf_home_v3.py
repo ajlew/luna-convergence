@@ -237,7 +237,7 @@ def _optional_timing_strip(snapshot: dict) -> str:
     return f'<div class="{css_class}">{"".join(items)}</div>'
 
 
-def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -> str:
+def _render_html(result: dict, narrative, order_reference: str, icon_uri: str, story: dict | None = None) -> str:
     report_right = f"{narrative.sign} / {narrative.label}"
     snapshot = dict(narrative.snapshot_rows)
 
@@ -601,10 +601,25 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
 {order_html}
 """
 
+    # The same validated live Paid Monthly text shown on screen is exported here.
+    # Never regenerate the voice during rendering or substitute unrelated canned prose.
+    story_page = ""
+    if story is not None and story.get("voice_complete"):
+        paragraphs = [str(p).strip() for p in (story.get("paragraphs") or []) if str(p).strip()]
+        if paragraphs:
+            body = "".join('<p>' + _safe(paragraph) + '</p>' for paragraph in paragraphs)
+            title = str(story.get("headline") or "Read the month")
+            story_page = (
+                '<div class="eyebrow">Your personal interpretation / full narrative</div>'
+                '<h1 class="section-title">Read the month</h1>'
+                '<div class="story-full-text"><h2>' + _safe(title) + '</h2>' + body + '</div>'
+            )
     page_bodies = [
         (page1_body, "homepage-page"),
         (page2_body, ""),
     ]
+    if story_page:
+        page_bodies.append((story_page, "monthly-story-page"))
     if natal_page:
         page_bodies.append((natal_page, "natal-overlay-page"))
     if horizon_has_content:
@@ -628,7 +643,9 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
     css = f"""
 {font_loader}
 :root {{ --white:#fff; --black:#050505; --ink:#151515; --soft:#f5f5f2; --line:#d8d8d3; --muted:#696963; }}
-@page {{ size:A4; margin:0; }}
+@page {{ size:A4; margin:0 0 8mm 0;
+  @bottom-right {{ content: counter(page); font: 500 7pt 'IBM Plex Mono',monospace; margin-right:16mm; color:#666; }}
+}}
 * {{ box-sizing:border-box; }}
 html, body {{ margin:0; padding:0; background:#e9e9e6; color:var(--ink); font-family:'Josefin Sans','Avenir Next','Century Gothic',Arial,sans-serif; }}
 body {{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }}
@@ -660,7 +677,13 @@ body {{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }}
   .chapter-row, .card, .date-card, .monthly-chart-pair, .natal-chart-print,
   .horizon-card, .trust-strip, .reading-card {{ break-inside:avoid-page; }}
   .page-footer {{ position:relative; left:auto; right:auto; bottom:auto;
-                  margin-top:8mm; break-inside:avoid; }}
+                  margin-top:5mm; break-inside:avoid; }}
+  .page-footer span:last-child {{ display:none; }}
+  .story-full-text p {{ font-size:10pt;line-height:1.6;margin:0 0 4mm; }}
+  .story-full-text {{ columns:1; }}
+  .monthly-story-page .section-title {{ margin-bottom:7mm; }}
+  .evidence-grid {{ gap:2mm; margin-top:3mm; }}
+  .evidence-card {{ min-height:0; padding:2.5mm; }}
   thead {{ display:table-header-group; }}
   tr {{ break-inside:avoid-page; }}
   h1, h2, h3 {{ break-after:avoid-page; }}
@@ -829,6 +852,7 @@ def build_monthly_homepage_pdf(
     main_focus: str = "General overview",
     personal_question: str = "",
     order_reference: str = "",
+    story: dict | None = None,
 ) -> bytes:
     """Render a monthly report with the Luna homepage's visual system.
 
@@ -843,7 +867,7 @@ def build_monthly_homepage_pdf(
         order_reference=order_reference,
     )
     icon_uri = _asset_data_uri(Path(__file__).parent / "assets" / "saturn_hex_brand.png")
-    html = _render_html(result, narrative, order_reference, icon_uri)
+    html = _render_html(result, narrative, order_reference, icon_uri, story=story)
 
     # Prefer a native HTML/CSS print engine when available. WeasyPrint is used
     # by the Linux build environment; Windows installations can use Chrome or
@@ -858,6 +882,8 @@ def build_monthly_homepage_pdf(
         pass
 
     browser = _find_browser()
+    if not browser and story is not None:
+        raise RuntimeError("No HTML PDF renderer is available for the completed paid monthly story; refusing to deliver an incomplete PDF.")
     if not browser:
         return build_monthly_editorial_pdf(
             result,
@@ -901,6 +927,8 @@ def build_monthly_homepage_pdf(
         if completed is not None and completed.returncode == 0 and pdf_path.exists() and pdf_path.stat().st_size > 10_000:
             return pdf_path.read_bytes()
 
+    if story is not None:
+        raise RuntimeError("Monthly PDF rendering failed; refusing to deliver a PDF without the paid interpretation.")
     return build_monthly_editorial_pdf(
         result,
         main_focus=main_focus,
@@ -914,6 +942,7 @@ def build_monthly_homepage_html(
     main_focus: str = "General overview",
     personal_question: str = "",
     order_reference: str = "",
+    story: dict | None = None,
 ) -> str:
     narrative = build_monthly_narrative(
         result,
@@ -922,4 +951,4 @@ def build_monthly_homepage_html(
         order_reference=order_reference,
     )
     icon_uri = _asset_data_uri(Path(__file__).parent / "assets" / "saturn_hex_brand.png")
-    return _render_html(result, narrative, order_reference, icon_uri)
+    return _render_html(result, narrative, order_reference, icon_uri, story=story)

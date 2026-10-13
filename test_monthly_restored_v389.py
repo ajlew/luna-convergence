@@ -32,4 +32,4 @@ def test_pdf_and_print_ready_html_retained():
     assert b'@page' in pdf
 
 def test_version_is_updated():
-    assert 'APP_VERSION = "v3.89"' in (ROOT/'app.py').read_text()
+    assert 'APP_VERSION = "v3.91"' in (ROOT/'app.py').read_text()
