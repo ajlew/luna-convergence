@@ -1,3 +1,27 @@
+LUNA CONVERGENCE v3.86 — SEGMENTED PAID NARRATIVE (CUMULATIVE)
+
+Replace the v3.85 files with the full ZIP. Preserve folder structures. Does not remove repository modules not shipped here.
+
+NEW: Paid Monthly uses THREE bounded chronological LLM calls (days 1–10, 11–20, 21–end) instead of requesting 1,350–1,600 words in a single completion. Each part is checked for a non-truncated, minimally substantive response and for invented ISO dates. The completed article is joined for the existing report renderer. Failing a section blocks publication; it does not fill text from generic stubs.
+
+NEW: Paid Year Ahead uses bounded editorial jobs: annual arc; batches of four monthly rounds; one or two major Games per job. Required markers are checked for each job. The final editorial parser preserves all 12 months and expected Games; deterministic transit evidence remains authoritative.
+
+NEW: Independent secondary LLM fallback on connection errors, 429/5xx, empty responses and completion-length truncation. Primary credentials are unchanged. To enable fallback, add to Streamlit secrets:
+  LUNA_SECONDARY_VOICE_BASE_URL = "https://<provider>/v1"
+  LUNA_SECONDARY_VOICE_MODEL = "<model>"
+  LUNA_SECONDARY_VOICE_API_KEY = "<secret>"
+Use a real OpenAI-compatible Chat Completions provider that accepts max_completion_tokens; do not invent credentials. Existing primary settings LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY still apply. Fallback is optional. Secondary may charge separately.
+
+IMPORTANT: This release changes the provider CALL TOPOLOGY, not just completion limits. It improves the truncation failure that was observed in Paid Monthly. Provider rate limits and non-OpenAI-compatible APIs still require proper configuration. Three calls can increase both latency and requests per minute. There is no live provider/Stripe verification in this artifact.
+
+NOT INCLUDED: Durable external order database, external worker queue, Stripe-webhook idempotency, background fulfillment, permanent object storage or usage dashboard. These are substantial production services that must be provisioned and integrated before claiming capacity at high paid volume. Do not use local Streamlit files as guaranteed durable customer storage.
+
+TESTS: Python modules compiled; 8 targeted tests passed locally against repository modules, including mocked provider fallback/truncation. Generate a NEW Monthly owner report and Year Ahead owner report to verify actual API behavior and output quality before public sale.
+
+Updated architecture and deployment stages: Luna_Paid_Year_Ahead_Updated_Build_Plan_v386.md, also shipped in this ZIP.
+
+---- PREVIOUS RELEASE NOTES ----
+
 LUNA CONVERGENCE v3.85 — CUMULATIVE READER-VALUE UPDATE
 
 Install this one ZIP over the repository root; it retains bundled v3.79-v3.84 improvements including PDF printing, natal activation visualizations, shortcut instructions, Saturn stone icon, native-library fallback, and Epic Sky JSON.

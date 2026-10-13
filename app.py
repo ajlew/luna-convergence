@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.85"
-BUILD_LABEL = f"Luna {APP_VERSION} — Activation Charts and A4 Print"
+APP_VERSION = "v3.86"
+BUILD_LABEL = f"Luna {APP_VERSION} — Segmented Paid Voice"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -222,6 +222,9 @@ LUNA_VOICE_MODE = secret("LUNA_VOICE_MODE", "published").strip().lower()
 LUNA_VOICE_BASE_URL = secret("LUNA_VOICE_BASE_URL")
 LUNA_VOICE_MODEL = secret("LUNA_VOICE_MODEL")
 LUNA_VOICE_API_KEY = secret("LUNA_VOICE_API_KEY")
+LUNA_SECONDARY_VOICE_BASE_URL = secret("LUNA_SECONDARY_VOICE_BASE_URL")
+LUNA_SECONDARY_VOICE_MODEL = secret("LUNA_SECONDARY_VOICE_MODEL")
+LUNA_SECONDARY_VOICE_API_KEY = secret("LUNA_SECONDARY_VOICE_API_KEY")
 LUNA_ADMIN_KEY = secret("LUNA_ADMIN_KEY")
 PUBLIC_SITE_URL = "https://luna-convergence.streamlit.app"
 _VOICE_ERRORS: dict[str, str] = {}
@@ -9594,8 +9597,9 @@ def _cached_paid_yearly_editorial(
     base_url: str,
     model: str,
     _api_key: str,
+    secondary_base: str = "", secondary_model: str = "", _secondary_key: str = "",
 ):
-    """One cached successful Paid Yearly editorial call.
+    """Cached segmented Paid Yearly editorial.
 
     Exceptions are not converted to cached fallback output. A failed owner/customer
     run must be explicitly generated again; there is no automatic retry loop.
@@ -9618,6 +9622,7 @@ def _cached_paid_yearly_editorial(
         base_url=base_url,
         model=model,
         api_key=_api_key,
+        secondary_base=secondary_base, secondary_model=secondary_model, secondary_key=_secondary_key,
     )
 
 
@@ -9686,6 +9691,9 @@ def _build_paid_yearly_product(
         LUNA_VOICE_BASE_URL,
         LUNA_VOICE_MODEL,
         LUNA_VOICE_API_KEY,
+        LUNA_SECONDARY_VOICE_BASE_URL,
+        LUNA_SECONDARY_VOICE_MODEL,
+        LUNA_SECONDARY_VOICE_API_KEY,
     )
 
     expected_issues = len(packet.games)
@@ -11151,99 +11159,86 @@ def _paid_monthly_preflight_tokens(prompt: str, completion_tokens: int) -> tuple
 
 
 def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
-    """Fit the one Paid Monthly request before it reaches Groq.
+    """Budget the full Paid Monthly article without squeezing it below a usable output size.
 
-    Try progressively more compact Python-built packets. This is not an LLM
-    retry: no provider call has happened yet. The full GitHub base remains
-    untouched; only optional duplicate/context wording is removed from the
-    creative prompt until the request fits safely below the observed provider
-    ceiling.
+    The earlier 2,500-token completion cap contradicted the 1,350–1,600-word
+    contract and could hit finish_reason=length. Keep the original one-call
+    architecture but allocate adequate completion space. For evidence-heavy
+    charts, compact *inputs*, never silently reduce the prose allowance.
+    Provider/account rate limits are independent and may still require a queue.
     """
-    target_total = 5350
-    preferred_completion = 2500
-
+    target_total = 10500
+    completion_tokens = 4600
     for level in range(4):
         prompt = _paid_monthly_weave_prompt(facts, compact_level=level)
-        buffered_input, total = _paid_monthly_preflight_tokens(prompt, preferred_completion)
+        buffered_input, total = _paid_monthly_preflight_tokens(prompt, completion_tokens)
         if total <= target_total:
-            return prompt, preferred_completion, buffered_input, level
-
-    # Extremely activation-heavy subjects can still enlarge the prompt. Rather
-    # than stopping production, keep the most compact evidence packet and give
-    # the remaining safe budget to the prose, with a useful minimum.
-    prompt = _paid_monthly_weave_prompt(facts, compact_level=3)
-    buffered_input, _ = _paid_monthly_preflight_tokens(prompt, 0)
-    completion_tokens = max(1900, min(preferred_completion, target_total - buffered_input))
-    return prompt, completion_tokens, buffered_input, 3
+            return prompt, completion_tokens, buffered_input, level
+    raise RuntimeError(
+        "Paid Monthly evidence packet exceeds the safe one-call token budget; "
+        "reduce optional context or use segmented generation."
+    )
 
 
 @st.cache_data(show_spinner=False, ttl=1800)
-def _cached_paid_monthly_weave(
-    facts_json: str,
-    base_url: str,
-    model: str,
-    _api_key: str,
-) -> str:
-    """One provider call, plain prose out. No JSON schema and no automatic retry."""
-    import requests
-
-    facts = json.loads(facts_json)
-    prompt, max_completion_tokens, _estimated_input_tokens, _compact_level = (
-        _paid_monthly_prepare_request(facts)
-    )
-
-    payload = {
-        "model": model,
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "Write Luna's interpretation from the supplied calculations. "
-                    "Return plain prose only. Python owns the facts and validation."
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.58,
-        "max_completion_tokens": max_completion_tokens,
-    }
-    if str(model or "").startswith("openai/gpt-oss"):
-        payload["reasoning_effort"] = "low"
-        payload["include_reasoning"] = False
-
-    try:
-        response = requests.post(
-            f"{str(base_url).rstrip('/')}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {_api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=150,
-        )
-    except requests.RequestException as exc:
-        raise RuntimeError(f"Voice provider request failed: {exc}") from exc
-
-    if response.status_code in (413, 429):
-        body = " ".join(str(response.text or "").split())[:500]
-        raise RuntimeError(f"Voice provider HTTP {response.status_code}: {body}")
-    if response.status_code >= 400:
-        body = " ".join(str(response.text or "").split())[:500]
-        raise RuntimeError(f"Voice provider HTTP {response.status_code}: {body}")
-
-    try:
-        choice = response.json()["choices"][0]
-        body = choice["message"]["content"]
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise RuntimeError("Voice provider returned no usable prose.") from exc
-
-    if str(choice.get("finish_reason") or "") == "length":
-        raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
-
-    clean = _paid_monthly_clean_plain_story(body)
-    if not clean:
-        raise RuntimeError("Voice provider returned an empty Paid Monthly story.")
-    return clean
+def _cached_paid_monthly_weave(facts_json: str, base_url: str, model: str, _api_key: str,
+                                secondary_base: str = "", secondary_model: str = "", _secondary_key: str = "") -> str:
+    """Three bounded chronological acts, not one truncation-prone 1600-word completion."""
+    from paid_voice_router import VoiceProvider, completion
+    from datetime import date as _date
+    facts=json.loads(facts_json)
+    material=_paid_monthly_prompt_material(facts,compact_level=2)
+    month=dict(material.get('month') or {})
+    original_timeline=list(month.get('timeline') or [])
+    original_calendar=list(month.get('calendar') or [])
+    original_beats=list(month.get('beats') or [])
+    # Prefer dates for act assignment; fall back to order for unfamiliar row shapes.
+    def row_day(row):
+        if isinstance(row,dict):
+            val=str(row.get('date') or row.get('day') or '')
+        elif isinstance(row,(list,tuple)) and row:
+            val=str(row[0] or '')
+        else: val=''
+        match=re.search(r'(?:\d{4}-\d\d-)?(\d\d)(?:T|$)',val)
+        if match:
+            n=int(match.group(1))
+            if 1<=n<=31: return n
+        return None
+    primary=VoiceProvider(base_url,model,_api_key)
+    alternate=VoiceProvider(secondary_base,secondary_model,_secondary_key) if all((secondary_base,secondary_model,_secondary_key)) else None
+    outputs=[]
+    partitions=((1,10),(11,20),(21,31))
+    for index,(lo,hi) in enumerate(partitions):
+        local=json.loads(json.dumps(material))
+        local_month=local['month']
+        local_month['timeline']=[row for k,row in enumerate(original_timeline) if (lo<=row_day(row)<=hi if row_day(row) else (k*3//max(1,len(original_timeline))==index))]
+        local_month['calendar']=[row for row in original_calendar if row_day(row) is None or lo<=row_day(row)<=hi]
+        local_month['beats']=[row for row in original_beats if isinstance(row,dict) and (int(str(row.get('range') or '1').split('-')[0])<=hi and int(str(row.get('range') or '31').split('-')[-1])>=lo)]
+        local_month['part']=f'{index+1} of 3: days {lo}–{hi}'
+        # The opening/ending follow the month's arc; later acts may refer to the
+        # already established theme but must not repeat prior dates or prose.
+        prior_summary=' '.join(outputs[-1].split()[-85:]) if outputs else ''
+        prompt=("You are Luna. Write ONLY your assigned chronological third of a personalised paid monthly reading. "
+            "Use second person, natural paragraphs, no headings, no markdown. 380–520 words in 3–5 paragraphs. "
+            "Translate calculated personal and collective events into clear, specific choices, tensions and possible scenarios. "
+            "Treat the astrology as symbolic rather than certain future events. No fabricated dates, aspects, natal positions or houses. "
+            "Events must appear in chronological order. Do not re-tell earlier sections or append an activation section. "
+            "Do not announce part numbers. Do not print internal keys. "
+            +( "Introduce the month naturally. " if index==0 else "Continue the same month without restarting the introduction. ")
+            +( "End with a short final synthesis without repeating previous paragraphs. " if index==2 else "Do not conclude the month yet. ")
+            +"The prior section ends with this context (do not quote): "+prior_summary+"\nCALCULATED INPUT: "+json.dumps(local,ensure_ascii=False,separators=(',',':')))
+        buffered, _=_paid_monthly_preflight_tokens(prompt,1850)
+        if buffered+1850>6200: raise RuntimeError('Monthly act input exceeds safe token budget')
+        out=completion([{'role':'system','content':'Only use the supplied calculated evidence. Never invent dates or transits.'},
+                        {'role':'user','content':prompt}],primary=primary,secondary=alternate,max_output=1850,timeout=110)
+        out=_paid_monthly_clean_plain_story(out)
+        if len(out.split())<170: raise RuntimeError(f'Paid Monthly act {index+1} is incomplete')
+        # ISO dates must come from the relevant calculated evidence.
+        allowed=set(re.findall(r'\b\d{4}-\d\d-\d\d\b',json.dumps(local)))
+        unexpected=set(re.findall(r'\b\d{4}-\d\d-\d\d\b',out))-allowed
+        if unexpected: raise RuntimeError(f'Paid Monthly act {index+1} contains unsupported exact dates')
+        outputs.append(out)
+    return '\n\n'.join(outputs)
 
 
 # All content requirements for Paid Monthly are instructions to Luna before the
@@ -11305,7 +11300,8 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
     facts_json = json.dumps(facts, ensure_ascii=False, sort_keys=True, default=str)
     try:
         body = _cached_paid_monthly_weave(
-            facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY
+            facts_json, LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY,
+            LUNA_SECONDARY_VOICE_BASE_URL, LUNA_SECONDARY_VOICE_MODEL, LUNA_SECONDARY_VOICE_API_KEY
         )
     except Exception as exc:
         _record_voice_error("paid_monthly_story_weave", exc)

@@ -1067,6 +1067,7 @@ def generate_paid_yearly_editorial(
     model: str,
     api_key: str,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    secondary_base: str = "", secondary_model: str = "", secondary_key: str = "",
 ) -> PaidYearlyEditorial:
     """One provider call. Plain text. No JSON schema. No retry loop."""
     if not str(base_url or "").strip() or not str(model or "").strip() or not str(api_key or "").strip():
@@ -1079,60 +1080,50 @@ def generate_paid_yearly_editorial(
         personal_question=personal_question,
         shared_year_context=shared_year_context,
     )
-    prompt, completion_tokens, _estimated_input = _prepare_request(material)
-    issue_numbers = [
-        int(item.get("number") or index)
-        for index, item in enumerate(material.get("major_issues") or [], start=1)
-    ]
-    month_numbers = [
-        int(item.get("number") or index)
-        for index, item in enumerate(material.get("monthly_rounds") or [], start=1)
-    ]
-    issue_titles = {
-        int(item.get("number") or index): str(item.get("customer_title") or "")
-        for index, item in enumerate(material.get("major_issues") or [], start=1)
-    }
-    allowed_dates = _calculated_dates(material)
-
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.58,
-        "max_completion_tokens": int(completion_tokens),
-    }
-    if str(model).startswith("openai/gpt-oss"):
-        payload["reasoning_effort"] = "low"
-        payload["include_reasoning"] = False
-
-    try:
-        response = requests.post(
-            f"{str(base_url).rstrip('/')}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=int(timeout),
-        )
-    except requests.RequestException as exc:
-        raise RuntimeError(f"Voice provider request failed: {exc}") from exc
-
-    if response.status_code >= 400:
-        body = " ".join(str(response.text or "").split())[:600]
-        raise RuntimeError(f"Voice provider HTTP {response.status_code}: {body}")
-
-    try:
-        choice = response.json()["choices"][0]
-        body = choice["message"]["content"]
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise RuntimeError("Voice provider returned no usable Paid Yearly prose.") from exc
-
-    if str(choice.get("finish_reason") or "") == "length":
-        raise RuntimeError("Voice provider truncated the Paid Yearly report at the completion limit.")
-
+    from paid_voice_router import VoiceProvider, completion
+    # Five bounded jobs: the annual arc, three four-month groups, and the major
+    # Games. Each receives only the relevant deterministic evidence.
+    compact=_compact_paid_yearly_material(material,2)
+    issue_numbers=[int(row.get('number') or i) for i,row in enumerate(material.get('major_issues') or [],1)]
+    month_numbers=[int(row.get('number') or i) for i,row in enumerate(material.get('monthly_rounds') or [],1)]
+    issue_titles={int(row.get('number') or i):str(row.get('customer_title') or '') for i,row in enumerate(material.get('major_issues') or [],1)}
+    allowed_dates=_calculated_dates(material)
+    primary=VoiceProvider(base_url,model,api_key)
+    alternate=VoiceProvider(secondary_base,secondary_model,secondary_key) if all((secondary_base,secondary_model,secondary_key)) else None
+    def section(job_name, requested, packet, output_limit):
+        prompt=("Write only these section markers and their prose, in order: "+', '.join(requested)+".\n"
+            "You are Luna writing a personalised strategic year, second person. Python owns all astrology. "
+            "Never fabricate an exact date, a transit pass, a house, a planetary placement or a future event. "
+            "No JSON, no markdown; use a literal marker alone on each line. "
+            "Make the reader's choices and concrete possibilities clear, without deterministic prediction. "
+            "No introductory filler. For monthly rounds use 45–65 useful words each. "
+            "For Games use two substantial paragraphs with specific scenarios, risks, choices and genuine passes. "
+            "For READ_YEAR write 450–650 words and for CLOSING write 90–130 words. "
+            "Each section must have meaningful content.\nCALCULATED EVIDENCE: "
+            +json.dumps(packet,ensure_ascii=False,separators=(',',':')))
+        estimated=math.ceil((_estimate_tokens(prompt)+_estimate_tokens(SYSTEM_PROMPT)+100)*1.15)
+        if estimated+output_limit>7800: raise RuntimeError(f'Year Ahead {job_name} packet over token budget')
+        result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
+             primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout)
+        found=set(_MARKER_RE.findall(_clean_text(result)))
+        if not set(m.strip('<>') for m in requested).issubset(found):
+            raise RuntimeError(f'Year Ahead {job_name} incomplete markers')
+        return result
+    base={k:compact.get(k) for k in ('period','reader_context','natal')}
+    all_parts=[]
+    intro_packet={**base,'major_issues':[{'number':g.get('number'),'title':g.get('customer_title'),'primary':g.get('primary')} for g in compact.get('major_issues') or []],
+        'monthly_rounds':[{'number':m.get('number'),'phase':m.get('phase'),'strongest_date':m.get('strongest_date')} for m in compact.get('monthly_rounds') or []]}
+    all_parts.append(section('annual',['<<HEADLINE>>','<<DECK>>','<<READ_YEAR>>','<<CLOSING>>'],intro_packet,2700))
+    for first in (1,5,9):
+        rows=[row for row in compact.get('monthly_rounds') or [] if first<=int(row.get('number') or 0)<first+4]
+        markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
+        if markers: all_parts.append(section('months',markers,{**base,'monthly_rounds':rows,'major_issues':intro_packet['major_issues']},1400))
+    games=compact.get('major_issues') or []
+    for first in range(0,len(games),2):
+        group=games[first:first+2]
+        markers=[f'<<ISSUE:{int(row["number"])}>>' for row in group]
+        all_parts.append(section('games',markers,{**base,'major_issues':group},2200))
+    body='\n\n'.join(all_parts)
     return parse_paid_yearly_editorial(
         body,
         expected_issue_numbers=issue_numbers,
