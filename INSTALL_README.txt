@@ -20,3 +20,5 @@ customers rely on it. Do not simultaneously change its prompt length or sections
 Offline regression tests: 10 passed in the complete source tree using
 `python -m pytest -q test_monthly_restored_v389.py test_print_v381.py test_activation_v383.py test_yearly_print_html_v378.py`.
 No live Groq call or live Stripe/Streamlit delivery test was performed.
+
+V3.90: Monthly print pagination fix: natal activation page print-only compact layout prevents orphan activation card. Monthly voice unchanged; Year Ahead unchanged.

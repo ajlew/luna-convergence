@@ -606,7 +606,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str) -
         (page2_body, ""),
     ]
     if natal_page:
-        page_bodies.append((natal_page, ""))
+        page_bodies.append((natal_page, "natal-overlay-page"))
     if horizon_has_content:
         page_bodies.append((horizon_page, ""))
     page_bodies.extend([
@@ -644,6 +644,19 @@ body {{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }}
            break-after:auto; page-break-after:auto; }}
   .page:first-of-type {{ break-before:auto; }}
   .page-content {{ break-inside:auto; }}
+  /* Fit natal wheel and all three activation cards on ONE A4 sheet.
+     The generic 55mm chapter minimum is too tall for this composite page. */
+  .natal-overlay-page .natal-chart-print {{ max-width:72mm; margin:1.2mm auto 2mm; }}
+  .natal-overlay-page .monthly-chart-pair {{ margin-top:1mm; gap:3mm; }}
+  .natal-overlay-page .section-title {{ font-size:25pt; margin:1mm 0 2mm; }}
+  .natal-overlay-page .hero-subtitle {{ font-size:8pt; line-height:1.3; }}
+  .natal-overlay-page .chapter-list {{ gap:2mm; }}
+  .natal-overlay-page .chapter-row {{ min-height:0; padding:2.4mm 3mm; gap:3mm; }}
+  .natal-overlay-page .chapter-row h2 {{ margin:1mm 0; font-size:12pt; }}
+  .natal-overlay-page .chapter-row p {{ margin-top:1mm; font-size:7pt; line-height:1.3; }}
+  .natal-overlay-page .best-move {{ margin-top:1.5mm; padding:1.5mm 0; }}
+  .natal-overlay-page .page-footer {{ margin-top:3mm; }}
+
   .chapter-row, .card, .date-card, .monthly-chart-pair, .natal-chart-print,
   .horizon-card, .trust-strip, .reading-card {{ break-inside:avoid-page; }}
   .page-footer {{ position:relative; left:auto; right:auto; bottom:auto;
