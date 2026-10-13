@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.91"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Restore + A4 Print"
+APP_VERSION = "v3.99"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Baseline Preservation"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -11692,6 +11692,17 @@ def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str 
     birthday = str(result.get("birthday_date") or "")[:10]
     if birthday:
         date_rows.append((human_date(birthday), "Birthday"))
+    # Order the calculated date entries chronologically, including birthdays.
+    # This is presentation-only: neither dates nor interpretations are altered.
+    def _key_date_sort(row):
+        try:
+            return datetime.strptime(row[0], "%d %B %Y").date()
+        except (TypeError, ValueError):
+            try:
+                return date.fromisoformat(str(row[0]))
+            except (TypeError, ValueError):
+                return date.max
+    date_rows.sort(key=_key_date_sort)
     personal = []
     for row in monthly_overlay_rows(result):
         personal.append((str(row.get("date") or ""), str(row.get("contact") or "")))
@@ -11703,7 +11714,9 @@ def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str 
         if label:
             evidence.append(f"{human_date(str(item.get('event_date') or ''))} · {label}")
     title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
-    label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
+    # The narrative's `label` can refer to a chart field (e.g. "Midheaven").
+    # The report header must instead describe the selected calendar month.
+    _, _, label = monthly_period_from_result(result, narrative)
     intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
     # Restore the original v3.92 deterministic natal foundation and signature
     # strengths; render it in the same document on screen, HTML and PDF.
