@@ -736,3 +736,18 @@ Paid Monthly demanded 1,350–1,600 words in one response. Earlier deployed gene
 **Required production design:** Stripe-paid webhook → idempotent durable order record (unique Stripe event and order IDs) → leased generation job → saved intermediate validated sections → final HTML/PDF artifacts in persistent object storage → email/return URL. Retries must resume only unfinished sections and must not charge or generate duplicate orders. Enforce per-provider token and request throttles and capture rate-limit telemetry. Keep the owner mode separate from real paid delivery.
 
 **Acceptance gates:** Paid Monthly owner run with real provider; Paid Year Ahead owner run with real provider; 429 failover drill; no invented dates; full 12 rounds and all Games; stable PDF output; network interruption drill; correct duplicate-webhook handling once a durable store is installed. **Do not call the whole production capacity plan complete until all these checks have passed.**
+
+
+## v3.87 — Provider Failure Diagnostics and Operational Runbook
+
+When an owner report fails, record the provider's HTTP status and safe error summary.
+Do not collapse every provider failure into `HTTPError`.
+
+- HTTP 400/422: inspect model/parameter errors and reduce invalid requests; do not blindly retry.
+- HTTP 401/403: verify provider credentials, access and model availability.
+- HTTP 402: resolve billing or credits.
+- HTTP 429: inspect Groq's live rate-limit dashboard, wait for the returned window and use an independent provider if configured.
+- HTTP 5xx: bounded retry then alternate provider.
+- `finish_reason=length`: the specific section exceeds its response allowance; do not publish truncated prose.
+
+**Architecture note:** This release improves diagnostics and bounded transport recovery. It does **not** implement a durable queue, external database or confirmed live second-provider access. Paid customer orders must eventually be handed to an idempotent job queue to survive rate-limit windows longer than a web request.

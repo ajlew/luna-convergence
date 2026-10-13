@@ -106,3 +106,11 @@ v3.83 NATAL CHART / ACTIVATION PRINT CORRECTION
 - A purple point is a known natal longitude. An orange point is displayed ONLY if the packet contains the transit's exact longitude; no inferred locations are fabricated. The month list explains which transits contact which targets.
 - packages.txt and WeasyPrint in requirements.txt enable HTML-to-PDF generation on Linux deployments supporting apt system packages. Streamlit Cloud must install packages.txt; reboot the app after deployment. If these packages cannot be installed, the previous ReportLab fallback remains and will NOT show the HTML activation maps. Download the HTML and Print > Save as PDF for the full design.
 - This does not certify Groq editorial chronology, nor does it replace the website's own interactive activation renderer. Those are separate implementation paths.
+
+v3.87 — PAID PROVIDER HTTP DIAGNOSTICS
+- Corrected paid_voice_router.py to retain HTTP status and safe provider error messages.
+- 400/401/403 are not retried with the same credentials.
+- 408/429/5xx receive at most one bounded retry, then optional secondary provider.
+- Actual quota, billing, credential, and model permissions must be resolved in the provider console.
+- A secondary provider is only active when all three secondary secrets are configured.
+- No paid report text is synthesized when all providers fail.
