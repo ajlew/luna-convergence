@@ -3602,12 +3602,9 @@ def payment_success_page() -> None:
             monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
             if not monthly_story.get("voice_complete"):
                 raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld.")
-            from monthly_report_pdf_home_v3 import build_monthly_homepage_pdf
-            pdf_bytes = build_monthly_homepage_pdf(
-                result, main_focus=main_focus,
-                personal_question=personal_question, order_reference=order_reference,
-                story=monthly_story,
-            )
+            from monthly_shared_view import build_monthly_shared_html, html_to_pdf
+            shared_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
+            pdf_bytes = html_to_pdf(shared_html)
             pdf_name = report_filename(result)
             st.download_button(
                 "Download your personalised PDF",
@@ -4159,16 +4156,9 @@ def _owner_report_output(order: dict) -> dict:
         monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
         if not monthly_story.get("voice_complete"):
             raise RuntimeError("Paid Monthly story was not completed; owner export withheld.")
-        from monthly_report_pdf_home_v3 import build_monthly_homepage_pdf, build_monthly_homepage_html
-        pdf_bytes = build_monthly_homepage_pdf(
-            result, main_focus=main_focus,
-            personal_question=personal_question, order_reference=order_reference,
-            story=monthly_story,
-        )
-        print_html = build_monthly_homepage_html(
-            result, main_focus=main_focus, personal_question=personal_question,
-            order_reference=order_reference, story=monthly_story,
-        )
+        from monthly_shared_view import build_monthly_shared_html, html_to_pdf
+        print_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
+        pdf_bytes = html_to_pdf(print_html)
         return {
             "story": monthly_story,
             "product_code": product_code,
@@ -11581,227 +11571,62 @@ def _paid_monthly_exact_key_date(item, result: dict) -> str:
     return fallback
 
 
-def _render_snapshot_monthly_report(
-    narrative,
-    result: dict,
-    *,
-    order_reference: str = "",
-    prebuilt_story: dict | None = None,
-) -> None:
-    """Paid Monthly: natal baseline, one integrated long-form month, then compact dates/evidence."""
-    st.markdown('<section class="natal-shell paid-monthly-shell">', unsafe_allow_html=True)
-    title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
-    st.markdown(f'<div class="editorial-title">{escape(title)}</div>', unsafe_allow_html=True)
-    label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
-    intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
-    intro_text = label + (f" · {intro}" if intro else "")
-    st.markdown(f'<div class="natal-intro">{escape(intro_text)}</div>', unsafe_allow_html=True)
-
-    paid_snapshot = _snapshot_from_encoded_natal_profile(
+def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str = "") -> dict:
+    """One customer-visible Monthly HTML, reused verbatim for the page and exports."""
+    from monthly_shared_view import build_monthly_shared_html
+    snap = _snapshot_from_encoded_natal_profile(
         str(result.get("natal_profile") or ""),
         timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
     )
-    if paid_snapshot is not None:
-        _render_snapshot_natal_core(
-            paid_snapshot,
-            precision_note=str(result.get("natal_precision") or ""),
-            show_evidence=False,
-            use_live_voice=False,
-            use_live_signature_moves=False,
+    events = _monthly_canonical_events(narrative, result)
+    natal_svg = natal_wheel_svg(snap, size=620) if snap is not None else ""
+    activation_svg = _monthly_activation_wheel_svg(result, events, "whole", size=620) if snap is not None and events else ""
+    raw_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
+    date_rows = []
+    for item in raw_dates:
+        date_rows.append((
+            _paid_monthly_exact_key_date(item, result),
+            str(getattr(item, "evidence", "") or getattr(item, "consequence", "") or "Sky event"),
+        ))
+    birthday = str(result.get("birthday_date") or "")[:10]
+    if birthday:
+        date_rows.append((human_date(birthday), "Birthday"))
+    personal = []
+    for row in monthly_overlay_rows(result):
+        personal.append((str(row.get("date") or ""), str(row.get("contact") or "")))
+    evidence = []
+    for item in list(result.get("major_sky_registry") or [])[:12]:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("display_label") or item.get("technical_label") or item.get("source_title") or "")
+        if label:
+            evidence.append(f"{human_date(str(item.get('event_date') or ''))} · {label}")
+    title = str(getattr(narrative, "hook_headline", "") or getattr(narrative, "headline", "") or "Your Personal Monthly")
+    label = str(getattr(narrative, "label", "") or result.get("label") or "This month")
+    intro = str(getattr(narrative, "central_storyline", "") or getattr(narrative, "subtitle", "") or "")
+    return {"title": title, "label": label, "intro": intro,
+            "paragraphs": list(story.get("paragraphs") or []),
+            "natal_svg": natal_svg, "activation_svg": activation_svg,
+            "contacts": personal, "key_dates": date_rows, "evidence": evidence,
+            "reference": reference}
+
+
+def _render_snapshot_monthly_report(narrative, result: dict, *, order_reference: str = "", prebuilt_story: dict | None = None) -> None:
+    """The paid Monthly view renders the exact document used by its PDF and HTML."""
+    story = prebuilt_story
+    if story is None:
+        snap = _snapshot_from_encoded_natal_profile(
+            str(result.get("natal_profile") or ""),
+            timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
         )
+        story = _paid_monthly_longform(narrative, result, snap)
+    if not story.get("voice_complete"):
+        st.error("Luna could not complete this Monthly report. Please try again.")
+        return
+    from monthly_shared_view import build_monthly_shared_html
+    shared = _monthly_shared_assets(narrative, result, story, order_reference)
+    st.markdown(build_monthly_shared_html(**shared, full_document=False), unsafe_allow_html=True)
 
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    st.markdown("## Read the month")
-    with st.spinner("Luna is weaving the calculated month around your natal chart…"):
-        longform = prebuilt_story if prebuilt_story is not None else _paid_monthly_longform(narrative, result, paid_snapshot)
-    paid_context = dict(longform.get("context") or {})
-
-    story_paragraphs = [
-        " ".join(str(item or "").split())
-        for item in (longform.get("paragraphs") or [])
-        if str(item or "").strip()
-    ]
-    story_headline = " ".join(str(longform.get("headline") or "").split())
-    if not longform.get("voice_complete", False):
-        st.error("Luna could not complete this report cleanly. Please regenerate it.")
-        if _admin_access_unlocked():
-            diagnostic = _voice_error("paid_monthly_story_weave")
-            if diagnostic and diagnostic != "No provider response was accepted.":
-                with st.expander("Owner diagnostic", expanded=False):
-                    st.caption(diagnostic)
-    else:
-        story_body = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in story_paragraphs)
-        if story_headline or story_body:
-            st.markdown(
-                '<div class="natal-signature-reading paid-monthly-longform paid-monthly-article">'
-                + (f'<h3>{escape(story_headline)}</h3>' if story_headline else '')
-                + story_body
-                + '</div>',
-                unsafe_allow_html=True,
-            )
-
-    # Show both chart wheels in the regular paid report, not behind a closed expander.
-    if paid_snapshot is not None:
-        month_events = _monthly_canonical_events(narrative, result)
-        st.markdown("## Your natal activation")
-        left, right = st.columns(2, gap="large")
-        with left:
-            st.markdown("**Natal reference**")
-            st.markdown(natal_wheel_svg(paid_snapshot, size=620), unsafe_allow_html=True)
-        with right:
-            st.markdown("**Monthly activation**")
-            if month_events:
-                st.markdown(_monthly_activation_wheel_svg(result, month_events, "whole", size=620), unsafe_allow_html=True)
-            else:
-                st.caption("No calculated monthly activation events available for this chart.")
-    # Read-only extra depth from the already-computed Paid Monthly natal overlay.
-    st.markdown("## Explore your month’s astrology")
-    with st.expander("Slower planets · personal transits · natal activation", expanded=False):
-        personal_rows = monthly_overlay_rows(result)
-        st.markdown("#### Slower planets")
-        for planet in SLOW_PLANETS:
-            matches = [item for item in personal_rows if planet.casefold() in item["contact"].casefold()]
-            if matches:
-                st.markdown(f'**{planet}** · ' + "; ".join(row["contact"] for row in matches[:2]))
-            else:
-                st.caption(f'{planet} · No listed personal activation this month')
-        st.markdown("#### Calculated personal contacts")
-        if personal_rows:
-            for item in personal_rows:
-                st.markdown(f'- {item["date"]} · {item["contact"]}')
-        else:
-            st.caption("No personal natal contacts are available in this report's calculated overlay.")
-    # Key Dates are now a compact reference index only. The full interpretation
-    # already appears in Read the month and is not repeated here.
-    key_dates = list(getattr(narrative, "key_dates", ()) or ())[:6]
-    birthday_date_value = str(result.get("birthday_date") or "")[:10]
-    if key_dates or birthday_date_value:
-        st.markdown("## Key dates")
-        st.caption("Quick reference only — the interpretation is already in Read the month.")
-
-        key_rows: list[tuple[str, str, str]] = []
-        for item in key_dates:
-            date_label = _paid_monthly_exact_key_date(item, result)
-            evidence = " ".join(str(getattr(item, "evidence", "") or "").split())
-            if evidence.casefold() in {"", "transition", "convergence"}:
-                consequence = " ".join(str(getattr(item, "consequence", "") or "").split())
-                first_sentence = re.split(r"(?<=[.!?])\s+", consequence, maxsplit=1)[0].strip()
-                words = first_sentence.split()
-                evidence = " ".join(words[:22]).rstrip(",;:") + ("…" if len(words) > 22 else "")
-            match = re.search(
-                r"\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b",
-                date_label,
-                flags=re.I,
-            )
-            sort_key = "9999-12-31"
-            if match:
-                try:
-                    sort_key = datetime.strptime(
-                        f"{match.group(1)} {match.group(2)} {match.group(3)}",
-                        "%d %B %Y",
-                    ).date().isoformat()
-                except ValueError:
-                    pass
-            key_rows.append((sort_key, date_label, evidence))
-
-        if birthday_date_value:
-            birthday_label = "Birthday"
-            overlay = dict(result.get("natal_overlay") or {})
-            for activation in list(overlay.get("activations") or []):
-                if not isinstance(activation, dict):
-                    continue
-                if str(activation.get("date") or "")[:10] != birthday_date_value:
-                    continue
-                signal = " ".join(str(activation.get("signal") or "").split())
-                if (
-                    "transit sun" in signal.casefold()
-                    and "natal sun" in signal.casefold()
-                    and "conjunction" in signal.casefold()
-                ):
-                    birthday_label = "Birthday · Sun conjunct natal Sun"
-                    break
-            key_rows.append((
-                birthday_date_value,
-                human_date(birthday_date_value),
-                birthday_label,
-            ))
-
-        for _sort_key, date_label, evidence in sorted(key_rows, key=lambda row: (row[0], row[2])):
-            st.markdown(
-                '<div class="natal-signature-reading paid-key-date">'
-                f'<div class="natal-evidence">{escape(date_label)}</div>'
-                f'<p>{escape(evidence)}</p>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
-
-    # No second/bottom Your Move. Strategic choices belong inside the long-form
-    # interpretation rather than appearing again as generic bullets.
-    overlay = dict(result.get("natal_overlay") or {})
-    activations = list(overlay.get("activations") or [])
-    with _luna_evidence_panel("Why Luna sees this · chart evidence"):
-        paid_facts = paid_context or _paid_monthly_voice_facts(narrative, result, paid_snapshot)
-        strengths = list((paid_facts.get("natal_player") or {}).get("strengths") or [])
-        if strengths:
-            st.markdown("**Natal strengths used in the interpretation**")
-            for item in strengths[:8]:
-                st.markdown(f"- {item.get('evidence', '')} · {item.get('title', '')}")
-        if activations:
-            st.markdown("**Personal natal contacts**")
-            for item in activations:
-                label_bits = [
-                    str(item.get("date_label") or item.get("date") or ""),
-                    str(item.get("signal") or ""),
-                ]
-                st.markdown("- " + " · ".join(bit for bit in label_bits if bit))
-        registry = list(result.get("major_sky_registry") or [])
-        if registry:
-            st.markdown("**Authoritative monthly sky**")
-            for item in registry:
-                if not isinstance(item, dict):
-                    continue
-                label_text = item.get("display_label") or item.get("technical_label") or item.get("source_title") or "Sky event"
-                _registry_date = _paid_monthly_event_date_from_ephemeris(
-                    label_text,
-                    item.get("event_date"),
-                    str(result.get("timezone_name") or DEFAULT_TIMEZONE),
-                )
-                st.markdown(f"- {human_date(_registry_date)} · {label_text}")
-        transitions = list(result.get("major_transitions") or [])
-        if transitions:
-            st.markdown("**Major monthly transitions**")
-            for item in transitions:
-                _transition_label = item.get("title", "Transition")
-                _transition_date = _paid_monthly_event_date_from_ephemeris(
-                    _transition_label,
-                    item.get("event_date"),
-                    str(result.get("timezone_name") or DEFAULT_TIMEZONE),
-                )
-                st.markdown(f"- {human_date(_transition_date)} · {_transition_label}")
-        convergences = list(result.get("convergences") or [])
-        if convergences:
-            st.markdown("**Calculated convergence windows**")
-            for item in convergences:
-                if not isinstance(item, dict):
-                    continue
-                start_label = item.get("start_date") or ""
-                end_label = item.get("end_date") or ""
-                title_text = item.get("title") or item.get("label") or "Convergence"
-                window = human_date(start_label) if start_label == end_label else f"{human_date(start_label)} – {human_date(end_label)}"
-                st.markdown(f"- {window} · {title_text}")
-        dominant = list(result.get("dominant_houses") or [])
-        if dominant:
-            st.markdown("**Dominant calculated life areas**")
-            for item in dominant:
-                st.markdown(
-                    f"- House {item.get('house')} · {item.get('topic', '')} · weight {float(item.get('weight', 0.0) or 0.0):.1f}"
-                )
-        st.markdown(f"**{LUNA_TRUST_STATEMENT}**")
-        st.caption(LUNA_TRUST_DISCLOSURE)
-
-    if order_reference:
-        st.caption(f"Order reference · {order_reference}")
-    st.markdown('</section>', unsafe_allow_html=True)
 
 def natal_snapshot_page() -> None:
     set_page_metadata(

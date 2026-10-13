@@ -1,21 +1,16 @@
-LUNA CONVERGENCE v3.91 — MONTHLY PAID STORY + PRINT + VISIBLE ACTIVATION
+LUNA CONVERGENCE v3.93 — PAID MONTHLY SHARED VIEW
 
-Apply this entire cumulative overlay to the repository root.
+Apply this cumulative ZIP over the repository, preserving folder paths.
+Paid Monthly screen, downloaded HTML and PDF now use monthly_shared_view.py.
+The legacy monthly_report_pdf_home_v3.py remains packaged for backwards compatibility but is not used by these paid delivery routes.
+Year Ahead generation and layouts have not been changed.
 
-Paid Monthly only:
-- Generates the existing one-call paid monthly story once per report rendering.
-- Shares that one validated story between on-screen Read the month, downloadable PDF, and print-ready HTML.
-- Withholds incomplete PDF and email if the paid story is incomplete.
-- Shows the two natal wheels directly in the paid on-screen report, outside the expandable chart evidence.
-- PDF and print-ready HTML include a full Read the month chapter.
-- Prints physical A4 page numbers via CSS page counter rather than incorrect logical section numbering.
-- Avoids silent ReportLab fallback that would discard paid interpretation.
+The LLM-written Monthly narrative is generated once and reused. No separate generation is made for printing.
+Offline A4 proof: Luna_v393_Monthly_Same_View_Proof.pdf (distributed separately).
+Validation: test_monthly_unified_v393.py; python -m pytest -q test_monthly_unified_v393.py
 
-Does not alter natal calculations, Monthly one-call prompt or Year Ahead orchestration.
-No live Groq calls or Stripe payments were made during testing.
-
-Tests: python -m pytest -q test_monthly_shared_print_v391.py
-
-Known production limitations: Full browser/Streamlit and external Groq production calls not verified. All HTML-to-PDF generation requires WeasyPrint or a supported headless browser. PDF previews generated with synthetic offline story content are layout proofs only.
-
-V3.92: Paid Monthly only: removes double story title; modest print typography; compact evidence cards; corrects explicit false Libra Sun element/modal claims; cached source story kept; no extra LLM calls.
+KNOWN LIMITATIONS:
+- This does not retrospectively fix potentially incorrect dates or astrological claims already stored in an LLM story.
+- On-screen styling is now defined by the unified HTML/CSS rather than legacy Streamlit components.
+- Live Streamlit Cloud appearance and live Groq generation have not been verified.
+- On-demand PDF relies on WeasyPrint and host OS libraries.
