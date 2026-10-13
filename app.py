@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.91"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Restore + A4 Print"
+APP_VERSION = "v3.95"
+BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Failure Diagnostics"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -3601,7 +3601,7 @@ def payment_success_page() -> None:
             )
             monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
             if not monthly_story.get("voice_complete"):
-                raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld.")
+                raise RuntimeError("Paid Monthly story was not completed; PDF and delivery were withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
             from monthly_shared_view import build_monthly_shared_html, html_to_pdf
             shared_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
             pdf_bytes = html_to_pdf(shared_html)
@@ -4155,7 +4155,7 @@ def _owner_report_output(order: dict) -> dict:
         )
         monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
         if not monthly_story.get("voice_complete"):
-            raise RuntimeError("Paid Monthly story was not completed; owner export withheld.")
+            raise RuntimeError("Paid Monthly story was not completed; owner export withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
         from monthly_shared_view import build_monthly_shared_html, html_to_pdf
         print_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
         pdf_bytes = html_to_pdf(print_html)
