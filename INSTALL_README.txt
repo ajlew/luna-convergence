@@ -114,3 +114,13 @@ v3.87 — PAID PROVIDER HTTP DIAGNOSTICS
 - Actual quota, billing, credential, and model permissions must be resolved in the provider console.
 - A secondary provider is only active when all three secondary secrets are configured.
 - No paid report text is synthesized when all providers fail.
+
+v3.88 — GROQ RATE-AWARE PAID GENERATION (single-provider operation)
+- Groq HTTP 429 honors Retry-After (seconds/date), rate-limit reset or parsed provider wait; if absent, defaults to 60 seconds. Total retries are bounded to 180 seconds per section.
+- Conservative in-process pacing reserves approximately 7,200 of 8,000 observed TPM rather than firing segmented requests immediately.
+- Each completed paid voice section is checkpointed by content hash in local SQLite at /tmp/luna_paid_voice_checkpoints.sqlite3 (override LUNA_VOICE_CHECKPOINT_DB).
+- The SQLite checkpoint is process-host local and TEMPORARY on Streamlit Cloud: it does not survive container recreation, and it is NOT a durable cross-instance paid-order queue. Persisted order recovery requires an external database and worker.
+- Secondary provider placeholders are ignored; configure only a real provider. Free Groq remains usable without an additional LLM.
+- In-process pacing does not coordinate across multiple Streamlit instances or other apps sharing the same Groq organisation, so Groq 429 remains authoritative.
+- A single section can wait about a minute or longer; the report may take several minutes to complete on an 8k TPM account. Streamlit session timeout is still a deployment risk.
+- Tests: 13 targeted tests passed in full repository overlay; no real Groq live transaction verified.

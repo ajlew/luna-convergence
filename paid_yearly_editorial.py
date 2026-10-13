@@ -1104,7 +1104,8 @@ def generate_paid_yearly_editorial(
         estimated=math.ceil((_estimate_tokens(prompt)+_estimate_tokens(SYSTEM_PROMPT)+100)*1.15)
         if estimated+output_limit>7800: raise RuntimeError(f'Year Ahead {job_name} packet over token budget')
         result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
-             primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout)
+             primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
+             checkpoint_id="yearly:"+job_name+":"+",".join(requested))
         found=set(_MARKER_RE.findall(_clean_text(result)))
         if not set(m.strip('<>') for m in requested).issubset(found):
             raise RuntimeError(f'Year Ahead {job_name} incomplete markers')

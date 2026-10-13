@@ -751,3 +751,19 @@ Do not collapse every provider failure into `HTTPError`.
 - `finish_reason=length`: the specific section exceeds its response allowance; do not publish truncated prose.
 
 **Architecture note:** This release improves diagnostics and bounded transport recovery. It does **not** implement a durable queue, external database or confirmed live second-provider access. Paid customer orders must eventually be handed to an idempotent job queue to survive rate-limit windows longer than a web request.
+
+---
+
+# v3.88 — Single-Groq Token-Aware Production Rules
+
+The historic one-call voice rule in sections 2, 17 and 20 is superseded: segmented, bounded sections are required for complete paid prose. The first active provider remains Groq. Secondary-provider development is deferred.
+
+**Runtime steps:** deterministic evidence → section jobs → provider-aware pacing → retry after 429 respecting Retry-After/reset information → checkpoint successful sections → validate calculated evidence → assemble HTML/PDF.
+
+**Observed limit:** 8,000 Groq tokens per minute. Conservative local pacing targets 7,200 estimated tokens/minute. This is an approximate reservation, not the authoritative provider counter. HTTP 429 can still occur.
+
+**Wait duration:** honor provider's seconds/reset information; when absent allow 60 seconds initially. Cap accumulated waiting at 180 seconds per section and fail clearly after that limit rather than looping forever. A Year Ahead with multiple segments can take several minutes on a free plan.
+
+**State:** v3.88 local SQLite checkpoints are best-effort and temporary on Streamlit Cloud. They survive ordinary reruns on the same instance but not host/container replacement. Production acceptance requires durable external order records, persistent section checkpoints, deduplicated job claims across instances, an asynchronous worker and fulfillment recovery. Do not claim this capability is implemented in v3.88.
+
+**Acceptance:** 429→wait→retry, retry limit, saved section reuse, malformed placeholder ignored, model truncation rejected, no unsupported date fabrication. Live tests still required.

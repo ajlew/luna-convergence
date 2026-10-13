@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.86"
-BUILD_LABEL = f"Luna {APP_VERSION} — Segmented Paid Voice"
+APP_VERSION = "v3.88"
+BUILD_LABEL = f"Luna {APP_VERSION} — Token-Aware Groq"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -11230,7 +11230,8 @@ def _cached_paid_monthly_weave(facts_json: str, base_url: str, model: str, _api_
         buffered, _=_paid_monthly_preflight_tokens(prompt,1850)
         if buffered+1850>6200: raise RuntimeError('Monthly act input exceeds safe token budget')
         out=completion([{'role':'system','content':'Only use the supplied calculated evidence. Never invent dates or transits.'},
-                        {'role':'user','content':prompt}],primary=primary,secondary=alternate,max_output=1850,timeout=110)
+                        {'role':'user','content':prompt}],primary=primary,secondary=alternate,max_output=1850,timeout=110,
+                       checkpoint_id=f"monthly:act:{index+1}")
         out=_paid_monthly_clean_plain_story(out)
         if len(out.split())<170: raise RuntimeError(f'Paid Monthly act {index+1} is incomplete')
         # ISO dates must come from the relevant calculated evidence.
