@@ -532,17 +532,28 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str, s
 """
 
     # Page 7 - evidence cards use homepage's "Why this is different" layout.
-    snapshot_cards = "".join(
-        f'<article class="card evidence-card"><div class="mono-label">{_safe(label)}</div><h3>{_safe(value)}</h3></article>'
-        for label, value in narrative.snapshot_rows
-    )
+    evidence_rows = list(narrative.snapshot_rows)
+    def _evidence_cards(rows):
+        return "".join(
+            f'<article class="card evidence-card"><div class="mono-label">{_safe(label)}</div><h3>{_safe(value)}</h3></article>'
+            for label, value in rows
+        )
+    # Deliberately paginate evidence: never let a CSS grid fragment on a sheet
+    # without a repeated heading. Two independently headed editorial pages.
+    first_rows = evidence_rows[:11]
+    remaining_rows = evidence_rows[11:]
     page7_body = f"""
 <div class="eyebrow">Explainable evidence / story first</div>
 <h1 class="section-title">Why this month feels different</h1>
-<p class="hero-subtitle narrow">The story comes first. These cards preserve the calculation without making the customer read a spreadsheet before receiving the meaning.</p>
-<div class="evidence-grid">{snapshot_cards}</div>
-<div class="best-move wide"><span>How to read the score</span><strong>The concentration score measures how strongly one internal astrological pattern dominates the month. It is not the probability that a predicted event will occur.</strong></div>
+<p class="hero-subtitle narrow">These cards preserve the calculation without asking you to read a spreadsheet before receiving the meaning.</p>
+<div class="evidence-grid">{_evidence_cards(first_rows)}</div>
 """
+    page7_continuation = f"""
+<div class="eyebrow">Explainable evidence / continued</div>
+<h1 class="section-title">The month's supporting evidence</h1>
+<div class="evidence-grid">{_evidence_cards(remaining_rows)}</div>
+<div class="best-move wide"><span>How to read the score</span><strong>The concentration score measures how strongly one internal astrological pattern dominates the month. It is not the probability that a predicted event will occur.</strong></div>
+""" if remaining_rows else ""
 
     # Page 8 - technical evidence, using the same typography and thin table system.
     solar = result.get("solar_convergence") or {}
@@ -612,7 +623,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str, s
             story_page = (
                 '<div class="eyebrow">Your personal interpretation / full narrative</div>'
                 '<h1 class="section-title">Read the month</h1>'
-                '<div class="story-full-text"><h2>' + _safe(title) + '</h2>' + body + '</div>'
+                '<div class="story-full-text">' + (('<h2>' + _safe(title) + '</h2>') if title.strip().casefold() != 'read the month' else '') + body + '</div>'
             )
     page_bodies = [
         (page1_body, "homepage-page"),
@@ -630,6 +641,7 @@ def _render_html(result: dict, narrative, order_reference: str, icon_uri: str, s
         (page5_body, ""),
         (page6_body, ""),
         (page7_body, ""),
+        *(([(page7_continuation, "")] if page7_continuation else [])),
         (page8_body, ""),
         (page9_body, ""),
     ])
@@ -679,11 +691,14 @@ body {{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }}
   .page-footer {{ position:relative; left:auto; right:auto; bottom:auto;
                   margin-top:5mm; break-inside:avoid; }}
   .page-footer span:last-child {{ display:none; }}
-  .story-full-text p {{ font-size:10pt;line-height:1.6;margin:0 0 4mm; }}
+  .story-full-text p {{ font-size:9.2pt;line-height:1.43;margin:0 0 2.8mm; orphans:3; widows:3; }}
   .story-full-text {{ columns:1; }}
   .monthly-story-page .section-title {{ margin-bottom:7mm; }}
-  .evidence-grid {{ gap:2mm; margin-top:3mm; }}
-  .evidence-card {{ min-height:0; padding:2.5mm; }}
+  .evidence-grid {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:3mm; margin-top:5mm; }}
+  .evidence-card {{ min-height:0; padding:2mm; }}
+  .evidence-card h3 {{ font-size:11pt; line-height:1.12; margin-top:1mm; overflow-wrap:anywhere; }}
+  .evidence-card .mono-label {{ font-size:4.7pt; }}
+  .evidence-grid + .best-move {{ margin-top:2mm; padding:2mm 0; }}
   thead {{ display:table-header-group; }}
   tr {{ break-inside:avoid-page; }}
   h1, h2, h3 {{ break-after:avoid-page; }}

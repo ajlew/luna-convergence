@@ -11115,6 +11115,7 @@ def _paid_monthly_weave_prompt(facts: dict, *, compact_level: int = 0) -> str:
         "If that same row contains a supplied Transit Sun conjunction natal Sun activation, you may describe the Sun returning to its natal position. "
         "Do not invent a Solar Return time or exact solar-return claim when birth time is unknown.\n"
         "NATAL FACT LOCK: natal.core is the ONLY source for natal sign placements. "
+        "Never assign element/modality by the natal dominant element: Libra is cardinal Air, not fixed Water. "
         "If you mention a natal placement, copy the planet and sign exactly from natal.core. "
         "Do not infer or substitute a sign because it fits the prose. Use natal.strengths as behavioural context, not as permission to invent chart geometry.\n"
         "ASTRONOMY DISCIPLINE: preserve every supplied planet pair, aspect/station state and date exactly. "
@@ -11346,6 +11347,50 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         "quality_note": "",
     }
 
+_LUNA_ZODIAC_FACTS = {
+    "aries": ("cardinal", "Fire"), "taurus": ("fixed", "Earth"),
+    "gemini": ("mutable", "Air"), "cancer": ("cardinal", "Water"),
+    "leo": ("fixed", "Fire"), "virgo": ("mutable", "Earth"),
+    "libra": ("cardinal", "Air"), "scorpio": ("fixed", "Water"),
+    "sagittarius": ("mutable", "Fire"), "capricorn": ("cardinal", "Earth"),
+    "aquarius": ("fixed", "Air"), "pisces": ("mutable", "Water"),
+}
+
+
+def _paid_monthly_correct_sun_sign_attribution(paragraphs: list[str], sign: str) -> list[str]:
+    """Correct only demonstrably false Sun-sign element/modality phrases.
+
+    Do not change chart-dominance statements: natal dominant element and modality
+    can differ from the Sun sign. Preserve narrative, dates and LLM call count.
+    """
+    traits = _LUNA_ZODIAC_FACTS.get(str(sign or '').casefold().strip())
+    if not traits:
+        return list(paragraphs)
+    mode, element = traits
+    fixed = []
+    for paragraph in paragraphs:
+        text = str(paragraph)
+        for modifier in ("cardinal", "fixed", "mutable"):
+            for substance in ("Fire", "Earth", "Air", "Water"):
+                if (modifier, substance) == traits:
+                    continue
+                wrong = re.escape(modifier + ' ' + substance)
+                # Replace only the explicit false claim about the sign's nature.
+                patterns = (
+                    rf'\b{wrong}(?=\s+nature\s*,?\s+rooted\s+in\s+(?:the\s+)?sign\s+of\s+{re.escape(sign)}\b)',
+                    rf'\b{wrong}(?=\s+nature\s+of\s+your\s+{re.escape(sign)}\s+Sun\b)',
+                    rf'\b{wrong}(?=\s+nature\s*,?\s+(?:of\s+)?your\s+{re.escape(sign)}\s+Sun\b)',
+                )
+                for pattern in patterns:
+                    text = re.sub(pattern, f'{mode} {element}', text, flags=re.IGNORECASE)
+        if str(sign).casefold() == "libra":
+            text = re.sub(r"\b([Tt]he) fixed Water nature of your Libra Sun\b", r"\1 cardinal Air nature of your Libra Sun", text)
+            text = re.sub(r"\b(?:Your|your) fixed Water nature\b", "Your cardinal Air nature", text)
+            text = re.sub(r"\b(?:your|Your) fixed nature\b", "your cardinal nature", text)
+        fixed.append(text)
+    return fixed
+
+
 def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
     """Free-Monthly macro arc + Daily detail + one natal subject -> one paid story."""
     context = _paid_monthly_voice_facts(narrative, result, snapshot)
@@ -11429,6 +11474,7 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
         for item in (woven.get("paragraphs") or [])
         if str(item or "").strip()
     ]
+    paragraphs = _paid_monthly_correct_sun_sign_attribution(paragraphs, sign)
     return {
         "headline": " ".join(str(woven.get("headline") or "").split()),
         "paragraphs": paragraphs,

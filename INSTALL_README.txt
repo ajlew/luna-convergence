@@ -17,3 +17,5 @@ No live Groq calls or Stripe payments were made during testing.
 Tests: python -m pytest -q test_monthly_shared_print_v391.py
 
 Known production limitations: Full browser/Streamlit and external Groq production calls not verified. All HTML-to-PDF generation requires WeasyPrint or a supported headless browser. PDF previews generated with synthetic offline story content are layout proofs only.
+
+V3.92: Paid Monthly only: removes double story title; modest print typography; compact evidence cards; corrects explicit false Libra Sun element/modal claims; cached source story kept; no extra LLM calls.
