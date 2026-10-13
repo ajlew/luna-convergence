@@ -10059,9 +10059,9 @@ def _monthly_natal_pattern(snapshot) -> str:
         else:
             dynamics = f"The connection brings {role1} and {role2} into the same decisions."
         lines.append(
-            f"The closest calculated natal aspect is {p1} {relation} {p2} "
+            f"The closest calculated natal aspect by orb is {p1} {relation} {p2} "
             f"({float(first.orb):.1f}° orb). {dynamics} "
-            "This is one strand of your chart, not your entire identity."
+            "Exactness alone is not the same as the strongest recurring pattern."
         )
     element = str(getattr(snapshot, "dominant_element", "") or "").strip()
     modality = str(getattr(snapshot, "dominant_modality", "") or "").strip()
@@ -11708,8 +11708,25 @@ def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str 
     # Restore the original v3.92 deterministic natal foundation and signature
     # strengths; render it in the same document on screen, HTML and PDF.
     natal_pattern = ""
+    natal_signature = []
+    natal_recurring = {}
     natal_strengths = []
     if snap is not None:
+        # The existing natal snapshot is the source of all six signature values.
+        pos = {p.planet: p for p in (getattr(snap, "positions", ()) or ())}
+        sun, moon = pos.get("Sun"), pos.get("Moon")
+        moon_label = moon.sign if moon else "Not calculated"
+        if not bool(getattr(snap, "birth_time_known", False)) and len(getattr(snap, "moon_uncertain", ()) or ()) > 1:
+            moon_label = " / ".join(getattr(snap, "moon_uncertain", ()))
+        natal_signature = [
+            ("Sun", sun.sign if sun else "Not calculated"),
+            ("Moon", moon_label),
+            ("Rising", snap.ascendant.sign if getattr(snap, "ascendant", None) and getattr(snap, "birth_time_known", False) else "Not calculated"),
+            ("Dominant element", str(getattr(snap, "dominant_element", "") or "Not calculated")),
+            ("Dominant mode", str(getattr(snap, "dominant_modality", "") or "Not calculated")),
+            ("Midheaven", snap.midheaven.sign if getattr(snap, "midheaven", None) and getattr(snap, "birth_time_known", False) else "Not calculated"),
+        ]
+        natal_recurring = _snapshot_natal_fallback_story(snap)
         natal_pattern = _monthly_natal_pattern(snap)
         signatures = list(getattr(snap, "signatures", ()) or ())
         if not signatures:
@@ -11725,7 +11742,8 @@ def _monthly_shared_assets(narrative, result: dict, story: dict, reference: str 
                 "remember": remember.strip(),
             })
     return {"title": title, "label": label, "intro": intro,
-            "natal_pattern": natal_pattern, "natal_strengths": natal_strengths,
+            "natal_pattern": natal_pattern, "natal_signature": natal_signature,
+            "natal_recurring": natal_recurring, "natal_strengths": natal_strengths,
             "paragraphs": list(story.get("paragraphs") or []),
             "natal_svg": natal_svg, "activation_svg": activation_svg,
             "contacts": personal, "key_dates": date_rows, "evidence": evidence,

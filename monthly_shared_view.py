@@ -17,6 +17,13 @@ CSS = r'''
 .luna-monthly .topline{border-bottom:1px solid #111;padding-bottom:12px;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
 .luna-monthly .deck{font-size:17px}.luna-monthly .block{padding-top:12px;border-top:1px solid #cfcfcf;margin-top:22px}
 .luna-monthly .wheels{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+ .luna-monthly .natal-signature{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 26px}
+.luna-monthly .natal-signature div{border-top:1px solid #ddd;padding-top:8px;min-width:0}
+.luna-monthly .natal-signature span{display:block;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#666}
+.luna-monthly .natal-signature strong{display:block;font:500 22px 'Bodoni Moda',Georgia,serif;margin-top:5px;overflow-wrap:anywhere}
+.luna-monthly .recurring-headline{font:500 21px 'Bodoni Moda',Georgia,serif;margin:4px 0 10px}
+.luna-monthly .recurring-kicker{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#666;text-transform:uppercase}
+.luna-monthly .natal-remember{border-left:2px solid #222;padding:8px 13px;margin:12px 0 16px;font-size:13px}
 .luna-monthly .natal-whole-chart{max-width:450px;margin:20px auto 6px;break-inside:avoid-page}
 .luna-monthly .natal-whole-chart svg{display:block;width:100%;height:auto;max-height:420px}
 .luna-monthly .wheels svg{display:block;max-width:100%;height:auto;max-height:300px}
@@ -40,17 +47,33 @@ def _clean_paragraph(text):
     # Do not silently rewrite speculative astrology claims. Report validation belongs upstream.
     return escape(text)
 
-def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', activation_svg='', contacts=(), key_dates=(), evidence=(), reference='', natal_pattern='', natal_strengths=(), full_document=True):
+def build_monthly_shared_html(*, title, label, intro, paragraphs, natal_svg='', activation_svg='', contacts=(), key_dates=(), evidence=(), reference='', natal_pattern='', natal_signature=(), natal_recurring=None, natal_strengths=(), full_document=True):
     if not paragraphs:
         raise ValueError('Paid Monthly export requires a completed story.')
     story = ''.join(f'<p>{_clean_paragraph(p)}</p>' for p in paragraphs if str(p).strip())
     if not story:
         raise ValueError('Paid Monthly export requires nonempty story paragraphs.')
     natal_html = ''
-    if natal_pattern or natal_strengths:
+    if natal_pattern or natal_signature or natal_recurring or natal_strengths:
         natal_html = '<section class="block natal-baseline"><h2>Your natal foundation</h2>'
-        if natal_pattern:
-            natal_html += f'<h3>Read the pattern</h3><p>{_clean_paragraph(natal_pattern)}</p>'
+        if natal_signature:
+            natal_html += '<h2>Your natal signature</h2><div class="natal-signature">'
+            for label, value in natal_signature:
+                natal_html += f'<div><span>{escape(str(label))}</span><strong>{escape(str(value))}</strong></div>'
+            natal_html += '</div>'
+        if natal_recurring or natal_pattern:
+            natal_html += '<h2>Read the pattern</h2>'
+            if natal_recurring:
+                rec = natal_recurring
+                natal_html += '<span class="recurring-kicker">Luna reads the whole chart</span>'
+                if rec.get('headline'):
+                    natal_html += f'<h3 class="recurring-headline">{_clean_paragraph(rec["headline"])}</h3>'
+                if rec.get('opening'):
+                    natal_html += f'<p>{_clean_paragraph(rec["opening"])}</p>'
+            if natal_pattern:
+                natal_html += f'<p>{_clean_paragraph(natal_pattern)}</p>'
+            if natal_recurring and natal_recurring.get('affirmation'):
+                natal_html += f'<div class="natal-remember"><b>Remember</b><p>{_clean_paragraph(natal_recurring["affirmation"])}</p></div>'
         if natal_strengths:
             natal_html += '<h2>Your strengths</h2><p class="muted">The strongest capacities in your natal pattern when you use them deliberately.</p>'
             for item in natal_strengths[:6]:
