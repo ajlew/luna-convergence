@@ -157,7 +157,53 @@ def _active_transits(game: dict, start: object, end: object) -> list[dict]:
     return selected
 
 
-def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577") -> str:
+def _sample_transit_orb(transit: dict, natal_longitudes: dict[str, float], day: date) -> float | None:
+    """Absolute aspect orb, calculated from Swiss Ephemeris; no synthetic peaks."""
+    import re
+    try:
+        import swisseph as swe
+        label = str(transit.get('technical_label') or '')
+        name = label.split(' ', 1)[0].casefold()
+        bodies = {'sun': swe.SUN, 'moon': swe.MOON, 'mercury': swe.MERCURY,
+                  'venus': swe.VENUS, 'mars': swe.MARS, 'jupiter': swe.JUPITER,
+                  'saturn': swe.SATURN, 'uranus': swe.URANUS,
+                  'neptune': swe.NEPTUNE, 'pluto': swe.PLUTO}
+        match = re.search(r'\b(conjunction|sextile|square|trine|opposition)\b', label, re.I)
+        if not match or name not in bodies:
+            return None
+        angles = {'conjunction':0., 'sextile':60., 'square':90.,
+                  'trine':120., 'opposition':180.}
+        target = str(transit.get('natal_target') or '').casefold().strip()
+        if not target:
+            m = re.search(r'\bnatal\s+(\w+)', label, re.I)
+            target = m.group(1).casefold() if m else ''
+        if target not in natal_longitudes:
+            return None
+        jd = swe.julday(day.year, day.month, day.day, 12.)
+        actual = float(swe.calc_ut(jd, bodies[name], swe.FLG_SWIEPH)[0][0]) % 360
+        delta = abs((actual - natal_longitudes[target] + 180) % 360 - 180)
+        return abs(delta - angles[match.group(1).casefold()])
+    except (ValueError, TypeError, KeyError, ImportError):
+        return None
+    except Exception:
+        # An ephemeris failure must never be rendered as invented precision.
+        return None
+
+
+def _natal_longitudes(snapshot: Any) -> dict[str, float]:
+    values = {}
+    for p in getattr(snapshot, 'positions', ()) or ():
+        try: values[str(p.planet).casefold()] = float(p.longitude) % 360
+        except (AttributeError, TypeError, ValueError): pass
+    for name in ('ascendant', 'midheaven'):
+        point = getattr(snapshot, name, None)
+        if point is not None:
+            try: values[name] = float(point.longitude) % 360
+            except (AttributeError, TypeError, ValueError): pass
+    return values
+
+
+def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577", natal_longitudes: dict[str, float] | None = None) -> str:
     """Show only contacts overlapping this rolling month; never infer dates."""
     a = _iso_date(round_.get("start")); b = _iso_date(round_.get("end"))
     if a is None or b is None:
@@ -165,6 +211,7 @@ def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577") -> st
     rows = _active_transits(game, a, b)
     if not rows:
         return '<p class="quiet">No major selected personal transit is active in this chapter.</p>'
+    from datetime import timedelta
     width = 760; chart_left = 285; chart_width = 455
     span = max(1, (b-a).days)
     height = 58 + 45*len(rows)
@@ -180,16 +227,43 @@ def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577") -> st
         right = chart_left+chart_width*min(span,(min(b,t_end)-a).days)/span
         svg.append(f'<text x="0" y="{y+5}" style="font-size:10px">{e(name[:46])}</text>')
         svg.append(f'<rect x="{chart_left}" y="{y-7}" width="{chart_width}" height="14" rx="5" fill="#f0efed"/>')
-        svg.append(f'<rect x="{left:.1f}" y="{y-3}" width="{max(3,right-left):.1f}" height="6" rx="3" fill="{e(color)}"/>')
+        # Sample the *actual* angular orb each day. Draw only inside the verified
+        # transit window; exact-hit markers remain the packet's certified passes.
+        sample_days = [a + timedelta(days=k) for k in range(span + 1)]
+        orbs = [_sample_transit_orb(transit, natal_longitudes or {}, day) for day in sample_days]
+        valid = [(day, orb) for day, orb in zip(sample_days, orbs)
+                 if orb is not None and t_start <= day <= t_end]
+        if valid:
+            max_orb = max(max(orb for _, orb in valid), 0.000001)
+            # Relative closeness, not a claim of absolute strength between aspects.
+            points = [(chart_left+chart_width*(day-a).days/span,
+                       y+3-20*(1 - orb/max_orb)) for day, orb in valid]
+            if len(points) == 1:
+                x, yy = points[0]
+                svg.append(f'<circle cx="{x:.2f}" cy="{yy:.2f}" r="2" fill="{e(color)}"/>')
+            else:
+                svg.append(f'<path class="orb-curve" d="{smooth_wave_path(points)}" '
+                           f'fill="none" stroke="{e(color)}" stroke-width="3" stroke-linecap="round"/>')
+        else:
+            svg.append(f'<rect x="{left:.1f}" y="{y-3}" width="{max(3,right-left):.1f}" height="6" rx="3" fill="{e(color)}"/>')
         for hit in transit.get('passes') or []:
             if not isinstance(hit,dict):continue
             hit_day = _iso_date(hit.get('date'))
             if hit_day is None or not a <= hit_day <= b:continue
             x = chart_left+chart_width*(hit_day-a).days/span
             label=str(hit.get('pass_label') or 'Exact')
-            svg.append(f'<circle cx="{x:.1f}" cy="{y}" r="5" fill="{e(color)}" stroke="white" stroke-width="1.5"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
+            near = _sample_transit_orb(transit, natal_longitudes or {}, hit_day)
+            on_curve = [orb for day, orb in valid] if valid else []
+            peak_orb = max(max(on_curve), 0.000001) if on_curve else 0
+            dot_y = y+3-20*(1-near/peak_orb) if (near is not None and on_curve) else y
+            svg.append(f'<circle cx="{x:.1f}" cy="{dot_y:.1f}" r="5" fill="{e(color)}" stroke="white" stroke-width="1.5"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
     svg.append('</svg>')
     return ''.join(svg)
+
+
+# Print-safe SVG contours for the twelve standard zodiac glyphs.
+# These are graphical assets, not calculated/customer-specific data.
+_ZODIAC_VECTOR = {'♈': ('M854 0Q854 600 711.0 986.5Q568 1373 399 1373Q270 1373 253.0 1274.5Q236 1176 236 1142Q236 1014 320 886H186Q93 1018 93 1179Q93 1311 174.5 1404.5Q256 1498 402 1498Q774 1498 905 725Q913 676 918 636Q922 676 930 725Q1062 1498 1433 1498Q1580 1498 1661.0 1404.5Q1742 1311 1742 1179Q1742 1018 1649 886H1515Q1600 1014 1600 1143Q1600 1177 1583.0 1275.0Q1566 1373 1436 1373Q1268 1373 1125.0 986.5Q982 600 982 0Z', (93, 0, 1742, 1498)), '♉': ('M917 860Q770 860 667.0 756.5Q564 653 564.0 506.0Q564 359 667.0 256.0Q770 153 917.0 153.0Q1064 153 1167.5 256.0Q1271 359 1271.0 506.0Q1271 653 1168.5 756.5Q1066 860 917 860ZM917 1010Q1048 1015 1124 1076Q1210 1142 1258.5 1232.0Q1307 1322 1387.5 1409.0Q1468 1496 1653 1496V1388Q1530 1388 1446.5 1232.0Q1363 1076 1232 968Q1211 949 1188 934Q1234 904 1277 863Q1423 714 1423 504Q1423 295 1275.5 147.5Q1128 0 917 0Q709 0 561.0 147.5Q413 295 413 504Q413 714 561 863Q602 905 650 935Q626 949 605 968Q476 1076 390.5 1232.0Q305 1388 183 1388V1496Q368 1496 461.0 1409.0Q554 1322 590.0 1232.0Q626 1142 711 1076Q788 1015 917 1010Z', (183, 0, 1653, 1496)), '♊': ('M530 1276Q362 1298 192 1350V1498Q539 1408 919.0 1408.0Q1299 1408 1642 1498V1347Q1466 1300 1300 1276V222Q1466 199 1642 152V0Q1299 91 919.0 91.0Q539 91 192 0V148Q362 201 530 222ZM682 234Q798 247 915 247Q915 247 1148 234V1265Q1032 1252 915 1252Q915 1252 682 1265Z', (192, 0, 1642, 1498)), '♋': ('M1251 241Q1345 241 1411.5 307.5Q1478 374 1478.0 469.0Q1478 564 1412.0 630.0Q1346 696 1251.0 696.0Q1156 696 1090.0 630.0Q1024 564 1024.0 469.0Q1024 374 1090.0 307.5Q1156 241 1251 241ZM1060 64Q748 66 566.0 86.0Q384 106 231 149V273Q484 189 666.0 178.0Q848 167 907 167Q1037 167 1029 193Q898 301 898 468Q898 615 1000.5 718.5Q1103 822 1250 822Q1399 822 1502.0 718.5Q1605 615 1605.0 468.0Q1605 321 1501 218Q1428 141 1305.0 103.0Q1182 65 1060 64ZM585 759Q679 759 745.5 825.0Q812 891 812.0 986.0Q812 1081 745.5 1147.0Q679 1213 585.0 1213.0Q491 1213 424.0 1147.0Q357 1081 357.0 986.0Q357 891 423.5 825.0Q490 759 585 759ZM775 1391Q1088 1389 1270.0 1368.5Q1452 1348 1605 1305V1182Q1352 1266 1171.0 1276.5Q990 1287 932 1287Q799 1287 807 1261Q938 1153 938 987Q938 839 835.5 735.5Q733 632 586 632Q437 632 334.0 735.5Q231 839 231 987Q231 1133 335 1236Q408 1313 530.5 1351.5Q653 1390 775 1391Z', (231, 64, 1605.0, 1391)), '♌': ('M660 396Q735 425 760.0 481.5Q785 538 785 577Q785 612 771 647Q742 722 685.5 747.0Q629 772 590 772Q554 772 519 758Q444 728 419.5 672.5Q395 617 395 578Q395 543 409 507Q439 431 494.5 406.5Q550 382 589 382Q624 382 660 396ZM672 1134Q672 1295 783.5 1395.5Q895 1496 1075 1496Q1247 1496 1356.0 1385.5Q1465 1275 1465 1099Q1465 912 1320.0 661.0Q1175 410 1175 230Q1179 106 1313 103Q1384 103 1484 191L1549 119Q1422 0 1311 0Q1212 0 1140.0 60.5Q1068 121 1068 232Q1068 431 1211.5 671.5Q1355 912 1355 1106Q1355 1240 1273.0 1322.5Q1191 1405 1059 1405Q932 1405 857.0 1327.5Q782 1250 782 1121Q782 1061 805.0 988.5Q828 916 853 854Q890 756 894.5 692.0Q899 628 899 611Q899 524 867 456Q816 341 700 296Q644 274 588 274Q528 274 441.5 311.5Q355 349 308 469Q286 523 286 579Q286 639 313 699Q364 813 481 859Q536 880 591 880Q667 880 741 839Q749 839 749 852Q749 878 710.5 970.0Q672 1062 672 1134Z', (286, 0, 1549, 1496)), '♍': ('M680 1496Q743 1496 802.5 1397.0Q862 1298 862 1170Q902 1289 1001.0 1392.5Q1100 1496 1175 1496Q1237 1496 1278.0 1412.5Q1319 1329 1319 1110V908Q1367 1033 1432.5 1092.5Q1498 1152 1566 1152Q1626 1152 1676.0 1036.0Q1726 920 1726 647Q1726 239 1345 -82Q1346 -176 1492 -369H1324Q1278 -328 1204 -167Q1037 -268 862 -275V-159Q1053 -131 1177 -44L1168 173V1028Q1168 1046 1168 1063Q1168 1344 1122 1345Q1064 1344 997.5 1235.5Q931 1127 868 927V0H717V922Q717 1243 701.5 1296.0Q686 1349 651 1349Q651 1349 650 1349Q650 1349 649 1349Q608 1349 518.5 1236.0Q429 1123 410 908V0H261V1089Q261 1279 109 1470H251Q369 1391 405 1215Q428 1308 519.5 1402.0Q611 1496 680 1496ZM1319 618V58Q1577 308 1601 646Q1601 839 1578.5 908.5Q1556 978 1528 978Q1528 978 1524 978Q1494 978 1422.5 875.0Q1351 772 1319 618Z', (109, -369, 1726, 1496)), '♎': ('M171 259H1665V107H171ZM728 506H171V658H525Q458 762 458 893Q458 1078 586.5 1207.5Q715 1337 900 1337Q1086 1337 1215.5 1207.5Q1345 1078 1345 893Q1345 762 1277 658H1665V506H1072V658H1071Q1089 671 1106 688Q1192 773 1192 894Q1192 1016 1107.0 1101.0Q1022 1186 900.0 1186.0Q778 1186 693.0 1101.0Q608 1016 608 894Q608 773 693 688Q709 671 728 658Z', (171, 107, 1665, 1337)), '♏': ('M1280 271Q1280 160 1331.5 97.5Q1383 35 1472 34H1561V152H1565L1768 -21L1565 -196L1561 -192V-74H1472Q1269 -74 1201 46Q1157 120 1149 238L1128 1028Q1128 1046 1128 1063Q1128 1344 1082 1345Q1024 1344 957.5 1235.5Q891 1127 828 927V0H677V922Q677 1243 661.5 1296.0Q646 1349 611 1349Q611 1349 610 1349Q610 1349 609 1349Q568 1349 478.5 1236.0Q389 1123 370 908V0H221V1089Q221 1279 69 1470H211Q329 1391 365 1215Q388 1308 479.5 1402.0Q571 1496 640 1496Q703 1496 762.5 1397.0Q822 1298 822 1170Q862 1289 961.0 1392.5Q1060 1496 1135 1496Q1197 1496 1238.0 1412.5Q1279 1329 1279 1110V908L1280 272Z', (69, -196, 1768, 1496)), '♐': ('M1514 728V1236L809 531L1126 214L1018 106L701 423L277 -1L276 0L170 106L169 107L593 531L276 848L277 849L383 955L384 956L701 639L1406 1344H898V1496H1666V728Z', (169, -1, 1666, 1496)), '♑': ('M851 1496Q958 1496 998.5 1063.0Q1039 630 1064 634Q1173 855 1368 855Q1489 855 1565.5 760.0Q1642 665 1642 562Q1642 417 1570.5 331.5Q1499 246 1357 246Q1202 246 1080 379Q1036 219 973.0 111.5Q910 4 772 0H604V118L758 119Q880 123 985 499Q935 515 903.0 909.5Q871 1304 813 1304Q777 1304 700.0 1070.5Q623 837 623 642Q623 627 623 613L465 611Q465 864 394.5 1112.0Q324 1360 192 1366V1463Q339 1463 419.5 1352.0Q500 1241 540 966Q586 1167 631 1255Q672 1346 733.0 1421.0Q794 1496 851 1496ZM1137 510Q1230 365 1360 365Q1521 365 1530 562Q1523 719 1364 738Q1212 738 1137 510Z', (192, 0, 1642, 1496)), '♒': ('M176 413Q501 684 616 684Q661 684 674 644Q698 573 754.0 573.0Q810 573 896.0 644.0Q982 715 1038 715Q1092 715 1116 644Q1142 573 1199.0 573.0Q1256 573 1342 644Q1385 680 1426 680Q1550 680 1659 364L1565 313Q1502 498 1407 498Q1356 498 1296 445Q1210 369 1154.0 369.0Q1098 369 1073 444Q1045 522 986 522Q931 522 848 455Q761 384 706 384Q650 384 625 456Q601 526 547 526Q492 526 363.0 419.5Q234 313 229 313L176 411ZM176 884Q500 1153 616 1153Q660 1153 674 1114Q698 1044 754 1044Q809 1044 895 1114Q982 1186 1037.0 1186.0Q1092 1186 1115 1114Q1142 1044 1198 1044Q1255 1044 1341 1114Q1384 1149 1425 1149Q1550 1149 1659 834L1565 784Q1502 969 1407 969Q1356 969 1296 915Q1209 838 1154 838Q1098 838 1072 914Q1045 992 986 992Q931 992 847 924Q761 853 705 853Q650 853 625 925Q601 997 546.0 997.0Q491 997 362.5 890.5Q234 784 229 784L176 881Z', (176, 313, 1659, 1186.0)), '♓': ('M1038 665 797 662Q765 324 487 3L322 0Q629 351 656 662H360V834H656Q628 1144 321 1496L487 1493Q765 1173 797 834H1039Q1070 1173 1349 1493L1514 1496Q1207 1144 1180 834H1475L1474 662H1178Q1207 351 1514 0L1348 3Q1069 324 1038 662Z', (321, 0, 1514, 1496))}
 
 
 def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None, end: Any = None) -> str:
@@ -213,12 +287,15 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
     out = ['<svg class="activation-wheel" viewBox="0 0 310 310" role="img" aria-label="Zodiac positions of natal targets and verified transiting contacts">',
            '<circle cx="155" cy="155" r="121" fill="none" stroke="#aaa"/>',
            '<circle cx="155" cy="155" r="84" fill="none" stroke="#d9d9d9"/>']
-    zodiac = ('Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces')
+    zodiac = ('♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓')
     for i, sign in enumerate(zodiac):
         x1,y1=point(i*30,84); x2,y2=point(i*30,121)
         tx,ty=point(i*30+15,133)
         out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#ddd"/>')
-        out.append(f'<text class="zodiac-label" x="{tx:.1f}" y="{ty:.1f}" text-anchor="middle" dominant-baseline="middle">{sign[:3]}</text>')
+        path, (xmin, ymin, xmax, ymax) = _ZODIAC_VECTOR[sign]
+        factor = 12.0 / max(xmax-xmin, ymax-ymin)
+        centre_x, centre_y = (xmin+xmax)/2, (ymin+ymax)/2
+        out.append(f'<path class="zodiac-symbol" d="{path}" transform="translate({tx:.2f} {ty:.2f}) scale({factor:.6f} -{factor:.6f}) translate({-centre_x:.2f} {-centre_y:.2f})" fill="#424242"/>')
     begin,end_day=_iso_date(start),_iso_date(end)
     plotted=set(); contact_lines=[]; shown=set(); legend=[]
     for transit in transits:
@@ -236,7 +313,7 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
             x,y=point(longitude,103)
             # Short outward radial tick makes overlapping positions legible.
             out.append(f'<circle class="natal-marker" cx="{x:.1f}" cy="{y:.1f}" r="5" fill="#725aca"/>')
-            lx,ly=point(longitude,117)
+            lx,ly=point(longitude,91)
             out.append(f'<text class="planet-label" x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">{e(key[:3].upper())}</text>')
         for hit in transit.get('passes') or []:
             if not isinstance(hit,dict): continue
@@ -392,15 +469,15 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
         scenario, decision = _month_editorial_parts(row['focus'])
         month_cards.append(
             f'<section class="month page"><div class="eyebrow">Month {i+1:02d} / {e(row["month"])}</div>'
-            f'<h2>{e(theme.title())}</h2><p class="meta">{e(row["phase"])} · {e(row["story"].replace(" And "," and "))}</p>'
+            f'<h2>{e(theme.title())}</h2><p class="meta">{e(row["phase"] if row["phase"].casefold() == row["story"].casefold() else row["phase"] + " · " + row["story"].replace(" And "," and "))}</p>'
             f'<h3>What this month brings into focus</h3><p>{e(scenario)}</p>'
             + (f'<h3>Your decision</h3><p>{e(decision)}</p>' if decision else '')
             + (f'<div class="callout"><strong>Key moment</strong><p>{e(row["strongest"])}</p></div>'
                 if row.get('strongest') else '')
-            + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused,color=game_colors.get(int(focused.get("number") or 0), "#765577"))}'
+            + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused,color=game_colors.get(int(focused.get("number") or 0), "#765577"),natal_longitudes=_natal_longitudes(snapshot))}'
                f'<ul class="contacts">{contacts}</ul>' if focused else
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
-            + ('<div class="chart-reading"><strong>How to read your monthly transits</strong><p>Each coloured bar shows when a calculated transit is active during this month. Its position tells you when that influence enters or leaves the period. A dot marks an exact contact.</p><p>Use the bars to see which influences overlap, then read <em>Your decision</em> for the practical question Luna has identified. A long bar shows duration, not constant intensity.</p></div>' if i == 0 and focused else '')
+            + ('<div class="chart-reading"><strong>How to read your monthly transits</strong><p>Each coloured curve follows the calculated orb through this month: higher means closer to exact. A dot marks a verified exact contact. Where orb data is unavailable, a bar shows only the active window.</p><p>Compare overlapping curves, then read <em>Your decision</em> for Luna&apos;s practical question. The chart describes angular exactness, not guaranteed events.</p></div>' if i == 0 and focused else '')
             + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
             + ('<div class="chart-reading"><strong>How to read your natal activation</strong><p>Your natal chart describes the planetary positions at birth. This smaller wheel highlights the natal positions contacted by this month&apos;s selected transits.</p><p>Purple markers identify those natal positions. Orange markers show transiting positions when verified coordinates are available.</p><p>Use this chart to recognise which parts of your natal pattern are receiving attention. The accompanying transit descriptions explain what those contacts may bring into focus.</p></div>' if i == 0 and focused else '')
             + '<p class="quiet">For the complete pass-by-pass interpretation, see the relevant major story below.</p>'
@@ -427,20 +504,20 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
 @page {size:A4;margin:17mm 17mm 18mm}
 *{box-sizing:border-box}body{font-family:'Josefin Sans',Arial,sans-serif;color:#141414;font-size:11pt;line-height:1.48;margin:0}
 h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h1{font-size:33pt;margin:0 0 10mm}h2{font-size:25pt;margin:0 0 5mm}h3{font-size:12pt;margin:6mm 0 2mm}p{margin:0 0 4mm}small,.quiet{color:#666}.eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:9mm}
-.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.month-timeline circle,.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
+.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid;page-break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.strength-list{break-inside:avoid;page-break-inside:avoid}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
 @media screen{body{max-width:820px;margin:auto;padding:25px}.page{padding-top:30px;border-top:1px solid #ddd;margin-top:50px}}
 
 .annual-timeline{display:block;width:100%;height:auto;margin:5mm 0 7mm;break-inside:avoid}.annual-timeline text{font-family:Josefin Sans,Arial,sans-serif}.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
 .chart-reading p{margin:1.5mm 0}.chart-reading strong{display:block;font-size:9pt;color:#222;margin-bottom:2mm}.chart-reading{font-size:8.5pt;color:#595959;line-height:1.35;margin:2mm 0 4mm}.month-timeline circle{stroke:#fff;stroke-width:1.5}
-.activation-layout{display:grid;grid-template-columns:70mm 1fr;gap:6mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:70mm;height:auto}.activation-wheel .zodiac-label{font:7px Arial,sans-serif;fill:#777}.activation-wheel .planet-label{font:bold 8px Arial,sans-serif;fill:#382a76}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
+.activation-layout{display:grid;grid-template-columns:92mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:92mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:bold 7px Arial,sans-serif;fill:#382a76}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
 .transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}
 .smallfact{margin-top:2mm;font-size:8pt;color:#555}
-@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0;grid-template-columns:54mm 1fr;gap:4mm}.month .activation-wheel{max-width:54mm}.month .activation-contacts{font-size:7pt}.month .chart-reading{font-size:7.5pt;margin:1mm 0 2mm}.month .month-timeline{margin:1mm 0}.month .contacts{font-size:7.5pt}.month .callout{margin:3mm 0;padding:2.5mm}.month .eyebrow{margin-bottom:4mm}.month p{margin-bottom:2mm}}
+@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0;grid-template-columns:90mm 1fr;gap:3mm}.month .activation-wheel{max-width:90mm}.month .activation-contacts{font-size:7pt}.month .chart-reading{font-size:7.5pt;margin:1mm 0 2mm}.month .month-timeline{margin:1mm 0}.month .contacts{font-size:7.5pt}.month .callout{margin:3mm 0;padding:2.5mm}.month .eyebrow{margin-bottom:4mm}.month p{margin-bottom:2mm}}
 '''
-    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and <em>Read the pattern</em>. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div><h2>Your strengths</h2>{strengths}</section>'
+    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and <em>Read the pattern</em>. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
     overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<h3>About this report</h3><p>Calculated planetary evidence is interpreted symbolically and is not professional advice.</p></section>'
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
