@@ -1097,7 +1097,7 @@ def generate_paid_yearly_editorial(
     # These are provider completion budgets, not hard-coded astrology or forecasts.
     annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '1900'))
     framing_output = int(os.environ.get('LUNA_YEARLY_FRAMING_OUTPUT_TOKENS', '1200'))
-    def section(job_name, requested, packet, output_limit, *, annual_instruction=""):
+    def section(job_name, requested, packet, output_limit, *, annual_instruction="", allow_unmarked=False):
         prompt=("Write only these section markers and their prose, in order: "+', '.join(requested)+".\n"
             "You are Luna writing a personalised strategic year, second person. Python owns all astrology. "
             "Never fabricate an exact date, a transit pass, a house, a planetary placement or a future event. "
@@ -1117,7 +1117,7 @@ def generate_paid_yearly_editorial(
              primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
         found=set(_MARKER_RE.findall(_clean_text(result)))
-        if not set(m.strip('<>') for m in requested).issubset(found):
+        if not allow_unmarked and not set(m.strip('<>') for m in requested).issubset(found):
             raise RuntimeError(f'Year Ahead {job_name} incomplete markers')
         return result
     base={k:compact.get(k) for k in ('period','reader_context','natal')}
@@ -1146,11 +1146,12 @@ def generate_paid_yearly_editorial(
         )
         result = section(f'annual_{chunk_index}', ['<<READ_YEAR>>'],
                          segment_packet, annual_output,
-                         annual_instruction=instruction)
-        markers = list(_MARKER_RE.finditer(_clean_text(result)))
-        if len(markers) != 1 or re.sub(r"\s+", "", markers[0].group('name')) != 'READ_YEAR':
-            raise RuntimeError(f'Year Ahead annual section {chunk_index} has unexpected markers')
-        prose = _clean_text(result)[markers[0].end():].strip()
+                         annual_instruction=instruction, allow_unmarked=True)
+        # The request already identifies its destination. Provider-generated
+        # heading/marker variations cannot change the destination or invalidate
+        # otherwise complete prose. Strip only standalone marker lines; do not
+        # substitute a canned passage or discard the customer's reading.
+        prose = re.sub(r'(?m)^\s*<<[^\r\n<>]{1,80}>>\s*$', '', _clean_text(result)).strip()
         if len(prose.split()) < 75:
             raise RuntimeError(f'Year Ahead annual section {chunk_index} is incomplete')
         year_segments.append(prose)
