@@ -39,7 +39,7 @@ PREFERRED_COMPLETION_TOKENS = 2500
 MIN_COMPLETION_TOKENS = 1800
 
 _MARKER_RE = re.compile(
-    r"(?m)^\s*(?:#{1,4}\s*)?(?:\*\*)?<<\s*(?P<name>HEADLINE|DECK|READ_YEAR|CLOSING|ISSUE\s*:\s*\d+|MONTH\s*:\s*\d+)\s*>>(?:\*\*)?\s*$"
+    r"(?m)^<<(?P<name>HEADLINE|DECK|READ_YEAR|CLOSING|ISSUE:\d+|MONTH:\d+)>>\s*$"
 )
 
 
@@ -951,11 +951,7 @@ def parse_paid_yearly_editorial(
     for index, match in enumerate(matches):
         start = match.end()
         end = matches[index + 1].start() if index + 1 < len(matches) else len(clean)
-        raw_name = re.sub(r"\s+", "", match.group("name"))
-        if ":" in raw_name:
-            kind, number = raw_name.split(":", 1)
-            raw_name = f"{kind}:{int(number)}"
-        sections[raw_name] = clean[start:end].strip()
+        sections[match.group("name")] = clean[start:end].strip()
 
     allowed_dates = set(allowed_dates or ())
     issue_titles = dict(issue_titles or {})
@@ -1099,9 +1095,9 @@ def generate_paid_yearly_editorial(
     total_budget = int(os.environ.get('LUNA_YEARLY_REQUEST_BUDGET_TOKENS', '7800'))
     # Keep the long annual essay separate from short framing and closing copy.
     # These are provider completion budgets, not hard-coded astrology or forecasts.
-    annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '3300'))
+    annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '1900'))
     framing_output = int(os.environ.get('LUNA_YEARLY_FRAMING_OUTPUT_TOKENS', '1200'))
-    def section(job_name, requested, packet, output_limit):
+    def section(job_name, requested, packet, output_limit, *, annual_instruction=""):
         prompt=("Write only these section markers and their prose, in order: "+', '.join(requested)+".\n"
             "You are Luna writing a personalised strategic year, second person. Python owns all astrology. "
             "Never fabricate an exact date, a transit pass, a house, a planetary placement or a future event. "
@@ -1109,7 +1105,7 @@ def generate_paid_yearly_editorial(
             "Make the reader's choices and concrete possibilities clear, without deterministic prediction. "
             "No introductory filler. For monthly rounds use 45–65 useful words each. "
             "For Games use two substantial paragraphs with specific scenarios, risks, choices and genuine passes. "
-            "For READ_YEAR write 450–650 words and for CLOSING write 90–130 words. "
+            "For CLOSING write 90–130 words. " + annual_instruction + " "
             "Each section must have meaningful content.\nCALCULATED EVIDENCE: "
             +json.dumps(packet,ensure_ascii=False,separators=(',',':')))
         estimated=math.ceil((_estimate_tokens(prompt)+_estimate_tokens(SYSTEM_PROMPT)+100)*1.15)
@@ -1120,54 +1116,55 @@ def generate_paid_yearly_editorial(
         result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
              primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
-        found = set()
-        for match in _MARKER_RE.finditer(_clean_text(result)):
-            name = re.sub(r"\s+", "", match.group("name"))
-            if ":" in name:
-                kind, number = name.split(":", 1)
-                name = f"{kind}:{int(number)}"
-            found.add(name)
-        required = {marker.strip('<>') for marker in requested}
-        missing = sorted(required - found)
-        if missing:
-            raise RuntimeError(
-                f'Year Ahead {job_name} missing required sections: {", ".join(missing)}'
-            )
-        # A marker without actual prose is not a completed paid section.
-        parsed = _clean_text(result)
-        markers = list(_MARKER_RE.finditer(parsed))
-        empty = []
-        for index, match in enumerate(markers):
-            marker = re.sub(r"\s+", "", match.group("name"))
-            if ":" in marker:
-                kind, number = marker.split(":", 1)
-                marker = f"{kind}:{int(number)}"
-            tail = markers[index + 1].start() if index + 1 < len(markers) else len(parsed)
-            if marker in required and not parsed[match.end():tail].strip():
-                empty.append(marker)
-        if empty:
-            raise RuntimeError(f'Year Ahead {job_name} empty sections: {", ".join(empty)}')
+        found=set(_MARKER_RE.findall(_clean_text(result)))
+        if not set(m.strip('<>') for m in requested).issubset(found):
+            raise RuntimeError(f'Year Ahead {job_name} incomplete markers')
         return result
     base={k:compact.get(k) for k in ('period','reader_context','natal')}
     all_parts=[]
     intro_packet={**base,'major_issues':[{'number':g.get('number'),'title':g.get('customer_title'),'primary':g.get('primary')} for g in compact.get('major_issues') or []],
         'monthly_rounds':[{'number':m.get('number'),'phase':m.get('phase'),'strongest_date':m.get('strongest_date')} for m in compact.get('monthly_rounds') or []]}
-    # The earlier four-marker annual job repeatedly exhausted GPT-OSS's
-    # completion budget (which also includes reasoning tokens). Two independent
-    # jobs keep the same published sections without deleting or shortening them.
-    # Build the annual essay first so that the headline and closing can refer to
-    # the actual central evidence without inventing additional events.
-    all_parts.append(section('annual_essay',['<<READ_YEAR>>'],intro_packet,annual_output))
+    # Construct a single chronological annual essay from three bounded segments.
+    # GPT-OSS completion tokens include hidden reasoning; generating a 650-word
+    # essay in one response can exhaust the cap before the prose is complete.
+    # These three requests reuse verified evidence and retain the same READ_YEAR
+    # contract expected by the unchanged parser and report renderer.
+    year_segments = []
+    for chunk_index, start_month in enumerate((1, 5, 9), 1):
+        month_slice = [row for row in compact.get('monthly_rounds') or []
+                       if start_month <= int(row.get('number') or 0) < start_month + 4]
+        if not month_slice:
+            raise RuntimeError(f'Year Ahead annual section {chunk_index} has no calculated month evidence')
+        segment_packet = {**base, 'major_issues': intro_packet['major_issues'],
+                          'monthly_rounds': month_slice}
+        instruction = (
+            'For READ_YEAR write 150-210 words in two or three substantial paragraphs, '
+            'covering ONLY the supplied consecutive four-month period. '
+            'This is part ' + str(chunk_index) + ' of three in one continuous annual story. '
+            'Do not restart the year, conclude the year early, or describe other '
+            'months as already past. Avoid repetitive introductions.'
+        )
+        result = section(f'annual_{chunk_index}', ['<<READ_YEAR>>'],
+                         segment_packet, annual_output,
+                         annual_instruction=instruction)
+        markers = list(_MARKER_RE.finditer(_clean_text(result)))
+        if len(markers) != 1 or re.sub(r"\s+", "", markers[0].group('name')) != 'READ_YEAR':
+            raise RuntimeError(f'Year Ahead annual section {chunk_index} has unexpected markers')
+        prose = _clean_text(result)[markers[0].end():].strip()
+        if len(prose.split()) < 75:
+            raise RuntimeError(f'Year Ahead annual section {chunk_index} is incomplete')
+        year_segments.append(prose)
+    all_parts.append('<<READ_YEAR>>\n' + '\n\n'.join(year_segments))
     all_parts.append(section('annual_framing',['<<HEADLINE>>','<<DECK>>','<<CLOSING>>'],intro_packet,framing_output))
     for first in (1,5,9):
         rows=[row for row in compact.get('monthly_rounds') or [] if first<=int(row.get('number') or 0)<first+4]
         markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
         if markers: all_parts.append(section('months',markers,{**base,'monthly_rounds':rows,'major_issues':intro_packet['major_issues']},1400))
     games=compact.get('major_issues') or []
-    for first in range(0,len(games)):
+    for first in range(len(games)):
         group=games[first:first+1]
         markers=[f'<<ISSUE:{int(row["number"])}>>' for row in group]
-        all_parts.append(section('games',markers,{**base,'major_issues':group},1600))
+        all_parts.append(section('games',markers,{**base,'major_issues':group},1700))
     body='\n\n'.join(all_parts)
     return parse_paid_yearly_editorial(
         body,
