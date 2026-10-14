@@ -1070,7 +1070,7 @@ def generate_paid_yearly_editorial(
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     secondary_base: str = "", secondary_model: str = "", secondary_key: str = "",
 ) -> PaidYearlyEditorial:
-    """One provider call. Plain text. No JSON schema. No retry loop."""
+    """Generate bounded yearly sections using calculated evidence, without canned prose."""
     if not str(base_url or "").strip() or not str(model or "").strip() or not str(api_key or "").strip():
         raise RuntimeError("Paid Yearly voice provider is not configured.")
 
@@ -1093,7 +1093,10 @@ def generate_paid_yearly_editorial(
     alternate=VoiceProvider(secondary_base,secondary_model,secondary_key) if all((secondary_base,secondary_model,secondary_key)) else None
     # Configurable provider budget: not a claim about the account's actual rate limit.
     total_budget = int(os.environ.get('LUNA_YEARLY_REQUEST_BUDGET_TOKENS', '7800'))
-    annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '4200'))
+    # Keep the long annual essay separate from short framing and closing copy.
+    # These are provider completion budgets, not hard-coded astrology or forecasts.
+    annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '3300'))
+    framing_output = int(os.environ.get('LUNA_YEARLY_FRAMING_OUTPUT_TOKENS', '1200'))
     def section(job_name, requested, packet, output_limit):
         prompt=("Write only these section markers and their prose, in order: "+', '.join(requested)+".\n"
             "You are Luna writing a personalised strategic year, second person. Python owns all astrology. "
@@ -1121,7 +1124,13 @@ def generate_paid_yearly_editorial(
     all_parts=[]
     intro_packet={**base,'major_issues':[{'number':g.get('number'),'title':g.get('customer_title'),'primary':g.get('primary')} for g in compact.get('major_issues') or []],
         'monthly_rounds':[{'number':m.get('number'),'phase':m.get('phase'),'strongest_date':m.get('strongest_date')} for m in compact.get('monthly_rounds') or []]}
-    all_parts.append(section('annual',['<<HEADLINE>>','<<DECK>>','<<READ_YEAR>>','<<CLOSING>>'],intro_packet,annual_output))
+    # The earlier four-marker annual job repeatedly exhausted GPT-OSS's
+    # completion budget (which also includes reasoning tokens). Two independent
+    # jobs keep the same published sections without deleting or shortening them.
+    # Build the annual essay first so that the headline and closing can refer to
+    # the actual central evidence without inventing additional events.
+    all_parts.append(section('annual_essay',['<<READ_YEAR>>'],intro_packet,annual_output))
+    all_parts.append(section('annual_framing',['<<HEADLINE>>','<<DECK>>','<<CLOSING>>'],intro_packet,framing_output))
     for first in (1,5,9):
         rows=[row for row in compact.get('monthly_rounds') or [] if first<=int(row.get('number') or 0)<first+4]
         markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
