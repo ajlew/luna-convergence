@@ -536,7 +536,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
     # Snapshot attributes vary between versions; use documented dict/signatures where available.
     strengths=''
     for s in list(getattr(snapshot,'signatures',()) or ())[:6]:
-        strengths+=f'<article class="block"><h3>{e(getattr(s,"title", ""))}</h3><p>{e(getattr(s,"text",""))}</p></article>'
+        strengths+=f'<article class="block"><h3>{e(getattr(s,"title", ""))}</h3><p>{e(getattr(s,"text",""))}</p>' + (f'<p class="quiet strength-evidence">{e(getattr(s,"evidence", ""))}</p>' if getattr(s,"evidence", "") else "") + '</article>'
     month_cards=[]
     for i, row in enumerate(months):
         round_ = rounds[i] if i < len(rounds) else {}

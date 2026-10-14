@@ -1157,6 +1157,17 @@ def generate_paid_yearly_editorial(
         # otherwise complete prose. Strip only standalone marker lines; do not
         # substitute a canned passage or discard the customer's reading.
         prose = re.sub(r'(?m)^\s*<<[^\r\n<>]{1,80}>>\s*$', '', _clean_text(result)).strip()
+        # Provider section boundaries are not editorial content. Do not allow
+        # leakage of packet fields, numbered monthly rows, or foreign sections
+        # into the customer-facing annual essay. Reject; never make up prose.
+        if re.search(r'<<[^<>\n]{1,100}>>', prose) or re.search(
+            r'(?im)(?:^|\n)\s*(?:phase\s*:|dominant\s+game\s*:|'
+            r'life\s+area\s*:|strongest\s+date\s*:|focus\s*:|'
+            r'game\s+\d+\s*:|scenario\s+(?:one|two|three)\s*:|'
+            r'\d{1,2}\s+\d{1,2}\s+[A-Z][a-z]{2}\s+[–-]\s+\d{1,2}\s+[A-Z][a-z]{2})',
+            prose,
+        ):
+            raise RuntimeError(f'Year Ahead annual section {chunk_index} contains internal planning content')
         if len(prose.split()) < 75:
             raise RuntimeError(f'Year Ahead annual section {chunk_index} is incomplete')
         year_segments.append(prose)
