@@ -297,6 +297,71 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
         centre_x, centre_y = (xmin+xmax)/2, (ymin+ymax)/2
         out.append(f'<path class="zodiac-symbol" d="{path}" transform="translate({tx:.2f} {ty:.2f}) scale({factor:.6f} -{factor:.6f}) translate({-centre_x:.2f} {-centre_y:.2f})" fill="#424242"/>')
     begin,end_day=_iso_date(start),_iso_date(end)
+    # Collect once before drawing so nearby natal targets can be laid out together.
+    # Geometry is display-only: all source longitudes remain untouched.
+    targets = {}
+    for tr in transits:
+        label = str(tr.get('technical_label') or '')
+        target = str(tr.get('natal_target') or '').strip()
+        if not target:
+            for name in natal:
+                if 'natal ' + name in label.casefold():
+                    target = name
+                    break
+        key = target.casefold().replace('natal ', '')
+        if key in natal:
+            targets[key] = float(natal[key].longitude) % 360
+
+    # Greedy deterministic non-overlapping placements, estimated in SVG user units.
+    # Markers remain at the true coordinate. Only their labels move; thin leader
+    # lines reconnect displaced labels to those natal positions.
+    placed_boxes = []
+    label_coords = {}
+    for key, longitude in sorted(targets.items(), key=lambda item: (item[1], item[0])):
+        anchor_x, anchor_y = point(longitude, 103)
+        best = None
+        for radius in (91, 76, 110, 63):
+            for shift in (0, 18, -18, 36, -36, 54, -54, 72, -72):
+                lx, ly = point(longitude + shift, radius)
+                # Planet label is a three-letter abbreviated name at 7px bold.
+                box = (lx - 16, ly - 12, lx + 16, ly + 5)
+                collision = sum(max(0, min(box[2], old[2]) - max(box[0], old[0])) *
+                                max(0, min(box[3], old[3]) - max(box[1], old[1]))
+                                for old in placed_boxes)
+                # Also avoid painting a label over another natal marker.
+                marker_overlap = sum(1 for other_key, other_lon in targets.items()
+                                     if other_key != key and
+                                     abs(lx - point(other_lon, 103)[0]) < 22 and
+                                     abs(ly - point(other_lon, 103)[1]) < 15)
+                score = (collision + marker_overlap * 200, abs(shift) + abs(radius-91) * .4)
+                if best is None or score < best[0]:
+                    best = (score, lx, ly, box)
+                if score[0] == 0 and shift == 0 and radius == 91:
+                    break
+            if best and best[0] == (0, 0):
+                break
+        _, lx, ly, box = best
+        placed_boxes.append(box)
+        label_coords[key] = (lx, ly)
+
+    # Coincident points retain their true angle. Spread only their display
+    # radii, with a fine spoke back to the exact calculated anchor.
+    marker_radii = {key: 103.0 for key in targets}
+    sorted_targets = sorted(targets, key=lambda key: (targets[key], key))
+    groups = []
+    for key in sorted_targets:
+        if groups and (targets[key] - targets[groups[-1][-1]]) <= 6:
+            groups[-1].append(key)
+        else:
+            groups.append([key])
+    if len(groups) > 1 and ((targets[groups[0][0]] + 360) - targets[groups[-1][-1]]) <= 6:
+        groups[0] = groups[-1] + groups[0]
+        groups.pop()
+    for group in groups:
+        if len(group) > 1:
+            for index, key in enumerate(sorted(group, key=lambda k: (targets[k], k))):
+                marker_radii[key] = 103 + (index - (len(group)-1)/2) * 12
+
     plotted=set(); contact_lines=[]; shown=set(); legend=[]
     for transit in transits:
         label=str(transit.get('technical_label') or 'Calculated transit')
@@ -310,10 +375,14 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
         longitude=float(n.longitude)%360
         if key not in plotted:
             plotted.add(key)
-            x,y=point(longitude,103)
-            # Short outward radial tick makes overlapping positions legible.
+            true_x,true_y=point(longitude,103)
+            x,y=point(longitude,marker_radii[key])
+            if marker_radii[key] != 103:
+                out.append(f'<line class="natal-label-leader" x1="{true_x:.1f}" y1="{true_y:.1f}" x2="{x:.1f}" y2="{y:.1f}"/>')
             out.append(f'<circle class="natal-marker" cx="{x:.1f}" cy="{y:.1f}" r="5" fill="#725aca"/>')
-            lx,ly=point(longitude,91)
+            lx,ly=label_coords[key]
+            if ((lx-x)**2 + (ly-y)**2)**.5 > 21:
+                out.append(f'<line class="natal-label-leader" x1="{x:.1f}" y1="{y:.1f}" x2="{lx:.1f}" y2="{ly-3:.1f}"/>')
             out.append(f'<text class="planet-label" x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">{e(key[:3].upper())}</text>')
         for hit in transit.get('passes') or []:
             if not isinstance(hit,dict): continue
@@ -510,7 +579,7 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 .annual-timeline{display:block;width:100%;height:auto;margin:5mm 0 7mm;break-inside:avoid}.annual-timeline text{font-family:Josefin Sans,Arial,sans-serif}.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
 .chart-reading p{margin:1.5mm 0}.chart-reading strong{display:block;font-size:9pt;color:#222;margin-bottom:2mm}.chart-reading{font-size:8.5pt;color:#595959;line-height:1.35;margin:2mm 0 4mm}.month-timeline circle{stroke:#fff;stroke-width:1.5}
-.activation-layout{display:grid;grid-template-columns:92mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:92mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:bold 7px Arial,sans-serif;fill:#382a76}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
+.activation-layout{display:grid;grid-template-columns:92mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:92mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:bold 7px Arial,sans-serif;fill:#382a76}.activation-wheel .natal-label-leader{stroke:#725aca;stroke-width:.65;opacity:.7}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
 .transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}
