@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.100"
-BUILD_LABEL = f"Luna {APP_VERSION} — Monthly Baseline Preservation"
+APP_VERSION = "v3.101"
+BUILD_LABEL = f"Luna {APP_VERSION} — Navigation Organisation"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -3007,11 +3007,11 @@ def top_navigation(current_path: str) -> None:
     # fulfilment, previews and administration still exist but stay out of sight.
     items = [
         ("", "Daily Horoscope"),
-        ("weekly-view", "Weekly View"),
-        ("birthday-card", "Birthday Card"),
-        (monthly_path, "This Month"),
-        ("reports", "Reports"),
+        ("weekly-view", "Weekly Horoscope"),
+        (monthly_path, "Monthly Horoscope"),
+        ("reports", "Personal Reports"),
         ("timing-map", "Your Year Ahead"),
+        ("birthday-card", "Birthday Card"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
     ]
@@ -3021,7 +3021,7 @@ def top_navigation(current_path: str) -> None:
     current_label = "Daily Horoscope"
 
     for item_path, label in items:
-        item_is_active = nav_path == item_path or (label == "This Month" and nav_path == "this-month")
+        item_is_active = nav_path == item_path or (label == "Monthly Horoscope" and nav_path == "this-month")
         active = " active" if item_is_active else ""
         if item_is_active:
             current_label = label

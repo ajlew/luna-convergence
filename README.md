@@ -1,12 +1,21 @@
-# Luna v3.100 — Monthly heading tidy-up
+# Luna v3.101 — Navigation only + Year Ahead plan consolidation
 
-Apply over the repository containing v3.99 and the shared Paid Monthly renderer.
+**Required code baseline:** v3.100. Apply the included `app.py` only to that baseline.
 
-Changes:
-- `monthly_shared_view.py`: display exactly one natal section heading. When a six-field natal signature exists, use `Your natal signature`; otherwise retain `Your natal foundation`. All fields, narrative, strengths, charts and exports remain intact.
-- `app.py`: explicitly update `APP_VERSION` from `v3.99` to `v3.100`.
-- `test_v3100_monthly_headings.py`: offline regression tests.
+## Exact code change
+- `app.py`: hard-coded `APP_VERSION` advanced from `v3.100` to `v3.101` and corresponding build description changed.
+- `app.py`: only the eight `top_navigation()` labels/order and the existing legacy `this-month` active-label check updated.
+- No paid report code, ephemeris, writers, PDF renderers, auth, Stripe or natal calculations were edited.
 
-No changes to provider configuration, writing prompts, natal calculations, Year Ahead, checkout, or PDF rendering mechanics. No Groq requests made.
+## Menu order
+Free: Daily Horoscope (`/`), Weekly Horoscope (`/weekly-view`), Monthly Horoscope (`/monthly`).
+Paid: Personal Reports (`/reports`), Your Year Ahead (`/timing-map`), Birthday Card (`/birthday-card`).
+Reference: House Guide (`/house-guide`), Solar Year (`/solar-year`).
+All existing URLs unchanged.
 
-Offline results: 3 targeted tests passed, Python compilation passed. Live Streamlit remains unverified.
+## Document
+`Luna_Paid_Year_Ahead.md` consolidates the full uploaded updated yearly plan with master rules, source conflict resolution, and critique acceptance tests. It is a specification only; it does **not** modify Year Ahead.
+
+## Tests and limitations
+Run: `python test_v3101_navigation.py`; `python -m py_compile app.py`.
+Static tests do not verify deployment, page rendering, or live Stripe/Groq behaviour. Rollback by restoring v3.100 `app.py`.
