@@ -474,179 +474,28 @@ def _render_year_at_a_glance(packet: dict[str, Any]) -> None:
 
 
 def _render_year_map(packet: dict[str, Any]) -> None:
-    rows = [
-        row
-        for row in list(packet.get("year_strip") or [])
-        if isinstance(row, dict)
-    ]
-    games = [
-        row
-        for row in list(packet.get("games") or [])
-        if isinstance(row, dict)
-    ]
-    period = dict(packet.get("period") or {})
-    start = _parse_date(period.get("start"))
-    end = _parse_date(period.get("end"))
-    if not rows or start is None or end is None:
-        return
+    """Show exactly the same verified Game curves as the Year Ahead export.
 
-    total_days = max(1, (end - start).days)
-    month_labels = [escape(str(row.get("month") or "")) for row in rows]
-
-    css = f"""
-    <style>
-    .luna-year-map-scroll{{overflow-x:auto;margin:8px 0 18px}}
-    .luna-year-map{{min-width:790px;border:1px solid rgba(127,127,127,.24);border-radius:14px;padding:14px}}
-    .luna-year-months,.luna-year-lane,.luna-year-rhythm{{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;align-items:center}}
-    .luna-year-months{{margin-bottom:8px}}
-    .luna-year-month-grid,.luna-year-rhythm-grid{{display:grid;grid-template-columns:repeat({len(rows)},minmax(0,1fr));gap:2px}}
-    .luna-year-month-grid div{{font-size:10px;letter-spacing:.06em;text-align:center;opacity:.68}}
-    .luna-year-label{{font-size:12px;font-weight:700;line-height:1.15}}
-    .luna-year-lane{{margin:13px 0}}
-    .luna-year-track{{height:44px;position:relative;border-radius:8px;background:rgba(127,127,127,.08);overflow:visible}}
-    .luna-year-bar{{position:absolute;top:18px;height:8px;background:currentColor;border-radius:999px;opacity:.72;min-width:5px}}
-    .luna-year-marker{{position:absolute;top:11px;width:12px;height:12px;border-radius:50%;background:currentColor;transform:translateX(-50%);z-index:2}}
-    .luna-year-marker span{{position:absolute;top:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;font-weight:700;padding:0 2px}}
-    .luna-year-trigger{{position:absolute;top:16px;height:12px;width:2px;background:currentColor;opacity:.42;transform:translateX(-50%)}}
-    .luna-year-rhythm{{margin-top:14px;padding-top:12px;border-top:1px solid rgba(127,127,127,.2)}}
-    .luna-year-rhythm-cell{{text-align:center;min-width:0}}
-    .luna-year-rhythm-bar{{display:block;width:62%;margin:0 auto 4px;background:currentColor;border-radius:4px 4px 1px 1px;min-height:5px}}
-    .luna-year-rhythm-cell small{{display:block;font-size:8px;line-height:1.05;letter-spacing:.02em}}
-    @media(max-width:720px){{
-      .luna-year-map{{min-width:730px}}
-      .luna-year-months,.luna-year-lane,.luna-year-rhythm{{grid-template-columns:120px minmax(0,1fr)}}
-    }}
-    </style>
+    This is a presentation adapter only. Source calculations and the Year
+    Ahead narrative remain unchanged.
     """
+    from yearly_print_html import _annual_timeline
 
-    month_html = "".join(f"<div>{label}</div>" for label in month_labels)
-    lane_html: list[str] = []
-
-    for game in games:
-        game_start = _parse_date(game.get("start_date")) or start
-        game_end = _parse_date(game.get("end_date")) or end
-        clipped_start = max(start, game_start)
-        clipped_end = min(end, game_end)
-
-        left = max(
-            0.0,
-            min(
-                100.0,
-                ((clipped_start - start).days / total_days) * 100.0,
-            ),
-        )
-        right = max(
-            left,
-            min(
-                100.0,
-                ((clipped_end - start).days / total_days) * 100.0,
-            ),
-        )
-        width = max(1.0, right - left)
-
-        primary = dict(game.get("primary_transit") or {})
-        passes = _pass_rows(primary)
-
-        markers: list[str] = []
-        for index, hit in enumerate(passes):
-            hit_date = _parse_date(hit.get("date"))
-            if hit_date is None or hit_date < start or hit_date > end:
-                continue
-            pos = ((hit_date - start).days / total_days) * 100.0
-            label = _human_pass_label(hit, index, len(passes))
-            markers.append(
-                f'<div class="luna-year-marker" style="left:{pos:.2f}%" '
-                f'title="{escape(label, quote=True)} · {escape(_date_label(hit_date), quote=True)}">'
-                f'<span>{escape(label)}</span></div>'
-            )
-
-        triggers: list[str] = []
-        for trigger in list(primary.get("triggers") or []):
-            if not isinstance(trigger, dict):
-                continue
-            trigger_date = _parse_date(trigger.get("date"))
-            if (
-                trigger_date is None
-                or trigger_date < start
-                or trigger_date > end
-            ):
-                continue
-            pos = ((trigger_date - start).days / total_days) * 100.0
-            title = _human_trigger_label(trigger)
-            triggers.append(
-                f'<div class="luna-year-trigger" style="left:{pos:.2f}%" '
-                f'title="{escape(title, quote=True)} · {escape(_date_label(trigger_date), quote=True)}"></div>'
-            )
-
-        edge_notes = []
-        if str(game.get("start_state") or "") == "already_active":
-            edge_notes.append("already active")
-        if str(game.get("end_state") or "") == "continues_beyond_year":
-            edge_notes.append("continues beyond")
-        edge_note = (
-            '<small style="display:block;font-weight:400;opacity:.62;margin-top:3px">'
-            + escape(" · ".join(edge_notes))
-            + '</small>'
-            if edge_notes
-            else ""
-        )
-
-        lane_html.append(
-            '<div class="luna-year-lane">'
-            f'<div class="luna-year-label">{escape(str(game.get("title") or _human_story_label(game)).title())}{edge_note}</div>'
-            '<div class="luna-year-track">'
-            f'<div class="luna-year-bar" style="left:{left:.2f}%;width:{width:.2f}%"></div>'
-            + "".join(triggers)
-            + "".join(markers)
-            + "</div></div>"
-        )
-
-    # The graph is grounded in precomputed year_strip.intensity (not an invented sine wave).
-    intensity_values = [max(0.0, min(1.0, float(r.get("intensity") or 0))) for r in rows]
-    from yearly_print_html import smooth_wave_path
-    wave_points = smooth_wave_path([
-        (24 + (i * 728 / max(1, len(rows) - 1)), 104 - val * 76)
-        for i, val in enumerate(intensity_values)
-    ])
-    wave_dots = "".join(
-        f'<circle cx="{24 + (i * 728 / max(1, len(rows) - 1)):.1f}" '
-        f'cy="{104 - val * 76:.1f}" r="3"/>'
-        for i, val in enumerate(intensity_values)
-    )
-    wave_labels = "".join(
-        f'<text x="{24 + (i * 728 / max(1, len(rows) - 1)):.1f}" y="126" '
-        f'text-anchor="middle">{escape(str(row.get("month") or ""))}</text>'
-        for i, row in enumerate(rows)
-    )
-    wave_html = (
-        '<div class="luna-year-rhythm" style="display:block">'
-        '<div class="luna-year-label" style="margin-bottom:8px">Your year’s rhythm</div>'
-        '<svg viewBox="0 0 780 140" role="img" '
-        'aria-label="Calculated monthly concentration of selected personal transits" '
-        'style="display:block;width:100%;height:auto">'
-        '<line x1="24" x2="752" y1="104" y2="104" stroke="#ddd"/>'
-        f'<path d="{wave_points}" fill="none" stroke="currentColor" '
-        'stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'
-        + wave_dots + wave_labels + '</svg>'
-        '<p style="font-size:11px;opacity:.7;margin:4px 0 0">'
-        'Higher points mean more selected astrological activity, not a prediction of better or worse events.</p></div>'
-    )
-
+    chart = _annual_timeline(packet)
+    if not chart:
+        return
     st.markdown("## How your year unfolds")
     st.caption(
-        "Your year moves through several overlapping stories. The bars show when each story "
-        "comes into focus; the dots show its turning points. The wave below shows when the "
-        "sky is busier and when it leaves more breathing room."
+        "Each coloured curve shows the calculated activity for one major story. "
+        "The black curve combines those same contacts. All curves and exact-hit "
+        "markers share the same dates."
     )
     st.markdown(
-        css
-        + '<div class="luna-year-map-scroll"><div class="luna-year-map">'
-        + '<div class="luna-year-months"><div></div><div class="luna-year-month-grid">'
-        + month_html
-        + "</div></div>"
-        + "".join(lane_html)
-        + wave_html
-        + "</div></div>",
+        '<div class="luna-year-map-scroll" style="overflow-x:auto">'
+        '<div style="min-width:720px;border:1px solid #ddd;border-radius:14px;'
+        'padding:12px">'
+        + chart
+        + '</div></div>',
         unsafe_allow_html=True,
     )
 
