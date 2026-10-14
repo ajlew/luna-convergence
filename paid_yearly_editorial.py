@@ -23,6 +23,7 @@ No JSON response format. No schema. No automatic retry.
 from dataclasses import dataclass
 import json
 import math
+import os
 import re
 from typing import Any
 
@@ -1090,6 +1091,9 @@ def generate_paid_yearly_editorial(
     allowed_dates=_calculated_dates(material)
     primary=VoiceProvider(base_url,model,api_key)
     alternate=VoiceProvider(secondary_base,secondary_model,secondary_key) if all((secondary_base,secondary_model,secondary_key)) else None
+    # Configurable provider budget: not a claim about the account's actual rate limit.
+    total_budget = int(os.environ.get('LUNA_YEARLY_REQUEST_BUDGET_TOKENS', '7800'))
+    annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '4200'))
     def section(job_name, requested, packet, output_limit):
         prompt=("Write only these section markers and their prose, in order: "+', '.join(requested)+".\n"
             "You are Luna writing a personalised strategic year, second person. Python owns all astrology. "
@@ -1102,7 +1106,10 @@ def generate_paid_yearly_editorial(
             "Each section must have meaningful content.\nCALCULATED EVIDENCE: "
             +json.dumps(packet,ensure_ascii=False,separators=(',',':')))
         estimated=math.ceil((_estimate_tokens(prompt)+_estimate_tokens(SYSTEM_PROMPT)+100)*1.15)
-        if estimated+output_limit>7800: raise RuntimeError(f'Year Ahead {job_name} packet over token budget')
+        if estimated+output_limit>total_budget: raise RuntimeError(
+            f'Year Ahead {job_name} packet over configured token budget: '
+            f'input={estimated}, output={output_limit}, budget={total_budget}'
+        )
         result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
              primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
@@ -1114,7 +1121,7 @@ def generate_paid_yearly_editorial(
     all_parts=[]
     intro_packet={**base,'major_issues':[{'number':g.get('number'),'title':g.get('customer_title'),'primary':g.get('primary')} for g in compact.get('major_issues') or []],
         'monthly_rounds':[{'number':m.get('number'),'phase':m.get('phase'),'strongest_date':m.get('strongest_date')} for m in compact.get('monthly_rounds') or []]}
-    all_parts.append(section('annual',['<<HEADLINE>>','<<DECK>>','<<READ_YEAR>>','<<CLOSING>>'],intro_packet,2700))
+    all_parts.append(section('annual',['<<HEADLINE>>','<<DECK>>','<<READ_YEAR>>','<<CLOSING>>'],intro_packet,annual_output))
     for first in (1,5,9):
         rows=[row for row in compact.get('monthly_rounds') or [] if first<=int(row.get('number') or 0)<first+4]
         markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]

@@ -1,12 +1,9 @@
-LUNA PAID TRANSIT CHAPTERS — FIRST IMPLEMENTATION
-Replace these THREE files at project root:
-- app.py
-- paid_yearly_report.py
-- monthly_transit_view.py (new)
-
-Paid Year Ahead: 12 expandable rolling-month sections populated from existing Timing Map report stories; selected personal transits, slow-planet status and existing natal/activation wheel.
-Paid Monthly: one expandable section with personal natal overlay, slow-planet contact listing and existing Monthly natal/activation wheel.
-No changes to ephemeris or forecasting engine, provider-call architecture, checkout or PDF.
-
-VERIFICATION: all modified Python files compile; shared view smoke tests pass.
-NOTE: Full repository pytest is not green: test_reading_clarity.py fails importing missing text_errors from unmodified plain_readings.py. Integration must still be verified in Streamlit with actual report data. PDF unchanged.
+Luna v3.103 — Year Ahead completion budget adjustment
+Base: uploaded luna-convergence-main(3).zip (v3.102).
+Changed: app.py (explicit version and build label); paid_yearly_editorial.py (configurable annual response allowance and request budget).
+New test: test_yearly_budget_v3103.py.
+Untouched: Paid Monthly code, natal calculations, Year Ahead transit engine, HTML/PDF, provider/router.
+Defaults: LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS=4200; LUNA_YEARLY_REQUEST_BUDGET_TOKENS=7800. Provider account limits are not inferred from these defaults.
+This corrects a too-small completion allowance but DOES NOT prove live provider completion. It does not rearchitect the existing multi-job writer into the planned single-call writer.
+Offline targeted tests passed; older test_voice_http_v387.py fails on pre-existing unrelated expected wording. No Groq called.
+Install the two .py files at repository root and retain original for rollback.
