@@ -1135,6 +1135,7 @@ def generate_paid_yearly_editorial(
     # These three requests reuse verified evidence and retain the same READ_YEAR
     # contract expected by the unchanged parser and report renderer.
     year_segments = []
+    previous_context = ''
     for chunk_index, start_month in enumerate((1, 5, 9), 1):
         month_slice = [row for row in compact.get('monthly_rounds') or []
                        if start_month <= int(row.get('number') or 0) < start_month + 4]
@@ -1142,12 +1143,36 @@ def generate_paid_yearly_editorial(
             raise RuntimeError(f'Year Ahead annual section {chunk_index} has no calculated month evidence')
         segment_packet = {**base, 'major_issues': intro_packet['major_issues'],
                           'monthly_rounds': month_slice}
+        # The three bounded calls form consecutive ACTS of a single article,
+        # not three independent mini-articles. Subsequent acts receive the end
+        # of the prior act to prevent restarts without replaying the full essay.
+        stage = ('opening act', 'middle act', 'final act')[chunk_index - 1]
+        continuity = (
+            'No previous prose exists; begin the article directly with the '
+            'earliest dated, documented tension.' if chunk_index == 1 else
+            'Previous act ended with this prose (continuity only, not evidence): '
+            + previous_context
+        )
+        ending = (
+            'Finish with an open transition to the next period, not a conclusion.'
+            if chunk_index < 3 else
+            'Finish the final act without a separate concluding paragraph; '
+            'the report already has a dedicated closing synthesis.'
+        )
         instruction = (
-            'For READ_YEAR write 150-210 words in two or three substantial paragraphs, '
-            'covering ONLY the supplied consecutive four-month period. '
-            'This is part ' + str(chunk_index) + ' of three in one continuous annual story. '
-            'Do not restart the year, conclude the year early, or describe other '
-            'months as already past. Avoid repetitive introductions.'
+            'Write one continuous chronological READ_YEAR article in three bounded acts. '
+            f'This request writes ONLY the {stage}, act {chunk_index} of 3. '
+            'Write 150–210 words of finished customer-facing narrative in 2–3 paragraphs, '
+            'not a list, outline, report summary or numbered Games. '
+            'Follow ONLY the supplied four rolling months in their actual order. '
+            'Keep later transits as future context only when explicitly needed and never '
+            'claim they become exact during an earlier act. '
+            'Do not restart the year, recap an earlier act, repeat the headline/deck, '
+            'introduce generic scenario lists or summarize other chapters. '
+            'Use actual named calculated transit evidence from the supplied packet '
+            'for every important shift, with concrete but conditional real-life choices. '
+            'Avoid season names unless supplied and verified for the reader timezone. '
+            + ending + ' ' + continuity
         )
         result = section(f'annual_{chunk_index}', ['<<READ_YEAR>>'],
                          segment_packet, annual_output,
@@ -1171,6 +1196,7 @@ def generate_paid_yearly_editorial(
         if len(prose.split()) < 75:
             raise RuntimeError(f'Year Ahead annual section {chunk_index} is incomplete')
         year_segments.append(prose)
+        previous_context = ' '.join(prose.split())[-650:]
     all_parts.append('<<READ_YEAR>>\n' + '\n\n'.join(year_segments))
     all_parts.append(section('annual_framing',['<<HEADLINE>>','<<DECK>>','<<CLOSING>>'],intro_packet,framing_output))
     for first in (1,5,9):
