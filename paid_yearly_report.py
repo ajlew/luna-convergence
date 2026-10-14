@@ -488,7 +488,7 @@ def _render_year_map(packet: dict[str, Any]) -> None:
     st.caption(
         "Each coloured curve shows the calculated activity for one major story. "
         "The black curve combines those same contacts. All curves and exact-hit "
-        "markers share the same dates."
+        "markers share the same dates. Compare peaks with the monthly decisions to see what may need attention."
     )
     st.markdown(
         '<div class="luna-year-map-scroll" style="overflow-x:auto">'

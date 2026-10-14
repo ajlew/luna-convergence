@@ -157,7 +157,7 @@ def _active_transits(game: dict, start: object, end: object) -> list[dict]:
     return selected
 
 
-def _transit_timeline(round_: dict, game: dict) -> str:
+def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577") -> str:
     """Show only contacts overlapping this rolling month; never infer dates."""
     a = _iso_date(round_.get("start")); b = _iso_date(round_.get("end"))
     if a is None or b is None:
@@ -180,14 +180,14 @@ def _transit_timeline(round_: dict, game: dict) -> str:
         right = chart_left+chart_width*min(span,(min(b,t_end)-a).days)/span
         svg.append(f'<text x="0" y="{y+5}" style="font-size:10px">{e(name[:46])}</text>')
         svg.append(f'<rect x="{chart_left}" y="{y-7}" width="{chart_width}" height="14" rx="5" fill="#f0efed"/>')
-        svg.append(f'<rect x="{left:.1f}" y="{y-3}" width="{max(3,right-left):.1f}" height="6" rx="3" fill="#333"/>')
+        svg.append(f'<rect x="{left:.1f}" y="{y-3}" width="{max(3,right-left):.1f}" height="6" rx="3" fill="{e(color)}"/>')
         for hit in transit.get('passes') or []:
             if not isinstance(hit,dict):continue
             hit_day = _iso_date(hit.get('date'))
             if hit_day is None or not a <= hit_day <= b:continue
             x = chart_left+chart_width*(hit_day-a).days/span
             label=str(hit.get('pass_label') or 'Exact')
-            svg.append(f'<circle cx="{x:.1f}" cy="{y}" r="5" fill="#0f0f0f"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
+            svg.append(f'<circle cx="{x:.1f}" cy="{y}" r="5" fill="{e(color)}" stroke="white" stroke-width="1.5"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
     svg.append('</svg>')
     return ''.join(svg)
 
@@ -355,6 +355,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
     games=[g for g in packet.get('games',[]) if isinstance(g,dict)]
     rounds=[r for r in packet.get('monthly_rounds',[]) if isinstance(r,dict)]
     game_by_number={int(g.get('number') or 0):g for g in games}
+    game_colors={int(g.get('number') or i+1):c for i,(g,c) in enumerate(zip(games,("#765577", "#51758a", "#a0783d", "#597762", "#8c5c50")))}
     months=[]
     for round_ in rounds:
         number=int(round_.get('number') or len(months)+1)
@@ -396,10 +397,12 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
             + (f'<h3>Your decision</h3><p>{e(decision)}</p>' if decision else '')
             + (f'<div class="callout"><strong>Key moment</strong><p>{e(row["strongest"])}</p></div>'
                 if row.get('strongest') else '')
-            + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused)}'
+            + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused,color=game_colors.get(int(focused.get("number") or 0), "#765577"))}'
                f'<ul class="contacts">{contacts}</ul>' if focused else
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
+            + ('<p class="chart-reading">Bars show active transit windows in this month; coloured dots mark exact contacts. Compare overlapping dates with <em>Your decision</em> above.</p>' if i == 0 and focused else '')
             + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
+            + ('<p class="chart-reading">Purple marks natal positions being contacted; orange shows a transiting position only when its longitude is verified. Use the listed aspects to interpret the contact.</p>' if i == 0 and focused else '')
             + '<p class="quiet">For the complete pass-by-pass interpretation, see the relevant major story below.</p>'
             + '</section>'
         )
@@ -429,16 +432,16 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 
 .annual-timeline{display:block;width:100%;height:auto;margin:5mm 0 7mm;break-inside:avoid}.annual-timeline text{font-family:Josefin Sans,Arial,sans-serif}.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
-.month-timeline circle{fill:#111}
+.chart-reading{font-size:8.5pt;color:#595959;line-height:1.35;margin:2mm 0 4mm}.month-timeline circle{stroke:#fff;stroke-width:1.5}
 .activation-layout{display:grid;grid-template-columns:70mm 1fr;gap:6mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:70mm;height:auto}.activation-wheel .zodiac-label{font:7px Arial,sans-serif;fill:#777}.activation-wheel .planet-label{font:bold 8px Arial,sans-serif;fill:#382a76}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
 .transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}
 .smallfact{margin-top:2mm;font-size:8pt;color:#555}
-@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0}}
+@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0;grid-template-columns:54mm 1fr;gap:4mm}.month .activation-wheel{max-width:54mm}.month .activation-contacts{font-size:7pt}.month .chart-reading{font-size:7.5pt;margin:1mm 0 2mm}.month .month-timeline{margin:1mm 0}.month .contacts{font-size:7.5pt}.month .callout{margin:3mm 0;padding:2.5mm}.month .eyebrow{margin-bottom:4mm}.month p{margin-bottom:2mm}}
 '''
-    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><h2>Your strengths</h2>{strengths}</section>'
-    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes.</p>{_annual_timeline(packet)}</section>'
+    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><p class="chart-reading">The planets show your birth positions; the lines connect selected natal aspects. Read the chart alongside your strengths to understand the patterns this year may activate.</p><h2>Your strengths</h2>{strengths}</section>'
+    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<h3>About this report</h3><p>Calculated planetary evidence is interpreted symbolically and is not professional advice.</p></section>'
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
 

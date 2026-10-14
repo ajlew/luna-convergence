@@ -1,16 +1,11 @@
-# Luna v3.105 — Year Ahead chart parity
+# Luna v3.106 — Year Ahead monthly chart presentation
 
-**Required baseline:** v3.104.
+**Install over v3.105.** Replace only `app.py`, `paid_yearly_report.py`, and `yearly_print_html.py`.
 
-**Source changes**
-- `paid_yearly_report.py`: the live Streamlit Year Ahead chart now renders the existing `_annual_timeline(packet)` chart function used by downloadable HTML/PDF, rather than the older bar-and-wave widget.
-- `app.py`: explicit version updated to `v3.105`.
+- `yearly_print_html.py`: match each of twelve monthly transit bars and exact-hit dots to its calculated parent Game's annual colour; add brief how-to-read text for natal, annual, monthly and activation graphics; reduce A4 monthly chart/spacing to avoid unnecessary carry-over pages.
+- `paid_yearly_report.py`: clarify the on-screen annual timeline caption (no structural changes).
+- `app.py`: explicitly set `APP_VERSION = "v3.106"`.
 
-**Included unchanged dependency**
-- `yearly_print_html.py`: exact v3.104 chart implementation required by the live renderer. This module has **not** been edited in v3.105. Included to avoid an incomplete install.
+No changes to Monthly, natal/ephemeris calculations, yearly event selection, Groq, checkout, report copy generation or the live report architecture. The HTML/PDF share the print renderer. The print spacing adjustment reduces but cannot guarantee elimination of splits for arbitrarily long report copy.
 
-**Not modified**: Paid Monthly, natal calculations, yearly calculations, yearly editorial/Groq, checkout, print/PDF logic.
-
-**Tests**: Python compilation; shared-chart output on two constructed Games (three SVG curves, two exact contact markers); code-path regression. No live Streamlit or Groq test; no real customer chart recomputed.
-
-**Installation**: Overlay these Python files in the repository root. Keep a copy of the v3.104 versions to roll back if needed. Confirm footer reads `v3.105` and the on-screen chart shows coloured Game curves identical to the downloaded HTML.
+Verified: Python compilation, chart colour/exact-hit SVG and guidance assertions. Full live Streamlit and real-customer rendered-PDF parity were not tested; no Groq calls.
