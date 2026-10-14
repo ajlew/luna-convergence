@@ -957,7 +957,12 @@ def parse_paid_yearly_editorial(
     issue_titles = dict(issue_titles or {})
 
     def safe(value: str) -> str:
-        return _sanitize_generated_dates(value, allowed_dates) if allowed_dates else " ".join(str(value or "").split())
+        # Strip internal orchestration markers even when the provider has
+        # embedded them inline inside otherwise meaningful customer prose.
+        # The original marker parser above still controls section boundaries.
+        clean_prose = re.sub(r"<<\s*[A-Z][A-Z0-9 _:-]{1,80}\s*>>", " ", str(value or ""), flags=re.I)
+        return (_sanitize_generated_dates(clean_prose, allowed_dates)
+                if allowed_dates else " ".join(clean_prose.split()))
 
     headline = safe(sections.get("HEADLINE", "")).rstrip(".")
     deck = safe(sections.get("DECK", ""))

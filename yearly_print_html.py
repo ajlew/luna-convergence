@@ -157,7 +157,7 @@ def _active_transits(game: dict, start: object, end: object) -> list[dict]:
     return selected
 
 
-def _sample_transit_orb(transit: dict, natal_longitudes: dict[str, float], day: date) -> float | None:
+def _sample_transit_orb(transit: dict, natal_longitudes: dict[str, float], day: date, hour_utc: float = 12.0) -> float | None:
     """Absolute aspect orb, calculated from Swiss Ephemeris; no synthetic peaks."""
     import re
     try:
@@ -179,7 +179,7 @@ def _sample_transit_orb(transit: dict, natal_longitudes: dict[str, float], day: 
             target = m.group(1).casefold() if m else ''
         if target not in natal_longitudes:
             return None
-        jd = swe.julday(day.year, day.month, day.day, 12.)
+        jd = swe.julday(day.year, day.month, day.day, hour_utc)
         actual = float(swe.calc_ut(jd, bodies[name], swe.FLG_SWIEPH)[0][0]) % 360
         delta = abs((actual - natal_longitudes[target] + 180) % 360 - 180)
         return abs(delta - angles[match.group(1).casefold()])
@@ -229,23 +229,38 @@ def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577", natal
         svg.append(f'<rect x="{chart_left}" y="{y-7}" width="{chart_width}" height="14" rx="5" fill="#f0efed"/>')
         # Sample the *actual* angular orb each day. Draw only inside the verified
         # transit window; exact-hit markers remain the packet's certified passes.
-        sample_days = [a + timedelta(days=k) for k in range(span + 1)]
-        orbs = [_sample_transit_orb(transit, natal_longitudes or {}, day) for day in sample_days]
-        valid = [(day, orb) for day, orb in zip(sample_days, orbs)
-                 if orb is not None and t_start <= day <= t_end]
-        if valid:
-            max_orb = max(max(orb for _, orb in valid), 0.000001)
-            # Relative closeness, not a claim of absolute strength between aspects.
-            points = [(chart_left+chart_width*(day-a).days/span,
-                       y+3-20*(1 - orb/max_orb)) for day, orb in valid]
-            if len(points) == 1:
-                x, yy = points[0]
-                svg.append(f'<circle cx="{x:.2f}" cy="{yy:.2f}" r="2" fill="{e(color)}"/>')
-            else:
-                svg.append(f'<path class="orb-curve" d="{smooth_wave_path(points)}" '
-                           f'fill="none" stroke="{e(color)}" stroke-width="3" stroke-linecap="round"/>')
+        # Six-hour ephemeris samples: a finely resolved measured signal, not
+        # a sine-wave approximation. A lower orb plots higher on the chart.
+        # The identical daily window and calculated birth longitude are retained.
+        steps = span * 4
+        measurements = []
+        for step in range(steps + 1):
+            day = a + timedelta(days=step // 4)
+            if not t_start <= day <= t_end:
+                continue
+            hour = float((step % 4) * 6)
+            orb = _sample_transit_orb(transit, natal_longitudes or {}, day, hour)
+            if orb is not None:
+                measurements.append((step / 4, orb))
+        max_orb = max((orb for _, orb in measurements), default=0.0)
+        def signal_y(orb):
+            return y + 3 - 20 * (1 - orb / max(max_orb, 0.000001))
+        if len(measurements) >= 2:
+            # Paired straight segments preserve every measured inflection.
+            # Applying = angular orb narrowing; separating = widening.
+            for (t0, o0), (t1, o1) in zip(measurements, measurements[1:]):
+                x0 = chart_left + chart_width * t0 / span
+                x1 = chart_left + chart_width * t1 / span
+                opacity = '0.90' if o1 < o0 else '0.52' if o1 > o0 else '0.70'
+                phase = 'applying' if o1 < o0 else 'separating' if o1 > o0 else 'stationary'
+                svg.append(f'<path class="orb-curve orb-{phase}" d="M {x0:.2f} {signal_y(o0):.2f} L {x1:.2f} {signal_y(o1):.2f}" '
+                           f'fill="none" stroke="{e(color)}" stroke-width="1.55" opacity="{opacity}" stroke-linecap="round"/>')
+        elif len(measurements) == 1:
+            t0, o0 = measurements[0]
+            x0 = chart_left + chart_width * t0 / span
+            svg.append(f'<circle cx="{x0:.2f}" cy="{signal_y(o0):.2f}" r="1.7" fill="{e(color)}"/>')
         else:
-            svg.append(f'<rect x="{left:.1f}" y="{y-3}" width="{max(3,right-left):.1f}" height="6" rx="3" fill="{e(color)}"/>')
+            svg.append(f'<rect x="{left:.1f}" y="{y-1.5}" width="{max(3,right-left):.1f}" height="3" rx="1.5" fill="{e(color)}" opacity="0.68"/>')
         for hit in transit.get('passes') or []:
             if not isinstance(hit,dict):continue
             hit_day = _iso_date(hit.get('date'))
@@ -253,10 +268,8 @@ def _transit_timeline(round_: dict, game: dict, *, color: str = "#765577", natal
             x = chart_left+chart_width*(hit_day-a).days/span
             label=str(hit.get('pass_label') or 'Exact')
             near = _sample_transit_orb(transit, natal_longitudes or {}, hit_day)
-            on_curve = [orb for day, orb in valid] if valid else []
-            peak_orb = max(max(on_curve), 0.000001) if on_curve else 0
-            dot_y = y+3-20*(1-near/peak_orb) if (near is not None and on_curve) else y
-            svg.append(f'<circle cx="{x:.1f}" cy="{dot_y:.1f}" r="5" fill="{e(color)}" stroke="white" stroke-width="1.5"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
+            dot_y = signal_y(near) if (near is not None and measurements) else y
+            svg.append(f'<circle cx="{x:.1f}" cy="{dot_y:.1f}" r="3.2" fill="{e(color)}" stroke="white" stroke-width="1.0"><title>{e(label)} · {e(d(hit_day))}</title></circle>')
     svg.append('</svg>')
     return ''.join(svg)
 
@@ -320,11 +333,11 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
     for key, longitude in sorted(targets.items(), key=lambda item: (item[1], item[0])):
         anchor_x, anchor_y = point(longitude, 103)
         best = None
-        for radius in (74, 64, 91, 110, 53):
-            for shift in (0, 18, -18, 36, -36, 54, -54, 72, -72, 90, -90):
+        for radius in (91, 76, 110, 63):
+            for shift in (0, 18, -18, 36, -36, 54, -54, 72, -72):
                 lx, ly = point(longitude + shift, radius)
                 # Planet label is a three-letter abbreviated name at 7px bold.
-                box = (lx - 20, ly - 12, lx + 20, ly + 7)
+                box = (lx - 16, ly - 12, lx + 16, ly + 5)
                 collision = sum(max(0, min(box[2], old[2]) - max(box[0], old[0])) *
                                 max(0, min(box[3], old[3]) - max(box[1], old[1]))
                                 for old in placed_boxes)
@@ -336,9 +349,9 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
                 score = (collision + marker_overlap * 200, abs(shift) + abs(radius-91) * .4)
                 if best is None or score < best[0]:
                     best = (score, lx, ly, box)
-                if score[0] == 0 and shift == 0 and radius == 74:
+                if score[0] == 0 and shift == 0 and radius == 91:
                     break
-            if best and best[0] == (0, abs(74-91) * .4):
+            if best and best[0] == (0, 0):
                 break
         _, lx, ly, box = best
         placed_boxes.append(box)
@@ -523,7 +536,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
     # Snapshot attributes vary between versions; use documented dict/signatures where available.
     strengths=''
     for s in list(getattr(snapshot,'signatures',()) or ())[:6]:
-        strengths+=f'<article class="block"><h3>{e(getattr(s,"title", ""))}</h3><p>{e(getattr(s,"text",""))}</p>' + (f'<p class="strength-evidence">{e(getattr(s,"evidence",""))}</p>' if getattr(s,"evidence","") else '') + '</article>'
+        strengths+=f'<article class="block"><h3>{e(getattr(s,"title", ""))}</h3><p>{e(getattr(s,"text",""))}</p></article>'
     month_cards=[]
     for i, row in enumerate(months):
         round_ = rounds[i] if i < len(rounds) else {}
@@ -547,7 +560,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
                f'<ul class="contacts">{contacts}</ul>' if focused else
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
             + ('<div class="chart-reading"><strong>How to read your monthly transits</strong><p>Each coloured curve follows the calculated orb through this month: higher means closer to exact. A dot marks a verified exact contact. Where orb data is unavailable, a bar shows only the active window.</p><p>Compare overlapping curves, then read <em>Your decision</em> for Luna&apos;s practical question. The chart describes angular exactness, not guaranteed events.</p></div>' if i == 0 and focused else '')
-            + (f'<div class="activation-section"><h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}</div>' if focused else '')
+            + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
             + ('<div class="chart-reading"><strong>How to read your natal activation</strong><p>Your natal chart describes the planetary positions at birth. This smaller wheel highlights the natal positions contacted by this month&apos;s selected transits.</p><p>Purple markers identify those natal positions. Orange markers show transiting positions when verified coordinates are available.</p><p>Use this chart to recognise which parts of your natal pattern are receiving attention. The accompanying transit descriptions explain what those contacts may bring into focus.</p></div>' if i == 0 and focused else '')
             + '<p class="quiet">For the complete pass-by-pass interpretation, see the relevant major story below.</p>'
             + '</section>'
@@ -570,7 +583,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
     appendix = _evidence_appendix(games)
     closing=para(getattr(editorial,'closing',()) or ())
     css='''
-@page {size:A4;margin:15mm 16mm 16mm}
+@page {size:A4;margin:17mm 17mm 18mm}
 *{box-sizing:border-box}body{font-family:'Josefin Sans',Arial,sans-serif;color:#141414;font-size:11pt;line-height:1.48;margin:0}
 h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h1{font-size:33pt;margin:0 0 10mm}h2{font-size:25pt;margin:0 0 5mm}h3{font-size:12pt;margin:6mm 0 2mm}p{margin:0 0 4mm}small,.quiet{color:#666}.eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:9mm}
 .page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid;page-break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.strength-list{break-inside:avoid;page-break-inside:avoid}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
@@ -581,7 +594,6 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 .chart-reading p{margin:1.5mm 0}.chart-reading strong{display:block;font-size:9pt;color:#222;margin-bottom:2mm}.chart-reading{font-size:8.5pt;color:#595959;line-height:1.35;margin:2mm 0 4mm}.month-timeline circle{stroke:#fff;stroke-width:1.5}
 .activation-layout{display:grid;grid-template-columns:92mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:92mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:bold 7px Arial,sans-serif;fill:#382a76}.activation-wheel .natal-label-leader{stroke:#725aca;stroke-width:.65;opacity:.7}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
-.strength-evidence{font-size:8pt;color:#555;margin-top:-1mm}.activation-section{break-inside:avoid;page-break-inside:avoid}.activation-section h3{break-after:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
 .transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}
 .smallfact{margin-top:2mm;font-size:8pt;color:#555}
