@@ -1,21 +1,16 @@
-# Luna v3.101 — Navigation only + Year Ahead plan consolidation
+# Luna v3.102 — Year Ahead natal-to-transit evidence (focused)
 
-**Required code baseline:** v3.100. Apply the included `app.py` only to that baseline.
+Base version: v3.101. This is the FIRST controlled Year Ahead enhancement, not the finished Year Ahead product.
 
-## Exact code change
-- `app.py`: hard-coded `APP_VERSION` advanced from `v3.100` to `v3.101` and corresponding build description changed.
-- `app.py`: only the eight `top_navigation()` labels/order and the existing legacy `this-month` active-label check updated.
-- No paid report code, ephemeris, writers, PDF renderers, auth, Stripe or natal calculations were edited.
+Changed application files:
+- app.py: explicit APP_VERSION v3.102 only.
+- paid_yearly_report.py: replaces text-search natal bridge with verified structured targets.
+New application file:
+- yearly_natal_intelligence.py: read-only evidence matching between existing natal aspects and Year Ahead Games.
+Test: test_yearly_natal_intelligence_v3102.py (3 offline tests).
 
-## Menu order
-Free: Daily Horoscope (`/`), Weekly Horoscope (`/weekly-view`), Monthly Horoscope (`/monthly`).
-Paid: Personal Reports (`/reports`), Your Year Ahead (`/timing-map`), Birthday Card (`/birthday-card`).
-Reference: House Guide (`/house-guide`), Solar Year (`/solar-year`).
-All existing URLs unchanged.
+Preservation: no paid Monthly, Stripe, ephemeris, ranked Games, dates, prompts, HTML or PDF code changes. Existing report sections retained. If no natal aspect has verified annual target contacts, the bridge is omitted.
 
-## Document
-`Luna_Paid_Year_Ahead.md` consolidates the full uploaded updated yearly plan with master rules, source conflict resolution, and critique acceptance tests. It is a specification only; it does **not** modify Year Ahead.
+Install: apply ZIP files in the project root on top of v3.101. Rollback: restore the pre-change app.py and paid_yearly_report.py and remove yearly_natal_intelligence.py.
 
-## Tests and limitations
-Run: `python test_v3101_navigation.py`; `python -m py_compile app.py`.
-Static tests do not verify deployment, page rendering, or live Stripe/Groq behaviour. Rollback by restoring v3.100 `app.py`.
+NOT verified: live Streamlit, full application test suite, Groq, Stripe, deployed PDF appearance. The full Year Ahead product is not complete.

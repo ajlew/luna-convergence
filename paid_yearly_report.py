@@ -1168,66 +1168,10 @@ _CORE_THREAD_YEAR_LANGUAGE = {
 }
 
 
-def _core_thread_year_bridge(
-    snapshot: Any,
-    packet: dict[str, Any],
-) -> str:
-    """Explain why the strongest natal pattern is relevant without inventing activation."""
-    aspects = list(getattr(snapshot, "aspects", ()) or ())
-    if not aspects:
-        return ""
-
-    strongest = aspects[0]
-    natal_planets = [
-        str(getattr(strongest, "planet1", "") or ""),
-        str(getattr(strongest, "planet2", "") or ""),
-    ]
-    natal_planets = [planet for planet in natal_planets if planet]
-    if not natal_planets:
-        return ""
-
-    games = [
-        row
-        for row in list(packet.get("games") or [])
-        if isinstance(row, dict)
-    ]
-    counts = {planet: 0 for planet in natal_planets}
-
-    for game in games:
-        stories = [dict(game.get("primary_transit") or {})] + [
-            dict(row)
-            for row in list(game.get("supporting_transits") or [])
-            if isinstance(row, dict)
-        ]
-        story_text = " ".join(
-            " ".join(
-                [
-                    str(story.get("transiting_planet") or ""),
-                    str(story.get("natal_target") or ""),
-                    str(story.get("technical_label") or ""),
-                ]
-            )
-            for story in stories
-        )
-        for planet in natal_planets:
-            if re.search(rf"\b{re.escape(planet)}\b", story_text, flags=re.IGNORECASE):
-                counts[planet] += 1
-
-    planet, count = max(counts.items(), key=lambda item: item[1])
-    if count <= 0:
-        return ""
-
-    p1, p2 = natal_planets[0], natal_planets[-1]
-    aspect_name = str(getattr(strongest, "name", "") or "").lower()
-    theme = _CORE_THREAD_YEAR_LANGUAGE.get(planet, planet.lower())
-    total = max(1, len(games))
-
-    return (
-        f"{planet} appears in {count} of your {total} major annual "
-        f"{'story' if total == 1 else 'stories'}. That does not mean those transits recreate "
-        f"your natal {p1} {aspect_name} {p2}. It means one side of that lifelong pattern — "
-        f"{theme} — is especially prominent in the timing selected for this year."
-    )
+def _core_thread_year_bridge(snapshot: Any, packet: dict[str, Any]) -> str:
+    """Evidence-only natal-to-year bridge, using explicit transit targets."""
+    from yearly_natal_intelligence import year_core_thread_evidence
+    return year_core_thread_evidence(snapshot, packet)
 
 
 def render_paid_yearly_report(
