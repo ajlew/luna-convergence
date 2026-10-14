@@ -39,7 +39,7 @@ PREFERRED_COMPLETION_TOKENS = 2500
 MIN_COMPLETION_TOKENS = 1800
 
 _MARKER_RE = re.compile(
-    r"(?m)^<<(?P<name>HEADLINE|DECK|READ_YEAR|CLOSING|ISSUE:\d+|MONTH:\d+)>>\s*$"
+    r"(?m)^\s*(?:#{1,4}\s*)?(?:\*\*)?<<\s*(?P<name>HEADLINE|DECK|READ_YEAR|CLOSING|ISSUE\s*:\s*\d+|MONTH\s*:\s*\d+)\s*>>(?:\*\*)?\s*$"
 )
 
 
@@ -951,7 +951,11 @@ def parse_paid_yearly_editorial(
     for index, match in enumerate(matches):
         start = match.end()
         end = matches[index + 1].start() if index + 1 < len(matches) else len(clean)
-        sections[match.group("name")] = clean[start:end].strip()
+        raw_name = re.sub(r"\s+", "", match.group("name"))
+        if ":" in raw_name:
+            kind, number = raw_name.split(":", 1)
+            raw_name = f"{kind}:{int(number)}"
+        sections[raw_name] = clean[start:end].strip()
 
     allowed_dates = set(allowed_dates or ())
     issue_titles = dict(issue_titles or {})
@@ -1116,9 +1120,33 @@ def generate_paid_yearly_editorial(
         result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
              primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
-        found=set(_MARKER_RE.findall(_clean_text(result)))
-        if not set(m.strip('<>') for m in requested).issubset(found):
-            raise RuntimeError(f'Year Ahead {job_name} incomplete markers')
+        found = set()
+        for match in _MARKER_RE.finditer(_clean_text(result)):
+            name = re.sub(r"\s+", "", match.group("name"))
+            if ":" in name:
+                kind, number = name.split(":", 1)
+                name = f"{kind}:{int(number)}"
+            found.add(name)
+        required = {marker.strip('<>') for marker in requested}
+        missing = sorted(required - found)
+        if missing:
+            raise RuntimeError(
+                f'Year Ahead {job_name} missing required sections: {", ".join(missing)}'
+            )
+        # A marker without actual prose is not a completed paid section.
+        parsed = _clean_text(result)
+        markers = list(_MARKER_RE.finditer(parsed))
+        empty = []
+        for index, match in enumerate(markers):
+            marker = re.sub(r"\s+", "", match.group("name"))
+            if ":" in marker:
+                kind, number = marker.split(":", 1)
+                marker = f"{kind}:{int(number)}"
+            tail = markers[index + 1].start() if index + 1 < len(markers) else len(parsed)
+            if marker in required and not parsed[match.end():tail].strip():
+                empty.append(marker)
+        if empty:
+            raise RuntimeError(f'Year Ahead {job_name} empty sections: {", ".join(empty)}')
         return result
     base={k:compact.get(k) for k in ('period','reader_context','natal')}
     all_parts=[]
@@ -1136,10 +1164,10 @@ def generate_paid_yearly_editorial(
         markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
         if markers: all_parts.append(section('months',markers,{**base,'monthly_rounds':rows,'major_issues':intro_packet['major_issues']},1400))
     games=compact.get('major_issues') or []
-    for first in range(0,len(games),2):
-        group=games[first:first+2]
+    for first in range(0,len(games)):
+        group=games[first:first+1]
         markers=[f'<<ISSUE:{int(row["number"])}>>' for row in group]
-        all_parts.append(section('games',markers,{**base,'major_issues':group},2200))
+        all_parts.append(section('games',markers,{**base,'major_issues':group},1600))
     body='\n\n'.join(all_parts)
     return parse_paid_yearly_editorial(
         body,
