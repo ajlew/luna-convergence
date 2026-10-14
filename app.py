@@ -170,8 +170,8 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.109"
-BUILD_LABEL = f"Luna {APP_VERSION} — Year Ahead Voice Completion"
+APP_VERSION = "v3.110"
+BUILD_LABEL = f"Luna {APP_VERSION} — Complete Year Ahead Print"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
@@ -3645,13 +3645,17 @@ def payment_success_page() -> None:
                 order_reference=order_reference,
             )
             pdf_name = paid_yearly_filename(sign, start_date, end_date)
-            st.download_button(
-                "Download your personalised PDF",
-                data=pdf_bytes,
-                file_name=pdf_name,
-                mime="application/pdf",
-                use_container_width=True,
-                key=f"paid-pdf-{session_id}",
+            from yearly_print_html import build_yearly_print_html
+            print_html = build_yearly_print_html(
+                snapshot=product["snapshot"],
+                packet=product["packet"].to_dict() if hasattr(product["packet"], "to_dict") else product["packet"],
+                editorial=product["editorial"], label=period_label,
+                main_focus=main_focus, personal_question=personal_question,
+                order_reference=order_reference,
+            )
+            _yearly_complete_document_downloads(
+                pdf_bytes=pdf_bytes, pdf_name=pdf_name, print_html=print_html,
+                key_prefix=f"paid-{session_id}",
             )
             _email_paid_report(
                 session,
@@ -4210,6 +4214,27 @@ def _owner_report_output(order: dict) -> dict:
     raise ValueError("Owner access received an unrecognised report type.")
 
 
+def _yearly_complete_document_downloads(
+    *, pdf_bytes: bytes, pdf_name: str, print_html: str, key_prefix: str, owner: bool = False
+) -> None:
+    """Deliver the complete A4 document, never a clipped Streamlit-page print."""
+    st.markdown("**Keep and print your complete Year Ahead**")
+    st.caption(
+        "Save the PDF for your records. To print, open the downloaded PDF and press Ctrl+P "
+        "(or use its Print command). Ctrl+P on this interactive page may print only its visible section."
+    )
+    st.download_button(
+        "Download complete Year Ahead PDF" if not owner else "Download complete owner Year Ahead PDF",
+        data=pdf_bytes, file_name=pdf_name, mime="application/pdf",
+        use_container_width=True, key=f"{key_prefix}-year-pdf",
+    )
+    st.download_button(
+        "Download printable Year Ahead HTML (open, then Ctrl+P)",
+        data=print_html, file_name=str(Path(pdf_name).with_suffix(".html")),
+        mime="text/html", use_container_width=True, key=f"{key_prefix}-year-html",
+    )
+
+
 def _render_owner_report(order: dict, key_context: str) -> None:
     output_key = f"owner-report-output::{key_context}::{str(order.get('product_code') or '').lower()}"
     if st.button(
@@ -4238,23 +4263,25 @@ def _render_owner_report(order: dict, key_context: str) -> None:
 
     st.session_state["reports-generated-result-visible"] = True
     st.success("Owner copy generated. No Stripe payment was created.")
-    st.download_button(
-        "Download owner PDF",
-        data=output["pdf"],
-        file_name=output["pdf_name"],
-        mime="application/pdf",
-        use_container_width=True,
-        key=f"{key_context}-owner-pdf-{str(order.get('product_code') or '').lower()}",
-    )
-    if output.get("print_html"):
-        st.download_button(
-            "Download print-ready HTML (open in browser → Print)",
-            data=output["print_html"],
-            file_name=output["pdf_name"].replace(".pdf", ".html"),
-            mime="text/html",
-            use_container_width=True,
-            key=f"{key_context}-owner-html-{str(order.get('product_code') or '').lower()}",
+    if output["product_code"] in {"YEAR", "YEARLY"}:
+        _yearly_complete_document_downloads(
+            pdf_bytes=output["pdf"], pdf_name=output["pdf_name"],
+            print_html=output["print_html"], key_prefix=f"{key_context}-owner", owner=True,
         )
+    else:
+        st.download_button(
+            "Download owner PDF", data=output["pdf"], file_name=output["pdf_name"],
+            mime="application/pdf", use_container_width=True,
+            key=f"{key_context}-owner-pdf-{str(order.get('product_code') or '').lower()}",
+        )
+        if output.get("print_html"):
+            st.download_button(
+                "Download print-ready HTML (open in browser → Print)",
+                data=output["print_html"],
+                file_name=output["pdf_name"].replace(".pdf", ".html"),
+                mime="text/html", use_container_width=True,
+                key=f"{key_context}-owner-html-{str(order.get('product_code') or '').lower()}",
+            )
     if output["product_code"] == "MONTHLY":
         _render_snapshot_monthly_report(
             output["narrative"],
