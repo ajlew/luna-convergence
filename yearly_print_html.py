@@ -17,43 +17,121 @@ def d(x: Any) -> str:
     except Exception: return str(x or '')
 
 
-def _strips(packet: dict) -> str:
-    games = [g for g in packet.get('games', []) if isinstance(g, dict)]
-    start = date.fromisoformat(str(packet['period']['start'])[:10]); end = date.fromisoformat(str(packet['period']['end'])[:10])
-    span = max((end-start).days, 1)
-    parts=[]
-    for g in games:
-        a=date.fromisoformat(str(g.get('start_date') or start)[:10]); b=date.fromisoformat(str(g.get('end_date') or end)[:10])
-        left=max(0,min(100,100*(a-start).days/span)); right=max(left,min(100,100*(b-start).days/span))
-        title=g.get('title') or str(g.get('human_life_area') or 'A major story')
-        area_label = e(str(g.get('human_life_area') or 'A major story'))
-        parts.append(f'<div class="lane"><div><strong>{e(str(title).title())}</strong><small>{area_label}</small></div><div class="track"><span style="left:{left:.1f}%;width:{max(1,right-left):.1f}%"></span></div></div>')
-    return ''.join(parts)
+def _annual_timeline(packet: dict) -> str:
+    """One date axis for selected Game activity, exact contacts and the aggregate.
+
+    Each colour trace is derived from that Game's recorded transit windows and
+    exact passes. No synthetic periodicity or forecast outcomes are introduced.
+    """
+    from datetime import timedelta
+    from math import exp
+
+    period = packet.get("period") or {}
+    start, end = _iso_date(period.get("start")), _iso_date(period.get("end"))
+    games = [g for g in packet.get("games", ()) if isinstance(g, dict)]
+    if not start or not end or end <= start or not games:
+        return ""
+
+    days = (end - start).days
+    x0, width = 196.0, 570.0
+    samples = [start + timedelta(days=round(days * i / 180)) for i in range(181)]
+    colors = ("#765577", "#51758a", "#a0783d", "#597762", "#8c5c50")
+    def xpos(day):
+        return x0 + width * max(0.0, min(1.0, (day - start).days / days))
+    def transits(game):
+        seen = set()
+        for tr in [game.get("primary_transit"), *(game.get("supporting_transits") or ())]:
+            if not isinstance(tr, dict):
+                continue
+            key = (str(tr.get("technical_label")), str(tr.get("start")), str(tr.get("end")))
+            if key not in seen:
+                seen.add(key)
+                yield tr
+
+    # Amplitude is based on exactly recorded passes and recorded active windows.
+    # Each event is a distinct pulse; long-running aspects do not produce an
+    # artificial constant-intensity plateau or a sine-wave cycle.
+    activity, valid = [], []
+    for game in games:
+        records = []
+        for tr in transits(game):
+            a, b = _iso_date(tr.get("start")), _iso_date(tr.get("end"))
+            if not a or not b or b < start or a > end or b < a:
+                continue
+            hits = []
+            for hit in tr.get("passes") or ():
+                dt = _iso_date(hit.get("date")) if isinstance(hit, dict) else None
+                if dt and a <= dt <= b:
+                    hits.append(dt)
+            records.append((tr, a, b, hits))
+        valid.append(records)
+        intensity = []
+        for day in samples:
+            value = 0.0
+            for _, a, b, hits in records:
+                if a <= day <= b:
+                    # Window shoulder is a secondary signal; exact passes
+                    # dominate when present. Width follows window duration.
+                    value += 0.13
+                    sigma = max(5., min(27., (b-a).days / 9.))
+                    for dt in hits:
+                        value += exp(-0.5 * (((day-dt).days) / sigma) ** 2)
+            intensity.append(value)
+        activity.append(intensity)
+
+    total = [sum(series[i] for series in activity) for i in range(len(samples))]
+    max_total = max(total) if total else 0
+    if max_total <= 0:
+        return '<p class="quiet">No verified annual transit activity is available to plot.</p>'
+    chart_height = 66 * len(games) + 142
+    rows = []
+    for i, game in enumerate(games):
+        y = 42 + 66*i
+        color = colors[i % len(colors)]
+        title = str(game.get("title") or game.get("human_life_area") or f"Game {i+1}")
+        rows.append(f'<text x="4" y="{y+12}" font-size="12" fill="#222">{e(title.title())}</text>')
+        rows.append(f'<line x1="{x0}" y1="{y+37}" x2="{x0+width}" y2="{y+37}" stroke="#dedede"/>')
+        for _, a, b, hits in valid[i]:
+            xa, xb = xpos(max(start,a)), xpos(min(end,b))
+            rows.append(f'<line x1="{xa:.2f}" y1="{y+37}" x2="{xb:.2f}" y2="{y+37}" stroke="{color}" stroke-opacity=".28" stroke-width="7" stroke-linecap="round"/>')
+        peak = max(activity[i]) or 1
+        pts = [(xpos(day), y+34-26*v/peak) for day,v in zip(samples,activity[i])]
+        rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="{color}" stroke-width="2.7" stroke-linecap="round"/>')
+        for _,a,b,hits in valid[i]:
+            for dt in hits:
+                if start <= dt <= end:
+                    j = min(range(len(samples)), key=lambda k: abs((samples[k]-dt).days))
+                    yy = y+34-26*activity[i][j]/peak
+                    rows.append(f'<circle cx="{xpos(dt):.2f}" cy="{yy:.2f}" r="3.2" fill="{color}"><title>{e(str(dt))}</title></circle>')
+
+    y = 56+66*len(games)
+    rows.append(f'<text x="4" y="{y+7}" font-size="12" fill="#222">Combined rhythm</text>')
+    rows.append(f'<line x1="{x0}" y1="{y+83}" x2="{x0+width}" y2="{y+83}" stroke="#dedede"/>')
+    pts=[(xpos(day), y+79-70*v/max_total) for day,v in zip(samples,total)]
+    rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="#171717" stroke-width="3" stroke-linecap="round"/>')
+    # Calendar ticks are calculated from dates, including partial first/last months.
+    tick = date(start.year,start.month,1)
+    while tick <= end:
+        if tick >= start:
+            x=xpos(tick)
+            rows.append(f'<line x1="{x:.2f}" y1="27" x2="{x:.2f}" y2="{y+83}" stroke="#999" stroke-opacity=".13"/>')
+            rows.append(f'<text x="{x:.2f}" y="22" font-size="9" text-anchor="middle">{tick.strftime("%b").upper()}</text>')
+        tick = date(tick.year+1,1,1) if tick.month==12 else date(tick.year,tick.month+1,1)
+    rows.append(f'<text x="{x0:.1f}" y="{y+99}" text-anchor="start" font-size="9">{e(d(start))}</text>')
+    rows.append(f'<text x="{x0+width:.1f}" y="{y+99}" text-anchor="end" font-size="9">{e(d(end))}</text>')
+    return (f'<svg class="annual-timeline" viewBox="0 0 790 {chart_height}" role="img" '
+            f'aria-label="Calculated individual Game activity and combined rhythm on a shared date axis">'
+            + ''.join(rows) + '</svg>')
 
 
 def smooth_wave_path(points: list[tuple[float, float]]) -> str:
-    """Cubic curve passing through every calculated month sample, without new peaks."""
     if not points:
         return ""
     output = [f"M {points[0][0]:.2f} {points[0][1]:.2f}"]
-    for (x1,y1),(x2,y2) in zip(points,points[1:]):
-        dx=(x2-x1)/3
-        output.append(
-            f"C {x1+dx:.2f} {y1:.2f} {x2-dx:.2f} {y2:.2f} {x2:.2f} {y2:.2f}"
-        )
+    for (x1, y1), (x2, y2) in zip(points, points[1:]):
+        dx = (x2-x1)/3
+        output.append(f"C {x1+dx:.2f} {y1:.2f} {x2-dx:.2f} {y2:.2f} {x2:.2f} {y2:.2f}")
     return " ".join(output)
-
-
-def _wave(packet: dict) -> str:
-    rows=[r for r in packet.get('year_strip', []) if isinstance(r,dict)]
-    if not rows: return ''
-    n=len(rows); vals=[max(0,min(1,float(r.get('intensity') or 0))) for r in rows]
-    # Smoothed, linear segments between actual calculated monthly concentration samples.
-    xy=[(35+i* (730/max(1,n-1)),105-78*v) for i,v in enumerate(vals)]
-    path=smooth_wave_path(xy)
-    labels=''.join(f'<text x="{x:.1f}" y="128" text-anchor="middle">{e(str(r.get("month") or ""))}</text>' for (x,_),r in zip(xy,rows))
-    circles=''.join(f'<circle class="rhythm-dot" cx="{x:.1f}" cy="{y:.1f}" r="3" />' for x,y in xy)
-    return f'<svg viewBox="0 0 800 145" role="img" aria-label="Monthly activity concentration based on calculated selected transits"><line x1="35" y1="105" x2="765" y2="105" stroke="#ddd"/><path d="{path}" fill="none" stroke="#151515" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>{circles}{labels}</svg>'
 
 
 def _iso_date(value: Any) -> date | None:
@@ -349,7 +427,7 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 .page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.month-timeline circle,.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
 @media screen{body{max-width:820px;margin:auto;padding:25px}.page{padding-top:30px;border-top:1px solid #ddd;margin-top:50px}}
 
-.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
+.annual-timeline{display:block;width:100%;height:auto;margin:5mm 0 7mm;break-inside:avoid}.annual-timeline text{font-family:Josefin Sans,Arial,sans-serif}.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
 .month-timeline circle{fill:#111}
 .activation-layout{display:grid;grid-template-columns:70mm 1fr;gap:6mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:70mm;height:auto}.activation-wheel .zodiac-label{font:7px Arial,sans-serif;fill:#777}.activation-wheel .planet-label{font:bold 8px Arial,sans-serif;fill:#382a76}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
@@ -360,7 +438,7 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 @media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0}}
 '''
     intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><h2>Your strengths</h2>{strengths}</section>'
-    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. These bars show when each one comes into focus, while the wave shows when the selected transits become more active or leave room to breathe. A higher point means more concentrated astrological activity, not a predicted outcome.</p><div class="lanes">{_strips(packet)}</div><h3>Your annual rhythm</h3>{_wave(packet)}</section>'
+    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<h3>About this report</h3><p>Calculated planetary evidence is interpreted symbolically and is not professional advice.</p></section>'
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
 

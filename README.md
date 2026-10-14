@@ -1,16 +1,13 @@
-# Luna v3.102 — Year Ahead natal-to-transit evidence (focused)
+Luna v3.104 — Year Ahead annual graphics
 
-Base version: v3.101. This is the FIRST controlled Year Ahead enhancement, not the finished Year Ahead product.
+Apply app.py and yearly_print_html.py to the existing v3.103 repository.
 
-Changed application files:
-- app.py: explicit APP_VERSION v3.102 only.
-- paid_yearly_report.py: replaces text-search natal bridge with verified structured targets.
-New application file:
-- yearly_natal_intelligence.py: read-only evidence matching between existing natal aspects and Year Ahead Games.
-Test: test_yearly_natal_intelligence_v3102.py (3 offline tests).
+Changes:
+- Year Ahead annual section now renders all selected Game curves and their combined curve in a single SVG/date axis.
+- The curves are derived from each Game's already-recorded transit active windows and exact-pass dates. No sine-wave periodicity or fixed customer dates.
+- Colour differentiates Games; precise contacts appear as dots; start/end and monthly ticks use actual dates.
+- app.py explicit application version is v3.104.
 
-Preservation: no paid Monthly, Stripe, ephemeris, ranked Games, dates, prompts, HTML or PDF code changes. Existing report sections retained. If no natal aspect has verified annual target contacts, the bridge is omitted.
+Not modified: Monthly report, natal calculation engine, writing/provider configuration, checkout, PDF generator architecture.
 
-Install: apply ZIP files in the project root on top of v3.101. Rollback: restore the pre-change app.py and paid_yearly_report.py and remove yearly_natal_intelligence.py.
-
-NOT verified: live Streamlit, full application test suite, Groq, Stripe, deployed PDF appearance. The full Year Ahead product is not complete.
+Verification: Python compilation and synthetic two-Game SVG structure checked. No live provider call, no full app integration test or real customer report visual comparison. Rollback: restore previous two files.
