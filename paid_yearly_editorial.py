@@ -1226,12 +1226,22 @@ def generate_paid_yearly_editorial(
              'dominant_game_number': row.get('dominant_game_number')}
             for row in full_month_slice
         ]
-        segment_packet = {**base, 'major_issues': [
-                             {'number': g.get('number'), 'title': g.get('customer_title'),
-                              'life_area': g.get('life_area')}
-                             for g in compact.get('major_issues') or []],
-                          'monthly_rounds': period_months,
-                          'verified_dated_contacts_for_this_act': ledger}
+        # A Read-the-Year act gets only its own four months and the exact
+        # ephemeris-backed contacts in those months. No all-year Game catalogue:
+        # future dated evidence must not leak into the earlier act's prose.
+        act_start = str(full_month_slice[0].get('start') or '')[:10]
+        act_end = str(full_month_slice[-1].get('end') or '')[:10]
+        if not (act_start and act_end and act_start <= act_end):
+            raise RuntimeError('Year Ahead calculated act boundaries are missing')
+        segment_packet = {
+            'period': {'start': act_start, 'end': act_end},
+            'reader_context': base.get('reader_context'),
+            'natal': base.get('natal'),
+            'act_start_date': act_start,
+            'act_end_date': act_end,
+            'monthly_rounds': period_months,
+            'allowed_exact_contacts': ledger,
+        }
         # The three bounded calls form consecutive ACTS of a single article,
         # not three independent mini-articles. Subsequent acts receive the end
         # of the prior act to prevent restarts without replaying the full essay.
@@ -1253,13 +1263,21 @@ def generate_paid_yearly_editorial(
             f'This request writes ONLY the {stage}, act {chunk_index} of 3. '
             'Write 150–210 words of finished customer-facing narrative in 2–3 paragraphs, '
             'not a list, outline, report summary or numbered Games. '
-            'Follow ONLY the supplied four rolling months in their actual order. '
-            'Only verified_dated_contacts_for_this_act supplies named contacts and dates. '
-            'Never infer a planet/aspect from month strongest_date or a generic trigger. '
-            'If a month has no named exact event, describe the documented active Game '
-            'without inventing a contact or placing later events in this month. '
-            'Keep later transits as future context only when explicitly needed and never '
-            'claim they become exact during an earlier act. '
+            f'ACT DATE BOUNDARY: {act_start} through {act_end}, inclusive. '
+            'Narrate only this time window, month by month, in the supplied order. '
+            'Do not name an event, month, contact or event date outside this act. '
+            'ASTROLOGICAL FACT WHITELIST: allowed_exact_contacts is the ONLY authority '
+            'for naming a transiting planet, aspect, natal target AND exact date. '
+            'You may ONLY name an exact planetary contact listed in that array. '
+            'Do not invent, assume, interpolate, relabel or transfer an unlisted '
+            'conjunction, sextile, square, trine or opposition, including Sun, Venus, '
+            'Mercury and other fast-moving planets. '
+            'Do not infer a planet or aspect from strongest_date, phase, Game title, '
+            'natal placements, or an incomplete generic trigger. '
+            'When a month has no allowed named contact, interpret its supplied '
+            'phase and focus in human terms, without creating a planetary claim. '
+            'Do not use Game numbering or section language such as "first game", '
+            '"second game", "Major Story", or internal planning headings. '
             'Do not restart the year, recap an earlier act, repeat the headline/deck, '
             'introduce generic scenario lists or summarize other chapters. '
             'Use actual named calculated transit evidence from the supplied packet '
