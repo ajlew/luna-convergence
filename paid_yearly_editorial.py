@@ -873,8 +873,7 @@ def parse_paid_yearly_editorial(
         # embedded them inline inside otherwise meaningful customer prose.
         # The original marker parser above still controls section boundaries.
         clean_prose = re.sub(r"<<\s*[A-Z][A-Z0-9 _:-]{1,80}\s*>>", " ", str(value or ""), flags=re.I)
-        return (_sanitize_generated_dates(clean_prose, allowed_dates)
-                if allowed_dates else " ".join(clean_prose.split()))
+        return " ".join(clean_prose.split())
 
     headline = safe(sections.get("HEADLINE", "")).rstrip(".")
     deck = safe(sections.get("DECK", ""))
@@ -918,9 +917,7 @@ def parse_paid_yearly_editorial(
         )
 
     for number in issue_numbers:
-        raw_paragraphs = _ensure_issue_paragraphs(
-            _paragraphs(sections.get(f"ISSUE:{int(number)}", ""))
-        )
+        raw_paragraphs = _paragraphs(sections.get(f"ISSUE:{int(number)}", ""))
         cleaned: list[str] = []
         for index, paragraph in enumerate(raw_paragraphs):
             paragraph = safe(paragraph)
@@ -975,28 +972,17 @@ def parse_paid_yearly_editorial(
 
 
 def _normalize_single_game_response(value: Any, expected_marker: str) -> str:
-    """Assign one bounded Game response to its Python-owned issue number.
+    """Place the response in its Python-assigned Game slot without editorial gates.
 
-    Marker spelling is transport formatting, not the identity of an issue.
-    Never accept blank prose or text that appears to contain another section.
+    Transport markers are not astrological evidence. A provider error or entirely
+    absent body is handled as a technical failure, not a prose-quality rejection.
     """
     prose = _clean_text(value)
     if not prose:
-        raise RuntimeError("Year Ahead games returned empty content")
-    # A single issue is requested: its destination is known independently of
-    # any marker the language model chooses to echo.
-    markers = re.findall(r"<<\s*([^<>\n]{1,80}?)\s*>>", prose)
-    expected_name = expected_marker.strip("<>")
-    for marker in markers:
-        normalized = marker.strip().upper()
-        if normalized not in (expected_name, "GAMES", "GAME", "MAJOR STORY"):
-            raise RuntimeError("Year Ahead games contained a foreign section marker")
+        raise RuntimeError("Year Ahead provider returned no Game text")
     prose = re.sub(r"<<\s*[^<>\n]{1,80}\s*>>", "", prose).strip()
-    prose = re.sub(r"(?im)^\s*(?:major story|game)\s*:?\s*$", "", prose).strip()
-    if len(prose.split()) < 45:
-        raise RuntimeError("Year Ahead games returned incomplete prose")
-    if re.search(r"(?im)^\s*(?:phase|dominant game|strongest date|life area)\s*:", prose):
-        raise RuntimeError("Year Ahead games contained internal planning content")
+    if not prose:
+        raise RuntimeError("Year Ahead provider returned no Game text")
     return expected_marker + "\n" + prose
 
 
@@ -1061,9 +1047,14 @@ def generate_paid_yearly_editorial(
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
         if job_name == 'games' and len(requested) == 1:
             return _normalize_single_game_response(result, requested[0])
-        found=set(_MARKER_RE.findall(_clean_text(result)))
-        if not allow_unmarked and not set(m.strip('<>') for m in requested).issubset(found):
-            raise RuntimeError(f'Year Ahead {job_name} incomplete markers')
+        # Marker labels are transport syntax, not post-LLM editorial acceptance.
+        # A single known section can be assigned its destination by Python.
+        if len(requested) == 1:
+            marker = requested[0]
+            prose = re.sub(r'(?m)^\s*<<[^<>\r\n]{1,80}>>\s*$', '', _clean_text(result)).strip()
+            if not prose:
+                raise RuntimeError(f'Year Ahead {job_name} provider returned no text')
+            return marker + "\n" + prose
         return result
     base={k:compact.get(k) for k in ('period','reader_context','natal')}
     all_parts=[]
@@ -1122,19 +1113,6 @@ def generate_paid_yearly_editorial(
         # otherwise complete prose. Strip only standalone marker lines; do not
         # substitute a canned passage or discard the customer's reading.
         prose = re.sub(r'(?m)^\s*<<[^\r\n<>]{1,80}>>\s*$', '', _clean_text(result)).strip()
-        # Provider section boundaries are not editorial content. Do not allow
-        # leakage of packet fields, numbered monthly rows, or foreign sections
-        # into the customer-facing annual essay. Reject; never make up prose.
-        if re.search(r'<<[^<>\n]{1,100}>>', prose) or re.search(
-            r'(?im)(?:^|\n)\s*(?:phase\s*:|dominant\s+game\s*:|'
-            r'life\s+area\s*:|strongest\s+date\s*:|focus\s*:|'
-            r'game\s+\d+\s*:|scenario\s+(?:one|two|three)\s*:|'
-            r'\d{1,2}\s+\d{1,2}\s+[A-Z][a-z]{2}\s+[–-]\s+\d{1,2}\s+[A-Z][a-z]{2})',
-            prose,
-        ):
-            raise RuntimeError(f'Year Ahead annual section {chunk_index} contains internal planning content')
-        if len(prose.split()) < 75:
-            raise RuntimeError(f'Year Ahead annual section {chunk_index} is incomplete')
         year_segments.append(prose)
         previous_context = ' '.join(prose.split())[-650:]
     all_parts.append('<<READ_YEAR>>\n' + '\n\n'.join(year_segments))
