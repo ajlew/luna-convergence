@@ -26,6 +26,7 @@ import math
 import os
 import re
 import time
+import threading
 from collections import deque
 from typing import Any
 
@@ -35,6 +36,54 @@ from year_ahead import YearPacket
 
 
 PAID_YEARLY_EDITORIAL_VERSION = "1.3-reader-value"
+# Per-worker token accounting. External Groq clients and other workers are not visible.
+_YEARLY_DAILY_LOCK = threading.Lock()
+_YEARLY_DAILY_RESERVATIONS = deque()
+_YEARLY_PROVIDER_DAILY_BLOCKED_UNTIL = 0.0
+_YEARLY_PROVIDER_DAILY_DETAIL = ""
+
+
+def _reserve_yearly_daily_tokens(tokens: int, *, budget: int, window: float) -> None:
+    """Fail before sending a request when this worker knows daily headroom is absent."""
+    global _YEARLY_PROVIDER_DAILY_BLOCKED_UNTIL
+    with _YEARLY_DAILY_LOCK:
+        now = time.time()
+        if now < _YEARLY_PROVIDER_DAILY_BLOCKED_UNTIL:
+            raise RuntimeError(
+                "Groq daily token allowance exhausted (TPD). "
+                + _YEARLY_PROVIDER_DAILY_DETAIL
+                + " Wait for the provider quota reset; do not resubmit the report yet."
+            )
+        while _YEARLY_DAILY_RESERVATIONS and now - _YEARLY_DAILY_RESERVATIONS[0][0] >= window:
+            _YEARLY_DAILY_RESERVATIONS.popleft()
+        reserved = sum(amount for _, amount in _YEARLY_DAILY_RESERVATIONS)
+        if tokens > budget or reserved + tokens > budget:
+            raise RuntimeError(
+                f"Year Ahead daily token preflight: this worker reserved {reserved:,} "
+                f"of {budget:,} configured tokens; next job requires up to {tokens:,}. "
+                "Wait for the daily budget window or configure the verified Groq allowance."
+            )
+        _YEARLY_DAILY_RESERVATIONS.append((now, tokens))
+
+
+def _remember_yearly_daily_429(error: Exception, *, window: float) -> None:
+    """Learn from Groq's actual TPD error without re-calling the model."""
+    global _YEARLY_PROVIDER_DAILY_BLOCKED_UNTIL, _YEARLY_PROVIDER_DAILY_DETAIL
+    message = str(error)
+    if not re.search(r"tokens per day|\bTPD\b", message, re.I):
+        return
+    used = re.search(r"Used\s+(\d+)", message, re.I)
+    limit = re.search(r"Limit\s+(\d+)", message, re.I)
+    requested = re.search(r"Requested\s+(\d+)", message, re.I)
+    detail = (f"Provider reports used {int(used.group(1)):,} / {int(limit.group(1)):,} "
+              f"tokens; attempted {int(requested.group(1)):,}. "
+              if used and limit and requested else "Provider explicitly reported TPD exhaustion. ")
+    with _YEARLY_DAILY_LOCK:
+        # Conservative local cooldown, not a claim about the provider reset time.
+        _YEARLY_PROVIDER_DAILY_BLOCKED_UNTIL = time.time() + window
+        _YEARLY_PROVIDER_DAILY_DETAIL = detail
+
+
 DEFAULT_TIMEOUT_SECONDS = 180
 TARGET_TOTAL_TOKENS = 5350
 PREFERRED_COMPLETION_TOKENS = 2500
@@ -1077,6 +1126,8 @@ def generate_paid_yearly_editorial(
     rolling_window_seconds = float(os.environ.get('LUNA_YEARLY_TOKEN_WINDOW_SECONDS', '65'))
     pacing_enabled = os.environ.get('LUNA_YEARLY_PACE_REQUESTS', '1').strip() != '0'
     request_reservations = deque()
+    daily_token_budget = int(os.environ.get('LUNA_YEARLY_TOKENS_PER_DAY', '200000'))
+    daily_window_seconds = float(os.environ.get('LUNA_YEARLY_DAILY_WINDOW_SECONDS', '86400'))
 
     def reserve_provider_capacity(estimated_input: int, completion_cap: int) -> None:
         if not pacing_enabled:
@@ -1119,10 +1170,18 @@ def generate_paid_yearly_editorial(
             f'Year Ahead {job_name} packet over configured token budget: '
             f'input={estimated}, output={output_limit}, budget={total_budget}'
         )
+        # Daily and minute budgets are independent. Check BEFORE sending to Groq.
+        # Only this process's usage is known until Groq returns a real quota error.
+        _reserve_yearly_daily_tokens(estimated + output_limit,
+                                     budget=daily_token_budget, window=daily_window_seconds)
         reserve_provider_capacity(estimated, output_limit)
-        result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
-             primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
-             checkpoint_id="yearly:"+job_name+":"+",".join(requested))
+        try:
+            result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
+                 primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
+                 checkpoint_id="yearly:"+job_name+":"+",".join(requested))
+        except Exception as exc:
+            _remember_yearly_daily_429(exc, window=daily_window_seconds)
+            raise
         if job_name == 'games' and len(requested) == 1:
             return _normalize_single_game_response(result, requested[0])
         # Marker labels are transport syntax, not post-LLM editorial acceptance.
