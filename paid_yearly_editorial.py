@@ -974,6 +974,32 @@ def parse_paid_yearly_editorial(
     )
 
 
+def _normalize_single_game_response(value: Any, expected_marker: str) -> str:
+    """Assign one bounded Game response to its Python-owned issue number.
+
+    Marker spelling is transport formatting, not the identity of an issue.
+    Never accept blank prose or text that appears to contain another section.
+    """
+    prose = _clean_text(value)
+    if not prose:
+        raise RuntimeError("Year Ahead games returned empty content")
+    # A single issue is requested: its destination is known independently of
+    # any marker the language model chooses to echo.
+    markers = re.findall(r"<<\s*([^<>\n]{1,80}?)\s*>>", prose)
+    expected_name = expected_marker.strip("<>")
+    for marker in markers:
+        normalized = marker.strip().upper()
+        if normalized not in (expected_name, "GAMES", "GAME", "MAJOR STORY"):
+            raise RuntimeError("Year Ahead games contained a foreign section marker")
+    prose = re.sub(r"<<\s*[^<>\n]{1,80}\s*>>", "", prose).strip()
+    prose = re.sub(r"(?im)^\s*(?:major story|game)\s*:?\s*$", "", prose).strip()
+    if len(prose.split()) < 45:
+        raise RuntimeError("Year Ahead games returned incomplete prose")
+    if re.search(r"(?im)^\s*(?:phase|dominant game|strongest date|life area)\s*:", prose):
+        raise RuntimeError("Year Ahead games contained internal planning content")
+    return expected_marker + "\n" + prose
+
+
 def generate_paid_yearly_editorial(
     packet: YearPacket | dict[str, Any],
     *,
@@ -1033,6 +1059,8 @@ def generate_paid_yearly_editorial(
         result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
              primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
+        if job_name == 'games' and len(requested) == 1:
+            return _normalize_single_game_response(result, requested[0])
         found=set(_MARKER_RE.findall(_clean_text(result)))
         if not allow_unmarked and not set(m.strip('<>') for m in requested).issubset(found):
             raise RuntimeError(f'Year Ahead {job_name} incomplete markers')
