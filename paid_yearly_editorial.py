@@ -25,6 +25,8 @@ import json
 import math
 import os
 import re
+import time
+from collections import deque
 from typing import Any
 
 import requests
@@ -1068,6 +1070,35 @@ def generate_paid_yearly_editorial(
     alternate=VoiceProvider(secondary_base,secondary_model,secondary_key) if all((secondary_base,secondary_model,secondary_key)) else None
     # Configurable provider budget: not a claim about the account's actual rate limit.
     total_budget = int(os.environ.get('LUNA_YEARLY_REQUEST_BUDGET_TOKENS', '7800'))
+    # This is a *rolling* provider quota, distinct from per-request context size.
+    # Set from the actual Groq account limit when known. Conservative free-tier
+    # default; do not confuse requests/day with tokens/minute.
+    minute_token_budget = int(os.environ.get('LUNA_YEARLY_TOKENS_PER_MINUTE', '8000'))
+    rolling_window_seconds = float(os.environ.get('LUNA_YEARLY_TOKEN_WINDOW_SECONDS', '65'))
+    pacing_enabled = os.environ.get('LUNA_YEARLY_PACE_REQUESTS', '1').strip() != '0'
+    request_reservations = deque()
+
+    def reserve_provider_capacity(estimated_input: int, completion_cap: int) -> None:
+        if not pacing_enabled:
+            return
+        requested = estimated_input + completion_cap
+        if minute_token_budget <= 0 or requested > minute_token_budget:
+            raise RuntimeError(
+                'Year Ahead single voice job exceeds configured tokens/minute; '
+                'reduce its Python packet or output allocation before contacting Groq.'
+            )
+        # Reserve potential usage, not merely observed completions. Sequential
+        # calls cannot otherwise know how many thinking tokens were consumed.
+        while True:
+            now = time.monotonic()
+            while request_reservations and now - request_reservations[0][0] >= rolling_window_seconds:
+                request_reservations.popleft()
+            used = sum(amount for _, amount in request_reservations)
+            if used + requested <= minute_token_budget:
+                request_reservations.append((now, requested))
+                return
+            pause = max(0.05, rolling_window_seconds - (now - request_reservations[0][0]))
+            time.sleep(pause)
     # Keep the long annual essay separate from short framing and closing copy.
     # These are provider completion budgets, not hard-coded astrology or forecasts.
     annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '1900'))
@@ -1088,6 +1119,7 @@ def generate_paid_yearly_editorial(
             f'Year Ahead {job_name} packet over configured token budget: '
             f'input={estimated}, output={output_limit}, budget={total_budget}'
         )
+        reserve_provider_capacity(estimated, output_limit)
         result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
              primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
              checkpoint_id="yearly:"+job_name+":"+",".join(requested))
