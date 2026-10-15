@@ -986,6 +986,52 @@ def _normalize_single_game_response(value: Any, expected_marker: str) -> str:
     return expected_marker + "\n" + prose
 
 
+def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deterministic exact-contact ledger for the four rolling months in an act.
+
+    Include only computed contacts that actually occur during that act. A Game
+    spanning multiple acts is context, not licence to move its exact date.
+    """
+    intervals = []
+    for row in month_slice:
+        start, end = str(row.get("start") or "")[:10], str(row.get("end") or "")[:10]
+        if start and end:
+            intervals.append((start, end, row.get("number")))
+    if not intervals:
+        return []
+    found = {}
+    for game in material.get("major_issues") or []:
+        for transit in [game.get("primary") or {}, *(game.get("supporting") or [])]:
+            technical = str(transit.get("technical") or "").strip()
+            if not technical:
+                continue
+            for passage in transit.get("passes") or []:
+                day = str(passage.get("date") or "")[:10]
+                for start, end, number in intervals:
+                    if start <= day <= end:
+                        key = (day, technical, "exact")
+                        found[key] = {"date": day, "month_number": number, "contact": technical,
+                                      "kind": "exact pass", "stage": passage.get("pass_label")}
+                        break
+            for trigger in transit.get("triggers") or []:
+                day = str(trigger.get("date") or "")[:10]
+                for start, end, number in intervals:
+                    if start <= day <= end:
+                        name = str(trigger.get("planet") or "").strip()
+                        aspect = str(trigger.get("aspect") or "").strip()
+                        target = str(trigger.get("target") or "").strip()
+                        title = " ".join(v for v in (name, aspect, "natal " + target if target else "") if v)
+                        if not (name and aspect and target):
+                            # An unnamed trigger remains an unlabelled activation;
+                            # the LLM must not invent the missing aspect or target.
+                            title = str(trigger.get("label") or "activation").strip()
+                        key = (day, title, "trigger")
+                        found[key] = {"date": day, "month_number": number, "contact": title,
+                                      "kind": "calculated supporting trigger", "background": technical}
+                        break
+    return sorted(found.values(), key=lambda item: (item["date"], item["contact"]))
+
+
 def generate_paid_yearly_editorial(
     packet: YearPacket | dict[str, Any],
     *,
@@ -1072,8 +1118,24 @@ def generate_paid_yearly_editorial(
                        if start_month <= int(row.get('number') or 0) < start_month + 4]
         if not month_slice:
             raise RuntimeError(f'Year Ahead annual section {chunk_index} has no calculated month evidence')
-        segment_packet = {**base, 'major_issues': intro_packet['major_issues'],
-                          'monthly_rounds': month_slice}
+        # Construct the act from the full, calculated material, not just month
+        # headings plus all-year Game dates. Only this act's exact contacts can
+        # be cited as occurring now; later Games supply undated thematic context.
+        full_month_slice = [row for row in material.get('monthly_rounds') or []
+                            if start_month <= int(row.get('number') or 0) < start_month + 4]
+        ledger = _annual_act_evidence(material, full_month_slice)
+        period_months = [
+            {'number': row.get('number'), 'start': row.get('start'), 'end': row.get('end'),
+             'phase': row.get('phase'), 'focus': row.get('focus'),
+             'dominant_game_number': row.get('dominant_game_number')}
+            for row in full_month_slice
+        ]
+        segment_packet = {**base, 'major_issues': [
+                             {'number': g.get('number'), 'title': g.get('customer_title'),
+                              'life_area': g.get('life_area')}
+                             for g in compact.get('major_issues') or []],
+                          'monthly_rounds': period_months,
+                          'verified_dated_contacts_for_this_act': ledger}
         # The three bounded calls form consecutive ACTS of a single article,
         # not three independent mini-articles. Subsequent acts receive the end
         # of the prior act to prevent restarts without replaying the full essay.
@@ -1096,6 +1158,10 @@ def generate_paid_yearly_editorial(
             'Write 150–210 words of finished customer-facing narrative in 2–3 paragraphs, '
             'not a list, outline, report summary or numbered Games. '
             'Follow ONLY the supplied four rolling months in their actual order. '
+            'Only verified_dated_contacts_for_this_act supplies named contacts and dates. '
+            'Never infer a planet/aspect from month strongest_date or a generic trigger. '
+            'If a month has no named exact event, describe the documented active Game '
+            'without inventing a contact or placing later events in this month. '
             'Keep later transits as future context only when explicitly needed and never '
             'claim they become exact during an earlier act. '
             'Do not restart the year, recap an earlier act, repeat the headline/deck, '
