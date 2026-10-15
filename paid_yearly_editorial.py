@@ -1107,7 +1107,7 @@ def generate_paid_yearly_editorial(
         personal_question=personal_question,
         shared_year_context=shared_year_context,
     )
-    from paid_voice_router import VoiceProvider, completion
+    from paid_voice_router import VoiceProvider, completion, cached_completion
     # Five bounded jobs: the annual arc, three four-month groups, and the major
     # Games. Each receives only the relevant deterministic evidence.
     compact=_compact_paid_yearly_material(material,2)
@@ -1170,18 +1170,23 @@ def generate_paid_yearly_editorial(
             f'Year Ahead {job_name} packet over configured token budget: '
             f'input={estimated}, output={output_limit}, budget={total_budget}'
         )
-        # Daily and minute budgets are independent. Check BEFORE sending to Groq.
-        # Only this process's usage is known until Groq returns a real quota error.
-        _reserve_yearly_daily_tokens(estimated + output_limit,
-                                     budget=daily_token_budget, window=daily_window_seconds)
-        reserve_provider_capacity(estimated, output_limit)
-        try:
-            result=completion([{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}],
-                 primary=primary,secondary=alternate,max_output=output_limit,timeout=timeout,
-                 checkpoint_id="yearly:"+job_name+":"+",".join(requested))
-        except Exception as exc:
-            _remember_yearly_daily_429(exc, window=daily_window_seconds)
-            raise
+        messages=[{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}]
+        checkpoint_id="yearly:"+job_name+":"+",".join(requested)
+        # Crucial ordering: a completed checkpoint costs no tokens and must not
+        # consume the process's daily or minute reservations.
+        result=cached_completion(messages, primary=primary,
+                                 checkpoint_id=checkpoint_id, max_output=output_limit)
+        if result is None:
+            _reserve_yearly_daily_tokens(estimated + output_limit,
+                                         budget=daily_token_budget, window=daily_window_seconds)
+            reserve_provider_capacity(estimated, output_limit)
+            try:
+                result=completion(messages, primary=primary, secondary=alternate,
+                                  max_output=output_limit, timeout=timeout,
+                                  checkpoint_id=checkpoint_id)
+            except Exception as exc:
+                _remember_yearly_daily_429(exc, window=daily_window_seconds)
+                raise
         if job_name == 'games' and len(requested) == 1:
             return _normalize_single_game_response(result, requested[0])
         # Marker labels are transport syntax, not post-LLM editorial acceptance.
