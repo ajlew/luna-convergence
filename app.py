@@ -170,7 +170,7 @@ from site_config import (
 
 # Live deployment identifier. Keep this in app.py so a single-file update
 # visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.118"
+APP_VERSION = "v3.119"
 BUILD_LABEL = f"Luna {APP_VERSION} — Year Ahead Voice Completion Stability"
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 

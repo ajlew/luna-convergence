@@ -228,66 +228,6 @@ def _issue_material(game: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-_PLANET_NAMES = (
-    "Sun", "Moon", "Mercury", "Venus", "Mars",
-    "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
-    "Ascendant", "Midheaven",
-)
-
-
-def _named_planets(*values: object) -> set[str]:
-    text = " ".join(str(value or "") for value in values)
-    found = set()
-    for planet in _PLANET_NAMES:
-        if re.search(rf"\b{re.escape(planet)}\b", text, flags=re.IGNORECASE):
-            found.add(planet)
-    return found
-
-
-def _natal_resonance_for_issue(
-    issue: dict[str, Any],
-    natal: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Find supplied natal signatures that genuinely overlap the issue's named planets.
-
-    This is a thematic bridge only. It does not claim a transit directly activates
-    a natal aspect unless that direct target already exists in the calculated packet.
-    """
-    primary = dict(issue.get("primary") or {})
-    supporting = [
-        row for row in list(issue.get("supporting") or [])
-        if isinstance(row, dict)
-    ]
-    issue_planets = _named_planets(
-        primary.get("technical"),
-        *[row.get("technical") for row in supporting],
-    )
-    if not issue_planets:
-        return []
-
-    matches = []
-    for row in list(natal.get("strengths") or []):
-        if not isinstance(row, dict):
-            continue
-        signature_planets = _named_planets(
-            row.get("title"),
-            row.get("evidence"),
-            row.get("strength"),
-            row.get("interpretation"),
-        )
-        overlap = sorted(issue_planets & signature_planets)
-        if not overlap:
-            continue
-        matches.append(
-            {
-                "title": _clip(row.get("title"), 72),
-                "evidence": _clip(row.get("evidence"), 90),
-                "overlap": overlap,
-            }
-        )
-    return matches[:2]
-
-
 def _monthly_round_material(row: dict[str, Any], index: int) -> dict[str, Any]:
     return {
         "number": int(row.get("number") or index),
@@ -331,9 +271,6 @@ def build_paid_yearly_material(
         for game in list(value.get("games") or [])
         if isinstance(game, dict)
     ]
-    for issue in major_issues:
-        issue["natal_resonance"] = _natal_resonance_for_issue(issue, natal)
-
     monthly_rounds = [
         _monthly_round_material(row, index)
         for index, row in enumerate(list(value.get("monthly_rounds") or []), start=1)
@@ -418,11 +355,6 @@ def _compact_paid_yearly_material(material: dict[str, Any], level: int) -> dict[
             "end": issue.get("end"),
             "start_state": issue.get("start_state"),
             "end_state": issue.get("end_state"),
-            "natal_resonance": [
-                dict(row)
-                for row in list(issue.get("natal_resonance") or [])[:2]
-                if isinstance(row, dict)
-            ],
             "question": _clip(issue.get("question"), (150, 120, 95, 80)[level]),
             "advantage": _clip(issue.get("advantage"), (180, 135, 105, 85)[level]),
             "risk": _clip(issue.get("risk"), (180, 135, 105, 85)[level]),
@@ -509,14 +441,6 @@ def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
         "'in the second half of the year' or similar neutral timing only when supported "
         "by the supplied chronology. Do NOT use spring, summer, autumn/fall or winter "
         "unless a local season is explicitly supplied. Never invent or alter a year.\n\n"
-
-        "NATAL BRIDGE: natal.strengths describe lifelong patterns. If an issue contains "
-        "natal_resonance, connect that supplied natal pattern to the current story as a "
-        "recurring lens: explain why the present pressure/opening may feel familiar or "
-        "what old habit it tests. Do NOT claim a transit 'activates' a natal aspect unless "
-        "the calculated transit target explicitly says so. If no resonance is supplied, "
-        "do not force one. In READ_YEAR, make at least one clear natal-to-year bridge when "
-        "the supplied resonance supports it.\n\n"
 
         "ONE CHRONOLOGY: move through the year once. A first exact contact, retrograde "
         "return and final contact are stages of ONE story. Explain the development: "
@@ -617,9 +541,6 @@ def build_paid_yearly_ultra_prompt(material: dict[str, Any]) -> str:
         "Use month names or neutral phrases such as 'later in the year'. Do not use season "
         "names unless local season data is supplied. Never invent or alter a year.\n\n"
 
-        "NATAL: if natal_resonance exists, use it only as a familiar lifelong lens. "
-        "Do not claim a transit activates a natal aspect unless the supplied target proves it.\n\n"
-
         "CHRONOLOGY: one forward-moving year. First contact, retrograde return and final "
         "contact are stages of one developing story. Fast-planet contacts are supporting moments.\n\n"
 
@@ -700,15 +621,6 @@ def _ultra_compact_paid_yearly_material(material: dict[str, Any]) -> dict[str, A
                 "end": issue.get("end"),
                 "start_state": issue.get("start_state"),
                 "end_state": issue.get("end_state"),
-                "natal_resonance": [
-                    {
-                        "title": _clip(row.get("title"), 64),
-                        "evidence": _clip(row.get("evidence"), 72),
-                        "overlap": list(row.get("overlap") or []),
-                    }
-                    for row in list(issue.get("natal_resonance") or [])[:1]
-                    if isinstance(row, dict)
-                ],
                 "primary": {
                     "technical": primary.get("technical"),
                     "active_start": primary.get("active_start"),
