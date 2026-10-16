@@ -13,6 +13,18 @@ def e(x: Any) -> str:
     return escape(str(x if x is not None else ''))
 
 
+def print_headline(value: Any) -> str:
+    """Discard literal Markdown decoration in an HTML heading, not the prose.
+
+    This is presentation-only: Groq owns words and Python owns typography.
+    """
+    headline = str(value or "Your Year Ahead").strip()
+    # Only enclosing Markdown bold wrappers; do not edit narrative contents.
+    while headline.startswith("**") and headline.endswith("**") and len(headline) > 4:
+        headline = headline[2:-2].strip()
+    return e(headline)
+
+
 def d(x: Any) -> str:
     try: return date.fromisoformat(str(x)[:10]).strftime('%-d %B %Y')
     except Exception: return str(x or '')
@@ -338,15 +350,15 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
             for shift in (0, 18, -18, 36, -36, 54, -54, 72, -72):
                 lx, ly = point(longitude + shift, radius)
                 # Planet label is a three-letter abbreviated name at 7px bold.
-                box = (lx - 22, ly - 14, lx + 22, ly + 7)
+                box = (lx - 28, ly - 15, lx + 28, ly + 11)
                 collision = sum(max(0, min(box[2], old[2]) - max(box[0], old[0])) *
                                 max(0, min(box[3], old[3]) - max(box[1], old[1]))
                                 for old in placed_boxes)
                 # Also avoid painting a label over another natal marker.
                 marker_overlap = sum(1 for other_key, other_lon in targets.items()
                                      if other_key != key and
-                                     abs(lx - point(other_lon, 103)[0]) < 22 and
-                                     abs(ly - point(other_lon, 103)[1]) < 15)
+                                     abs(lx - point(other_lon, 103)[0]) < 28 and
+                                     abs(ly - point(other_lon, 103)[1]) < 17)
                 score = (collision + marker_overlap * 200, abs(shift) + abs(radius-91) * .4)
                 if best is None or score < best[0]:
                     best = (score, lx, ly, box)
@@ -397,7 +409,7 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
             lx,ly=label_coords[key]
             if ((lx-x)**2 + (ly-y)**2)**.5 > 21:
                 out.append(f'<line class="natal-label-leader" x1="{x:.1f}" y1="{y:.1f}" x2="{lx:.1f}" y2="{ly-3:.1f}"/>')
-            out.append(f'<text class="planet-label" x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">{e(key[:3].upper())}</text>')
+            out.append(f'<text class="planet-label" x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">{e(key[:3].title())}</text>')
         for hit in transit.get('passes') or []:
             if not isinstance(hit,dict): continue
             day=_iso_date(hit.get('date'))
@@ -418,8 +430,8 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
             planet=label.split(' ',1)[0]
             legend.append(f'<li><strong>{e(planet)}</strong> → {e(target)} · {e(d(day))} (exact)</li>')
         if label not in contact_lines:contact_lines.append(label)
-    out.append('<text class="chart-centre" x="155" y="151" text-anchor="middle">NATAL</text>')
-    out.append('<text class="chart-centre-small" x="155" y="166" text-anchor="middle">ACTIVATIONS</text></svg>')
+    out.append('<text class="chart-centre" x="155" y="151" text-anchor="middle">Natal</text>')
+    out.append('<text class="chart-centre-small" x="155" y="166" text-anchor="middle">activations</text></svg>')
     if not plotted:
         return '<p class="quiet">No calculated natal target positions for this chapter.</p>'
     contacts=''.join(f'<li>{e(line)}</li>' for line in contact_lines)
@@ -683,7 +695,7 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .activation-wheel circle, .activation-wheel path {shape-rendering:geometricPrecision;}
 }
 '''
-    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
+    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{print_headline(getattr(editorial,"headline",None))}</h1><p class="deck">{e(label)}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
     overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Luna calls a related set of calculated transits a Game: a strategic period in which competing pressures, choices and trade-offs converge. A Game is an interpretive decision framework, not a prediction or a mathematically proven optimal move. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<footer class="year-report-disclaimer">Calculated planetary evidence is interpreted symbolically and is not professional advice.</footer></section>'
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
