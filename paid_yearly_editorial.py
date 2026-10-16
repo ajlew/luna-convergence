@@ -90,7 +90,7 @@ PREFERRED_COMPLETION_TOKENS = 2500
 MIN_COMPLETION_TOKENS = 1800
 
 _MARKER_RE = re.compile(
-    r"(?m)^<<(?P<name>HEADLINE|DECK|READ_YEAR|CLOSING|ISSUE:\d+|MONTH:\d+)>>\s*$"
+    r"(?m)^<<(?P<name>HEADLINE|DECK|NATAL_PROFILE|READ_YEAR|CLOSING|ISSUE:\d+|MONTH:\d+)>>\s*$"
 )
 
 
@@ -116,6 +116,8 @@ class PaidYearlyEditorial:
     word_count: int
     voice_complete: bool = True
     monthly_rounds: tuple[PaidYearlyMonth, ...] = ()
+    annual_phases: tuple[tuple[str, str, str], ...] = ()
+    natal_portrait: tuple[str, ...] = ()
 
     def issue_for(self, number: int) -> PaidYearlyIssue | None:
         for issue in self.issues:
@@ -934,6 +936,10 @@ def parse_paid_yearly_editorial(
         for paragraph in _paragraphs(sections.get("READ_YEAR", ""))
         if safe(paragraph)
     )
+    natal_portrait = tuple(safe(paragraph) for paragraph in _paragraphs(sections.get("NATAL_PROFILE", "")) if safe(paragraph))
+    annual_phases = tuple(
+        (str(index), "", "") for index in ()
+    )
     closing = tuple(
         safe(paragraph)
         for paragraph in _paragraphs(sections.get("CLOSING", ""))
@@ -1019,6 +1025,7 @@ def parse_paid_yearly_editorial(
         word_count=word_count,
         voice_complete=required_present,
         monthly_rounds=tuple(monthly_rounds),
+        natal_portrait=natal_portrait,
     )
 
 
@@ -1253,17 +1260,18 @@ def generate_paid_yearly_editorial(
     # These three requests reuse verified evidence and retain the same READ_YEAR
     # contract expected by the unchanged parser and report renderer.
     year_segments = []
+    phase_metadata = []
     previous_context = ''
-    for chunk_index, start_month in enumerate((1, 5, 9), 1):
+    for chunk_index, start_month in enumerate((1, 4, 7, 10), 1):
         month_slice = [row for row in compact.get('monthly_rounds') or []
-                       if start_month <= int(row.get('number') or 0) < start_month + 4]
+                       if start_month <= int(row.get('number') or 0) < start_month + 3]
         if not month_slice:
             raise RuntimeError(f'Year Ahead annual section {chunk_index} has no calculated month evidence')
         # Construct the act from the full, calculated material, not just month
         # headings plus all-year Game dates. Only this act's exact contacts can
         # be cited as occurring now; later Games supply undated thematic context.
         full_month_slice = [row for row in material.get('monthly_rounds') or []
-                            if start_month <= int(row.get('number') or 0) < start_month + 4]
+                            if start_month <= int(row.get('number') or 0) < start_month + 3]
         ledger = _annual_act_evidence(material, full_month_slice)
         period_months = [
             {'number': row.get('number'), 'start': row.get('start'), 'end': row.get('end'),
@@ -1290,23 +1298,25 @@ def generate_paid_yearly_editorial(
         # The three bounded calls form consecutive ACTS of a single article,
         # not three independent mini-articles. Subsequent acts receive the end
         # of the prior act to prevent restarts without replaying the full essay.
-        stage = ('opening act', 'middle act', 'final act')[chunk_index - 1]
+        stage = ('opening phase', 'second phase', 'third phase', 'final phase')[chunk_index - 1]
+        # Do not relay prior Groq prose as factual input: earlier prose may
+        # contain an invented aspect that would be amplified in a later act.
+        # Calculated month phases provide continuity without fact contamination.
         continuity = (
-            'No previous prose exists; begin the article directly with the '
-            'earliest dated, documented tension.' if chunk_index == 1 else
-            'Previous act ended with this prose (continuity only, not evidence): '
-            + previous_context
+            'Open with the first supplied monthly phase.' if chunk_index == 1 else
+            'Continue the annual narrative without recapping earlier phases. '
+            'The only facts permitted are in this act evidence packet.'
         )
         ending = (
             'Finish with an open transition to the next period, not a conclusion.'
-            if chunk_index < 3 else
+            if chunk_index < 4 else
             'Finish the final act without a separate concluding paragraph; '
             'the report already has a dedicated closing synthesis.'
         )
         instruction = (
-            'Write one continuous chronological READ_YEAR article in three bounded acts. '
-            f'This request writes ONLY the {stage}, act {chunk_index} of 3. '
-            'Write 150–210 words of finished customer-facing narrative in 2–3 paragraphs, '
+            'Write one continuous chronological READ_YEAR article in four bounded phases. '
+            f'This request writes ONLY the {stage}, phase {chunk_index} of 4. '
+            'Write 125–175 words of finished customer-facing narrative in 2–3 paragraphs, '
             'not a list, outline, report summary or numbered Games. '
             f'ACT DATE BOUNDARY: {act_start} through {act_end}, inclusive. '
             'Narrate only this time window, month by month, in the supplied order. '
@@ -1314,6 +1324,7 @@ def generate_paid_yearly_editorial(
             'ASTROLOGICAL FACT WHITELIST: allowed_exact_contacts is the ONLY authority '
             'for naming a transiting planet, aspect, natal target AND exact date. '
             'You may ONLY name an exact planetary contact listed in that array. '
+            'Copy its contact identity and date faithfully; never expand an unnamed trigger. '
             'Do not invent, assume, interpolate, relabel or transfer an unlisted '
             'conjunction, sextile, square, trine or opposition, including Sun, Venus, '
             'Mercury and other fast-moving planets. '
@@ -1339,13 +1350,69 @@ def generate_paid_yearly_editorial(
         # substitute a canned passage or discard the customer's reading.
         prose = re.sub(r'(?m)^\s*<<[^\r\n<>]{1,80}>>\s*$', '', _clean_text(result)).strip()
         year_segments.append(prose)
-        previous_context = ' '.join(prose.split())[-650:]
+        phase_metadata.append((act_start, act_end, prose))
+        # No generated prose is passed to a later Groq call.
     all_parts.append('<<READ_YEAR>>\n' + '\n\n'.join(year_segments))
-    all_parts.append(section('annual_framing',['<<HEADLINE>>','<<DECK>>','<<CLOSING>>'],intro_packet,framing_output))
+    # The existing framing request also writes a personal natal portrait; no
+    # additional framing call. Its evidence comes exclusively from Python's natal engine.
+    intro_packet['natal'] = compact.get('natal')
+    framing_instruction = (
+        'For NATAL_PROFILE write 145–200 words in two personalised second-person paragraphs. '
+        'Describe how the calculated Sun, Moon, Ascendant (only when available), '
+        'Mercury, Venus and Mars placements interact with the calculated Strengths '
+        'and their natal aspects/orbs. Translate those patterns into recognisable '
+        'habits, assets, blind spots and everyday examples, with alternatives rather '
+        'than claims about private biography. Explain how strengths can become traps '
+        'under pressure. Never invent a placement, house, orb or aspect. '
+        'Do not repeat the four Strengths verbatim or promise life outcomes.'
+    )
+    all_parts.append(section('annual_framing',['<<HEADLINE>>','<<DECK>>','<<NATAL_PROFILE>>','<<CLOSING>>'],intro_packet,
+                             max(framing_output, int(os.environ.get('LUNA_YEARLY_FRAMING_WITH_NATAL_TOKENS','1750'))),
+                             annual_instruction=framing_instruction))
+    full_games = {int(g.get('number') or 0): g for g in material.get('major_issues') or []}
     for first in (1,5,9):
         rows=[row for row in compact.get('monthly_rounds') or [] if first<=int(row.get('number') or 0)<first+4]
+        # Monthly prose sees only its own calculated bounds/theme. Do not pass
+        # strongest_date or strongest_kind: these can be unnamed generic triggers.
+        scoped_rows=[{'number':r.get('number'), 'phase':r.get('phase'),
+                      'focus':r.get('focus'), 'dominant_game_number':r.get('dominant_game_number')}
+                     for r in rows]
         markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
-        if markers: all_parts.append(section('months',markers,{**base,'monthly_rounds':rows,'major_issues':intro_packet['major_issues']},1400))
+        if markers:
+            full_rows = [r for r in material.get('monthly_rounds') or [] if first <= int(r.get('number') or 0) < first + 4]
+            monthly_evidence = {}
+            for month in full_rows:
+                number = int(month['number'])
+                game_number = int(month.get('dominant_game_number') or 0)
+                allowed = _annual_act_evidence(material, [month])
+                game = full_games.get(game_number) or {}
+                monthly_evidence[str(number)] = {
+                    'start': month.get('start'), 'end': month.get('end'),
+                    'dominant_game_number': game_number,
+                    'dominant_game_title': game.get('customer_title'),
+                    'dominant_life_area': game.get('life_area'),
+                    'active_game_context': [
+                        {'technical': t.get('technical'), 'active_start': t.get('active_start'), 'active_end': t.get('active_end')}
+                        for t in [game.get('primary') or {}, *(game.get('supporting') or [])]
+                        if t.get('technical')
+                    ],
+                    'allowed_exact_contacts': allowed,
+                }
+            monthly_instructions = (
+                'MONTH OWNERSHIP: monthly_evidence is authoritative. For every MONTH section '
+                'only narrate events dated between its own start and end, inclusive. '
+                'Use ONLY its assigned dominant_game_number and dominant_game_title '
+                'for the central subject; supporting influences must be explicitly named '
+                'in active_game_context. Do not import another Game or another month. '
+                'Only identify an exact aspect and date when fully present in '
+                'allowed_exact_contacts. Never infer fast-planet aspects from a generic '
+                'trigger or strongest_date. Where a transit remains active but is not exact, '
+                'interpret its continuing background without claiming a new pass. '
+                'Make each month distinct and describe possible, not guaranteed, outcomes.'
+            )
+            all_parts.append(section('months', markers,
+                {**base,'monthly_rounds':scoped_rows,'monthly_evidence':monthly_evidence},1400,
+                annual_instruction=monthly_instructions))
     games=compact.get('major_issues') or []
     full_games = {int(g.get('number') or 0): g for g in material.get('major_issues') or []}
     for first in range(len(games)):
@@ -1353,7 +1420,13 @@ def generate_paid_yearly_editorial(
         game_number=int(group[0]['number'])
         markers=[f'<<ISSUE:{game_number}>>']
         scope=_game_voice_evidence(full_games[game_number], material.get('monthly_rounds') or [])
-        game_packet={**base, 'major_issues':group, 'game_evidence_contract':scope}
+        raw_game=group[0]
+        # Keep strategic vocabulary, but exclude overlapping raw transit/triggers
+        # and undated supporting events that invite reconstructed aspects/dates.
+        game_theme={k:raw_game.get(k) for k in (
+            'number','customer_title','strategic_frame','life_area','question',
+            'advantage','risk','move','dont','start_state','end_state')}
+        game_packet={**base, 'major_issues':[game_theme], 'game_evidence_contract':scope}
         game_instructions=(
             'Write ONLY the named Game in major_issues, not another twelve-month forecast. '
             'game_evidence_contract is the authoritative calculated timeline. '
@@ -1362,7 +1435,8 @@ def generate_paid_yearly_editorial(
             'report start as the Game start. Do not describe every overlapping month: '
             'focus on the actual calculated pass sequence, the human tension, two '
             'conditional real-life scenarios, meaningful trade-offs, and a concrete move. '
-            'Only name exact planetary contacts present in allowed_exact_contacts. '
+            'Only name exact planetary contacts present in game_evidence_contract.allowed_exact_contacts; '
+            'copy their date, planet, aspect and natal target without alterations. '
             'Never infer Sun, Venus, Mercury, Mars or another aspect from a generic '
             'trigger, natal placement or a Game heading. If the list is empty, '
             'describe the active window without inventing exact passes. '
@@ -1371,10 +1445,12 @@ def generate_paid_yearly_editorial(
         all_parts.append(section('games',markers,game_packet,1700,
                                  annual_instruction=game_instructions))
     body='\n\n'.join(all_parts)
-    return parse_paid_yearly_editorial(
+    parsed = parse_paid_yearly_editorial(
         body,
         expected_issue_numbers=issue_numbers,
         expected_month_numbers=month_numbers,
         issue_titles=issue_titles,
         allowed_dates=allowed_dates,
     )
+    from dataclasses import replace
+    return replace(parsed, annual_phases=tuple(phase_metadata))

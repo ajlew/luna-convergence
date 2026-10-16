@@ -4,6 +4,7 @@ No new sky calculations, model calls or report text generation occur here.
 """
 from __future__ import annotations
 from datetime import date
+import re
 from html import escape
 from typing import Any
 
@@ -337,7 +338,7 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
             for shift in (0, 18, -18, 36, -36, 54, -54, 72, -72):
                 lx, ly = point(longitude + shift, radius)
                 # Planet label is a three-letter abbreviated name at 7px bold.
-                box = (lx - 16, ly - 12, lx + 16, ly + 5)
+                box = (lx - 22, ly - 14, lx + 22, ly + 7)
                 collision = sum(max(0, min(box[2], old[2]) - max(box[0], old[0])) *
                                 max(0, min(box[3], old[3]) - max(box[1], old[1]))
                                 for old in placed_boxes)
@@ -508,6 +509,28 @@ def _yearly_editorial_date_warnings(editorial: Any, packet: dict) -> list[str]:
     return sorted(set(warnings))
 
 
+def _print_reflow_natal_labels(svg: str) -> str:
+    """Move ONLY print natal label text when neighbouring abbreviations collide.
+
+    Planet dots/aspects retain their exact calculated coordinates. No natal
+    calculations or shared natal renderer are modified.
+    """
+    pattern = re.compile(r'(<text x="(?P<x>-?[\d.]+)" y="(?P<y>-?[\d.]+)"[^>]*>)(?P<label>SUN|MOON|MER|VEN|MAR|JUP|SAT|URA|NEP|PLU|NODE)(</text>)')
+    placed = []
+    def place(match):
+        x, y = float(match.group('x')), float(match.group('y'))
+        # On the 760-unit source wheel, even 3-letter labels need ~29 units.
+        options = [(0,0),(0,-19),(0,19),(-25,0),(25,0),(-28,-18),(28,18),(-28,18),(28,-18)]
+        dx, dy = next(((dx,dy) for dx,dy in options if all(
+            abs(x+dx-px) >= 34 or abs(y+dy-py) >= 16 for px,py in placed)), options[-1])
+        placed.append((x+dx,y+dy))
+        opening = match.group(1)
+        opening = re.sub(r'x="[-\d.]+"', f'x="{x+dx:.1f}"', opening, count=1)
+        opening = re.sub(r'y="[-\d.]+"', f'y="{y+dy:.1f}"', opening, count=1)
+        return opening + match.group('label') + match.group(5)
+    return pattern.sub(place, svg)
+
+
 def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, label: str, main_focus: str = '', personal_question: str = '', order_reference: str = '') -> str:
     from monthly_report_pdf_home_v3 import FONT_IMPORT, _font_face_css
     from natal_snapshot import natal_wheel_svg
@@ -527,13 +550,24 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
             'focus':str(getattr(focus_voice,'focus','') or round_.get('focus') or ''),
             'strongest':str(round_.get('strongest_date') or '')+' · '+str(round_.get('strongest_label') or round_.get('strongest_kind') or 'Calculated contact') if round_.get('strongest_date') else '',
         })
+    def annual_phase_markup():
+        phases = tuple(getattr(editorial, 'annual_phases', ()) or ())
+        if len(phases) == 4:
+            return ''.join(
+                '<div class="year-phase"><h3 class="year-phase-heading">'
+                + f'<span>Phase {index}</span><small>{e(d(start))} – {e(d(end))}</small></h3>'
+                + para((prose,)) + '</div>'
+                for index, (start, end, prose) in enumerate(phases, 1)
+            )
+        return para(getattr(editorial,'read_year',()) or ())
     def para(xs): return ''.join(f'<p>{e(s)}</p>' for s in (xs or []) if str(s).strip())
-    try: chart=natal_wheel_svg(snapshot,size=760)
+    try: chart=_print_reflow_natal_labels(natal_wheel_svg(snapshot,size=760))
     except Exception: chart=''
     if not chart: raise ValueError('Year Ahead print export requires its natal chart; no PDF generated without it')
     positions={str(getattr(p,'planet','')):str(getattr(p,'sign','')) for p in (getattr(snapshot,'positions',()) or ())}
     signature=''.join(f'<div><span>{name}</span><strong>{e(value)}</strong></div>' for name,value in [('Sun',positions.get('Sun','Not calculated')),('Moon',positions.get('Moon','Not calculated')),('Rising',getattr(getattr(snapshot,'ascendant',None),'sign','Not calculated'))])
     # Snapshot attributes vary between versions; use documented dict/signatures where available.
+    portrait = para(getattr(editorial, 'natal_portrait', ()) or ())
     strengths=''
     for s in list(getattr(snapshot,'signatures',()) or ())[:6]:
         strengths+=f'<article class="block"><h3>{e(getattr(s,"title", ""))}</h3><p>{e(getattr(s,"text",""))}</p>' + (f'<p class="quiet strength-evidence">{e(getattr(s,"evidence", ""))}</p>' if getattr(s,"evidence", "") else "") + '</article>'
@@ -556,13 +590,13 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
             + (f'<h3>Your decision</h3><p>{e(decision)}</p>' if decision else '')
             + (f'<div class="callout"><strong>Key moment</strong><p>{e(row["strongest"])}</p></div>'
                 if row.get('strongest') else '')
-            + (f'<h3>Personal transits this period</h3>{_transit_timeline(round_,focused,color=game_colors.get(int(focused.get("number") or 0), "#765577"),natal_longitudes=_natal_longitudes(snapshot))}'
+            + (f'<div class="month-data"><h3>Personal transits this period</h3>{_transit_timeline(round_,focused,color=game_colors.get(int(focused.get("number") or 0), "#765577"),natal_longitudes=_natal_longitudes(snapshot))}'
                f'<ul class="contacts">{contacts}</ul>' if focused else
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
             + ('<div class="chart-reading"><strong>How to read your monthly transits</strong><p>Each coloured curve follows the calculated orb through this month: higher means closer to exact. A dot marks a verified exact contact. Where orb data is unavailable, a bar shows only the active window.</p><p>Compare overlapping curves, then read <em>Your decision</em> for Luna&apos;s practical question. The chart describes angular exactness, not guaranteed events.</p></div>' if i == 0 and focused else '')
-            + (f'<h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
+            + (f'</div><div class="month-activation"><h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
             + ('<div class="chart-reading"><strong>How to read your natal activation</strong><p>Your natal chart describes the planetary positions at birth. This smaller wheel highlights the natal positions contacted by this month&apos;s selected transits.</p><p>Purple markers identify those natal positions. Orange markers show transiting positions when verified coordinates are available.</p><p>Use this chart to recognise which parts of your natal pattern are receiving attention. The accompanying transit descriptions explain what those contacts may bring into focus.</p></div>' if i == 0 and focused else '')
-            + '<p class="quiet">For the complete pass-by-pass interpretation, see the relevant major story below.</p>'
+             + ('</div>' if focused else '')
             + '</section>'
         )
     issue_cards=[]
@@ -586,7 +620,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
 @page {size:A4;margin:17mm 17mm 18mm}
 *{box-sizing:border-box}body{font-family:'Josefin Sans',Arial,sans-serif;color:#141414;font-size:11pt;line-height:1.48;margin:0}
 h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h1{font-size:33pt;margin:0 0 10mm}h2{font-size:25pt;margin:0 0 5mm}h3{font-size:12pt;margin:6mm 0 2mm}p{margin:0 0 4mm}small,.quiet{color:#666}.eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:9mm}
-.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid;page-break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.strength-list{break-inside:avoid;page-break-inside:avoid}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
+.page{break-before:page}.cover{padding-top:16mm}.deck{font-size:13pt;max-width:160mm}.meta{color:#555}.block,.callout,.lane,.natal-svg,.signature{break-inside:avoid;page-break-inside:avoid}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:7mm 0}.signature>div,.callout{padding:4mm;border:1px solid #ddd}.signature span{display:block;font-size:8pt;text-transform:uppercase}.signature strong{display:block;margin-top:2mm}.natal-svg{width:100%;height:108mm;break-before:page;break-inside:avoid;text-align:center;padding-top:4mm}.strength-list{break-inside:auto;page-break-inside:auto}.natal-svg svg{display:block;width:96mm!important;height:96mm!important;margin:0 auto}.divider{border-top:1px solid #aaa;margin:7mm 0}.lanes{margin:7mm 0}.lane{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;margin:4mm 0}.lane strong{font-size:9pt;display:block}.lane small{font-size:7pt;display:block}.track{height:12mm;background:#f3f3f3;border-radius:2mm;position:relative}.track span{position:absolute;top:5mm;height:2mm;background:#333;border-radius:2mm}svg text{font:9px Arial,sans-serif;fill:#777}.rhythm-dot{fill:#111}.callout{background:#f6f5f3;margin:7mm 0}.month,.issue{padding-top:3mm}.month{min-height:0}footer{margin-top:10mm;border-top:1px solid #ddd;padding-top:3mm;font-size:8pt;color:#777}
 @media screen{body{max-width:820px;margin:auto;padding:25px}.page{padding-top:30px;border-top:1px solid #ddd;margin-top:50px}}
 
 .annual-timeline{display:block;width:100%;height:auto;margin:5mm 0 7mm;break-inside:avoid}.annual-timeline text{font-family:Josefin Sans,Arial,sans-serif}.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
@@ -594,13 +628,49 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 .chart-reading p{margin:1.5mm 0}.chart-reading strong{display:block;font-size:9pt;color:#222;margin-bottom:2mm}.chart-reading{font-size:8.5pt;color:#595959;line-height:1.35;margin:2mm 0 4mm}.month-timeline circle{stroke:#fff;stroke-width:1.5}
 .activation-layout{display:grid;grid-template-columns:92mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:92mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:bold 7px Arial,sans-serif;fill:#382a76}.activation-wheel .natal-label-leader{stroke:#725aca;stroke-width:.65;opacity:.7}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
-.keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:3mm 0;border-bottom:1px solid #ddd;font-size:9pt}
-.transit-fact{padding:3mm 0;border-bottom:1px solid #eee;font-size:9pt}
+.keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:1.8mm 0;border-bottom:1px solid #ddd;font-size:9pt;break-inside:avoid}
+.transit-fact{padding:2mm 0;border-bottom:1px solid #eee;font-size:9pt}
 .smallfact{margin-top:2mm;font-size:8pt;color:#555}
-.year-report-disclaimer{margin-top:12mm;padding-top:3mm;border-top:1px solid #d5d5d5;font-size:8pt;color:#555;break-inside:avoid}@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:2mm 0;grid-template-columns:90mm 1fr;gap:3mm}.month .activation-wheel{max-width:90mm}.month .activation-contacts{font-size:7pt}.month .chart-reading{font-size:7.5pt;margin:1mm 0 2mm}.month .month-timeline{margin:1mm 0}.month .contacts{font-size:7.5pt}.month .callout{margin:3mm 0;padding:2.5mm}.month .eyebrow{margin-bottom:4mm}.month p{margin-bottom:2mm}}
+.year-phase{margin:0 0 6mm;break-inside:auto}.year-phase-heading{display:flex;justify-content:space-between;align-items:baseline;gap:5mm;border-top:1px solid #bbb;padding-top:2mm;margin:5mm 0 2mm;break-after:avoid}.year-phase-heading small{font:8pt 'Josefin Sans',Arial,sans-serif;color:#555}.natal-portrait{font-size:10pt;line-height:1.42;max-width:164mm}.natal-portrait p{margin-bottom:3mm;orphans:3;widows:3}.year-phase p{orphans:3;widows:3}.year-report-disclaimer{margin-top:12mm;padding-top:3mm;border-top:1px solid #d5d5d5;font-size:8pt;color:#555;break-inside:avoid}@media print{.page{break-before:page}.month,.issue{break-before:page}.month h2,.month h3{break-after:avoid}.activation-layout,.month-timeline,.callout{break-inside:avoid}.natal-svg{break-before:auto}.cover{break-after:page}.month{font-size:9.5pt;line-height:1.3}.month h2{font-size:21pt}.month h3{margin:3mm 0 1mm}.month .activation-contacts{font-size:7.5pt}.month .contacts{font-size:8pt;margin:2mm 0}.month .activation-layout{margin:1mm 0;grid-template-columns:84mm 1fr;gap:3mm;align-items:center}.month .activation-wheel{max-width:84mm}.month .activation-contacts{font-size:7pt}.month .chart-reading{font-size:7.5pt;line-height:1.23;margin:.5mm 0 1mm}.month .month-timeline{margin:1mm 0}.month .contacts{font-size:7.5pt}.month .callout{margin:3mm 0;padding:2.5mm}.month .eyebrow{margin-bottom:2.5mm}.month p{margin-bottom:1.4mm}.month>p.quiet:last-child{font-size:7pt;line-height:1.2;margin:1mm 0 0;break-after:avoid}.month h3{break-after:avoid}.keydate{padding:1.8mm 0}.evidence-group{break-inside:auto}.transit-fact{break-inside:avoid;padding:1.8mm 0}}
+
+/* Book-quality A4 folios: print page furniture and controlled technical plates. */
+@page {
+  size: A4;
+  margin: 17mm 17mm 18mm;
+  @bottom-left {content: "LUNA CONVERGENCE  /  YOUR YEAR AHEAD"; font: 7pt "Josefin Sans",Arial,sans-serif; letter-spacing: .12em; color: #777;}
+  @bottom-right {content: counter(page); font: 9pt Georgia,serif; color: #777;}
+}
+@media print {
+  .cover {break-after:page;}
+  .natal-study {break-before:page; display:grid; grid-template-columns:1fr 60mm; align-items:center; gap:5mm; min-height:125mm; break-inside:avoid;}
+  .natal-study .natal-svg {height:auto; padding:3mm 0; margin:0; break-before:auto;}
+  .natal-study .natal-svg svg {width:109mm!important;height:109mm!important;max-width:100%;}
+  .natal-study .chart-reading {font-size:9pt;line-height:1.43; padding-left:4mm; border-left:1px solid #c9b28b;}
+  .month {break-before:page; padding-top:2mm;}
+  .month-data {break-inside:avoid; margin-top:3mm;}
+  .month-activation {break-inside:avoid; margin-top:4mm; padding:3mm 0 2mm; border-top:1px solid #c7b08a;}
+  .month-activation h3 {margin-top:1mm;}
+  .month .activation-layout {grid-template-columns:79mm 1fr; gap:5mm;}
+  .month .activation-wheel {max-width:79mm;}
+  .month .activation-description {line-height:1.3;}
+  .month .activation-contacts {font-size:7.8pt;}
+  .month .chart-reading {margin:2mm 0;}
+  .month .month-timeline {margin:1mm 0 2mm;}
+  .month .contacts {margin:1mm 0 2mm;}
+  .month .contacts li {margin:1mm 0;}
+  .keydate {padding:1mm 0; font-size:8.6pt;}
+  .evidence-group {break-inside:auto;}
+  .transit-fact {padding:1.2mm 0;}
+  .strength-list .block {break-inside:avoid;}
+  h2,h3 {break-after:avoid;}
+  p {orphans:3;widows:3;}
+  .activation-wheel .planet-label {font-size:8px; fill:#27204d;}
+  .activation-wheel .natal-label-leader {stroke-width:.9;}
+  .activation-wheel circle, .activation-wheel path {shape-rendering:geometricPrecision;}
+}
 '''
-    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and <em>Read the pattern</em>. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
-    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{para(getattr(editorial,"read_year",()) or ())}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
+    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
+    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<footer class="year-report-disclaimer">Calculated planetary evidence is interpreted symbolically and is not professional advice.</footer></section>'
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
 
