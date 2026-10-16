@@ -13,16 +13,20 @@ def e(x: Any) -> str:
     return escape(str(x if x is not None else ''))
 
 
+def clean_cover_headline(value: Any) -> str:
+    """Return a display-only plain headline without enclosing Markdown emphasis."""
+    headline = str(value or "Your Year Ahead").strip()
+    while headline.startswith("**") and headline.endswith("**") and len(headline) > 4:
+        headline = headline[2:-2].strip()
+    return headline
+
+
 def print_headline(value: Any) -> str:
     """Discard literal Markdown decoration in an HTML heading, not the prose.
 
     This is presentation-only: Groq owns words and Python owns typography.
     """
-    headline = str(value or "Your Year Ahead").strip()
-    # Only enclosing Markdown bold wrappers; do not edit narrative contents.
-    while headline.startswith("**") and headline.endswith("**") and len(headline) > 4:
-        headline = headline[2:-2].strip()
-    return e(headline)
+    return e(clean_cover_headline(value))
 
 
 def d(x: Any) -> str:
@@ -349,8 +353,8 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
         for radius in (91, 76, 110, 63):
             for shift in (0, 18, -18, 36, -36, 54, -54, 72, -72):
                 lx, ly = point(longitude + shift, radius)
-                # Planet label is a three-letter abbreviated name at 7px bold.
-                box = (lx - 28, ly - 15, lx + 28, ly + 11)
+                # Font-aware safe label box; geometry only, never moves the true natal point.
+                box = (lx - 30, ly - 15, lx + 30, ly + 12)
                 collision = sum(max(0, min(box[2], old[2]) - max(box[0], old[0])) *
                                 max(0, min(box[3], old[3]) - max(box[1], old[1]))
                                 for old in placed_boxes)
@@ -640,7 +644,7 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 .annual-timeline{display:block;width:100%;height:auto;margin:5mm 0 7mm;break-inside:avoid}.annual-timeline text{font-family:Josefin Sans,Arial,sans-serif}.month-timeline{display:block;width:100%;height:auto;margin:4mm 0 3mm}
 .month-timeline text{font:12px 'Josefin Sans',Arial,sans-serif;fill:#444}
 .chart-reading p{margin:1.5mm 0}.chart-reading strong{display:block;font-size:9pt;color:#222;margin-bottom:2mm}.chart-reading{font-size:8.5pt;color:#595959;line-height:1.35;margin:2mm 0 4mm}.month-timeline circle{stroke:#fff;stroke-width:1.5}
-.activation-layout{display:grid;grid-template-columns:92mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:92mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:bold 7px Arial,sans-serif;fill:#382a76}.activation-wheel .natal-label-leader{stroke:#725aca;stroke-width:.65;opacity:.7}.activation-wheel .chart-centre{font:15px Georgia,serif;fill:#333}.activation-wheel .chart-centre-small{font:7px Arial,sans-serif;fill:#777}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
+.activation-layout{display:grid;grid-template-columns:106mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}.activation-wheel{display:block;width:100%;max-width:106mm;height:auto}.activation-wheel .zodiac-label{font:13px "DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;fill:#444}.activation-wheel .planet-label{font:600 12px "Josefin Sans",sans-serif;fill:#382a76}.activation-wheel .natal-label-leader{stroke:#725aca;stroke-width:.65;opacity:.7}.activation-wheel .chart-centre{font:600 16px "Josefin Sans",sans-serif;fill:#333}.activation-wheel .chart-centre-small{font:500 12px "Josefin Sans",sans-serif;fill:#555}.activation-wheel .natal-marker{fill:#725aca;stroke:white;stroke-width:1}.activation-wheel .transit-marker{fill:#e58b40;stroke:white;stroke-width:1}.activation-wheel .aspect-line{stroke:#ae9a6b;stroke-width:1.5}.activation-contacts{font-size:8pt;padding-left:5mm}.activation-contacts li{margin-bottom:2mm}.contacts{font-size:9pt;padding-left:5mm}.contacts li{margin:2mm 0}
 .evidence-group,.keydate{break-inside:avoid}
 .keydate{display:grid;grid-template-columns:32mm 1fr;gap:5mm;padding:1.8mm 0;border-bottom:1px solid #ddd;font-size:9pt;break-inside:avoid}
 .transit-fact{padding:2mm 0;border-bottom:1px solid #eee;font-size:9pt}
@@ -664,9 +668,9 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .month-data {break-inside:auto; margin-top:3mm;}
   .month-activation {break-inside:auto; margin-top:4mm; padding:3mm 0 2mm; border-top:1px solid #c7b08a;}
   .month-activation h3 {margin-top:1mm;}
-  .month .activation-layout {grid-template-columns:79mm 1fr; gap:5mm;}
-  .month .activation-wheel {max-width:72mm;}
-  .month .activation-layout {grid-template-columns:72mm 1fr;}
+  .month .activation-layout {grid-template-columns:88mm 1fr; gap:5mm;}
+  .month .activation-wheel {max-width:88mm;}
+  .month .activation-layout {grid-template-columns:88mm 1fr;}
   .month .activation-description {line-height:1.3;}
   .month .activation-contacts {font-size:7.8pt;}
   .month .chart-reading {margin:2mm 0;}
@@ -688,9 +692,10 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .issue .story-timing ul {margin:1mm 0;padding-left:5mm;}
   .technical-reference {font-size:6.5pt;color:#777;overflow-wrap:anywhere; margin-top:9mm;}
   .month-activation .activation-layout {break-inside:avoid;page-break-inside:avoid;}
+  .month-activation .activation-wheel {width:88mm;max-width:88mm;}
   h2,h3 {break-after:avoid;}
   p {orphans:3;widows:3;}
-  .activation-wheel .planet-label {font-size:8px; fill:#27204d;}
+  .activation-wheel .planet-label {font:600 12px "Josefin Sans",sans-serif; fill:#27204d;}
   .activation-wheel .natal-label-leader {stroke-width:.9;}
   .activation-wheel circle, .activation-wheel path {shape-rendering:geometricPrecision;}
 }

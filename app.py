@@ -9776,10 +9776,20 @@ def _render_paid_yearly_product(
     order_reference: str = "",
 ) -> None:
     """Render the Paid Monthly-style Yearly report."""
+    # Display-only cover projection: Python owns the cover structure. The
+    # generated deck remains in the canonical editorial object for other uses;
+    # the live hero shows the period label, matching the print cover.
+    from dataclasses import replace as _display_replace
+    from yearly_print_html import clean_cover_headline as _clean_cover_headline
+    display_editorial = _display_replace(
+        product["editorial"],
+        headline=_clean_cover_headline(product["editorial"].headline),
+        deck="",
+    )
     render_paid_yearly_report(
         snapshot=product["snapshot"],
         packet=product["packet"],
-        editorial=product["editorial"],
+        editorial=display_editorial,
         label=label,
         natal_precision=natal_precision,
         order_reference=order_reference,
