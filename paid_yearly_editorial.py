@@ -1,23 +1,9 @@
 from __future__ import annotations
 
-"""Luna Paid Yearly editorial engine.
+"""Year Ahead prose engine. Python owns every destination and evidence packet.
 
-Fresh implementation for the paid Year Ahead only.
-
-The deterministic YearPacket remains the authority for astrology. This module
-turns that finished packet into one substantial paid reading in ONE provider
-call. The model does not calculate, select, rank, date, group or correct
-astrology.
-
-Response format is plain text with simple internal section markers so a single
-call can supply:
-- the paid editorial headline;
-- the short deck beneath it;
-- one long chronological "Read the year" article;
-- a substantial interpretation for every selected major annual issue;
-- a short closing synthesis.
-
-No JSON response format. No schema. No automatic retry.
+Each provider completion writes prose for exactly one Python-assigned section.
+No section delimiters, LLM-authored labels, response parsing or editorial gates.
 """
 
 from dataclasses import dataclass
@@ -35,7 +21,7 @@ import requests
 from year_ahead import YearPacket
 
 
-PAID_YEARLY_EDITORIAL_VERSION = "1.3-reader-value"
+PAID_YEARLY_EDITORIAL_VERSION = "1.4-python-owned-prose"
 # Per-worker token accounting. External Groq clients and other workers are not visible.
 _YEARLY_DAILY_LOCK = threading.Lock()
 _YEARLY_DAILY_RESERVATIONS = deque()
@@ -88,10 +74,6 @@ DEFAULT_TIMEOUT_SECONDS = 180
 TARGET_TOTAL_TOKENS = 5350
 PREFERRED_COMPLETION_TOKENS = 2500
 MIN_COMPLETION_TOKENS = 1800
-
-_MARKER_RE = re.compile(
-    r"(?m)^<<(?P<name>HEADLINE|DECK|NATAL_PROFILE|READ_YEAR|CLOSING|ISSUE:\d+|MONTH:\d+)>>\s*$"
-)
 
 
 @dataclass(frozen=True)
@@ -454,178 +436,6 @@ def _compact_paid_yearly_material(material: dict[str, Any], level: int) -> dict[
     return output
 
 
-def build_paid_yearly_prompt(material: dict[str, Any]) -> str:
-    issues = list(material.get("major_issues") or [])
-    months = list(material.get("monthly_rounds") or [])
-
-    month_markers = "\n".join(
-        f"<<MONTH:{int(item.get('number') or index)}>>"
-        for index, item in enumerate(months, start=1)
-    )
-    issue_markers = "\n".join(
-        f"<<ISSUE:{int(item.get('number') or index)}>>"
-        for index, item in enumerate(issues, start=1)
-    )
-
-    return (
-        "Write Luna's PAID PERSONAL YEAR AHEAD. This is the finished paid product, "
-        "not a preview, dashboard summary or transit catalogue.\n\n"
-
-        "ROLE SPLIT: Python has already calculated every transit, exact contact, "
-        "active window, return, boundary state, ranking, monthly dominant story and "
-        "Game. You only translate that finished evidence into useful human language. "
-        "Do not calculate, repair, re-rank or invent astrology.\n\n"
-
-        "EDITORIAL MODEL: follow Luna's Paid Monthly hierarchy but scale it to a "
-        "rolling year. The person comes first. Tell one connected strategic story, "
-        "then deepen the 3-5 supplied major stories. The report should feel like a "
-        "skilled narrator explaining a year of choices and changing conditions, not "
-        "software describing its own output.\n\n"
-
-        "HUMAN-FIRST RULE: start paragraphs with the lived situation, consequence, "
-        "decision or change. Do not begin a paragraph with a transit name, aspect, "
-        "house, active-window range or technical label. Do not say 'the first issue', "
-        "'the second Game', 'this report', 'the packet' or similar report-meta language. "
-        "Technical facts may be mentioned sparingly after the human meaning is clear.\n\n"
-
-        "DATE / LOCALISATION RULE: exact timing is rendered separately by Python. In "
-        "READ_YEAR and ISSUE prose, DO NOT print raw ISO dates such as 2027-02-27 and do "
-        "not restate active-window date ranges. Use month names, 'later in the year', "
-        "'in the second half of the year' or similar neutral timing only when supported "
-        "by the supplied chronology. Do NOT use spring, summer, autumn/fall or winter "
-        "unless a local season is explicitly supplied. Never invent or alter a year.\n\n"
-
-        "ONE CHRONOLOGY: move through the year once. A first exact contact, retrograde "
-        "return and final contact are stages of ONE story. Explain the development: "
-        "what first becomes visible, what returns for review/renegotiation, and what can "
-        "finally be settled or integrated. Fast Sun/Mercury/Venus/Mars contacts are "
-        "supporting moments only.\n\n"
-
-        "MONTHLY ROUNDS: Python has supplied exactly twelve rolling rounds from the "
-        "reader's chosen start date. For each MONTH marker write ONE distinct 12-24 word "
-        "strategic sentence. Do not repeat the Game title, date or phase label because "
-        "the interface already shows them. Make the sentence specific to that round's "
-        "phase and supplied focus. When consecutive rounds share the same dominant_game_number, "
-        "treat them as stages of one continuing story: the later line must show what has "
-        "changed, what is being tested, revisited, consolidated or settled since the previous "
-        "round. Never restart the story from zero and never reuse the same sentence in two months.\n\n"
-
-        "MAJOR STORY CHAPTERS: for each ISSUE marker, write 2-3 substantial paragraphs. "
-        "Paragraph 1 = what is changing in human terms. Paragraphs 2-3 = concrete ways "
-        "this may show up in ordinary life, the trade-off/risk, and how the sequence of "
-        "passes changes the decision. Treat the supplied life_area, strategic_frame, risk "
-        "and move as the customer-facing context for this story; do not drag relationship, "
-        "chemistry, money or career language into a different life area merely because a "
-        "planet is associated with those themes. Do not repeat the customer title at the "
-        "start. Do not recite active-window dates; the interface renders timing separately.\n\n"
-
-        "READER CONTEXT: the customer's priority/question may influence emphasis only "
-        "when the supplied astrology supports it. Do not force an answer.\n\n"
-
-        "VOICE: direct second person throughout. Strategic, adult, specific and grounded. "
-        "Preserve agency. Avoid fate, therapy-speak, manifestation claims, guaranteed "
-        "outcomes and mystical padding. Prefer ordinary consequences: agreements, workload, "
-        "money, reciprocity, visibility, responsibility, information, timing, openings and "
-        "limits where the supplied life area supports them.\n\n"
-
-        "DEPTH / BUDGET:\n"
-        "- READ_YEAR: roughly 550-700 words in 5-7 substantial paragraphs.\n"
-        "- EACH ISSUE: roughly 160-210 words in 2-3 substantial paragraphs.\n"
-        "- EACH MONTH: two substantive sentences, 35-48 words total, no duplicated advice.\n"
-        "- CLOSING: roughly 90-120 words in 1-2 paragraphs.\n"
-        "- Use density rather than repetition. Every paragraph must add a new consequence, "
-        "choice, stage or manifestation.\n\n"
-
-        "OUTPUT FORMAT: PLAIN TEXT ONLY. Use the exact internal markers below on their "
-        "own lines. No Markdown headings, bullets, JSON or code fences. The markers are "
-        "parsing boundaries and are not shown to the customer.\n\n"
-
-        "<<HEADLINE>>\n"
-        "One strong editorial headline, 8-18 words. Human and non-technical.\n"
-        "<<DECK>>\n"
-        "One or two sentences stating the strategic shape of the rolling year.\n"
-        "<<READ_YEAR>>\n"
-        "The connected annual narrative.\n"
-        f"{month_markers}\n"
-        "For each MONTH marker write two grounded sentences: a possible everyday scenario tied to that month's supplied transits, followed by a practical decision or watch-out. Show how the story evolves; do not introduce unsupported dates or guarantees.\n"
-        f"{issue_markers}\n"
-        "For each ISSUE marker write the substantial human-first interpretation for that supplied story.\n"
-        "<<CLOSING>>\n"
-        "Final strategic synthesis: what to protect, pursue, stop carrying and carry forward.\n\n"
-
-        "Before returning, silently check: chronology is forward-moving; no raw ISO dates "
-        "appear in prose; no season name appears unless local season data was supplied; no "
-        "supplied story title is redundantly repeated at the start of its own chapter; no "
-        "monthly sentence is duplicated; and every example belongs to the stated life area.\n\n"
-
-        "CALCULATED YEAR:\n"
-        + json.dumps(material, ensure_ascii=False, separators=(",", ":"), default=str)
-    )
-
-
-def build_paid_yearly_ultra_prompt(material: dict[str, Any]) -> str:
-    """Provider-fit fallback prompt.
-
-    Same editorial contract as the full prompt, but stripped of repeated explanation.
-    Used only after the YearPacket itself has already been ultra-compacted.
-    """
-    issues = list(material.get("major_issues") or [])
-    months = list(material.get("monthly_rounds") or [])
-
-    month_markers = "\n".join(
-        f"<<MONTH:{int(item.get('number') or index)}>>"
-        for index, item in enumerate(months, start=1)
-    )
-    issue_markers = "\n".join(
-        f"<<ISSUE:{int(item.get('number') or index)}>>"
-        for index, item in enumerate(issues, start=1)
-    )
-
-    return (
-        "Write Luna's finished PAID PERSONAL YEAR AHEAD from CALCULATED YEAR below. "
-        "Python owns every astrology fact, date, pass, ranking, boundary and monthly story. "
-        "Do not calculate, repair, rank or invent anything.\n\n"
-
-        "VOICE: direct second person, adult, strategic, human-first. Start with lived "
-        "situations, choices and consequences, not transit names. Technical astrology may "
-        "support meaning after the human point is clear. Preserve agency; no fate or mystical padding.\n\n"
-
-        "TIMING: do not print raw ISO dates or active-window ranges in READ_YEAR/ISSUE prose. "
-        "Use month names or neutral phrases such as 'later in the year'. Do not use season "
-        "names unless local season data is supplied. Never invent or alter a year.\n\n"
-
-        "CHRONOLOGY: one forward-moving year. First contact, retrograde return and final "
-        "contact are stages of one developing story. Fast-planet contacts are supporting moments.\n\n"
-
-        "MONTHS: write two unique sentences (30-45 words) per MONTH marker: one plausible manifestation and one actionable choice/check. "
-        "Do not repeat title/date/phase. If consecutive months share a story, show progression "
-        "rather than restarting it.\n\n"
-
-        "ISSUES: 2 substantial paragraphs per ISSUE. Paragraph 1: what changes in ordinary "
-        "life. Paragraph 2: concrete manifestations, risk/trade-off and how the pass sequence "
-        "changes the decision. Use the supplied life_area/strategic_frame/risk/move; do not "
-        "import relationship, money or career language into the wrong life area.\n\n"
-
-        "SIZE: READ_YEAR about 500-650 words in 5-6 paragraphs; each ISSUE about 140-190 "
-        "words; CLOSING about 80-110 words. Be dense, not repetitive.\n\n"
-
-        "PLAIN TEXT ONLY. Use these exact markers on their own lines. No Markdown, bullets, "
-        "JSON or code fences:\n"
-        "<<HEADLINE>>\n"
-        "<<DECK>>\n"
-        "<<READ_YEAR>>\n"
-        f"{month_markers}\n"
-        f"{issue_markers}\n"
-        "<<CLOSING>>\n\n"
-
-        "Silently check: no invented dates, no season names, no duplicate monthly sentence, "
-        "no report-meta language, and every example fits its life area.\n\n"
-
-        "CALCULATED YEAR:\n"
-        + json.dumps(material, ensure_ascii=False, separators=(",", ":"), default=str)
-    )
-
-
 def _estimate_tokens(text: str) -> int:
     try:
         import tiktoken
@@ -635,413 +445,15 @@ def _estimate_tokens(text: str) -> int:
         return max(1, math.ceil(len(str(text or "")) / 4.0))
 
 
-def _ultra_compact_paid_yearly_material(material: dict[str, Any]) -> dict[str, Any]:
-    """Last pre-call compression: keep every major issue and primary pass/date."""
-    natal = dict(material.get("natal") or {})
-    core = dict(natal.get("core") or {})
-    natal_min = {
-        "birth_time_known": bool(natal.get("birth_time_known")),
-        "core": {
-            key: core[key]
-            for key in ("Sun", "Moon", "Venus", "Mars")
-            if key in core
-        },
-        "dominant_element": natal.get("dominant_element"),
-        "dominant_modality": natal.get("dominant_modality"),
-        "strengths": [
-            {
-                "title": _clip(item.get("title"), 64),
-                "strength": _clip(item.get("strength") or item.get("interpretation"), 82),
-                "evidence": _clip(item.get("evidence"), 64),
-            }
-            for item in list(natal.get("strengths") or [])[:2]
-            if isinstance(item, dict)
-        ],
-    }
-
-    issues = []
-    for issue in list(material.get("major_issues") or []):
-        if not isinstance(issue, dict):
-            continue
-        primary = dict(issue.get("primary") or {})
-        issues.append(
-            {
-                "number": issue.get("number"),
-                "customer_title": _clip(issue.get("customer_title"), 72),
-                "strategic_frame": _clip(issue.get("strategic_frame"), 92),
-                "life_area": _clip(issue.get("life_area"), 72),
-                "start": issue.get("start"),
-                "end": issue.get("end"),
-                "start_state": issue.get("start_state"),
-                "end_state": issue.get("end_state"),
-                "primary": {
-                    "technical": primary.get("technical"),
-                    "active_start": primary.get("active_start"),
-                    "active_end": primary.get("active_end"),
-                    "house": primary.get("house"),
-                    "passes": [
-                        {
-                            "pass_number": row.get("pass_number"),
-                            "pass_label": row.get("pass_label"),
-                            "date": row.get("date"),
-                            "time": row.get("time"),
-                            "retrograde": bool(row.get("retrograde")),
-                        }
-                        for row in list(primary.get("passes") or [])
-                        if isinstance(row, dict)
-                    ],
-                    "triggers": [
-                        {
-                            "planet": row.get("planet"),
-                            "date": row.get("date"),
-                            "label": _clip(row.get("label"), 72),
-                            "activates_pass_number": row.get("activates_pass_number"),
-                        }
-                        for row in list(primary.get("triggers") or [])[:2]
-                        if isinstance(row, dict)
-                    ],
-                },
-                "supporting": [
-                    {
-                        "technical": row.get("technical"),
-                        "active_start": row.get("active_start"),
-                        "active_end": row.get("active_end"),
-                    }
-                    for row in list(issue.get("supporting") or [])[:2]
-                    if isinstance(row, dict)
-                ],
-            }
-        )
-
-    return {
-        "period": dict(material.get("period") or {}),
-        "reader_context": dict(material.get("reader_context") or {}),
-        "natal": natal_min,
-        "monthly_rounds": [
-            {
-                "number": row.get("number"),
-                "phase": row.get("phase"),
-                "dominant_game_number": row.get("dominant_game_number"),
-                "strongest_date": row.get("strongest_date"),
-                "strongest_kind": row.get("strongest_kind"),
-                "focus": _clip(row.get("focus"), 60),
-            }
-            for row in list(material.get("monthly_rounds") or [])[:12]
-            if isinstance(row, dict)
-        ],
-        "major_issues": issues,
-    }
-
-
-def _prepare_request(material: dict[str, Any]) -> tuple[str, int, int]:
-    """Fit one Paid Yearly call inside the same safe envelope proven by Paid Monthly."""
-    for level in range(4):
-        compact = _compact_paid_yearly_material(material, level)
-        prompt = build_paid_yearly_prompt(compact)
-        estimated_input = math.ceil(
-            (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 100) * 1.15
-        )
-        if estimated_input + PREFERRED_COMPLETION_TOKENS <= TARGET_TOTAL_TOKENS:
-            return prompt, PREFERRED_COMPLETION_TOKENS, estimated_input
-
-    compact = _ultra_compact_paid_yearly_material(material)
-    prompt = build_paid_yearly_ultra_prompt(compact)
-    estimated_input = math.ceil(
-        (_estimate_tokens(SYSTEM_PROMPT) + _estimate_tokens(prompt) + 100) * 1.15
-    )
-    completion = min(
-        PREFERRED_COMPLETION_TOKENS,
-        TARGET_TOTAL_TOKENS - estimated_input,
-    )
-    if completion < MIN_COMPLETION_TOKENS:
-        raise RuntimeError(
-            "Paid Yearly preflight still exceeds the provider-safe token envelope "
-            f"after ultra compaction ({estimated_input} estimated input tokens)."
-        )
-    return prompt, int(completion), estimated_input
-
-
-def _clean_text(value: Any) -> str:
-    text = str(value or "").strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        if lines and lines[0].lstrip().startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        text = "\n".join(lines).strip()
-    return re.sub(r"\*{1,3}|_{2,3}|`+", "", text).strip()
-
-
 def _paragraphs(text: str) -> tuple[str, ...]:
     return tuple(
-        " ".join(part.split())
+        part.strip()
         for part in re.split(r"\n\s*\n+", str(text or "").strip())
         if str(part or "").strip()
     )
 
 
 _ISO_DATE_TOKEN_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
-
-
-def _calculated_dates(material: dict[str, Any]) -> set[str]:
-    dates: set[str] = set()
-
-    def add(value: object) -> None:
-        text = str(value or "").strip()
-        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
-            dates.add(text)
-
-    period = dict(material.get("period") or {})
-    add(period.get("start"))
-    add(period.get("end"))
-
-    for month in list(material.get("monthly_rounds") or []):
-        if not isinstance(month, dict):
-            continue
-        add(month.get("start"))
-        add(month.get("end"))
-        add(month.get("strongest_date"))
-
-    for issue in list(material.get("major_issues") or []):
-        if not isinstance(issue, dict):
-            continue
-        add(issue.get("start"))
-        add(issue.get("end"))
-        for story in [dict(issue.get("primary") or {})] + [
-            dict(row)
-            for row in list(issue.get("supporting") or [])
-            if isinstance(row, dict)
-        ]:
-            add(story.get("active_start"))
-            add(story.get("active_end"))
-            for row in list(story.get("passes") or []):
-                if isinstance(row, dict):
-                    add(row.get("date"))
-            for row in list(story.get("triggers") or []):
-                if isinstance(row, dict):
-                    add(row.get("date"))
-
-    return dates
-
-
-def _human_date(value: str) -> str:
-    try:
-        from datetime import date as _date
-        return _date.fromisoformat(value).strftime("%d %B %Y").lstrip("0")
-    except ValueError:
-        return value
-
-
-def _sanitize_generated_dates(text: str, allowed_dates: set[str]) -> str:
-    """Drop any sentence containing an invented ISO date; humanise supplied dates.
-
-    Exact timing is already rendered deterministically elsewhere. This guard never
-    repairs astrology or calls the model again.
-    """
-    parts = re.split(r"(?<=[.!?])\s+", str(text or "").strip())
-    kept: list[str] = []
-
-    for sentence in parts:
-        tokens = _ISO_DATE_TOKEN_RE.findall(sentence)
-        if tokens and any(token not in allowed_dates for token in tokens):
-            continue
-        for token in tokens:
-            sentence = sentence.replace(token, _human_date(token))
-        sentence = " ".join(sentence.split()).strip()
-        if sentence:
-            kept.append(sentence)
-
-    return " ".join(kept).strip()
-
-
-def _strip_repeated_title(text: str, title: str) -> str:
-    value = " ".join(str(text or "").split()).strip()
-    title = " ".join(str(title or "").split()).strip()
-    if not value or not title:
-        return value
-
-    pattern = re.compile(
-        rf"^{re.escape(title)}\s*(?:[:—–\-.]+\s*)?",
-        flags=re.IGNORECASE,
-    )
-    return pattern.sub("", value, count=1).strip()
-
-
-
-def _ensure_issue_paragraphs(
-    paragraphs: tuple[str, ...],
-) -> tuple[str, ...]:
-    """Recover the two-part story shape if the provider omitted a blank line."""
-    cleaned = tuple(
-        " ".join(str(item or "").split()).strip()
-        for item in paragraphs
-        if str(item or "").strip()
-    )
-    if len(cleaned) >= 2 or not cleaned:
-        return cleaned
-
-    sentences = [
-        " ".join(item.split()).strip()
-        for item in re.split(r"(?<=[.!?])\s+", cleaned[0])
-        if str(item or "").strip()
-    ]
-    if len(sentences) < 2:
-        return cleaned
-
-    split_at = max(1, min(len(sentences) - 1, len(sentences) // 2))
-    return (
-        " ".join(sentences[:split_at]).strip(),
-        " ".join(sentences[split_at:]).strip(),
-    )
-
-
-def parse_paid_yearly_editorial(
-    value: Any,
-    *,
-    expected_issue_numbers: list[int] | tuple[int, ...] = (),
-    expected_month_numbers: list[int] | tuple[int, ...] = (),
-    issue_titles: dict[int, str] | None = None,
-    allowed_dates: set[str] | None = None,
-) -> PaidYearlyEditorial:
-    clean = _clean_text(value)
-    if not clean:
-        raise RuntimeError("Voice provider returned an empty Paid Yearly response.")
-
-    matches = list(_MARKER_RE.finditer(clean))
-    if not matches:
-        raise RuntimeError("Paid Yearly response did not contain the required plain-text sections.")
-
-    sections: dict[str, str] = {}
-    for index, match in enumerate(matches):
-        start = match.end()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(clean)
-        sections[match.group("name")] = clean[start:end].strip()
-
-    allowed_dates = set(allowed_dates or ())
-    issue_titles = dict(issue_titles or {})
-
-    def safe(value: str) -> str:
-        # Strip internal orchestration markers even when the provider has
-        # embedded them inline inside otherwise meaningful customer prose.
-        # The original marker parser above still controls section boundaries.
-        clean_prose = re.sub(r"<<\s*[A-Z][A-Z0-9 _:-]{1,80}\s*>>", " ", str(value or ""), flags=re.I)
-        return " ".join(clean_prose.split())
-
-    headline = safe(sections.get("HEADLINE", "")).rstrip(".")
-    deck = safe(sections.get("DECK", ""))
-
-    read_year = tuple(
-        safe(paragraph)
-        for paragraph in _paragraphs(sections.get("READ_YEAR", ""))
-        if safe(paragraph)
-    )
-    natal_portrait = tuple(safe(paragraph) for paragraph in _paragraphs(sections.get("NATAL_PROFILE", "")) if safe(paragraph))
-    annual_phases = tuple(
-        (str(index), "", "") for index in ()
-    )
-    closing = tuple(
-        safe(paragraph)
-        for paragraph in _paragraphs(sections.get("CLOSING", ""))
-        if safe(paragraph)
-    )
-
-    month_numbers = list(expected_month_numbers)
-    if not month_numbers:
-        month_numbers = sorted(
-            int(name.split(":", 1)[1])
-            for name in sections
-            if name.startswith("MONTH:")
-        )
-    monthly_rounds: list[PaidYearlyMonth] = []
-    for number in month_numbers:
-        focus = safe(sections.get(f"MONTH:{int(number)}", ""))
-        if focus:
-            monthly_rounds.append(
-                PaidYearlyMonth(
-                    number=int(number),
-                    focus=focus,
-                )
-            )
-
-    issues: list[PaidYearlyIssue] = []
-    issue_numbers = list(expected_issue_numbers)
-    if not issue_numbers:
-        issue_numbers = sorted(
-            int(name.split(":", 1)[1])
-            for name in sections
-            if name.startswith("ISSUE:")
-        )
-
-    for number in issue_numbers:
-        raw_paragraphs = _paragraphs(sections.get(f"ISSUE:{int(number)}", ""))
-        cleaned: list[str] = []
-        for index, paragraph in enumerate(raw_paragraphs):
-            paragraph = safe(paragraph)
-            if index == 0:
-                paragraph = _strip_repeated_title(
-                    paragraph,
-                    issue_titles.get(int(number), ""),
-                )
-            if paragraph:
-                cleaned.append(paragraph)
-        if cleaned:
-            issues.append(
-                PaidYearlyIssue(
-                    number=int(number),
-                    paragraphs=tuple(cleaned),
-                )
-            )
-
-    all_text = " ".join(
-        [headline, deck, *read_year, *closing]
-        + [month.focus for month in monthly_rounds]
-        + [paragraph for issue in issues for paragraph in issue.paragraphs]
-    )
-    word_count = len(re.findall(r"\\b[\\w'-]+\\b", all_text))
-
-    required_issue_count = len(list(expected_issue_numbers or ())) or len(issue_numbers)
-    required_month_count = len(list(expected_month_numbers or ()))
-
-    required_present = bool(
-        headline
-        and deck
-        and read_year
-        and closing
-        and issues
-        and len(issues) == required_issue_count
-        and (
-            not required_month_count
-            or len(monthly_rounds) == required_month_count
-        )
-    )
-
-    return PaidYearlyEditorial(
-        headline=headline,
-        deck=deck,
-        read_year=read_year,
-        issues=tuple(issues),
-        closing=closing,
-        word_count=word_count,
-        voice_complete=required_present,
-        monthly_rounds=tuple(monthly_rounds),
-        natal_portrait=natal_portrait,
-    )
-
-
-def _normalize_single_game_response(value: Any, expected_marker: str) -> str:
-    """Place the response in its Python-assigned Game slot without editorial gates.
-
-    Transport markers are not astrological evidence. A provider error or entirely
-    absent body is handled as a technical failure, not a prose-quality rejection.
-    """
-    prose = _clean_text(value)
-    if not prose:
-        raise RuntimeError("Year Ahead provider returned no Game text")
-    prose = re.sub(r"<<\s*[^<>\n]{1,80}\s*>>", "", prose).strip()
-    if not prose:
-        raise RuntimeError("Year Ahead provider returned no Game text")
-    return expected_marker + "\n" + prose
 
 
 def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1160,13 +572,11 @@ def generate_paid_yearly_editorial(
         shared_year_context=shared_year_context,
     )
     from paid_voice_router import VoiceProvider, completion, cached_completion
-    # Five bounded jobs: the annual arc, three four-month groups, and the major
-    # Games. Each receives only the relevant deterministic evidence.
+    # Every job has one preassigned destination and its own calculated evidence.
     compact=_compact_paid_yearly_material(material,2)
     issue_numbers=[int(row.get('number') or i) for i,row in enumerate(material.get('major_issues') or [],1)]
     month_numbers=[int(row.get('number') or i) for i,row in enumerate(material.get('monthly_rounds') or [],1)]
     issue_titles={int(row.get('number') or i):str(row.get('customer_title') or '') for i,row in enumerate(material.get('major_issues') or [],1)}
-    allowed_dates=_calculated_dates(material)
     primary=VoiceProvider(base_url,model,api_key)
     alternate=VoiceProvider(secondary_base,secondary_model,secondary_key) if all((secondary_base,secondary_model,secondary_key)) else None
     # Configurable provider budget: not a claim about the account's actual rate limit.
@@ -1206,62 +616,57 @@ def generate_paid_yearly_editorial(
     # These are provider completion budgets, not hard-coded astrology or forecasts.
     annual_output = int(os.environ.get('LUNA_YEARLY_ANNUAL_OUTPUT_TOKENS', '1900'))
     framing_output = int(os.environ.get('LUNA_YEARLY_FRAMING_OUTPUT_TOKENS', '1200'))
-    def section(job_name, requested, packet, output_limit, *, annual_instruction="", allow_unmarked=False):
-        prompt=("Write only these section markers and their prose, in order: "+', '.join(requested)+".\n"
-            "You are Luna writing a personalised strategic year, second person. Python owns all astrology. "
-            "Never fabricate an exact date, a transit pass, a house, a planetary placement or a future event. "
-            "No JSON, no markdown; use a literal marker alone on each line. "
-            "Make the reader's choices and concrete possibilities clear, without deterministic prediction. "
-            "No introductory filler. For monthly rounds use 45–65 useful words each. "
-            "For Games use two substantial paragraphs with specific scenarios, risks, choices and genuine passes. "
-            "For CLOSING write 90–130 words. " + annual_instruction + " "
-            "Each section must have meaningful content.\nCALCULATED EVIDENCE: "
-            +json.dumps(packet,ensure_ascii=False,separators=(',',':')))
-        estimated=math.ceil((_estimate_tokens(prompt)+_estimate_tokens(SYSTEM_PROMPT)+100)*1.15)
-        if estimated+output_limit>total_budget: raise RuntimeError(
-            f'Year Ahead {job_name} packet over configured token budget: '
-            f'input={estimated}, output={output_limit}, budget={total_budget}'
+    def section(job_name, packet, output_limit, *, instruction=""):
+        """One predetermined Python slot per prose-only completion.
+
+        There is no LLM-owned section delimiter, title, JSON envelope, or marker
+        parser. Checkpoint identity is a Python internal identifier.
+        """
+        prompt = (
+            "Write ONLY the finished customer-facing prose for the single section "
+            "defined by the following instructions. Do not generate structural "
+            "labels, section identifiers, headings, JSON or markdown. "
+            "Python has already assigned the destination and calculated the evidence. "
+            "Never calculate or invent an astrological fact, date, aspect or pass. "
+            "Write clear personal interpretation, not instructions or a plan. "
+            + instruction + "\nCALCULATED EVIDENCE: "
+            + json.dumps(packet, ensure_ascii=False, separators=(',', ':'))
         )
-        messages=[{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}]
-        checkpoint_id="yearly:"+job_name+":"+",".join(requested)
-        # Crucial ordering: a completed checkpoint costs no tokens and must not
-        # consume the process's daily or minute reservations.
-        result=cached_completion(messages, primary=primary,
-                                 checkpoint_id=checkpoint_id, max_output=output_limit)
+        estimated = math.ceil((_estimate_tokens(prompt)+_estimate_tokens(SYSTEM_PROMPT)+100)*1.15)
+        if estimated + output_limit > total_budget:
+            raise RuntimeError(
+                f'Year Ahead {job_name} packet over configured token budget: '
+                f'input={estimated}, output={output_limit}, budget={total_budget}'
+            )
+        messages = [{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}]
+        checkpoint_id = 'yearly:prose_slots_v3133:' + job_name
+        result = cached_completion(messages, primary=primary,
+                                   checkpoint_id=checkpoint_id, max_output=output_limit)
         if result is None:
             _reserve_yearly_daily_tokens(estimated + output_limit,
                                          budget=daily_token_budget, window=daily_window_seconds)
             reserve_provider_capacity(estimated, output_limit)
             try:
-                result=completion(messages, primary=primary, secondary=alternate,
-                                  max_output=output_limit, timeout=timeout,
-                                  checkpoint_id=checkpoint_id)
+                result = completion(messages, primary=primary, secondary=alternate,
+                                    max_output=output_limit, timeout=timeout,
+                                    checkpoint_id=checkpoint_id)
             except Exception as exc:
                 _remember_yearly_daily_429(exc, window=daily_window_seconds)
                 raise
-        if job_name == 'games' and len(requested) == 1:
-            return _normalize_single_game_response(result, requested[0])
-        # Marker labels are transport syntax, not post-LLM editorial acceptance.
-        # A single known section can be assigned its destination by Python.
-        if len(requested) == 1:
-            marker = requested[0]
-            prose = re.sub(r'(?m)^\s*<<[^<>\r\n]{1,80}>>\s*$', '', _clean_text(result)).strip()
-            if not prose:
-                raise RuntimeError(f'Year Ahead {job_name} provider returned no text')
-            return marker + "\n" + prose
-        return result
+        prose = str(result or '').strip()
+        if not prose:
+            raise RuntimeError(f'Year Ahead {job_name} provider returned no text')
+        return prose
     base={k:compact.get(k) for k in ('period','reader_context','natal')}
-    all_parts=[]
+    written_slots={}
     intro_packet={**base,'major_issues':[{'number':g.get('number'),'title':g.get('customer_title'),'primary':g.get('primary')} for g in compact.get('major_issues') or []],
         'monthly_rounds':[{'number':m.get('number'),'phase':m.get('phase'),'strongest_date':m.get('strongest_date')} for m in compact.get('monthly_rounds') or []]}
-    # Construct a single chronological annual essay from three bounded segments.
+    # Construct four Python-owned chronological phases.
     # GPT-OSS completion tokens include hidden reasoning; generating a 650-word
     # essay in one response can exhaust the cap before the prose is complete.
-    # These three requests reuse verified evidence and retain the same READ_YEAR
-    # contract expected by the unchanged parser and report renderer.
+    # The renderer receives the same assembled dataclass contract.
     year_segments = []
     phase_metadata = []
-    previous_context = ''
     for chunk_index, start_month in enumerate((1, 4, 7, 10), 1):
         month_slice = [row for row in compact.get('monthly_rounds') or []
                        if start_month <= int(row.get('number') or 0) < start_month + 3]
@@ -1341,20 +746,13 @@ def generate_paid_yearly_editorial(
             'Avoid season names unless supplied and verified for the reader timezone. '
             + ending + ' ' + continuity
         )
-        result = section(f'annual_{chunk_index}', ['<<READ_YEAR>>'],
-                         segment_packet, annual_output,
-                         annual_instruction=instruction, allow_unmarked=True)
-        # The request already identifies its destination. Provider-generated
-        # heading/marker variations cannot change the destination or invalidate
-        # otherwise complete prose. Strip only standalone marker lines; do not
-        # substitute a canned passage or discard the customer's reading.
-        prose = re.sub(r'(?m)^\s*<<[^\r\n<>]{1,80}>>\s*$', '', _clean_text(result)).strip()
+        prose = section(f'annual_{chunk_index}', segment_packet, annual_output,
+                        instruction=instruction)
         year_segments.append(prose)
         phase_metadata.append((act_start, act_end, prose))
         # No generated prose is passed to a later Groq call.
-    all_parts.append('<<READ_YEAR>>\n' + '\n\n'.join(year_segments))
-    # The existing framing request also writes a personal natal portrait; no
-    # additional framing call. Its evidence comes exclusively from Python's natal engine.
+    written_slots['read_year'] = '\n\n'.join(year_segments)
+    # The natal portrait uses Python-calculated natal evidence.
     intro_packet['natal'] = compact.get('natal')
     framing_instruction = (
         'For NATAL_PROFILE write 145–200 words in two personalised second-person paragraphs. '
@@ -1366,59 +764,58 @@ def generate_paid_yearly_editorial(
         'under pressure. Never invent a placement, house, orb or aspect. '
         'Do not repeat the four Strengths verbatim or promise life outcomes.'
     )
-    all_parts.append(section('annual_framing',['<<HEADLINE>>','<<DECK>>','<<NATAL_PROFILE>>','<<CLOSING>>'],intro_packet,
-                             max(framing_output, int(os.environ.get('LUNA_YEARLY_FRAMING_WITH_NATAL_TOKENS','1750'))),
-                             annual_instruction=framing_instruction))
+    # Framing has four independent Python-owned destinations. A single free-form
+    # response cannot contain four reliably recoverable sections without asking
+    # the model to do formatting or introducing a post-LLM delimiter parser.
+    framing_jobs = (
+        ('headline', 'Write one short, distinctive customer-facing headline. One line only.', 190),
+        ('deck', 'Write a concise personalised introductory deck (two sentences).', 260),
+        ('natal_portrait', framing_instruction.replace('For NATAL_PROFILE write', 'Write'),
+         max(framing_output, int(os.environ.get('LUNA_YEARLY_NATAL_PORTRAIT_TOKENS', '1100')))),
+        ('closing', 'Write a 90–130 word closing synthesis grounded only in the calculated annual themes.', 650),
+    )
+    for slot, instruction, cap in framing_jobs:
+        written_slots[slot] = section('framing_' + slot, intro_packet, cap, instruction=instruction)
     full_games = {int(g.get('number') or 0): g for g in material.get('major_issues') or []}
-    for first in (1,5,9):
-        rows=[row for row in compact.get('monthly_rounds') or [] if first<=int(row.get('number') or 0)<first+4]
-        # Monthly prose sees only its own calculated bounds/theme. Do not pass
-        # strongest_date or strongest_kind: these can be unnamed generic triggers.
-        scoped_rows=[{'number':r.get('number'), 'phase':r.get('phase'),
-                      'focus':r.get('focus'), 'dominant_game_number':r.get('dominant_game_number')}
-                     for r in rows]
-        markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
-        if markers:
-            full_rows = [r for r in material.get('monthly_rounds') or [] if first <= int(r.get('number') or 0) < first + 4]
-            monthly_evidence = {}
-            for month in full_rows:
-                number = int(month['number'])
-                game_number = int(month.get('dominant_game_number') or 0)
-                allowed = _annual_act_evidence(material, [month])
-                game = full_games.get(game_number) or {}
-                monthly_evidence[str(number)] = {
-                    'start': month.get('start'), 'end': month.get('end'),
-                    'dominant_game_number': game_number,
-                    'dominant_game_title': game.get('customer_title'),
-                    'dominant_life_area': game.get('life_area'),
-                    'active_game_context': [
-                        {'technical': t.get('technical'), 'active_start': t.get('active_start'), 'active_end': t.get('active_end')}
-                        for t in [game.get('primary') or {}, *(game.get('supporting') or [])]
-                        if t.get('technical')
-                    ],
-                    'allowed_exact_contacts': allowed,
-                }
-            monthly_instructions = (
-                'MONTH OWNERSHIP: monthly_evidence is authoritative. For every MONTH section '
-                'only narrate events dated between its own start and end, inclusive. '
-                'Use ONLY its assigned dominant_game_number and dominant_game_title '
-                'for the central subject; supporting influences must be explicitly named '
-                'in active_game_context. Do not import another Game or another month. '
-                'Only identify an exact aspect and date when fully present in '
-                'allowed_exact_contacts. Never infer fast-planet aspects from a generic '
-                'trigger or strongest_date. Where a transit remains active but is not exact, '
-                'interpret its continuing background without claiming a new pass. '
-                'Make each month distinct and describe possible, not guaranteed, outcomes.'
-            )
-            all_parts.append(section('months', markers,
-                {**base,'monthly_rounds':scoped_rows,'monthly_evidence':monthly_evidence},1400,
-                annual_instruction=monthly_instructions))
+    # Individually bounded monthly slots are necessary for strict prose-only
+    # output. Four free-form monthly texts cannot be separated deterministically
+    # without provider-authored separators or post-response heuristics.
+    for month in material.get('monthly_rounds') or []:
+        number = int(month['number'])
+        game_number = int(month.get('dominant_game_number') or 0)
+        game = full_games.get(game_number) or {}
+        allowed = _annual_act_evidence(material, [month])
+        evidence = {
+            'start': month.get('start'), 'end': month.get('end'),
+            'number': number,
+            'phase': month.get('phase'), 'focus': month.get('focus'),
+            'dominant_game_number': game_number,
+            'dominant_game_title': game.get('customer_title'),
+            'dominant_life_area': game.get('life_area'),
+            'active_game_context': [
+                {'technical': t.get('technical'), 'active_start': t.get('active_start'),
+                 'active_end': t.get('active_end')}
+                for t in [game.get('primary') or {}, *(game.get('supporting') or [])]
+                if t.get('technical')
+            ],
+            'allowed_exact_contacts': allowed,
+        }
+        instruction = (
+            f'Write 45–65 useful words for the single month from {evidence["start"]} '
+            f'through {evidence["end"]}, inclusive. The dominant Game is the central subject. '
+            'Do not import another month or unrelated Game. Only name an exact contact '
+            'and date if supplied in allowed_exact_contacts. Do not infer fast-planet '
+            'aspects from unnamed triggers or phase names. Use conditional, specific '
+            'real-life choices, not guaranteed outcomes.'
+        )
+        written_slots[f'month_{number}'] = section(
+            f'month_{number}', {**base, 'monthly_evidence': evidence}, 460,
+            instruction=instruction)
     games=compact.get('major_issues') or []
     full_games = {int(g.get('number') or 0): g for g in material.get('major_issues') or []}
     for first in range(len(games)):
         group=games[first:first+1]
         game_number=int(group[0]['number'])
-        markers=[f'<<ISSUE:{game_number}>>']
         scope=_game_voice_evidence(full_games[game_number], material.get('monthly_rounds') or [])
         raw_game=group[0]
         # Keep strategic vocabulary, but exclude overlapping raw transit/triggers
@@ -1442,15 +839,28 @@ def generate_paid_yearly_editorial(
             'describe the active window without inventing exact passes. '
             'The Game heading and evidence will be rendered by Python; write prose only.'
         )
-        all_parts.append(section('games',markers,game_packet,1700,
-                                 annual_instruction=game_instructions))
-    body='\n\n'.join(all_parts)
-    parsed = parse_paid_yearly_editorial(
-        body,
-        expected_issue_numbers=issue_numbers,
-        expected_month_numbers=month_numbers,
-        issue_titles=issue_titles,
-        allowed_dates=allowed_dates,
+        written_slots[f'game_{game_number}'] = section(
+            f'game_{game_number}', game_packet, 1700, instruction=game_instructions)
+    # Assemble from Python-owned destinations; never inspect, split, rewrite,
+    # or validate the editorial content of a provider completion.
+    headline = written_slots['headline']
+    deck = written_slots['deck']
+    read_year = _paragraphs(written_slots['read_year'])
+    closing = _paragraphs(written_slots['closing'])
+    natal_portrait = _paragraphs(written_slots['natal_portrait'])
+    monthly_rounds = tuple(
+        PaidYearlyMonth(number=n, focus=written_slots[f'month_{n}'])
+        for n in month_numbers
     )
-    from dataclasses import replace
-    return replace(parsed, annual_phases=tuple(phase_metadata))
+    issues = tuple(
+        PaidYearlyIssue(number=n, paragraphs=_paragraphs(written_slots[f'game_{n}']))
+        for n in issue_numbers
+    )
+    all_text = ' '.join(written_slots.values())
+    return PaidYearlyEditorial(
+        headline=headline, deck=deck, read_year=read_year,
+        issues=issues, closing=closing,
+        word_count=len(all_text.split()), voice_complete=True,
+        monthly_rounds=monthly_rounds, annual_phases=tuple(phase_metadata),
+        natal_portrait=natal_portrait,
+    )
