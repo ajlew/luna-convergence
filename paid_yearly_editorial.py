@@ -1073,14 +1073,59 @@ def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, A
                         target = str(trigger.get("target") or "").strip()
                         title = " ".join(v for v in (name, aspect, "natal " + target if target else "") if v)
                         if not (name and aspect and target):
-                            # An unnamed trigger remains an unlabelled activation;
-                            # the LLM must not invent the missing aspect or target.
-                            title = str(trigger.get("label") or "activation").strip()
+                            # Unknown aspect identity cannot license a dated planetary claim.
+                            continue
                         key = (day, title, "trigger")
                         found[key] = {"date": day, "month_number": number, "contact": title,
                                       "kind": "calculated supporting trigger", "background": technical}
                         break
     return sorted(found.values(), key=lambda item: (item["date"], item["contact"]))
+
+
+
+def _game_voice_evidence(game: dict[str, Any], month_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build one Game's dated narrative contract from Python-computed records.
+
+    Only full named exact passes are permitted as planetary assertions. Unnamed
+    triggers do not supply an aspect identity and cannot authorise a named claim.
+    Dates outside the customer rolling year are context, not narrative dates.
+    """
+    months = sorted((r for r in month_rows if r.get('start') and r.get('end')),
+                    key=lambda r: str(r['start']))
+    if not months:
+        raise RuntimeError('Year Ahead Game has no calculated rolling months')
+    year_start, year_end = str(months[0]['start'])[:10], str(months[-1]['end'])[:10]
+    game_start = str(game.get('start') or '')[:10]
+    game_end = str(game.get('end') or '')[:10]
+    if not game_start or not game_end or game_start > game_end:
+        raise RuntimeError('Year Ahead Game is missing calculated active boundaries')
+    narrative_start = max(year_start, game_start)
+    narrative_end = min(year_end, game_end)
+    if narrative_start > narrative_end:
+        raise RuntimeError('Year Ahead Game does not overlap the rolling year')
+    contacts = {}
+    for transit in [game.get('primary') or {}, *(game.get('supporting') or [])]:
+        technical = str(transit.get('technical') or '').strip()
+        if not technical:
+            continue
+        for passage in transit.get('passes') or []:
+            day = str(passage.get('date') or '')[:10]
+            if narrative_start <= day <= narrative_end:
+                contacts[(day, technical)] = {
+                    'date': day, 'contact': technical, 'stage': passage.get('pass_label') or '',
+                }
+    affected = [
+        {'number': m.get('number'), 'start': m.get('start'), 'end': m.get('end'),
+         'phase': m.get('phase'), 'focus': m.get('focus')}
+        for m in months
+        if str(m['start'])[:10] <= narrative_end and str(m['end'])[:10] >= narrative_start
+    ]
+    return {
+        'active_start': game_start, 'active_end': game_end,
+        'narrative_start': narrative_start, 'narrative_end': narrative_end,
+        'allowed_exact_contacts': sorted(contacts.values(), key=lambda x: (x['date'], x['contact'])),
+        'overlapping_months': affected,
+    }
 
 
 def generate_paid_yearly_editorial(
@@ -1302,10 +1347,29 @@ def generate_paid_yearly_editorial(
         markers=[f'<<MONTH:{int(row["number"])}>>' for row in rows]
         if markers: all_parts.append(section('months',markers,{**base,'monthly_rounds':rows,'major_issues':intro_packet['major_issues']},1400))
     games=compact.get('major_issues') or []
+    full_games = {int(g.get('number') or 0): g for g in material.get('major_issues') or []}
     for first in range(len(games)):
         group=games[first:first+1]
-        markers=[f'<<ISSUE:{int(row["number"])}>>' for row in group]
-        all_parts.append(section('games',markers,{**base,'major_issues':group},1700))
+        game_number=int(group[0]['number'])
+        markers=[f'<<ISSUE:{game_number}>>']
+        scope=_game_voice_evidence(full_games[game_number], material.get('monthly_rounds') or [])
+        game_packet={**base, 'major_issues':group, 'game_evidence_contract':scope}
+        game_instructions=(
+            'Write ONLY the named Game in major_issues, not another twelve-month forecast. '
+            'game_evidence_contract is the authoritative calculated timeline. '
+            'Its narrative_start and narrative_end are absolute boundaries for this Game. '
+            'Do not narrate a month or date outside these bounds or treat the annual '
+            'report start as the Game start. Do not describe every overlapping month: '
+            'focus on the actual calculated pass sequence, the human tension, two '
+            'conditional real-life scenarios, meaningful trade-offs, and a concrete move. '
+            'Only name exact planetary contacts present in allowed_exact_contacts. '
+            'Never infer Sun, Venus, Mercury, Mars or another aspect from a generic '
+            'trigger, natal placement or a Game heading. If the list is empty, '
+            'describe the active window without inventing exact passes. '
+            'The Game heading and evidence will be rendered by Python; write prose only.'
+        )
+        all_parts.append(section('games',markers,game_packet,1700,
+                                 annual_instruction=game_instructions))
     body='\n\n'.join(all_parts)
     return parse_paid_yearly_editorial(
         body,
