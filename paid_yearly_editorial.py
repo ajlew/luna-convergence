@@ -456,7 +456,7 @@ def _paragraphs(text: str) -> tuple[str, ...]:
 _ISO_DATE_TOKEN_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 
 
-def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, Any]], *, game_number: int | None = None) -> list[dict[str, Any]]:
     """Deterministic exact-contact ledger for the four rolling months in an act.
 
     Include only computed contacts that actually occur during that act. A Game
@@ -471,6 +471,8 @@ def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, A
         return []
     found = {}
     for game in material.get("major_issues") or []:
+        if game_number is not None and int(game.get("number") or 0) != game_number:
+            continue
         for transit in [game.get("primary") or {}, *(game.get("supporting") or [])]:
             technical = str(transit.get("technical") or "").strip()
             if not technical:
@@ -483,21 +485,10 @@ def _annual_act_evidence(material: dict[str, Any], month_slice: list[dict[str, A
                         found[key] = {"date": day, "month_number": number, "contact": technical,
                                       "kind": "exact pass", "stage": passage.get("pass_label")}
                         break
-            for trigger in transit.get("triggers") or []:
-                day = str(trigger.get("date") or "")[:10]
-                for start, end, number in intervals:
-                    if start <= day <= end:
-                        name = str(trigger.get("planet") or "").strip()
-                        aspect = str(trigger.get("aspect") or "").strip()
-                        target = str(trigger.get("target") or "").strip()
-                        title = " ".join(v for v in (name, aspect, "natal " + target if target else "") if v)
-                        if not (name and aspect and target):
-                            # Unknown aspect identity cannot license a dated planetary claim.
-                            continue
-                        key = (day, title, "trigger")
-                        found[key] = {"date": day, "month_number": number, "contact": title,
-                                      "kind": "calculated supporting trigger", "background": technical}
-                        break
+            # Supporting trigger rows may carry a date without a complete,
+            # appendix-backed aspect identity. They cannot authorise narrated
+            # exact planetary claims. The appendix and narrator use the same
+            # primary/supporting exact-pass source of truth.
     return sorted(found.values(), key=lambda item: (item["date"], item["contact"]))
 
 
@@ -639,7 +630,7 @@ def generate_paid_yearly_editorial(
                 f'input={estimated}, output={output_limit}, budget={total_budget}'
             )
         messages = [{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}]
-        checkpoint_id = 'yearly:prose_slots_v3133:' + job_name
+        checkpoint_id = 'yearly:prose_slots_v3135:' + job_name
         result = cached_completion(messages, primary=primary,
                                    checkpoint_id=checkpoint_id, max_output=output_limit)
         if result is None:
@@ -726,7 +717,7 @@ def generate_paid_yearly_editorial(
             'monthly_rounds': period_months,
             'allowed_exact_contacts': ledger,
         }
-        # The three bounded calls form consecutive ACTS of a single article,
+        # The four bounded calls form consecutive PHASES of a single article,
         # not three independent mini-articles. Subsequent acts receive the end
         # of the prior act to prevent restarts without replaying the full essay.
         stage = ('opening phase', 'second phase', 'third phase', 'final phase')[chunk_index - 1]
@@ -756,7 +747,7 @@ def generate_paid_yearly_editorial(
             'for naming a transiting planet, aspect, natal target AND exact date. '
             'You may ONLY name an exact planetary contact listed in that array. '
             'Copy its contact identity and date faithfully; never expand an unnamed trigger. '
-            'Do not invent, assume, interpolate, relabel or transfer an unlisted '
+            'The technical appendix uses the SAME pass ledger. Do not invent, assume, interpolate, relabel or transfer an unlisted '
             'conjunction, sextile, square, trine or opposition, including Sun, Venus, '
             'Mercury and other fast-moving planets. '
             'Do not infer a planet or aspect from strongest_date, phase, Game title, '
@@ -788,6 +779,7 @@ def generate_paid_yearly_editorial(
         'habits, assets, blind spots and everyday examples, with alternatives rather '
         'than claims about private biography. Explain how strengths can become traps '
         'under pressure. Never invent a placement, house, orb or aspect. '
+        'Explain the four supplied Strengths through recognisable daily-life behaviours: a benefit, a possible excess, and a choice the person can notice. Avoid mechanical definitions and do not invent aspects. '
         'Do not repeat the four Strengths verbatim or promise life outcomes.'
     )
     # Framing has four independent Python-owned destinations. A single free-form
@@ -810,7 +802,7 @@ def generate_paid_yearly_editorial(
         number = int(month['number'])
         game_number = int(month.get('dominant_game_number') or 0)
         game = full_games.get(game_number) or {}
-        allowed = _annual_act_evidence(material, [month])
+        allowed = _annual_act_evidence(material, [month], game_number=game_number)
         evidence = {
             'start': month.get('start'), 'end': month.get('end'),
             'number': number,
@@ -818,20 +810,17 @@ def generate_paid_yearly_editorial(
             'dominant_game_number': game_number,
             'dominant_game_title': game.get('customer_title'),
             'dominant_life_area': game.get('life_area'),
-            'active_game_context': [
-                {'technical': t.get('technical'), 'active_start': t.get('active_start'),
-                 'active_end': t.get('active_end')}
-                for t in [game.get('primary') or {}, *(game.get('supporting') or [])]
-                if t.get('technical')
-            ],
+            # Do not expose a separate transit catalogue with extra dates:
+            # exact passes in allowed_exact_contacts are the sole date authority.
             'allowed_exact_contacts': allowed,
         }
         instruction = (
             f'Write 45–65 useful words for the single month from {evidence["start"]} '
             f'through {evidence["end"]}, inclusive. The dominant Game is the central subject. '
             'Do not import another month or unrelated Game. Only name an exact contact '
-            'and date if supplied in allowed_exact_contacts. Do not infer fast-planet '
-            'aspects from unnamed triggers or phase names. Use conditional, specific '
+            'and date if supplied in allowed_exact_contacts. Never name a transiting '
+            'planetary contact missing from this list; if empty, describe only the Game '
+            'theme and the choice without attaching an aspect or date. Use conditional, specific '
             'real-life choices, not guaranteed outcomes.'
         )
         written_slots[f'month_{number}'] = section(

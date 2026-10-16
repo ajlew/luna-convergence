@@ -613,8 +613,10 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
                 v=getattr(voice,attr,None)
                 if isinstance(v,str) and v.strip(): paragraphs.append(v)
         title=g.get('title') or f'Major story {i+1}'
-        issue_cards.append(f'<section class="issue page"><div class="eyebrow">Major story {i+1:02d}</div><h2>{e(title.title())}</h2>{para(paragraphs)}<h3>Timing and evidence</h3><p>{e(primary.get("technical_label") or primary.get("label") or primary.get("name") or "")}</p><ul>{evidence}</ul></section>')
+        issue_cards.append(f'<section class="issue page"><div class="eyebrow">Major story {i+1:02d}</div><h2>{e(title.title())}</h2><div class="story-timing"><h3>Timing and evidence</h3><p>{e(primary.get("technical_label") or primary.get("label") or primary.get("name") or "")}</p><ul>{evidence}</ul></div>{para(paragraphs)}</section>')
     appendix = _evidence_appendix(games)
+    if order_reference:
+        appendix = appendix.rsplit("</section>", 1)[0] + f'<p class="technical-reference">Document reference: {e(order_reference)}</p></section>'
     closing=para(getattr(editorial,'closing',()) or ())
     css='''
 @page {size:A4;margin:17mm 17mm 18mm}
@@ -647,11 +649,12 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .natal-study .natal-svg svg {width:109mm!important;height:109mm!important;max-width:100%;}
   .natal-study .chart-reading {font-size:9pt;line-height:1.43; padding-left:4mm; border-left:1px solid #c9b28b;}
   .month {break-before:page; padding-top:2mm;}
-  .month-data {break-inside:avoid; margin-top:3mm;}
-  .month-activation {break-inside:avoid; margin-top:4mm; padding:3mm 0 2mm; border-top:1px solid #c7b08a;}
+  .month-data {break-inside:auto; margin-top:3mm;}
+  .month-activation {break-inside:auto; margin-top:4mm; padding:3mm 0 2mm; border-top:1px solid #c7b08a;}
   .month-activation h3 {margin-top:1mm;}
   .month .activation-layout {grid-template-columns:79mm 1fr; gap:5mm;}
-  .month .activation-wheel {max-width:79mm;}
+  .month .activation-wheel {max-width:72mm;}
+  .month .activation-layout {grid-template-columns:72mm 1fr;}
   .month .activation-description {line-height:1.3;}
   .month .activation-contacts {font-size:7.8pt;}
   .month .chart-reading {margin:2mm 0;}
@@ -661,7 +664,18 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .keydate {padding:1mm 0; font-size:8.6pt;}
   .evidence-group {break-inside:auto;}
   .transit-fact {padding:1.2mm 0;}
-  .strength-list .block {break-inside:avoid;}
+  .strength-list .block {break-inside:auto;}
+  .story-timing {break-inside:auto; margin-top:3mm;}
+  .story-timing h3 {break-after:avoid;}
+  .story-timing li {break-inside:avoid;}
+  .issue {break-inside:auto;}
+  .issue p {orphans:3; widows:3; font-size:9.8pt;line-height:1.38;margin-bottom:2.7mm;}
+  .issue .story-timing {font-size:8pt;margin:2mm 0 5mm;border-top:1px solid #c9b28b;padding-top:2mm;}
+  .issue .story-timing h3 {font-size:9pt;margin:1mm 0;}
+  .issue .story-timing p {font-size:8pt;margin:1mm 0;}
+  .issue .story-timing ul {margin:1mm 0;padding-left:5mm;}
+  .technical-reference {font-size:6.5pt;color:#777;overflow-wrap:anywhere; margin-top:9mm;}
+  .month-activation .activation-layout {break-inside:avoid;page-break-inside:avoid;}
   h2,h3 {break-after:avoid;}
   p {orphans:3;widows:3;}
   .activation-wheel .planet-label {font-size:8px; fill:#27204d;}
@@ -669,8 +683,8 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .activation-wheel circle, .activation-wheel path {shape-rendering:geometricPrecision;}
 }
 '''
-    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><p class="quiet">{e(order_reference)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
-    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Your year has several overlapping stories. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
+    intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{e(getattr(editorial,"headline",None) or "Your Year Ahead")}</h1><p class="deck">{e(label)} · {e(getattr(editorial,"deck",None) or "")}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
+    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Luna calls a related set of calculated transits a Game: a strategic period in which competing pressures, choices and trade-offs converge. A Game is an interpretive decision framework, not a prediction or a mathematically proven optimal move. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<footer class="year-report-disclaimer">Calculated planetary evidence is interpreted symbolically and is not professional advice.</footer></section>'
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
 
