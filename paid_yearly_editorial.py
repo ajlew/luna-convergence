@@ -21,7 +21,7 @@ import requests
 from year_ahead import YearPacket
 
 
-PAID_YEARLY_EDITORIAL_VERSION = "1.4-python-owned-prose"
+PAID_YEARLY_EDITORIAL_VERSION = "1.5-python-owned-prose-bounded-truncation"
 # Per-worker token accounting. External Groq clients and other workers are not visible.
 _YEARLY_DAILY_LOCK = threading.Lock()
 _YEARLY_DAILY_RESERVATIONS = deque()
@@ -643,16 +643,42 @@ def generate_paid_yearly_editorial(
         result = cached_completion(messages, primary=primary,
                                    checkpoint_id=checkpoint_id, max_output=output_limit)
         if result is None:
-            _reserve_yearly_daily_tokens(estimated + output_limit,
-                                         budget=daily_token_budget, window=daily_window_seconds)
-            reserve_provider_capacity(estimated, output_limit)
-            try:
-                result = completion(messages, primary=primary, secondary=alternate,
-                                    max_output=output_limit, timeout=timeout,
-                                    checkpoint_id=checkpoint_id)
-            except Exception as exc:
-                _remember_yearly_daily_429(exc, window=daily_window_seconds)
-                raise
+            # A finish_reason=length is a technical truncation, not an editorial
+            # judgment. Retry it at most once with more room for GPT-OSS hidden
+            # reasoning. Preserve completed checkpoints and all prose verbatim.
+            # Routine successful sections still cost exactly one provider call.
+            caps = [output_limit]
+            # An explicit retry cap is never used unless the first completion
+            # actually reached its limit. Never exceed the configured TPM or
+            # per-request budget; otherwise fail with the Python section name.
+            retry_cap = min(total_budget - estimated,
+                            minute_token_budget - estimated,
+                            max(output_limit + 600, int(output_limit * 1.6)))
+            if retry_cap > output_limit:
+                caps.append(retry_cap)
+            for attempt, cap in enumerate(caps):
+                _reserve_yearly_daily_tokens(estimated + cap,
+                                             budget=daily_token_budget,
+                                             window=daily_window_seconds)
+                reserve_provider_capacity(estimated, cap)
+                try:
+                    result = completion(messages, primary=primary, secondary=alternate,
+                                        max_output=cap, timeout=timeout,
+                                        checkpoint_id=checkpoint_id)
+                    break
+                except Exception as exc:
+                    _remember_yearly_daily_429(exc, window=daily_window_seconds)
+                    truncated = 'completion limit reached' in str(exc).lower()
+                    if truncated and attempt + 1 < len(caps):
+                        continue
+                    if truncated:
+                        raise RuntimeError(
+                            f'Year Ahead {job_name}: Groq completion truncated '
+                            f'(last max_completion_tokens={cap}; '
+                            f'estimated input tokens={estimated}). '
+                            'The section was not accepted or rewritten.'
+                        ) from exc
+                    raise RuntimeError(f'Year Ahead {job_name}: {exc}') from exc
         prose = str(result or '').strip()
         if not prose:
             raise RuntimeError(f'Year Ahead {job_name} provider returned no text')
