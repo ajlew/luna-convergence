@@ -17,6 +17,20 @@ def config_value(secrets_obj, name):
     except (AttributeError, KeyError, TypeError):
         return ''
 
+def mail_config(secrets_obj):
+    """Reuse the app's existing Gmail secrets; allow Luna-specific overrides."""
+    user = config_value(secrets_obj, 'LUNA_SMTP_USER') or config_value(secrets_obj, 'SMTP_USER')
+    password = config_value(secrets_obj, 'LUNA_SMTP_PASSWORD') or config_value(secrets_obj, 'SMTP_APP_PASSWORD')
+    sender = (config_value(secrets_obj, 'LUNA_SUPPORT_FROM_EMAIL')
+              or config_value(secrets_obj, 'SMTP_FROM') or user)
+    owner = config_value(secrets_obj, 'LUNA_SUPPORT_TO_EMAIL') or user
+    host = (config_value(secrets_obj, 'LUNA_SMTP_HOST')
+            or config_value(secrets_obj, 'SMTP_HOST') or 'smtp.gmail.com')
+    port = config_value(secrets_obj, 'LUNA_SMTP_PORT') or config_value(secrets_obj, 'SMTP_PORT') or '587'
+    return {'host': host, 'port': port, 'user': user, 'password': password,
+            'sender': sender, 'owner': owner}
+
+
 def store_request(secrets_obj, table, method='GET', payload=None, params=None):
     base = config_value(secrets_obj, 'LUNA_SUPABASE_URL').rstrip('/')
     key = config_value(secrets_obj, 'LUNA_SUPABASE_SERVICE_ROLE_KEY')
@@ -34,16 +48,14 @@ def store_request(secrets_obj, table, method='GET', payload=None, params=None):
 def send_code(secrets_obj, address, code):
     if not EMAIL_RE.fullmatch(address):
         raise ValueError('Enter a valid email address.')
-    host = config_value(secrets_obj,'LUNA_SMTP_HOST')
-    sender = config_value(secrets_obj,'LUNA_SUPPORT_FROM_EMAIL')
-    user = config_value(secrets_obj,'LUNA_SMTP_USER')
-    password = config_value(secrets_obj,'LUNA_SMTP_PASSWORD')
+    cfg = mail_config(secrets_obj)
+    host, sender, user, password = (cfg[k] for k in ('host', 'sender', 'user', 'password'))
     if not all((host,sender,user,password)):
         raise RuntimeError('Email verification has not been configured.')
     msg=EmailMessage()
     msg['From']=sender; msg['To']=address; msg['Subject']='Verify your Luna support request'
     msg.set_content(f'Your Luna verification code is {code}. It expires in 10 minutes.\nIf you did not request support, ignore this email.')
-    port=int(config_value(secrets_obj,'LUNA_SMTP_PORT') or '587')
+    port=int(cfg['port'])
     with smtplib.SMTP(host,port,timeout=15) as smtp:
         smtp.starttls(); smtp.login(user,password); smtp.send_message(msg)
 
@@ -95,11 +107,8 @@ def notify_owner(secrets_obj, *, sender_address: str, report_type: str,
     subject = support_subject(report_type, issue_type)
     if not EMAIL_RE.fullmatch(sender_address):
         raise ValueError('Invalid customer email')
-    host = config_value(secrets_obj, 'LUNA_SMTP_HOST')
-    sender = config_value(secrets_obj, 'LUNA_SUPPORT_FROM_EMAIL')
-    user = config_value(secrets_obj, 'LUNA_SMTP_USER')
-    password = config_value(secrets_obj, 'LUNA_SMTP_PASSWORD')
-    owner = config_value(secrets_obj, 'LUNA_SUPPORT_TO_EMAIL')
+    cfg = mail_config(secrets_obj)
+    host, sender, user, password, owner = (cfg[k] for k in ('host', 'sender', 'user', 'password', 'owner'))
     if not all((host, sender, user, password, owner)):
         raise RuntimeError('Owner notification is not configured')
     if not EMAIL_RE.fullmatch(owner):
@@ -117,7 +126,7 @@ def notify_owner(secrets_obj, *, sender_address: str, report_type: str,
         'Message:', message, '',
         'Reply to this email to respond to the customer.',
     )))
-    port = int(config_value(secrets_obj, 'LUNA_SMTP_PORT') or '587')
+    port = int(cfg['port'])
     with smtplib.SMTP(host, port, timeout=15) as smtp:
         smtp.starttls()
         smtp.login(user, password)
@@ -125,20 +134,22 @@ def notify_owner(secrets_obj, *, sender_address: str, report_type: str,
 
 
 def support_mail_status(secrets_obj):
-    """Non-sensitive support-mail configuration status (never reveals credential values)."""
-    required = ('LUNA_SMTP_HOST', 'LUNA_SMTP_USER', 'LUNA_SMTP_PASSWORD', 'LUNA_SUPPORT_FROM_EMAIL')
-    absent = [name for name in required if not config_value(secrets_obj, name)]
+    """Non-sensitive config status; never expose password or app-password."""
+    cfg = mail_config(secrets_obj)
+    absent = [name for name in ('user', 'password', 'sender') if not cfg[name]]
     if absent:
-        return 'Missing Streamlit secrets: ' + ', '.join(absent)
-    port = config_value(secrets_obj, 'LUNA_SMTP_PORT') or '587'
+        aliases = {'user': 'SMTP_USER', 'password': 'SMTP_APP_PASSWORD', 'sender': 'SMTP_FROM'}
+        return 'Missing Streamlit secrets: ' + ', '.join(aliases[name] for name in absent)
     try:
-        parsed = int(port)
-        if parsed < 1 or parsed > 65535:
-            raise ValueError()
+        port = int(cfg['port'])
+        if not 1 <= port <= 65535:
+            raise ValueError
     except ValueError:
-        return 'Invalid LUNA_SMTP_PORT (must be 1–65535)'
-    if parsed != 587:
-        return 'Unsupported SMTP port for the current STARTTLS client (expected 587)'
-    if not EMAIL_RE.fullmatch(config_value(secrets_obj, 'LUNA_SUPPORT_FROM_EMAIL')):
-        return 'LUNA_SUPPORT_FROM_EMAIL is not a valid email address'
+        return 'Invalid SMTP port (must be 1–65535)'
+    if port != 587:
+        return 'Unsupported SMTP port for current STARTTLS client (expected 587)'
+    if not EMAIL_RE.fullmatch(cfg['sender']):
+        return 'SMTP_FROM is not a valid email address'
+    if not EMAIL_RE.fullmatch(cfg['owner']):
+        return 'Support inbox email is not valid'
     return 'ready'

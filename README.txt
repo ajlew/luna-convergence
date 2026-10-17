@@ -1,1 +1,14 @@
-Luna v3.140 Contact Luna SMTP diagnostic fix. Replace app.py and luna_customer_features.py together. Restores product/issue dropdowns while keeping footer-only Contact Luna route. Configure LUNA_SMTP_HOST, LUNA_SMTP_PORT=587, LUNA_SMTP_USER, LUNA_SMTP_PASSWORD, LUNA_SUPPORT_FROM_EMAIL in Streamlit Cloud Secrets; this code does not supply credentials. For Gmail use a valid app password if eligible; host smtp.gmail.com. Streamlit Community Cloud may restrict outbound SMTP ports; use a transactional email HTTPS API if network connections are blocked. Never paste credentials in chat or commit to GitHub. A live email test is still required.
+Luna v3.140 Contact Luna SMTP secret compatibility fix
+
+Replace only luna_customer_features.py at the repository root.
+
+Uses your existing Streamlit Cloud secrets:
+  SMTP_USER
+  SMTP_APP_PASSWORD
+  SMTP_FROM
+Defaults: smtp.gmail.com port 587 (STARTTLS), support inbox SMTP_USER.
+LUNA_* SMTP values still take precedence if provided.
+
+No app.py replacement, no version change, no provider requests.
+This is offline-tested only. A live send is required to verify provider connectivity.
+Do not put credentials in GitHub.
