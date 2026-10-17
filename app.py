@@ -13692,7 +13692,7 @@ def footer() -> None:
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 <br><strong>Build:</strong> {escape(BUILD_LABEL)}
 {"<br><strong>Preview mode enabled</strong>" if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
+<br><a href="/contact-luna">Contact Luna</a> · <a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,
         unsafe_allow_html=True,
@@ -13921,6 +13921,7 @@ ALL_PAGES = [
     EPHEMERIS_ADMIN_REF,
     REPORTS_PAGE_REF,
     HOUSES_PAGE_REF,
+    CONTACT_PAGE_REF,
     SAMPLE_PAGE_REF,
     SOLAR_YEAR_PAGE_REF,
     NATAL_SNAPSHOT_REF,
