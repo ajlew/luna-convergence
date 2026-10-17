@@ -1320,7 +1320,10 @@ a {
 .top-nav {
     display:flex;
     align-items:center;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
     gap:0;
     border-top:1px solid var(--black);
     border-bottom:1px solid var(--black);
@@ -1332,7 +1335,8 @@ a {
     align-items:center;
     gap:.48rem;
     min-height:2.75rem;
-    padding:.15rem .82rem;
+    padding:.15rem .52rem;
+    flex:0 0 auto;
     color:var(--black) !important;
     text-decoration:none !important;
     font-family:"IBM Plex Mono", "Courier New", monospace;
@@ -3023,7 +3027,6 @@ def top_navigation(current_path: str) -> None:
         ("birthday-card", "Birthday Card"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
-        ("contact-luna", "Contact Luna"),
     ]
 
     desktop_links: list[str] = []
@@ -13730,7 +13733,7 @@ def footer() -> None:
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 <br><strong>Build:</strong> {escape(BUILD_LABEL)}
 {"<br><strong>Preview mode enabled</strong>" if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
+<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a> · <a href="/contact-luna">Contact Luna</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,
         unsafe_allow_html=True,
@@ -13931,6 +13934,7 @@ ALL_PAGES = [
     WEEKLY_PAGE_REF,
     WEEKLY_STUDIO_REF,
     BIRTHDAY_CARD_REF,
+    CONTACT_PAGE_REF,
     MONTHLY_INDEX_REF,
     LEGACY_MONTHLY_INDEX_REF,
     MONTHLY_PREVIEW_REF,
