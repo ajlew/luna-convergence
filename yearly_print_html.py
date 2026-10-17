@@ -655,12 +655,12 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
     # Snapshot attributes vary between versions; use documented dict/signatures where available.
     portrait = para(getattr(editorial, 'natal_portrait', ()) or ())
     strengths=''
-    for signature in list(getattr(snapshot,'signatures',()) or ())[:6]:
+    for natal_item in list(getattr(snapshot,'signatures',()) or ())[:6]:
         # Paid Year Ahead-only language correction to Python-written natal
         # evidence. Shared Natal Snapshot and Paid Monthly remain untouched.
-        strength_title = str(getattr(signature, 'title', '') or '')
-        strength_evidence = str(getattr(signature, 'evidence', '') or '')
-        strength_text = str(getattr(signature, 'text', '') or '')
+        strength_title = str(getattr(natal_item, 'title', '') or '')
+        strength_evidence = str(getattr(natal_item, 'evidence', '') or '')
+        strength_text = str(getattr(natal_item, 'text', '') or '')
         if (strength_title == 'Two instincts arrive together'
                 and 'Moon' in strength_evidence and 'Mercury' in strength_evidence):
             strength_text = ('Feelings and thoughts often arrive together. You may notice a detail '

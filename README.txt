@@ -1,6 +1,7 @@
-Luna v3.140 - Year Ahead context_guard initialization hotfix
+Luna v3.140 — Year Ahead natal cover hotfix
 
-Replace paid_yearly_editorial.py at repository root.
-Fixes UnboundLocalError: context_guard was referenced in the annual phase loop before its assignment.
-Moves the existing constant definition before its first use. Does not modify its text or Groq call settings.
-No Groq calls were made for testing.
+Replace yearly_print_html.py in repository root.
+
+Fix: the natal strengths loop previously reused signature, overwriting the Sun/Moon/Rising cover markup with a NatalSignature object. Loop now uses natal_item.
+
+No Groq, Monthly, or version changes. Python parse and ZIP integrity checked. Full report not regenerated.
