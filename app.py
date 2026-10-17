@@ -5120,6 +5120,7 @@ def weekly_page() -> None:
     if sign is None:
         return
     _render_free_plain("weekly", monday, sign)
+    _free_report_like('weekly', sign, monday.isoformat())
     complete_report_print_button("Print / Save complete Week Ahead", key="weekly-view-complete-report")
     st.markdown('<a class="lean-monthly-link" href="/daily-horoscope">Open your Daily Horoscope →</a>',
                 unsafe_allow_html=True)
@@ -5185,6 +5186,42 @@ One shared sky. Twelve sign readings. Export artwork at **1080 × 1920 (9:16)**.
                 st.caption(str(card["technical"]))
         else:
             st.caption("No separate card event selected from the calculated sky for this day.")
+
+    # Text-only Canva social cards; uses the already calculated Studio sky events.
+    from social_card_voice import social_card_prompt as _social_prompt, generate_social_card as _social_generate
+    with st.expander("Instagram Story · four-stanza social card (1080 × 1920)", expanded=False):
+        st.caption("Select a calculated day. Luna writes only the four-stanza poem; build your 9:16 artwork in Canva. No image generation or automatic Groq calls.")
+        _social_cards = [c for c in master_packet.get("sky_cards", []) if c.get("date") and c.get("event") and c.get("has_event")]
+        if not _social_cards:
+            st.info("No dated calculated event is available for a social card in this week.")
+        else:
+            _social_dates = [c["date"] for c in _social_cards]
+            _social_date = st.selectbox("Social card date", _social_dates,
+                format_func=lambda v: date.fromisoformat(v).strftime("%A %d %B %Y"),
+                key=f"social-card-date-{monday.isoformat()}")
+            _social_card = next(c for c in _social_cards if c["date"] == _social_date)
+            st.caption(f"Calculated event: {_social_card['event']}")
+            _social_session_key = f"studio-social-poem-{_social_date}"
+            if st.button("Generate four-stanza social card", key=f"social-card-generate-{monday.isoformat()}"):
+                if not all((LUNA_VOICE_BASE_URL, LUNA_VOICE_MODEL, LUNA_VOICE_API_KEY)):
+                    st.error("Luna voice is not configured. Check the LUNA_VOICE_* Streamlit secrets.")
+                else:
+                    with st.spinner("Writing one social-card poem…"):
+                        try:
+                            st.session_state[_social_session_key] = _social_generate(
+                                _social_card, base_url=LUNA_VOICE_BASE_URL,
+                                model=LUNA_VOICE_MODEL, api_key=LUNA_VOICE_API_KEY)
+                        except Exception as _social_error:
+                            st.error(f"Social-card generation failed: {_social_error}")
+            if st.session_state.get(_social_session_key):
+                st.markdown("**Copy for your Canva Story**")
+                st.code(st.session_state[_social_session_key], language=None, wrap_lines=True)
+                st.download_button("Download poem (.txt)", st.session_state[_social_session_key],
+                    file_name=f"luna-social-story-{_social_date}.txt", mime="text/plain",
+                    key=f"social-card-download-{_social_date}")
+            st.download_button("Download the LLM prompt (optional)", _social_prompt(_social_card),
+                file_name=f"luna-social-prompt-{_social_date}.txt", mime="text/plain",
+                key=f"social-prompt-download-{_social_date}")
 
     # Optional mythic layer: an explicit Studio button invokes one Groq call.
     from epic_sky import (load_approved as _epic_load, prompt_from_cards as _epic_prompt,
@@ -6327,6 +6364,27 @@ def sample_page() -> None:
         "Choose a star sign and period to see a live Luna Convergence report sample generated from the selected sky.",
         "/sample-report",
     )
+    from luna_customer_features import social_card_dimensions
+    st.markdown('<div class="eyebrow">Preview before you order</div>', unsafe_allow_html=True)
+    st.markdown('## Luna sample gallery')
+    st.caption('Representative formats. Free examples are not a personal reading; purchased reports use your own calculated birth chart.')
+    samples = [
+        ('Personal Monthly', 'Natal-based monthly decisions, calculated timing, personal transits and downloadable PDF.', '/reports'),
+        ('Your Year Ahead', 'Twelve months, personal natal activations, strategic Games and review checkpoints.', '/timing-map'),
+        ('Birthday Card', 'Personalised keepsake with recipient-specific Sun/Moon and calculated natal themes.', '/birthday-card'),
+        ('Social Card · Instagram Story', 'Vertical 1080 × 1920 (9:16) social artwork, not a square feed image.', '/weekly-studio'),
+    ]
+    for title, description, destination in samples:
+        with st.container(border=True):
+            st.markdown(f'### {title}')
+            st.write(description)
+            if title.startswith('Social Card'):
+                st.caption('Story canvas: 1080 × 1920 pixels. Preview should retain the full portrait aspect ratio.')
+            st.link_button('See product / example', destination, use_container_width=True)
+    st.info('The gallery links to existing product/example pages. Curated, anonymised downloadable sample PDFs and Story artwork can be added here once approved.')
+    with st.expander('Build a live sample from the calculated sky', expanded=False):
+        render_report_generator_workspace()
+    return
     st.markdown('<div class="eyebrow">Live example</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Choose the sky.<br>Then read the sample.</div>', unsafe_allow_html=True)
     st.markdown(
@@ -13715,6 +13773,71 @@ HOUSES_PAGE_REF = st.Page(
     title="House Guide",
     url_path="house-guide",
 )
+def contact_luna_page() -> None:
+    from luna_customer_features import challenge, verify_code, send_code, store_request, EMAIL_RE
+    set_page_metadata('Contact Luna | Support', 'Help with Luna orders, downloads, printing and refunds.', '/contact-luna')
+    st.title('Contact Luna')
+    st.caption('For downloads, printing, order issues and refund requests. Never include card details or passwords.')
+    with st.form('luna-contact-details'):
+        email=st.text_input('Your email address', key='luna-support-email', max_chars=254)
+        topic=st.selectbox('How can we help?', ['Download or access','Printing','Billing or refund','Other'])
+        order=st.text_input('Luna order reference (optional)', max_chars=120)
+        description=st.text_area('Describe the issue', max_chars=3000)
+        request_code=st.form_submit_button('Email me a verification code')
+    if request_code:
+        if not EMAIL_RE.fullmatch(email.strip()) or len(description.strip())<10:
+            st.error('Enter a valid email and at least 10 characters describing your issue.')
+        else:
+            try:
+                code, state=challenge(email.strip())
+                send_code(st.secrets,email.strip(),code)
+                st.session_state['luna-support-pending']={'state':state,'topic':topic,'order':order,'description':description}
+                st.success('Verification code sent. Enter it below within 10 minutes.')
+            except Exception as exc:
+                st.error(f'Unable to send verification email: {type(exc).__name__}. Please try again later.')
+    pending=st.session_state.get('luna-support-pending')
+    if pending:
+        with st.form('luna-contact-verify'):
+            otp=st.text_input('Six-digit email verification code', max_chars=6)
+            submit=st.form_submit_button('Verify and send support request')
+        if submit:
+            state=pending['state']
+            if verify_code(state,email,otp):
+                try:
+                    store_request(st.secrets,'luna_support_requests','POST',payload={
+                        'email':state['email'],'topic':pending['topic'],
+                        'order_reference':pending['order'],'message':pending['description'],
+                        'status':'new'})
+                    st.session_state.pop('luna-support-pending',None)
+                    st.success('Your verified request has been received. Keep your order reference for follow-up.')
+                except Exception:
+                    st.error('Support storage unavailable. Your request has not been submitted; please try later.')
+            else:
+                st.error('Incorrect, expired or exhausted code. Request a new verification code if needed.')
+
+
+def _free_report_like(category: str, sign: str, period) -> None:
+    from luna_customer_features import like_key, store_request
+    identifier=like_key(category,sign,period)
+    st.markdown('#### Was this reading useful?')
+    key='luna-like-once-'+identifier
+    if st.session_state.get(key):
+        st.caption('Thank you for your feedback.')
+        return
+    if st.button('♡  Like this free report',key='like-'+identifier,use_container_width=True,type='primary'):
+        try:
+            # A unique session token reduces accidental double counting; cross-device deduplication requires accounts.
+            token=st.session_state.setdefault('luna-like-session-token',secrets.token_hex(16))
+            store_request(st.secrets,'luna_free_likes','POST',payload={
+                'report_key':identifier,'report_type':category,'sign':sign,
+                'period':str(period),'visitor_token':hashlib.sha256(token.encode()).hexdigest()})
+            st.session_state[key]=True
+            st.success('Thank you — your like has been recorded.')
+        except Exception:
+            st.warning('Likes are temporarily unavailable; your like was not recorded.')
+
+
+CONTACT_PAGE_REF = st.Page(contact_luna_page, title='Contact Luna', url_path='contact-luna')
 SAMPLE_PAGE_REF = st.Page(
     sample_page,
     title="Sample Report",
