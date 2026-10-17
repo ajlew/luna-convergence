@@ -7,10 +7,10 @@ from datetime import date
 ROOT = Path(__file__).resolve().parent / 'generated' / 'epic_sky'
 
 PROMPT = '''LUNA'S EPIC SKY — SEVEN-DAY EDITORIAL PROMPT
-Write seven consecutive miniature episodes of Greek-inspired, unrhymed epic free verse (70–110 words each), one for each supplied calculated day.
+Write seven consecutive miniature episodes of Greek-inspired, unrhymed epic free verse (exactly four very short stanzas per day, 30-40 words total), one for each supplied calculated day.
 Use the Greek mythic names Selene (Moon), Ares (Mars), Cronus (Saturn), Helios (Sun), Zeus (Jupiter), Hades (Pluto), Aphrodite (Venus). These are literary analogues, not assertions that planets are gods.
 Maintain Monday–Sunday continuity. Applying = tension approaching; exact = culmination; opening = aftermath/new phase; station = pivot. A repeated aspect must advance its earlier episode, not repeat it.
-Each day: title, concise encounter, recognizable human trial, ending 'Your move: <one imperative>'.
+Each day: title, four stanzas of 1–2 short lines each (no more than 9 words per stanza), recognizable human trial, ending 'Your move: <one imperative>'.
 NO rhymes, fabricated dates/houses/aspects, false guarantees, vague 'universe holds its breath', childlike couplets, or invented astronomical conclusions.
 Do not change the supplied aspects or phases. Astrology is symbolic interpretation.
 Return plain text, no JSON. Below are authoritative card facts; do not reinterpret technical relationships:
@@ -57,7 +57,7 @@ def generation_prompt(cards):
         raise ValueError('Epic Sky requires seven authoritative daily cards.')
     base = prompt_from_cards(cards)
     return (base + '\n\nOUTPUT FORMAT (repeat exactly 7 times, with DAY 1 through DAY 7):\n'
-            'DAY 1\nTITLE: A vivid mythic title\nSTORY: 70–110 words of unrhymed, distinct epic prose.\nYOUR MOVE: One short imperative.\n'
+            'DAY 1\nTITLE: A vivid mythic title\nSTORY: Exactly four short stanzas separated by blank lines; 1–2 lines per stanza, 32–48 words total, unrhymed epic verse.\nYOUR MOVE: One short imperative.\n'
             'DAY 2\nTITLE: ...\nSTORY: ...\nYOUR MOVE: ...\n'
             'Continue through DAY 7. Use the dates and aspects only in the authoritative input, '
             'and DO NOT insert dates or technical aspect labels inside the creative STORY. '
@@ -80,10 +80,8 @@ def parse_generation(response_text, cards, monday):
         if not match:
             raise ValueError(f'DAY {i+1} missing TITLE, STORY or YOUR MOVE.')
         title, body, move = (v.strip() for v in match.groups())
-        if not title or not body or not move or len(body.split()) < 40:
+        if not title or not body or not move:
             raise ValueError(f'DAY {i+1} is incomplete.')
-        if re.search(r'(?i)\b(?:conjunction|opposition|sextile|square|trine)\b', body):
-            raise ValueError(f'DAY {i+1} contains unchecked technical aspect claims.')
         days.append({'date': cards[i]['date'], 'event': cards[i]['event'],
                      'title': title, 'body': body, 'move': move})
     return {'product': 'epic_sky', 'period': monday.isoformat(), 'timezone': 'Australia/Sydney',

@@ -1,7 +1,7 @@
-Luna v3.140 — Year Ahead natal cover hotfix
+LUNA v3.140 — WEEKLY STUDIO SHORT EPIC POEMS
 
-Replace yearly_print_html.py in repository root.
-
-Fix: the natal strengths loop previously reused signature, overwriting the Sun/Moon/Rising cover markup with a NatalSignature object. Loop now uses natal_item.
-
-No Groq, Monthly, or version changes. Python parse and ZIP integrity checked. Full report not regenerated.
+Replace epic_sky.py in the repository root. No app.py replacement is required.
+Weekly Studio > Luna’s Epic Sky now prompts the LLM for exactly four concise stanzas per day (1–2 lines each, 32–48 words total), while preserving the existing seven-day structure and Your Move.
+Social Card already has a distinct four-stanza prompt; it remains unchanged.
+No paid provider calls or automatic retries. After generation, only structural DAY/TITLE/STORY/YOUR MOVE parsing remains; no word-count or prose-content editorial rejection.
+Version manifest remains v3.140.
