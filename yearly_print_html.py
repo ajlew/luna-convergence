@@ -113,7 +113,7 @@ def _annual_timeline(packet: dict) -> str:
             rows.append(f'<line x1="{xa:.2f}" y1="{y+37}" x2="{xb:.2f}" y2="{y+37}" stroke="{color}" stroke-opacity=".28" stroke-width="7" stroke-linecap="round"/>')
         peak = max(activity[i]) or 1
         pts = [(xpos(day), y+34-26*v/peak) for day,v in zip(samples,activity[i])]
-        rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="{color}" stroke-width="2.7" stroke-linecap="round"/>')
+        rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="{color}" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>')
         for _,a,b,hits in valid[i]:
             for dt in hits:
                 if start <= dt <= end:
@@ -124,8 +124,12 @@ def _annual_timeline(packet: dict) -> str:
     y = 56+66*len(games)
     rows.append(f'<text x="4" y="{y+7}" font-size="12" fill="#222">Combined rhythm</text>')
     rows.append(f'<line x1="{x0}" y1="{y+83}" x2="{x0+width}" y2="{y+83}" stroke="#dedede"/>')
+    for guide in (0.25, 0.5, 0.75):
+        gy = y+79-70*guide
+        rows.append(f'<line x1="{x0}" y1="{gy:.1f}" x2="{x0+width}" y2="{gy:.1f}" stroke="#dadada" stroke-dasharray="2 5" stroke-opacity=".6"/>')
     pts=[(xpos(day), y+79-70*v/max_total) for day,v in zip(samples,total)]
-    rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="#171717" stroke-width="3" stroke-linecap="round"/>')
+    rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>')
+    # Subtle score-independent chart guides aid comparison; these are not probabilities.
     # Calendar ticks are calculated from dates, including partial first/last months.
     tick = date(start.year,start.month,1)
     while tick <= end:

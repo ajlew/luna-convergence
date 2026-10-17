@@ -237,6 +237,8 @@ def _transit_material(story: dict[str, Any]) -> dict[str, Any]:
 
 
 def _issue_material(game: dict[str, Any]) -> dict[str, Any]:
+    from game_decision_model import _resource_profile
+    strategic_resources = _resource_profile(game)
     primary = game.get("primary_transit")
     supporting = game.get("supporting_transits")
     return {
@@ -250,6 +252,7 @@ def _issue_material(game: dict[str, Any]) -> dict[str, Any]:
         "start_state": str(game.get("start_state") or ""),
         "end_state": str(game.get("end_state") or ""),
         "question": str(game.get("question") or ""),
+        "strategic_resources": strategic_resources,
         "advantage": str(game.get("advantage") or ""),
         "risk": str(game.get("risk") or ""),
         "move": str(game.get("move") or ""),
@@ -825,6 +828,7 @@ def generate_paid_yearly_editorial(
             'dominant_game_title': game.get('customer_title'),
             'dominant_life_area': game.get('life_area'),
             'decision_stage': editorial_stage,
+            'strategic_resources': (game.get('strategic_resources') or {}),
             # Do not expose a separate transit catalogue with extra dates:
             # exact passes in allowed_exact_contacts are the sole date authority.
             'allowed_exact_contacts': allowed,
