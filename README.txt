@@ -1,4 +1,1 @@
-Luna v3.140 — Paid Monthly diagnostic-only patch.
-Replace app.py in repository root. Preserves paid Monthly generation, provider calls, and all pricing/version settings.
-On failure, owner output now exposes the existing safe preflight/provider error saved by _record_voice_error instead of one generic message.
-No Groq calls run. Syntax parse passed. Not a correction to an unknown provider/preflight root cause.
+Luna v3.140 - Paid Monthly pre-LLM contract. Replace app.py, add monthly_preflight_contract.py. Test: python -m unittest -v test_paid_monthly_preflight_contract.py. Only checked request facts/budget before Groq; no post-LLM editorial inspection and no automatic retry. No Groq calls in testing. Live paid report not tested.

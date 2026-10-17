@@ -11310,12 +11310,15 @@ def _paid_monthly_prepare_request(facts: dict) -> tuple[str, int, int, int]:
         if total <= target_total:
             return prompt, preferred_completion, buffered_input, level
 
-    # Extremely activation-heavy subjects can still enlarge the prompt. Rather
-    # than stopping production, keep the most compact evidence packet and give
-    # the remaining safe budget to the prose, with a useful minimum.
+    # Very dense subjects must fail BEFORE calling Groq rather than send an
+    # over-budget request or pay for a truncated answer.
     prompt = _paid_monthly_weave_prompt(facts, compact_level=3)
     buffered_input, _ = _paid_monthly_preflight_tokens(prompt, 0)
-    completion_tokens = max(1900, min(preferred_completion, target_total - buffered_input))
+    completion_tokens = min(preferred_completion, target_total - buffered_input)
+    from monthly_preflight_contract import validate_prompt_budget
+    if completion_tokens < 1900:
+        raise ValueError(f"Paid Monthly preflight: packet too large for usable prose capacity ({completion_tokens} tokens remaining).")
+    validate_prompt_budget(buffered_input, completion_tokens, total_ceiling=target_total)
     return prompt, completion_tokens, buffered_input, 3
 
 
@@ -11330,9 +11333,12 @@ def _cached_paid_monthly_weave(
     import requests
 
     facts = json.loads(facts_json)
+    from monthly_preflight_contract import validate_monthly_facts, validate_prompt_budget
+    validate_monthly_facts(facts)
     prompt, max_completion_tokens, _estimated_input_tokens, _compact_level = (
         _paid_monthly_prepare_request(facts)
     )
+    validate_prompt_budget(_estimated_input_tokens, max_completion_tokens)
 
     payload = {
         "model": model,
@@ -11382,10 +11388,9 @@ def _cached_paid_monthly_weave(
     if str(choice.get("finish_reason") or "") == "length":
         raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
 
-    clean = _paid_monthly_clean_plain_story(body)
-    if not _paid_monthly_transport_has_text(clean):
+    if not _paid_monthly_transport_has_text(body):
         raise RuntimeError("Voice provider returned an empty response.")
-    return clean
+    return str(body)
 
 
 # All content requirements for Paid Monthly are instructions to Luna before the
@@ -11395,8 +11400,8 @@ def _cached_paid_monthly_weave(
 
 def _paid_monthly_story_paragraphs(body: object) -> list[str]:
     """Presentation-only paragraph splitting; never inspect prose quality or length."""
-    text = _paid_monthly_clean_plain_story(body)
-    return [part.strip() for part in re.split(r"\n\s*\n+", text) if part.strip()]
+    text = str(body or "")
+    return [part for part in re.split(r"\n\s*\n+", text) if part.strip()]
 
 
 
@@ -11483,7 +11488,7 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
     daily_signals = _paid_monthly_compact_daily_briefs(source_days)
     subject = _paid_monthly_subject_dossier(snapshot, context)
     core_positions = dict(subject.get("core_positions") or {})
-    if not isinstance(core_positions.get("Sun"), dict) or not isinstance(core_positions.get("Moon"), dict):
+    if not all(isinstance(core_positions.get(p), dict) and str(core_positions[p].get("sign") or "").strip() for p in ("Sun", "Moon")):
         _record_voice_error(
             "paid_monthly_story_weave",
             "Paid Monthly preflight failed: the Subject dossier does not contain both Sun and Moon.",
@@ -11517,13 +11522,18 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
         "daily_signals": daily_signals,
     }
 
+    from monthly_preflight_contract import validate_monthly_facts, MonthlyPreflightError
+    try:
+        validate_monthly_facts(weave_facts)
+    except MonthlyPreflightError as exc:
+        _record_voice_error("paid_monthly_story_weave", exc)
+        return {"headline": "", "paragraphs": [], "story_word_count": 0, "voice_complete": False, "context": context, "background_source": "preflight-failed"}
+
     with st.spinner("Luna is turning the calculated month into your personal story. Keep this page open…"):
         woven = _generate_paid_monthly_weave(weave_facts)
 
     paragraphs = [
-        " ".join(str(item or "").split())
-        for item in (woven.get("paragraphs") or [])
-        if str(item or "").strip()
+        str(item) for item in (woven.get("paragraphs") or []) if str(item).strip()
     ]
     return {
         "headline": " ".join(str(woven.get("headline") or "").split()),
