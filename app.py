@@ -9808,6 +9808,14 @@ def _render_paid_yearly_product(
         timing_report=product.get("timing_report"),
         activation_chart=lambda start, end: _render_paid_yearly_month_activation(product, start, end),
     )
+    # Deterministic Game decision boards, shared verbatim with Year Ahead PDF.
+    from game_decision_model import build_game_decision_boards, render_game_decision_board, GAME_DECISION_CSS
+    st.markdown(f"<style>{GAME_DECISION_CSS}</style>", unsafe_allow_html=True)
+    st.subheader("Play your Games · Strategic choices")
+    st.caption("Decision prompts linked to your calculated Games—not guaranteed outcomes or objective payoff estimates.")
+    for decision in build_game_decision_boards(product["packet"].to_dict()):
+        st.markdown(render_game_decision_board(decision), unsafe_allow_html=True)
+
 
 
 def _snapshot_natal_facts(snapshot) -> dict:

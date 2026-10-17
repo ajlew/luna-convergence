@@ -615,6 +615,8 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
              + ('</div>' if focused else '')
             + '</section>'
         )
+    from game_decision_model import build_game_decision_boards, render_game_decision_board, GAME_DECISION_CSS
+    decision_boards = {row["number"]:row for row in build_game_decision_boards(packet)}
     issue_cards=[]
     for i,g in enumerate(games):
         voice=editorial.issue_for(int(g.get('number') or i+1)) if editorial is not None and hasattr(editorial,'issue_for') else None
@@ -629,7 +631,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
                 v=getattr(voice,attr,None)
                 if isinstance(v,str) and v.strip(): paragraphs.append(v)
         title=g.get('title') or f'Major story {i+1}'
-        issue_cards.append(f'<section class="issue page"><div class="eyebrow">Major story {i+1:02d}</div><h2>{e(title.title())}</h2><div class="story-timing"><h3>Timing and evidence</h3><p>{e(primary.get("technical_label") or primary.get("label") or primary.get("name") or "")}</p><ul>{evidence}</ul></div>{para(paragraphs)}</section>')
+        issue_cards.append(f'<section class="issue page"><div class="eyebrow">Major story {i+1:02d}</div><h2>{e(title.title())}</h2><div class="story-timing"><h3>Timing and evidence</h3><p>{e(primary.get("technical_label") or primary.get("label") or primary.get("name") or "")}</p><ul>{evidence}</ul></div>{para(paragraphs)}{render_game_decision_board(decision_boards[int(g.get("number") or i+1)]) if int(g.get("number") or i+1) in decision_boards else ""}</section>')
     appendix = _evidence_appendix(games)
     if order_reference:
         appendix = appendix.rsplit("</section>", 1)[0] + f'<p class="technical-reference">Document reference: {e(order_reference)}</p></section>'
@@ -703,6 +705,7 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
     intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{print_headline(getattr(editorial,"headline",None))}</h1><p class="deck">{e(label)}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
     overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Luna calls a related set of calculated transits a Game: a strategic period in which competing pressures, choices and trade-offs converge. A Game is an interpretive decision framework, not a prediction or a mathematically proven optimal move. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<footer class="year-report-disclaimer">Calculated planetary evidence is interpreted symbolically and is not professional advice.</footer></section>'
+    css += GAME_DECISION_CSS
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
 
 
