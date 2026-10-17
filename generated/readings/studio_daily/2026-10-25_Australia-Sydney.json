@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-25",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-25 · Mercury stations retrograde · pivot"
+      ],
+      "life_areas": [],
+      "facts_hash": "e390ebe2dbaec4f2b251b1ced96233f68bbef45b3c16930441dc4e105282e7d1",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "READ THIS: Mercury’s pivot on 25 Oct 2026 signals a collective pause in communication—think of it as a cosmic coffee break. When the mind feels jittery, slow down, review notes, and rewrite the message before sending. The planet’s retrograde nature invites you to revisit old ideas, edit drafts, and correct missteps; a quick reread of your email can save you a costly mix‑up. Remember, the universe isn’t dictating your path—just nudging you to double‑check. TAKE ACTION: pause, reread, and correct one email today.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

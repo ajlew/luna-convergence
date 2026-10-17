@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-23",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-23 · Sun conjunct Venus · applying · 0.99° orb at closest approach"
+      ],
+      "life_areas": [],
+      "facts_hash": "1df73099dacf491a8b2b33715b2d11eb7b97a158290be80f99a53c517e29bd67",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Savour the glow of today’s Sun‑Venus dance, a gentle reminder that harmony can bloom even in routine tasks. This celestial kiss signals a surge of warmth and aesthetic appreciation; feel it when choosing a color for your workspace or when sharing a compliment. Let the light guide you: pick one thing you can beautify in your surroundings and brighten it now.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}

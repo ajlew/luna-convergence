@@ -1,0 +1,22 @@
+{
+  "signs": {
+    "All signs": {
+      "product": "studio_daily",
+      "period": "2026-10-22",
+      "sign": "All signs",
+      "timezone": "Australia/Sydney",
+      "calculation_header": [
+        "2026-10-22 · Moon square Uranus · exact today · approximately 9:07 am AEDT"
+      ],
+      "life_areas": [],
+      "facts_hash": "d616c0daa80411c169f9c2a4a0e2ee7ed6b32621fd63219477948de130b88702",
+      "voice_version": "plain-text-1",
+      "writing_revision": "chronology-only-1",
+      "voice_body": "Stand up and feel the electric hum of the sky today. The Moon’s square to Uranus at 9:07 am throws a jolt into your routine—unexpected ideas, sudden urges to break patterns. It’s a reminder that tension can spark creativity; if a meeting feels too rigid, suggest a quick walk outside to let fresh thoughts flow. This is a prompt, not a prophecy—use the moment to test a new habit, like swapping your coffee for tea. Take a breath, notice the shift, and deliberately try that change right now.",
+      "status": "published"
+    }
+  },
+  "jobs": {
+    "All signs": "published"
+  }
+}
