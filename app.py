@@ -13869,6 +13869,10 @@ def contact_luna_page() -> None:
             state = pending['state']
             if verify_code(state, state['email'], otp):
                 subject = support_subject(pending['report_type'], pending['issue_type'])
+                # Delivery is verified only if a durable destination accepts the request.
+                # Support email is the primary operational inbox; Supabase is optional backup.
+                stored = False
+                emailed = False
                 try:
                     store_request(st.secrets, 'luna_support_requests', 'POST', payload={
                         'email': state['email'], 'topic': pending['issue_type'],
@@ -13876,18 +13880,25 @@ def contact_luna_page() -> None:
                         'message': f"Product: {pending['report_type']}\nSubject: {subject}\n\n{pending['description']}",
                         'status': 'new',
                     })
+                    stored = True
                 except Exception:
-                    st.error('Support storage is unavailable. Your request was not submitted; please try again later.')
-                else:
+                    pass  # Missing database/table must not block a verified email request.
+                try:
+                    notify_owner(st.secrets, sender_address=state['email'],
+                                 report_type=pending['report_type'], issue_type=pending['issue_type'],
+                                 order_reference=pending['order'], message=pending['description'])
+                    emailed = True
+                except Exception:
+                    pass
+                if emailed or stored:
                     st.session_state.pop('luna-support-pending', None)
-                    try:
-                        notify_owner(st.secrets, sender_address=state['email'],
-                                     report_type=pending['report_type'], issue_type=pending['issue_type'],
-                                     order_reference=pending['order'], message=pending['description'])
-                        st.success('Your verified request was submitted and Luna was notified by email.')
-                    except Exception:
-                        st.warning('Your request was saved, but the email notification is unavailable. Luna can still find the saved request.')
+                    if emailed:
+                        st.success('Your verified support request has been emailed to Luna.')
+                    else:
+                        st.warning('Your request was saved, but the email notification could not be sent. Luna can review the saved request.')
                     st.caption('Subject: ' + subject)
+                else:
+                    st.error('Support delivery is unavailable. Your request was not submitted. Please try again later.')
             else:
                 st.error('Incorrect, expired or exhausted code. Request a new verification code if needed.')
 

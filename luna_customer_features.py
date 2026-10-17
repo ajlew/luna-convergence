@@ -32,8 +32,8 @@ def mail_config(secrets_obj):
 
 
 def store_request(secrets_obj, table, method='GET', payload=None, params=None):
-    base = config_value(secrets_obj, 'LUNA_SUPABASE_URL').rstrip('/')
-    key = config_value(secrets_obj, 'LUNA_SUPABASE_SERVICE_ROLE_KEY')
+    base = (config_value(secrets_obj, 'LUNA_SUPABASE_URL') or config_value(secrets_obj, 'SUPABASE_URL')).rstrip('/')
+    key = (config_value(secrets_obj, 'LUNA_SUPABASE_SERVICE_ROLE_KEY') or config_value(secrets_obj, 'SUPABASE_SERVICE_ROLE_KEY'))
     if not base or not key:
         raise RuntimeError('Persistent customer storage is not configured.')
     if table not in {'luna_support_requests', 'luna_free_likes'}:
