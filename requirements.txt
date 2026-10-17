@@ -13,3 +13,5 @@ gunicorn>=23,<24
 # install separately only with the necessary system libraries.
 # Browser-style HTML/PDF renderer (OS libraries installed from packages.txt).
 weasyprint>=62,<69
+
+fonttools>=4.50,<5  # Bodoni vector outlines for reliable Year Ahead PDF SVG text
