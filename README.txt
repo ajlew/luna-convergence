@@ -1,11 +1,1 @@
-Luna v3.140 — Contact Luna footer placement
-
-Replace app.py in your repository root.
-- Contact Luna removed from top desktop/mobile navigation.
-- Contact Luna added to permanent site footer as /contact-luna.
-- CONTACT_PAGE_REF remains registered in ALL_PAGES.
-- Other existing app features unchanged from the immediately preceding menu layout patch.
-
-Run: python -m py_compile app.py
-
-No provider calls needed. Live deployment not verified.
+Luna v3.140 Contact Luna SMTP diagnostic fix. Replace app.py and luna_customer_features.py together. Restores product/issue dropdowns while keeping footer-only Contact Luna route. Configure LUNA_SMTP_HOST, LUNA_SMTP_PORT=587, LUNA_SMTP_USER, LUNA_SMTP_PASSWORD, LUNA_SUPPORT_FROM_EMAIL in Streamlit Cloud Secrets; this code does not supply credentials. For Gmail use a valid app password if eligible; host smtp.gmail.com. Streamlit Community Cloud may restrict outbound SMTP ports; use a transactional email HTTPS API if network connections are blocked. Never paste credentials in chat or commit to GitHub. A live email test is still required.

@@ -122,3 +122,23 @@ def notify_owner(secrets_obj, *, sender_address: str, report_type: str,
         smtp.starttls()
         smtp.login(user, password)
         smtp.send_message(mail)
+
+
+def support_mail_status(secrets_obj):
+    """Non-sensitive support-mail configuration status (never reveals credential values)."""
+    required = ('LUNA_SMTP_HOST', 'LUNA_SMTP_USER', 'LUNA_SMTP_PASSWORD', 'LUNA_SUPPORT_FROM_EMAIL')
+    absent = [name for name in required if not config_value(secrets_obj, name)]
+    if absent:
+        return 'Missing Streamlit secrets: ' + ', '.join(absent)
+    port = config_value(secrets_obj, 'LUNA_SMTP_PORT') or '587'
+    try:
+        parsed = int(port)
+        if parsed < 1 or parsed > 65535:
+            raise ValueError()
+    except ValueError:
+        return 'Invalid LUNA_SMTP_PORT (must be 1–65535)'
+    if parsed != 587:
+        return 'Unsupported SMTP port for the current STARTTLS client (expected 587)'
+    if not EMAIL_RE.fullmatch(config_value(secrets_obj, 'LUNA_SUPPORT_FROM_EMAIL')):
+        return 'LUNA_SUPPORT_FROM_EMAIL is not a valid email address'
+    return 'ready'
