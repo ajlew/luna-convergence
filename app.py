@@ -3609,7 +3609,7 @@ def payment_success_page() -> None:
             )
             monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
             if not monthly_story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(monthly_story.get("paragraphs") or []))[0]:
-                raise RuntimeError("Paid Monthly did not return a complete interpretation; PDF and delivery were withheld.")
+                raise RuntimeError("Paid Monthly PDF and delivery withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
             from monthly_shared_view import build_monthly_shared_html, html_to_pdf
             shared_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
             pdf_bytes = html_to_pdf(shared_html)
@@ -4167,7 +4167,7 @@ def _owner_report_output(order: dict) -> dict:
         )
         monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
         if not monthly_story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(monthly_story.get("paragraphs") or []))[0]:
-            raise RuntimeError("Paid Monthly did not return a complete interpretation; owner export withheld.")
+            raise RuntimeError("Paid Monthly owner export withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
         from monthly_shared_view import build_monthly_shared_html, html_to_pdf
         print_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
         pdf_bytes = html_to_pdf(print_html)
