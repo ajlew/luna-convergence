@@ -13774,44 +13774,64 @@ HOUSES_PAGE_REF = st.Page(
     url_path="house-guide",
 )
 def contact_luna_page() -> None:
-    from luna_customer_features import challenge, verify_code, send_code, store_request, EMAIL_RE
-    set_page_metadata('Contact Luna | Support', 'Help with Luna orders, downloads, printing and refunds.', '/contact-luna')
+    from luna_customer_features import (
+        challenge, verify_code, send_code, store_request, notify_owner,
+        support_subject, EMAIL_RE, REPORT_TYPES, ISSUE_TYPES,
+    )
+    set_page_metadata('Contact Luna | Support', 'Help with Luna reports, downloads, printing and refunds.', '/contact-luna')
     st.title('Contact Luna')
-    st.caption('For downloads, printing, order issues and refund requests. Never include card details or passwords.')
+    st.caption('Questions about a report, payment, downloads, printing or returns? Choose the product and issue so Luna can respond efficiently. Do not include passwords or card details.')
     with st.form('luna-contact-details'):
-        email=st.text_input('Your email address', key='luna-support-email', max_chars=254)
-        topic=st.selectbox('How can we help?', ['Download or access','Printing','Billing or refund','Other'])
-        order=st.text_input('Luna order reference (optional)', max_chars=120)
-        description=st.text_area('Describe the issue', max_chars=3000)
-        request_code=st.form_submit_button('Email me a verification code')
+        report_type = st.selectbox('What is your query about?', REPORT_TYPES)
+        issue_type = st.selectbox('What do you need help with?', ISSUE_TYPES)
+        email = st.text_input('Your email address', key='luna-support-email', max_chars=254)
+        order = st.text_input('Luna order reference (if available)', max_chars=120)
+        description = st.text_area('Describe your issue', max_chars=3000, placeholder='Tell us what happened and what you need help with.')
+        st.caption('We will email a one-time verification code before submitting your request.')
+        request_code = st.form_submit_button('Email verification code', type='primary')
     if request_code:
-        if not EMAIL_RE.fullmatch(email.strip()) or len(description.strip())<10:
-            st.error('Enter a valid email and at least 10 characters describing your issue.')
+        if not EMAIL_RE.fullmatch(email.strip()) or len(description.strip()) < 10:
+            st.error('Enter a valid email address and at least 10 characters describing the issue.')
         else:
             try:
-                code, state=challenge(email.strip())
-                send_code(st.secrets,email.strip(),code)
-                st.session_state['luna-support-pending']={'state':state,'topic':topic,'order':order,'description':description}
+                code, state = challenge(email.strip())
+                send_code(st.secrets, email.strip(), code)
+                st.session_state['luna-support-pending'] = {
+                    'state': state, 'report_type': report_type, 'issue_type': issue_type,
+                    'order': order.strip(), 'description': description.strip(),
+                }
                 st.success('Verification code sent. Enter it below within 10 minutes.')
             except Exception as exc:
-                st.error(f'Unable to send verification email: {type(exc).__name__}. Please try again later.')
-    pending=st.session_state.get('luna-support-pending')
+                st.error(f'Unable to send verification email ({type(exc).__name__}). Your request was not submitted.')
+    pending = st.session_state.get('luna-support-pending')
     if pending:
+        st.caption('Verify the email address: ' + pending['state']['email'])
         with st.form('luna-contact-verify'):
-            otp=st.text_input('Six-digit email verification code', max_chars=6)
-            submit=st.form_submit_button('Verify and send support request')
+            otp = st.text_input('Six-digit verification code', max_chars=6)
+            submit = st.form_submit_button('Verify and send to Luna', type='primary')
         if submit:
-            state=pending['state']
-            if verify_code(state,email,otp):
+            state = pending['state']
+            if verify_code(state, state['email'], otp):
+                subject = support_subject(pending['report_type'], pending['issue_type'])
                 try:
-                    store_request(st.secrets,'luna_support_requests','POST',payload={
-                        'email':state['email'],'topic':pending['topic'],
-                        'order_reference':pending['order'],'message':pending['description'],
-                        'status':'new'})
-                    st.session_state.pop('luna-support-pending',None)
-                    st.success('Your verified request has been received. Keep your order reference for follow-up.')
+                    store_request(st.secrets, 'luna_support_requests', 'POST', payload={
+                        'email': state['email'], 'topic': pending['issue_type'],
+                        'order_reference': pending['order'],
+                        'message': f"Product: {pending['report_type']}\nSubject: {subject}\n\n{pending['description']}",
+                        'status': 'new',
+                    })
                 except Exception:
-                    st.error('Support storage unavailable. Your request has not been submitted; please try later.')
+                    st.error('Support storage is unavailable. Your request was not submitted; please try again later.')
+                else:
+                    st.session_state.pop('luna-support-pending', None)
+                    try:
+                        notify_owner(st.secrets, sender_address=state['email'],
+                                     report_type=pending['report_type'], issue_type=pending['issue_type'],
+                                     order_reference=pending['order'], message=pending['description'])
+                        st.success('Your verified request was submitted and Luna was notified by email.')
+                    except Exception:
+                        st.warning('Your request was saved, but the email notification is unavailable. Luna can still find the saved request.')
+                    st.caption('Subject: ' + subject)
             else:
                 st.error('Incorrect, expired or exhausted code. Request a new verification code if needed.')
 
