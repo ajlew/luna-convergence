@@ -42,16 +42,37 @@ def _resource_profile(game: dict) -> dict[str, str]:
         protection='Define a maximum acceptable cost and a clear exit condition.')
 
 
-def _adaptive_role(contact: dict) -> str:
-    """Treat retrograde as a review cue, not as evidence of real-life loss."""
+def _adaptive_role(contact: dict, game: dict | None = None) -> str:
+    """Deterministic pre-LLM action cue by planet, target, aspect, game and pass."""
     phase = _safe(contact.get('stage')).casefold()
+    label = _safe(contact.get('label')).casefold()
+    area = (_safe((game or {}).get('human_life_area')) + ' ' + _safe((game or {}).get('title'))).casefold()
+    planet = label.split(' ', 1)[0]
+    if planet == 'jupiter':
+        cue = 'Explore a promising opening, estimate resources and test the smallest useful expansion'
+    elif planet == 'saturn':
+        cue = 'Price the obligation, define a firm limit and check whether the structure can hold'
+    elif planet == 'uranus':
+        cue = 'Prepare alternatives for disruption; avoid betting everything on one fixed plan'
+    elif planet == 'mercury':
+        cue = 'Check communications, agreements, job specifications and missing details'
+    elif planet == 'venus':
+        cue = 'Compare reciprocity, value and the terms of the proposed exchange'
+    elif planet == 'mars':
+        cue = 'Test action capacity, urgency and the cost of a rushed commitment'
+    else:
+        cue = 'Identify the relevant constraint and gather evidence before committing resources'
+    if 'moon' in label:
+        cue += '; check emotional bandwidth against practical evidence'
+    elif 'midheaven' in label or 'career' in area:
+        cue += '; confirm workload and public responsibilities'
+    elif 'venus' in label or 'agreement' in area:
+        cue += '; clarify mutual obligations and exit terms'
     if 'retrograde' in phase or 'return' in phase:
-        return 'Review earlier choices, new information and unexpected costs; revise if the evidence calls for it'
+        return 'Review earlier assumptions and unexpected costs. ' + cue
     if 'final' in phase:
-        return 'Compare trial results; decide whether to commit, adjust or withdraw'
-    if 'initial' in phase or 'first' in phase:
-        return 'Identify the choice, gather evidence and test a limited reversible step'
-    return 'Review real conditions before adjusting resources'
+        return 'Compare what the trial actually showed; commit, revise or exit. ' + cue
+    return "Identify the choice and information gap. " + cue
 
 
 def build_game_decision_boards(packet: dict) -> list[dict]:
@@ -98,7 +119,7 @@ def build_game_decision_boards(packet: dict) -> list[dict]:
             'avoid': warning,
             'start': _safe(game.get('start_date')),
             'end': _safe(game.get('end_date')),
-            'contacts': [{**c, 'decision_role': _adaptive_role(c)} for c in contacts],
+            'contacts': [{**c, 'decision_role': _adaptive_role(c, game)} for c in contacts],
             **_resource_profile(game),
         })
     return boards
@@ -133,7 +154,7 @@ GAME_DECISION_CSS = '''
 .game-decision-board{border-top:1px solid #b69b71;border-bottom:1px solid #ded4c6;padding:4mm 0;margin:6mm 0;font-size:9pt;break-inside:auto}
 .game-decision-board h3{font-size:13pt;margin:1mm 0 2mm}
 .game-decision-board h4{font-size:9pt;margin:3mm 0 1mm}
-.game-decision-row{display:grid;grid-template-columns:40mm minmax(0,1fr);gap:4mm;border-top:1px solid #e8e2da;padding:1.6mm 0;break-inside:avoid}
+.game-decision-row{display:grid;grid-template-columns:40mm minmax(0,1fr);gap:4mm;border-top:1px solid #e8e2da;padding:1mm 0;break-inside:avoid}
 .game-decision-row strong{font-weight:600}
 .game-decision-board .game-decision-note{font-size:8pt;line-height:1.35;color:#54504b;margin:1.5mm 0}
 .game-decision-dates{padding-left:5mm;margin:1mm 0;font-size:8pt}

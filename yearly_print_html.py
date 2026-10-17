@@ -34,7 +34,7 @@ def d(x: Any) -> str:
     except Exception: return str(x or '')
 
 
-def _annual_timeline(packet: dict) -> str:
+def _annual_timeline(packet: dict, natal_longitudes: dict[str, float] | None = None) -> str:
     """One date axis for selected Game activity, exact contacts and the aggregate.
 
     Each colour trace is derived from that Game's recorded transit windows and
@@ -51,7 +51,7 @@ def _annual_timeline(packet: dict) -> str:
 
     days = (end - start).days
     x0, width = 196.0, 570.0
-    samples = [start + timedelta(days=round(days * i / 180)) for i in range(181)]
+    samples = [start + timedelta(days=round(days * i / 240)) for i in range(241)]
     colors = ("#765577", "#51758a", "#a0783d", "#597762", "#8c5c50")
     def xpos(day):
         return x0 + width * max(0.0, min(1.0, (day - start).days / days))
@@ -85,14 +85,25 @@ def _annual_timeline(packet: dict) -> str:
         intensity = []
         for day in samples:
             value = 0.0
-            for _, a, b, hits in records:
-                if a <= day <= b:
-                    # Window shoulder is a secondary signal; exact passes
-                    # dominate when present. Width follows window duration.
-                    value += 0.13
-                    sigma = max(5., min(27., (b-a).days / 9.))
-                    for dt in hits:
-                        value += exp(-0.5 * (((day-dt).days) / sigma) ** 2)
+            for transit, a, b, hits in records:
+                if not a <= day <= b:
+                    continue
+                # Use measured Swiss-Ephemeris orb whenever the natal position
+                # is available. The curve is not an outcome probability.
+                orb = (_sample_transit_orb(transit, natal_longitudes, day)
+                       if natal_longitudes else None)
+                if orb is not None:
+                    orb_limit = max(0.1, float(transit.get('orb_limit') or transit.get('max_orb') or 3.0))
+                    proximity = max(0., 1. - orb / orb_limit)
+                    value += proximity ** 2
+                elif hits:
+                    # Explicitly labelled fallback only when the ephemeris or
+                    # natal longitude cannot be sampled: verified exact-pass
+                    # date kernel, not asserted measured angular precision.
+                    sigma = max(3., min(16., (b-a).days / 14.))
+                    value += sum(exp(-0.5 * (((day-dt).days)/sigma)**2) for dt in hits)
+                else:
+                    value += 0.08
             intensity.append(value)
         activity.append(intensity)
 
@@ -128,6 +139,11 @@ def _annual_timeline(packet: dict) -> str:
         gy = y+79-70*guide
         rows.append(f'<line x1="{x0}" y1="{gy:.1f}" x2="{x0+width}" y2="{gy:.1f}" stroke="#dadada" stroke-dasharray="2 5" stroke-opacity=".6"/>')
     pts=[(xpos(day), y+79-70*v/max_total) for day,v in zip(samples,total)]
+    # Subtle uncertainty-neutral visual halo, not confidence intervals.
+    upper=[(x, yy-5) for x,yy in pts]
+    lower=[(x, yy+5) for x,yy in reversed(pts)]
+    halo_path = 'M ' + ' L '.join(f'{x:.2f} {yy:.2f}' for x,yy in upper+lower) + ' Z'
+    rows.append(f'<path d="{halo_path}" fill="#d3d3d3" opacity=".42"/>')
     rows.append(f'<path d="{smooth_wave_path(pts)}" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>')
     # Subtle score-independent chart guides aid comparison; these are not probabilities.
     # Calendar ticks are calculated from dates, including partial first/last months.
@@ -364,6 +380,13 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
            '<circle cx="155" cy="155" r="121" fill="none" stroke="#aaa"/>',
            '<circle cx="155" cy="155" r="84" fill="none" stroke="#d9d9d9"/>']
     zodiac = ('♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓')
+    # Fine 5-degree engraving ticks; they indicate geometry only.
+    for degree in range(0, 360, 5):
+        major = degree % 30 == 0
+        x1,y1=point(degree, 121)
+        x2,y2=point(degree, 127 if major else 124)
+        out.append(f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" stroke="#b6b6b6" stroke-width="{0.7 if major else 0.35}"/>')
+    out.append('<circle cx="155" cy="155" r="128" fill="none" stroke="#bdbdbd" stroke-width=".5"/>')
     for i, sign in enumerate(zodiac):
         x1,y1=point(i*30,84); x2,y2=point(i*30,121)
         tx,ty=point(i*30+15,133)
@@ -632,8 +655,20 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
     # Snapshot attributes vary between versions; use documented dict/signatures where available.
     portrait = para(getattr(editorial, 'natal_portrait', ()) or ())
     strengths=''
-    for s in list(getattr(snapshot,'signatures',()) or ())[:6]:
-        strengths+=f'<article class="block"><h3>{e(getattr(s,"title", ""))}</h3><p>{e(getattr(s,"text",""))}</p>' + (f'<p class="quiet strength-evidence">{e(getattr(s,"evidence", ""))}</p>' if getattr(s,"evidence", "") else "") + '</article>'
+    for signature in list(getattr(snapshot,'signatures',()) or ())[:6]:
+        # Paid Year Ahead-only language correction to Python-written natal
+        # evidence. Shared Natal Snapshot and Paid Monthly remain untouched.
+        strength_title = str(getattr(signature, 'title', '') or '')
+        strength_evidence = str(getattr(signature, 'evidence', '') or '')
+        strength_text = str(getattr(signature, 'text', '') or '')
+        if (strength_title == 'Two instincts arrive together'
+                and 'Moon' in strength_evidence and 'Mercury' in strength_evidence):
+            strength_text = ('Feelings and thoughts often arrive together. You may notice a detail '
+                             'before you can explain why it matters. Give your first impression '
+                             'room, then check it against what you can actually verify.')
+        strengths += (f'<article class="block"><h3>{e(strength_title)}</h3><p>{e(strength_text)}</p>'
+                      + (f'<p class="quiet strength-evidence">{e(strength_evidence)}</p>'
+                         if strength_evidence else '') + '</article>')
     month_cards=[]
     for i, row in enumerate(months):
         round_ = rounds[i] if i < len(rounds) else {}
@@ -753,9 +788,25 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
 }
 '''
     intro=f'<section class="cover"><div class="eyebrow">Luna Convergence · Your Year Ahead</div><h1>{print_headline(getattr(editorial,"headline",None))}</h1><p class="deck">{e(label)}</p><div class="divider"></div><p><b>Focus:</b> {e(main_focus)}</p><h2>Your natal signature</h2><div class="signature">{signature}</div><div class="natal-study"><div class="natal-svg">{chart}</div><div class="chart-reading"><strong>How to read your natal chart</strong><p>This is your starting pattern: the calculated positions of the planets at your birth. The zodiac signs describe their placement, while the connecting lines show selected relationships between them.</p><p>Read this alongside <em>Your strengths</em> and the natal portrait below. It provides the personal foundation for understanding why certain yearly transits may be particularly relevant to you.</p></div></div><h2>Read the pattern</h2><div class="natal-portrait">{portrait}</div><h2>Your strengths</h2><div class="strength-list">{strengths}</div></section>'
-    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Luna calls a related set of calculated transits a Game: a strategic period in which competing pressures, choices and trade-offs converge. A Game is an interpretive decision framework, not a prediction or a mathematically proven optimal move. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect concentrations of calculated contacts, not predicted outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet)}</section>'
+    overview=f'<section class="page"><div class="eyebrow">The big picture</div><h2>Read the year</h2>{annual_phase_markup()}<h2>How your year unfolds</h2><p>Luna calls a related set of calculated transits a Game: a strategic period in which competing pressures, choices and trade-offs converge. A Game is an interpretive decision framework, not a prediction or a mathematically proven optimal move. Each coloured curve shows activity from the verified transits in that Game, with dots at exact contacts. The black curve combines those same contacts. Peaks reflect calculated orb closeness where positions are available, otherwise verified exact-pass timing; they do not predict outcomes. Use overlapping peaks to see which stories may warrant closer attention, then refer to their monthly decisions.</p>{_annual_timeline(packet, _natal_longitudes(snapshot))}</section>'
     outro=f'<section class="page"><h2>What the year leaves you with</h2>{closing}<footer class="year-report-disclaimer">Calculated planetary evidence is interpreted symbolically and is not professional advice.</footer></section>'
-    css += GAME_DECISION_CSS
+    css += GAME_DECISION_CSS + """
+@media print {
+ .issue {font-size:9pt;line-height:1.28}
+ .issue p {font-size:9pt;line-height:1.27;margin-bottom:1.6mm}
+ .issue h2 {font-size:22pt;margin-bottom:3mm}
+ .issue .eyebrow {margin-bottom:4mm}
+ .game-decision-board {margin:3mm 0;padding:2mm 0;font-size:8.1pt}
+ .game-decision-board h3 {font-size:11pt;margin:1mm 0}
+ .game-decision-row {grid-template-columns:35mm minmax(0,1fr);padding:.75mm 0;gap:3mm;line-height:1.18}
+ .game-decision-dates {font-size:7.1pt;margin:.5mm 0}
+ .game-decision-dates li {padding:.2mm 0;break-inside:avoid}
+ .checkpoint-role {font-size:6.9pt;margin-left:2mm;line-height:1.12}
+ .game-decision-board .game-decision-note {font-size:7pt;line-height:1.17;margin:1mm 0}
+ .game-decision-board h4 {font-size:8pt;margin:1mm 0}
+ .annual-timeline {max-height:110mm}
+}
+"""
     return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Luna Convergence · Your Year Ahead</title><style>{FONT_IMPORT}{_font_face_css()}{css}</style></head><body>{intro}{overview}{"".join(month_cards)}{"".join(issue_cards)}{outro}{appendix}</body></html>'
 
 

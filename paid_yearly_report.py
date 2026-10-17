@@ -473,15 +473,15 @@ def _render_year_at_a_glance(packet: dict[str, Any]) -> None:
     )
 
 
-def _render_year_map(packet: dict[str, Any]) -> None:
+def _render_year_map(packet: dict[str, Any], snapshot: Any = None) -> None:
     """Show exactly the same verified Game curves as the Year Ahead export.
 
     This is a presentation adapter only. Source calculations and the Year
     Ahead narrative remain unchanged.
     """
-    from yearly_print_html import _annual_timeline
+    from yearly_print_html import _annual_timeline, _natal_longitudes
 
-    chart = _annual_timeline(packet)
+    chart = _annual_timeline(packet, _natal_longitudes(snapshot) if snapshot is not None else None)
     if not chart:
         return
     st.markdown("## How your year unfolds")
@@ -1097,7 +1097,7 @@ def render_paid_yearly_report(
             "Please regenerate it."
         )
 
-    _render_year_map(value)
+    _render_year_map(value, snapshot)
     _render_month_by_month(value, editorial, timing_report=timing_report, activation_chart=activation_chart)
 
     st.markdown("## The major stories of your year")

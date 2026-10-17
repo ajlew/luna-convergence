@@ -625,6 +625,11 @@ def generate_paid_yearly_editorial(
             "Python has already assigned the destination and calculated the evidence. "
             "Never calculate or invent an astrological fact, date, aspect or pass. "
             "Write clear personal interpretation, not instructions or a plan. "
+            "The report begins on the exact stated date, never the first of the calendar month. "
+            "Every monthly chapter covers a full rolling month, not a week. "
+            "Do not infer seasons or climate from the reader timezone. "
+            "Plain prose only: no Markdown asterisks or numbered list syntax. "
+            "Exact planetary aspects and pass names must be copied, never reconstructed. "
             + instruction + "\nCALCULATED EVIDENCE: "
             + json.dumps(packet, ensure_ascii=False, separators=(',', ':'))
         )
@@ -754,13 +759,23 @@ def generate_paid_yearly_editorial(
             + ending + ' ' + continuity
         )
         prose = section(f'annual_{chunk_index}', segment_packet, annual_output,
-                        instruction=instruction)
+                        instruction=context_guard + instruction)
         year_segments.append(prose)
         phase_metadata.append((act_start, act_end, prose))
         # No generated prose is passed to a later Groq call.
     written_slots['read_year'] = '\n\n'.join(year_segments)
     # The natal portrait uses Python-calculated natal evidence.
     intro_packet['natal'] = compact.get('natal')
+    # These are preflight writing constraints, not post-generation inspection.
+    context_guard = (
+        'The report period begins on its exact stated start date, not the first '
+        'day of a calendar month. Every MONTHLY chapter spans an entire rolling '
+        'month, never call it a week. Do not invoke summer/winter/spring/autumn '
+        'unless the reader hemisphere and actual season are independently established. '
+        'Never write Markdown formatting such as ** or numbered Markdown list syntax. '
+        'Copy named astronomical facts literally from verified allowed contacts, '
+        'do not paraphrase square as opposition or infer a final pass. '
+    )
     framing_instruction = (
         'For NATAL_PROFILE write 145–200 words in two personalised second-person paragraphs. '
         'Describe how the calculated Sun, Moon, Ascendant (only when available), '
