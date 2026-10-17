@@ -562,6 +562,8 @@ def generate_paid_yearly_editorial(
         personal_question=personal_question,
         shared_year_context=shared_year_context,
     )
+    from yearly_preflight import verify_yearly_material, decision_stage
+    verify_yearly_material(material)
     from paid_voice_router import VoiceProvider, completion, cached_completion
     # Every job has one preassigned destination and its own calculated evidence.
     compact=_compact_paid_yearly_material(material,2)
@@ -632,44 +634,29 @@ def generate_paid_yearly_editorial(
         messages = [{'role':'system','content':SYSTEM_PROMPT},{'role':'user','content':prompt}]
         checkpoint_id = 'yearly:prose_slots_v3135:' + job_name
         result = cached_completion(messages, primary=primary,
-                                   checkpoint_id=checkpoint_id, max_output=output_limit)
+                                   checkpoint_id=checkpoint_id, max_output=output_limit,
+                                   checkpoint_db=os.environ.get('LUNA_YEARLY_CHECKPOINT_DB') or None)
         if result is None:
-            # A finish_reason=length is a technical truncation, not an editorial
-            # judgment. Retry it at most once with more room for GPT-OSS hidden
-            # reasoning. Preserve completed checkpoints and all prose verbatim.
-            # Routine successful sections still cost exactly one provider call.
-            caps = [output_limit]
-            # An explicit retry cap is never used unless the first completion
-            # actually reached its limit. Never exceed the configured TPM or
-            # per-request budget; otherwise fail with the Python section name.
-            retry_cap = min(total_budget - estimated,
-                            minute_token_budget - estimated,
-                            max(output_limit + 600, int(output_limit * 1.6)))
-            if retry_cap > output_limit:
-                caps.append(retry_cap)
-            for attempt, cap in enumerate(caps):
-                _reserve_yearly_daily_tokens(estimated + cap,
-                                             budget=daily_token_budget,
-                                             window=daily_window_seconds)
-                reserve_provider_capacity(estimated, cap)
-                try:
-                    result = completion(messages, primary=primary, secondary=alternate,
-                                        max_output=cap, timeout=timeout,
-                                        checkpoint_id=checkpoint_id)
-                    break
-                except Exception as exc:
-                    _remember_yearly_daily_429(exc, window=daily_window_seconds)
-                    truncated = 'completion limit reached' in str(exc).lower()
-                    if truncated and attempt + 1 < len(caps):
-                        continue
-                    if truncated:
-                        raise RuntimeError(
-                            f'Year Ahead {job_name}: Groq completion truncated '
-                            f'(last max_completion_tokens={cap}; '
-                            f'estimated input tokens={estimated}). '
-                            'The section was not accepted or rewritten.'
-                        ) from exc
-                    raise RuntimeError(f'Year Ahead {job_name}: {exc}') from exc
+            # Exactly one billable attempt per predetermined Year Ahead slot.
+            # A truncated completion or provider failure is recorded, never retried.
+            _reserve_yearly_daily_tokens(estimated + output_limit,
+                                         budget=daily_token_budget,
+                                         window=daily_window_seconds)
+            reserve_provider_capacity(estimated, output_limit)
+            try:
+                result = completion(
+                    messages, primary=primary, secondary=None,
+                    max_output=output_limit, timeout=timeout,
+                    checkpoint_id=checkpoint_id,
+                    checkpoint_db=os.environ.get('LUNA_YEARLY_CHECKPOINT_DB') or None,
+                    max_attempts=1, allow_secondary=False,
+                )
+            except Exception as exc:
+                _remember_yearly_daily_429(exc, window=daily_window_seconds)
+                raise RuntimeError(
+                    f'Year Ahead {job_name}: generation stopped after one provider attempt; '
+                    'no automatic retry or fallback provider was used.'
+                ) from exc
         prose = str(result or '').strip()
         if not prose:
             raise RuntimeError(f'Year Ahead {job_name} provider returned no text')
@@ -780,7 +767,10 @@ def generate_paid_yearly_editorial(
         'than claims about private biography. Explain how strengths can become traps '
         'under pressure. Never invent a placement, house, orb or aspect. '
         'Explain the four supplied Strengths through recognisable daily-life behaviours: a benefit, a possible excess, and a choice the person can notice. Avoid mechanical definitions and do not invent aspects. '
-        'Do not repeat the four Strengths verbatim or promise life outcomes.'
+        'Do not repeat the four Strengths verbatim or promise life outcomes. '
+        'Avoid formula-like wording such as "emotional needs and habits and thinking". '
+        'Each described trait must be linked to an actual supplied placement or aspect; '
+        'if evidence for a trait is absent, omit the trait.'
     )
     # Framing has four independent Python-owned destinations. A single free-form
     # response cannot contain four reliably recoverable sections without asking
@@ -798,7 +788,10 @@ def generate_paid_yearly_editorial(
     # Individually bounded monthly slots are necessary for strict prose-only
     # output. Four free-form monthly texts cannot be separated deterministically
     # without provider-authored separators or post-response heuristics.
+    prior_months = []
     for month in material.get('monthly_rounds') or []:
+        editorial_stage = decision_stage(month, prior_months)
+        prior_months.append(month)
         number = int(month['number'])
         game_number = int(month.get('dominant_game_number') or 0)
         game = full_games.get(game_number) or {}
@@ -810,6 +803,7 @@ def generate_paid_yearly_editorial(
             'dominant_game_number': game_number,
             'dominant_game_title': game.get('customer_title'),
             'dominant_life_area': game.get('life_area'),
+            'decision_stage': editorial_stage,
             # Do not expose a separate transit catalogue with extra dates:
             # exact passes in allowed_exact_contacts are the sole date authority.
             'allowed_exact_contacts': allowed,
@@ -821,7 +815,8 @@ def generate_paid_yearly_editorial(
             'and date if supplied in allowed_exact_contacts. Never name a transiting '
             'planetary contact missing from this list; if empty, describe only the Game '
             'theme and the choice without attaching an aspect or date. Use conditional, specific '
-            'real-life choices, not guaranteed outcomes.'
+            'real-life choices, not guaranteed outcomes. Advance the supplied decision_stage, '
+            'never merely repeat the previous month’s advice.'
         )
         written_slots[f'month_{number}'] = section(
             f'month_{number}', {**base, 'monthly_evidence': evidence}, 460,

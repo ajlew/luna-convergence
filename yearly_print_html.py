@@ -654,7 +654,7 @@ def build_yearly_print_html(*, snapshot: Any, packet: dict, editorial: Any, labe
                '<p class="quiet">A quieter period to consolidate what is already underway.</p>')
             + ('<div class="chart-reading"><strong>How to read your monthly transits</strong><p>Each coloured curve follows the calculated orb through this month: higher means closer to exact. A dot marks a verified exact contact. Where orb data is unavailable, a bar shows only the active window.</p><p>Compare overlapping curves, then read <em>Your decision</em> for Luna&apos;s practical question. The chart describes angular exactness, not guaranteed events.</p></div>' if i == 0 and focused else '')
             + (f'</div><div class="month-activation"><h3>Your natal activation</h3>{_month_activation_svg(snapshot, transit_rows, round_.get("start"), round_.get("end"))}' if focused else '')
-            + ('<div class="chart-reading"><strong>How to read your natal activation</strong><p>Your natal chart describes the planetary positions at birth. This smaller wheel highlights the natal positions contacted by this month&apos;s selected transits.</p><p>Purple markers identify those natal positions. Orange markers show transiting positions when verified coordinates are available.</p><p>Use this chart to recognise which parts of your natal pattern are receiving attention. The accompanying transit descriptions explain what those contacts may bring into focus.</p></div>' if i == 0 and focused else '')
+            + ('<div class="chart-reading"><strong>How to read your natal activation</strong><p>Your natal chart describes the planetary positions at birth. This smaller wheel highlights the natal positions contacted by this month&apos;s selected transits.</p><p>Purple markers identify those natal positions. Orange markers show transiting positions when verified coordinates are available.</p><p></p></div>' if i == 0 and focused else '')
              + ('</div>' if focused else '')
             + '</section>'
         )
@@ -714,8 +714,8 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .month-activation {break-inside:auto; margin-top:4mm; padding:3mm 0 2mm; border-top:1px solid #c7b08a;}
   .month-activation h3 {margin-top:1mm;}
   .month .activation-layout {grid-template-columns:88mm 1fr; gap:5mm;}
-  .month .activation-wheel {max-width:88mm;}
-  .month .activation-layout {grid-template-columns:88mm 1fr;}
+  .month .activation-wheel {max-width:77mm;}
+  .month .activation-layout {grid-template-columns:77mm 1fr;}
   .month .activation-description {line-height:1.3;}
   .month .activation-contacts {font-size:7.8pt;}
   .month .chart-reading {margin:2mm 0;}
@@ -737,7 +737,10 @@ h1,h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;line-height:1.15}h
   .issue .story-timing ul {margin:1mm 0;padding-left:5mm;}
   .technical-reference {font-size:6.5pt;color:#777;overflow-wrap:anywhere; margin-top:9mm;}
   .month-activation .activation-layout {break-inside:avoid;page-break-inside:avoid;}
-  .month-activation .activation-wheel {width:88mm;max-width:88mm;}
+  .month-activation {margin-top:2mm;padding-top:1.5mm;padding-bottom:0;}
+  .month-activation h3 {margin-top:0;}
+  .month .chart-reading {margin:0 0 1mm;font-size:7pt;line-height:1.16;}
+  .month-activation .activation-wheel {width:77mm;max-width:77mm;}
   h2,h3 {break-after:avoid;}
   p {orphans:3;widows:3;}
   .activation-wheel .planet-label {font:500 14px "Bodoni Moda",Georgia,serif; fill:#27204d;}

@@ -135,7 +135,7 @@ def _daily_token_429(response):
 def completion(messages, *, primary: VoiceProvider, secondary: VoiceProvider | None = None,
                max_output: int = 1900, timeout: int = 100, session=None,
                checkpoint_id: str | None = None, checkpoint_db: str | None = None,
-               max_wait_seconds: float = 180.0):
+               max_wait_seconds: float = 180.0, max_attempts: int = 4, allow_secondary: bool = True):
     """Generate one section. Wait for TPM reset, preserve completed sections locally.
 
     A rejected request has bounded retries (up to 3); no endless loops. Successful
@@ -144,7 +144,7 @@ def completion(messages, *, primary: VoiceProvider, secondary: VoiceProvider | N
     global _NEXT_REQUEST_AT
     http = session or requests
     providers=[primary]
-    if secondary and all((secondary.base_url,secondary.model,secondary.api_key)) and 'your-model-name' not in secondary.model:
+    if allow_secondary and secondary and all((secondary.base_url,secondary.model,secondary.api_key)) and 'your-model-name' not in secondary.model:
         providers.append(secondary)
     cache_key=None
     path=checkpoint_db or _DEFAULT_CHECKPOINT_DB
@@ -158,7 +158,7 @@ def completion(messages, *, primary: VoiceProvider, secondary: VoiceProvider | N
     errors=[]
     for provider in providers:
         waited=0.
-        for attempt in range(4):
+        for attempt in range(max(1, int(max_attempts))):
             payload={'model':provider.model,'messages':messages,'temperature':0.48,'max_completion_tokens':int(max_output)}
             if provider.model.startswith('openai/gpt-oss'):
                 payload['reasoning_effort']='low'
@@ -177,7 +177,7 @@ def completion(messages, *, primary: VoiceProvider, secondary: VoiceProvider | N
                 status=response.status_code
                 if status>=400:
                     description=_safe_http_error(response)
-                    if status in (408,429,500,502,503,504) and attempt<3 and not (status == 429 and _daily_token_429(response)):
+                    if status in (408,429,500,502,503,504) and attempt < max_attempts - 1 and not (status == 429 and _daily_token_429(response)):
                         delay=_wait_from_response(response) if status==429 else min(8.,2.**attempt)
                         if waited+delay<=max_wait_seconds:
                             waited+=delay

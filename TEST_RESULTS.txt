@@ -1,0 +1,73 @@
+
+==================================== ERRORS ====================================
+________________ ERROR collecting test_monthly_quality_v392.py _________________
+test_monthly_quality_v392.py:14: in <module>
+    soup=BeautifulSoup(Path('/mnt/data/Luna_v392_Actual_Monthly_Print_Proof.html').read_text(),'html.parser')
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/pathlib/_local.py:548: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/pathlib/_local.py:539: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/Luna_v392_Actual_Monthly_Print_Proof.html'
+________________ ERROR collecting test_monthly_recovery_v397.py ________________
+test_monthly_recovery_v397.py:2: in <module>
+    src=pathlib.Path('/mnt/data/recovery/current/app.py').read_text()
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/pathlib/_local.py:548: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/pathlib/_local.py:539: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/recovery/current/app.py'
+___________________ ERROR collecting test_reading_clarity.py ___________________
+ImportError while importing test module '/mnt/data/luna_work/luna-convergence-main/test_reading_clarity.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test_reading_clarity.py:5: in <module>
+    from plain_readings import make_reading, split_move, reading_html, prompt_for, text_errors
+E   ImportError: cannot import name 'text_errors' from 'plain_readings' (/mnt/data/luna_work/luna-convergence-main/plain_readings.py)
+__________________ ERROR collecting test_v3101_navigation.py ___________________
+test_v3101_navigation.py:4: in <module>
+    assert 'APP_VERSION = "v3.101"' in s
+E   assert 'APP_VERSION = "v3.101"' in 'from __future__ import annotations\n\nfrom datetime import date, datetime, timedelta, timezone\nfrom functools import...nt_page.url_path else f"/{current_page.url_path}",\n)\ninstall_statcounter()\n\ncurrent_page.run()\nfooter()\n\n\n\n\n'
+__________________ ERROR collecting test_v3114_year_voice.py ___________________
+test_v3114_year_voice.py:23: in <module>
+    with patch.object(mod,'build_paid_yearly_material',return_value=compact), patch.object(mod,'_compact_paid_yearly_material',return_value=compact), patch.object(mod,'parse_paid_yearly_editorial',side_effect=lambda raw,**kw:raw):
+                                                                                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/unittest/mock.py:1497: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/unittest/mock.py:1467: in get_original
+    raise AttributeError(
+E   AttributeError: <module 'paid_yearly_editorial' from '/mnt/data/luna_work/luna-convergence-main/paid_yearly_editorial.py'> does not have the attribute 'parse_paid_yearly_editorial'
+_______________ ERROR collecting test_v3115_marker_acceptance.py _______________
+test_v3115_marker_acceptance.py:23: in <module>
+    with patch.object(mod,'build_paid_yearly_material',return_value=compact),patch.object(mod,'_compact_paid_yearly_material',return_value=compact),patch.object(mod,'parse_paid_yearly_editorial',side_effect=lambda raw,**kw:raw):
+                                                                                                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/unittest/mock.py:1497: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/unittest/mock.py:1467: in get_original
+    raise AttributeError(
+E   AttributeError: <module 'paid_yearly_editorial' from '/mnt/data/luna_work/luna-convergence-main/paid_yearly_editorial.py'> does not have the attribute 'parse_paid_yearly_editorial'
+=========================== short test summary info ============================
+ERROR test_monthly_quality_v392.py - FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/Luna_v392_Actual_Monthly_Print_Proof.html'
+ERROR test_monthly_recovery_v397.py - FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/recovery/current/app.py'
+ERROR test_reading_clarity.py
+ERROR test_v3101_navigation.py - assert 'APP_VERSION = "v3.101"' in 'from __future__ import annotations\n\nfrom datetime import date, datetime, timedelta, timezone\nfrom functools import...nt_page.url_path else f"/{current_page.url_path}",\n)\ninstall_statcounter()\n\ncurrent_page.run()\nfooter()\n\n\n\n\n'
+ERROR test_v3114_year_voice.py - AttributeError: <module 'paid_yearly_editorial' from '/mnt/data/luna_work/luna-convergence-main/paid_yearly_editorial.py'> does not have the attribute 'parse_paid_yearly_editorial'
+ERROR test_v3115_marker_acceptance.py - AttributeError: <module 'paid_yearly_editorial' from '/mnt/data/luna_work/luna-convergence-main/paid_yearly_editorial.py'> does not have the attribute 'parse_paid_yearly_editorial'
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 6 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+6 errors in 2.59s
