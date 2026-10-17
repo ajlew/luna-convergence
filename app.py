@@ -3608,7 +3608,7 @@ def payment_success_page() -> None:
                 timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
             )
             monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
-            if not monthly_story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(monthly_story.get("paragraphs") or []))[0]:
+            if not monthly_story.get("voice_complete"):
                 raise RuntimeError("Paid Monthly PDF and delivery withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
             from monthly_shared_view import build_monthly_shared_html, html_to_pdf
             shared_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
@@ -4166,7 +4166,7 @@ def _owner_report_output(order: dict) -> dict:
             timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
         )
         monthly_story = _paid_monthly_longform(narrative, result, paid_snapshot)
-        if not monthly_story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(monthly_story.get("paragraphs") or []))[0]:
+        if not monthly_story.get("voice_complete"):
             raise RuntimeError("Paid Monthly owner export withheld. Cause: " + _voice_error("paid_monthly_story_weave"))
         from monthly_shared_view import build_monthly_shared_html, html_to_pdf
         print_html = build_monthly_shared_html(**_monthly_shared_assets(narrative, result, monthly_story, order_reference))
@@ -11268,29 +11268,9 @@ def _paid_monthly_clean_plain_story(value: object) -> str:
     return re.sub(r"\*{1,3}|_{2,3}|`+", "", text).strip()
 
 
-def _paid_monthly_publishable_prose(value: object) -> tuple[bool, str]:
-    """Reject refusals/error messages as paid editorial; never fake an interpretation.
-
-    This is a minimal safety/completeness gate, not a second LLM or
-    heuristic rewriting process. It never modifies accepted prose.
-    """
-    text = _paid_monthly_clean_plain_story(value)
-    compact = " ".join(text.casefold().split())
-    if not compact:
-        return False, "empty provider response"
-    import re as _re
-    rejection = (
-        r"(?:i(?:'|’)?m sorry|i am sorry)[,. ]+(?:but )?(?:i |we )?(?:can(?:not|'t|’t)|won(?:not|'t|’t))\b",
-        r"(?:i |we )(?:can(?:not|'t|’t)|won(?:not|'t|’t))\s+(?:help|assist|comply|fulfil|fulfill|provide|generate|write)\b",
-        r"(?:as an ai|as a language model|i cannot fulfill|i can't fulfill|i’m unable|i am unable)\b",
-        r"(?:this request violates|i must decline|unable to assist|cannot help with that)\b",
-    )
-    if any(_re.search(pattern, compact) for pattern in rejection):
-        return False, "provider returned a refusal instead of a monthly interpretation"
-    # A one-line apology or service message cannot meet a paid article contract.
-    if len(compact.split()) < 120:
-        return False, "provider returned an incomplete monthly interpretation"
-    return True, ""
+def _paid_monthly_transport_has_text(value: object) -> bool:
+    """Transport-only check: do not examine the meaning or length of Groq prose."""
+    return bool(str(value or "").strip())
 
 
 
@@ -11403,9 +11383,8 @@ def _cached_paid_monthly_weave(
         raise RuntimeError("Voice provider truncated the Paid Monthly story at the completion limit.")
 
     clean = _paid_monthly_clean_plain_story(body)
-    publishable, reason = _paid_monthly_publishable_prose(clean)
-    if not publishable:
-        raise RuntimeError("Paid Monthly response rejected: " + reason)
+    if not _paid_monthly_transport_has_text(clean):
+        raise RuntimeError("Voice provider returned an empty response.")
     return clean
 
 
@@ -11415,37 +11394,9 @@ def _cached_paid_monthly_weave(
 # Post-call handling is transport-only: usable non-truncated prose is published.
 
 def _paid_monthly_story_paragraphs(body: object) -> list[str]:
-    """Normalise plain prose without making formatting a publication blocker.
-
-    Groq sometimes returns a complete article with too few blank-line breaks.
-    When the prose is substantial, split it deterministically into readable
-    paragraph-sized sentence groups instead of rejecting a good report.
-    """
+    """Presentation-only paragraph splitting; never inspect prose quality or length."""
     text = _paid_monthly_clean_plain_story(body)
-    paragraphs = [
-        " ".join(part.split())
-        for part in re.split(r"\n\s*\n+", text)
-        if str(part or "").strip()
-    ]
-    if len(paragraphs) >= 8 or _word_count(text) < 1200:
-        return paragraphs
-
-    # A long single/short block is a transport-format issue, not a failed story.
-    sentences = [
-        " ".join(item.split())
-        for item in re.split(r"(?<=[.!?])\s+", text)
-        if str(item or "").strip()
-    ]
-    if len(sentences) < 8:
-        return paragraphs
-
-    target = max(8, min(14, round(_word_count(text) / 165)))
-    per_group = max(1, (len(sentences) + target - 1) // target)
-    rebuilt = [
-        " ".join(sentences[index:index + per_group]).strip()
-        for index in range(0, len(sentences), per_group)
-    ]
-    return [item for item in rebuilt if item]
+    return [part.strip() for part in re.split(r"\n\s*\n+", text) if part.strip()]
 
 
 
@@ -11474,9 +11425,8 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         _record_voice_error("paid_monthly_story_weave", exc)
         return _paid_monthly_weave_fallback(facts)
 
-    publishable, reason = _paid_monthly_publishable_prose(body)
-    if not publishable:
-        _record_voice_error("paid_monthly_story_weave", "Paid Monthly response rejected: " + reason)
+    if not _paid_monthly_transport_has_text(body):
+        _record_voice_error("paid_monthly_story_weave", "Voice provider returned an empty response.")
         return _paid_monthly_weave_fallback(facts)
     paragraphs = _paid_monthly_story_paragraphs(body)
     if not paragraphs:
@@ -11490,49 +11440,6 @@ def _generate_paid_monthly_weave(facts: dict) -> dict:
         "quality_tier": "published",
         "quality_note": "",
     }
-
-_LUNA_ZODIAC_FACTS = {
-    "aries": ("cardinal", "Fire"), "taurus": ("fixed", "Earth"),
-    "gemini": ("mutable", "Air"), "cancer": ("cardinal", "Water"),
-    "leo": ("fixed", "Fire"), "virgo": ("mutable", "Earth"),
-    "libra": ("cardinal", "Air"), "scorpio": ("fixed", "Water"),
-    "sagittarius": ("mutable", "Fire"), "capricorn": ("cardinal", "Earth"),
-    "aquarius": ("fixed", "Air"), "pisces": ("mutable", "Water"),
-}
-
-
-def _paid_monthly_correct_sun_sign_attribution(paragraphs: list[str], sign: str) -> list[str]:
-    """Correct only demonstrably false Sun-sign element/modality phrases.
-
-    Do not change chart-dominance statements: natal dominant element and modality
-    can differ from the Sun sign. Preserve narrative, dates and LLM call count.
-    """
-    traits = _LUNA_ZODIAC_FACTS.get(str(sign or '').casefold().strip())
-    if not traits:
-        return list(paragraphs)
-    mode, element = traits
-    fixed = []
-    for paragraph in paragraphs:
-        text = str(paragraph)
-        for modifier in ("cardinal", "fixed", "mutable"):
-            for substance in ("Fire", "Earth", "Air", "Water"):
-                if (modifier, substance) == traits:
-                    continue
-                wrong = re.escape(modifier + ' ' + substance)
-                # Replace only the explicit false claim about the sign's nature.
-                patterns = (
-                    rf'\b{wrong}(?=\s+nature\s*,?\s+rooted\s+in\s+(?:the\s+)?sign\s+of\s+{re.escape(sign)}\b)',
-                    rf'\b{wrong}(?=\s+nature\s+of\s+your\s+{re.escape(sign)}\s+Sun\b)',
-                    rf'\b{wrong}(?=\s+nature\s*,?\s+(?:of\s+)?your\s+{re.escape(sign)}\s+Sun\b)',
-                )
-                for pattern in patterns:
-                    text = re.sub(pattern, f'{mode} {element}', text, flags=re.IGNORECASE)
-        if str(sign).casefold() == "libra":
-            text = re.sub(r"\b([Tt]he) fixed Water nature of your Libra Sun\b", r"\1 cardinal Air nature of your Libra Sun", text)
-            text = re.sub(r"\b(?:Your|your) fixed Water nature\b", "Your cardinal Air nature", text)
-            text = re.sub(r"\b(?:your|Your) fixed nature\b", "your cardinal nature", text)
-        fixed.append(text)
-    return fixed
 
 
 def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
@@ -11618,7 +11525,6 @@ def _paid_monthly_longform(narrative, result: dict, snapshot=None) -> dict:
         for item in (woven.get("paragraphs") or [])
         if str(item or "").strip()
     ]
-    paragraphs = _paid_monthly_correct_sun_sign_attribution(paragraphs, sign)
     return {
         "headline": " ".join(str(woven.get("headline") or "").split()),
         "paragraphs": paragraphs,
@@ -11825,7 +11731,7 @@ def _render_snapshot_monthly_report(narrative, result: dict, *, order_reference:
             timezone_name=str(result.get("timezone_name") or DEFAULT_TIMEZONE),
         )
         story = _paid_monthly_longform(narrative, result, snap)
-    if not story.get("voice_complete") or not _paid_monthly_publishable_prose(" ".join(story.get("paragraphs") or []))[0]:
+    if not story.get("voice_complete"):
         st.error("Luna could not complete this Monthly report. Please try again.")
         return
     from monthly_shared_view import build_monthly_shared_html
