@@ -168,10 +168,18 @@ from site_config import (
     NAV_ITEMS,
 )
 
-# Live deployment identifier. Keep this in app.py so a single-file update
-# visibly confirms which application build is running in Streamlit.
-APP_VERSION = "v3.136"
-BUILD_LABEL = f"Luna {APP_VERSION} — Year Ahead Evidence Ownership"
+# Version is owned by the release manifest, never edited into app source.
+# An absent manifest retains the current site-config build label.
+def _luna_release_version() -> str:
+    try:
+        metadata = json.loads((Path(__file__).parent / "luna_release.json").read_text(encoding="utf-8"))
+        version = str(metadata.get("version", "")).strip()
+        return version if re.fullmatch(r"v\d+\.\d+", version) else ""
+    except (OSError, ValueError, TypeError):
+        return ""
+
+APP_VERSION = _luna_release_version()
+BUILD_LABEL = f"Luna {APP_VERSION} — Year Ahead Evidence Ownership" if APP_VERSION else CONFIG_BUILD_LABEL
 PAID_MONTHLY_STORY_REVISION = "prebuilt-month-base-single-timeline-1"
 
 
