@@ -435,7 +435,7 @@ def _month_activation_svg(snapshot: Any, transits: list[dict], start: Any = None
             legend.append(f'<li><strong>{e(planet)}</strong> → {e(target)} · {e(d(day))} (exact)</li>')
         if label not in contact_lines:contact_lines.append(label)
     out.append('<text class="chart-centre" x="155" y="151" text-anchor="middle">Natal</text>')
-    out.append('<text class="chart-centre-small" x="155" y="166" text-anchor="middle">activations</text></svg>')
+    out.append('<text class="chart-centre-small" x="155" y="166" text-anchor="middle">Activations</text></svg>')
     if not plotted:
         return '<p class="quiet">No calculated natal target positions for this chapter.</p>'
     contacts=''.join(f'<li>{e(line)}</li>' for line in contact_lines)
