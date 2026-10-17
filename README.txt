@@ -1,1 +1,6 @@
-Luna v3.140 - Paid Monthly pre-LLM contract. Replace app.py, add monthly_preflight_contract.py. Test: python -m unittest -v test_paid_monthly_preflight_contract.py. Only checked request facts/budget before Groq; no post-LLM editorial inspection and no automatic retry. No Groq calls in testing. Live paid report not tested.
+Luna v3.140 - Year Ahead context_guard initialization hotfix
+
+Replace paid_yearly_editorial.py at repository root.
+Fixes UnboundLocalError: context_guard was referenced in the annual phase loop before its assignment.
+Moves the existing constant definition before its first use. Does not modify its text or Groq call settings.
+No Groq calls were made for testing.

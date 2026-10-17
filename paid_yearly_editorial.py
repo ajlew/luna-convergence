@@ -673,6 +673,16 @@ def generate_paid_yearly_editorial(
     written_slots={}
     intro_packet={**base,'major_issues':[{'number':g.get('number'),'title':g.get('customer_title'),'primary':g.get('primary')} for g in compact.get('major_issues') or []],
         'monthly_rounds':[{'number':m.get('number'),'phase':m.get('phase'),'strongest_date':m.get('strongest_date')} for m in compact.get('monthly_rounds') or []]}
+    # These are preflight writing constraints, not post-generation inspection.
+    context_guard = (
+        'The report period begins on its exact stated start date, not the first '
+        'day of a calendar month. Every MONTHLY chapter spans an entire rolling '
+        'month, never call it a week. Do not invoke summer/winter/spring/autumn '
+        'unless the reader hemisphere and actual season are independently established. '
+        'Never write Markdown formatting such as ** or numbered Markdown list syntax. '
+        'Copy named astronomical facts literally from verified allowed contacts, '
+        'do not paraphrase square as opposition or infer a final pass. '
+    )
     # Construct four Python-owned chronological phases.
     # GPT-OSS completion tokens include hidden reasoning; generating a 650-word
     # essay in one response can exhaust the cap before the prose is complete.
@@ -766,16 +776,6 @@ def generate_paid_yearly_editorial(
     written_slots['read_year'] = '\n\n'.join(year_segments)
     # The natal portrait uses Python-calculated natal evidence.
     intro_packet['natal'] = compact.get('natal')
-    # These are preflight writing constraints, not post-generation inspection.
-    context_guard = (
-        'The report period begins on its exact stated start date, not the first '
-        'day of a calendar month. Every MONTHLY chapter spans an entire rolling '
-        'month, never call it a week. Do not invoke summer/winter/spring/autumn '
-        'unless the reader hemisphere and actual season are independently established. '
-        'Never write Markdown formatting such as ** or numbered Markdown list syntax. '
-        'Copy named astronomical facts literally from verified allowed contacts, '
-        'do not paraphrase square as opposition or infer a final pass. '
-    )
     framing_instruction = (
         'For NATAL_PROFILE write 145–200 words in two personalised second-person paragraphs. '
         'Describe how the calculated Sun, Moon, Ascendant (only when available), '
