@@ -85,6 +85,7 @@ from birthday_card import (
     render_birthday_card_pdf,
     render_birthday_card_png,
 )
+from birthday_background_library import BirthdayBackgroundLibrary, BirthdayBackgroundError
 from birthday_card_voice import (
     BirthdayPoemError,
     build_birthday_poem_facts,
@@ -3022,6 +3023,7 @@ def top_navigation(current_path: str) -> None:
         ("birthday-card", "Birthday Card"),
         ("house-guide", "House Guide"),
         ("solar-year", "Solar Year"),
+        ("contact-luna", "Contact Luna"),
     ]
 
     desktop_links: list[str] = []
@@ -9282,7 +9284,7 @@ def birthday_card_page() -> None:
         "/birthday-card",
     )
     st.markdown('<section class="natal-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">Luna birthday sky · two keepsake designs</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Luna birthday sky · personalised keepsake</div>', unsafe_allow_html=True)
     st.markdown('<div class="editorial-title">Give them<br>their sky.</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="natal-intro">Enter the recipientâ€™s full birth date so Luna can calculate the card accurately. '
@@ -9297,6 +9299,44 @@ def birthday_card_page() -> None:
         st.session_state.pop("birthday-card-result-v1", None)
         st.markdown(f"### Personalised Birthday Card · {BIRTHDAY_PRICE}")
         st.caption("One payment includes the finished 1080 × 1920 PNG and matching printable PDF.")
+
+    if admin_unlocked:
+        with st.expander("Owner Tools · Manage Birthday Backgrounds", expanded=False):
+            st.caption("Upload 9:16 Canva JPG/PNG/WebP. Active backgrounds appear at checkout; retired backgrounds remain available to paid orders.")
+            owner_lib = BirthdayBackgroundLibrary.from_streamlit(st)
+            if not owner_lib.configured:
+                st.info("Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and create the private Storage bucket 'birthday-backgrounds'.")
+            else:
+                try:
+                    entries = owner_lib.list_entries()
+                    with st.form("luna-bg-upload", clear_on_submit=True):
+                        name_bg = st.text_input("Background name", max_chars=55)
+                        uploaded_bg = st.file_uploader("Background image", type=["png", "jpg", "jpeg", "webp"])
+                        light_text = st.checkbox("Light text (dark background)", value=True)
+                        add_bg = st.form_submit_button("Add background")
+                    if add_bg:
+                        if uploaded_bg is None or not name_bg.strip():
+                            st.error("Supply a name and image.")
+                        else:
+                            try:
+                                owner_lib.add(name_bg.strip(), uploaded_bg.getvalue(), light_text=light_text)
+                                st.success("Background uploaded.")
+                                st.rerun()
+                            except BirthdayBackgroundError as exc:
+                                st.error(str(exc))
+                    for entry in entries:
+                        cols = st.columns([3, 2, 1, 1, 1])
+                        cols[0].write(entry["name"])
+                        cols[1].caption("Active" if entry.get("active") else "Retired")
+                        if cols[2].button("Hide" if entry.get("active") else "Show", key=f"bg-toggle-{entry['id']}"):
+                            owner_lib.update(entry["id"], active=not entry.get("active")); st.rerun()
+                        if cols[3].button("↑", key=f"bg-up-{entry['id']}"):
+                            owner_lib.move(entry["id"], -1); st.rerun()
+                        if cols[4].button("↓", key=f"bg-down-{entry['id']}"):
+                            owner_lib.move(entry["id"], 1); st.rerun()
+                    st.caption("Use Hide to retire a design. Images are not deleted, preserving previous purchases.")
+                except BirthdayBackgroundError as exc:
+                    st.error(str(exc))
 
     with st.container(border=True):
         delivery_email = ""
@@ -9324,35 +9364,31 @@ def birthday_card_page() -> None:
             index=timezone_select_index(),
             help="This lets Luna check the Moon across the correct local birth date.",
         )
-        st.markdown("**Choose the finished look**")
-        preview_dir = Path(__file__).resolve().parent / "assets" / "birthday-previews"
-        preview_columns = st.columns(2, gap="small")
-        with preview_columns[0]:
-            st.image(
-                str(preview_dir / "lara-midnight-painted.png"),
-                caption="Midnight Painted",
-                use_container_width=True,
-            )
-        with preview_columns[1]:
-            st.image(
-                str(preview_dir / "lara-ivory-letter.png"),
-                caption="Ivory Letter",
-                use_container_width=True,
-            )
-        st.caption(
-            "Style samples only. Your finished card uses the recipientâ€™s calculated birth sky and Lunaâ€™s unique poem."
-        )
-        card_style = st.radio(
-            "Card style",
-            ("Midnight Painted", "Ivory Letter"),
-            horizontal=True,
-            help="Midnight Painted uses warm-white type over hand-painted blue paper. Ivory Letter uses dark type over tactile ivory paper.",
-            key="birthday-card-style-v1",
-        )
-        card_theme = {
-            "Midnight Painted": "painted_blue",
-            "Ivory Letter": "ivory_paper",
-        }[card_style]
+        st.markdown("**Choose a background**")
+        library = BirthdayBackgroundLibrary.from_streamlit(st)
+        builtin = [("painted_blue", "Midnight Painted"), ("ivory_paper", "Ivory Letter")]
+        remote_entries = []
+        if library.configured:
+            try:
+                remote_entries = library.list_entries()
+            except BirthdayBackgroundError as exc:
+                st.warning(f"Custom backgrounds are temporarily unavailable: {exc}")
+        active = builtin + [(entry["id"], entry["name"]) for entry in remote_entries if entry.get("active")]
+        if active:
+            preview_columns = st.columns(min(3, len(active)), gap="small")
+            for i, (background_id, background_name) in enumerate(active):
+                with preview_columns[i % len(preview_columns)]:
+                    try:
+                        if background_id in {"painted_blue", "ivory_paper"}:
+                            preview_name = "lara-midnight-painted.png" if background_id == "painted_blue" else "lara-ivory-letter.png"
+                            st.image(str(Path(__file__).resolve().parent / "assets" / "birthday-previews" / preview_name), caption=background_name, use_container_width=True)
+                        else:
+                            st.image(library.get_image(background_id), caption=background_name, use_container_width=True)
+                    except (BirthdayBackgroundError, OSError):
+                        st.caption(background_name)
+        card_theme = st.selectbox("Birthday Card background", options=[v for v, _ in active], format_func=lambda x: dict(active).get(x, x), key="birthday-card-background-v2")
+        poetry_style = st.selectbox("Poetry style", ("Homeric Epic", "Shakespearean", "Ancient Oracle", "Modern Celebration"), key="birthday-card-poetry-style-v2")
+        st.caption("Three short stanzas · 30 words maximum · mature unrhymed verse. Designs are 1080 × 1920.")
         time_known = st.checkbox(
             "I know the birth time",
             value=False,
@@ -9409,6 +9445,7 @@ def birthday_card_page() -> None:
                     poem_facts = build_birthday_poem_facts(
                         snapshot=snapshot,
                         variation_key=secrets.token_hex(8),
+                        poetry_style=poetry_style,
                     )
                     with st.spinner("Luna is writing from the calculated birth sky. Keep this page openâ€¦"):
                         poem = _cached_birthday_poem(
@@ -9467,6 +9504,7 @@ def birthday_card_page() -> None:
                             if time_known and birth_time_value else ""
                         ),
                         "birthday_theme": card_theme,
+                        "birthday_poetry_style": poetry_style,
                         "birthday_poem": card.poem,
                     }
                     order["checkout_url"] = _create_instant_checkout(order, "BIRTHDAY")
@@ -9496,7 +9534,7 @@ def birthday_card_page() -> None:
         st.success("Your personalised card is prepared. Complete payment to unlock both files.")
         st.markdown(
             f"**For {escape(prepared_order['birthday_name'])} · {escape(prepared_order['period'])}**  "
-            f"  \n{escape(card_style)} · Order `{escape(prepared_order['reference'])}`"
+            f"  \n{escape(dict(active).get(card_theme, card_theme))} · Order `{escape(prepared_order['reference'])}`"
         )
         payment_button(
             f"Continue to secure payment — {BIRTHDAY_PRICE}",
@@ -13692,7 +13730,7 @@ def footer() -> None:
 <strong>{escape(BRAND_NAME)}</strong> — astrology is a symbolic interpretive framework and is not a substitute for professional advice.
 <br><strong>Build:</strong> {escape(BUILD_LABEL)}
 {"<br><strong>Preview mode enabled</strong>" if EDITOR_PREVIEW_ENABLED else ""}
-<br><a href="/contact-luna">Contact Luna</a> · <a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
+<br><a href="/privacy">Privacy</a> · <a href="/natal-snapshot">Free Natal Snapshot</a> · <a href="/timing-map">Your Year Ahead</a>{f' · <a href="{escape(LUNA_YOUTUBE_CHANNEL_URL)}" target="_blank" rel="noopener">YouTube</a>' if LUNA_YOUTUBE_CHANNEL_URL else ''}
 </div>
         """,
         unsafe_allow_html=True,
@@ -13774,64 +13812,44 @@ HOUSES_PAGE_REF = st.Page(
     url_path="house-guide",
 )
 def contact_luna_page() -> None:
-    from luna_customer_features import (
-        challenge, verify_code, send_code, store_request, notify_owner,
-        support_subject, EMAIL_RE, REPORT_TYPES, ISSUE_TYPES,
-    )
-    set_page_metadata('Contact Luna | Support', 'Help with Luna reports, downloads, printing and refunds.', '/contact-luna')
+    from luna_customer_features import challenge, verify_code, send_code, store_request, EMAIL_RE
+    set_page_metadata('Contact Luna | Support', 'Help with Luna orders, downloads, printing and refunds.', '/contact-luna')
     st.title('Contact Luna')
-    st.caption('Questions about a report, payment, downloads, printing or returns? Choose the product and issue so Luna can respond efficiently. Do not include passwords or card details.')
+    st.caption('For downloads, printing, order issues and refund requests. Never include card details or passwords.')
     with st.form('luna-contact-details'):
-        report_type = st.selectbox('What is your query about?', REPORT_TYPES)
-        issue_type = st.selectbox('What do you need help with?', ISSUE_TYPES)
-        email = st.text_input('Your email address', key='luna-support-email', max_chars=254)
-        order = st.text_input('Luna order reference (if available)', max_chars=120)
-        description = st.text_area('Describe your issue', max_chars=3000, placeholder='Tell us what happened and what you need help with.')
-        st.caption('We will email a one-time verification code before submitting your request.')
-        request_code = st.form_submit_button('Email verification code', type='primary')
+        email=st.text_input('Your email address', key='luna-support-email', max_chars=254)
+        topic=st.selectbox('How can we help?', ['Download or access','Printing','Billing or refund','Other'])
+        order=st.text_input('Luna order reference (optional)', max_chars=120)
+        description=st.text_area('Describe the issue', max_chars=3000)
+        request_code=st.form_submit_button('Email me a verification code')
     if request_code:
-        if not EMAIL_RE.fullmatch(email.strip()) or len(description.strip()) < 10:
-            st.error('Enter a valid email address and at least 10 characters describing the issue.')
+        if not EMAIL_RE.fullmatch(email.strip()) or len(description.strip())<10:
+            st.error('Enter a valid email and at least 10 characters describing your issue.')
         else:
             try:
-                code, state = challenge(email.strip())
-                send_code(st.secrets, email.strip(), code)
-                st.session_state['luna-support-pending'] = {
-                    'state': state, 'report_type': report_type, 'issue_type': issue_type,
-                    'order': order.strip(), 'description': description.strip(),
-                }
+                code, state=challenge(email.strip())
+                send_code(st.secrets,email.strip(),code)
+                st.session_state['luna-support-pending']={'state':state,'topic':topic,'order':order,'description':description}
                 st.success('Verification code sent. Enter it below within 10 minutes.')
             except Exception as exc:
-                st.error(f'Unable to send verification email ({type(exc).__name__}). Your request was not submitted.')
-    pending = st.session_state.get('luna-support-pending')
+                st.error(f'Unable to send verification email: {type(exc).__name__}. Please try again later.')
+    pending=st.session_state.get('luna-support-pending')
     if pending:
-        st.caption('Verify the email address: ' + pending['state']['email'])
         with st.form('luna-contact-verify'):
-            otp = st.text_input('Six-digit verification code', max_chars=6)
-            submit = st.form_submit_button('Verify and send to Luna', type='primary')
+            otp=st.text_input('Six-digit email verification code', max_chars=6)
+            submit=st.form_submit_button('Verify and send support request')
         if submit:
-            state = pending['state']
-            if verify_code(state, state['email'], otp):
-                subject = support_subject(pending['report_type'], pending['issue_type'])
+            state=pending['state']
+            if verify_code(state,email,otp):
                 try:
-                    store_request(st.secrets, 'luna_support_requests', 'POST', payload={
-                        'email': state['email'], 'topic': pending['issue_type'],
-                        'order_reference': pending['order'],
-                        'message': f"Product: {pending['report_type']}\nSubject: {subject}\n\n{pending['description']}",
-                        'status': 'new',
-                    })
+                    store_request(st.secrets,'luna_support_requests','POST',payload={
+                        'email':state['email'],'topic':pending['topic'],
+                        'order_reference':pending['order'],'message':pending['description'],
+                        'status':'new'})
+                    st.session_state.pop('luna-support-pending',None)
+                    st.success('Your verified request has been received. Keep your order reference for follow-up.')
                 except Exception:
-                    st.error('Support storage is unavailable. Your request was not submitted; please try again later.')
-                else:
-                    st.session_state.pop('luna-support-pending', None)
-                    try:
-                        notify_owner(st.secrets, sender_address=state['email'],
-                                     report_type=pending['report_type'], issue_type=pending['issue_type'],
-                                     order_reference=pending['order'], message=pending['description'])
-                        st.success('Your verified request was submitted and Luna was notified by email.')
-                    except Exception:
-                        st.warning('Your request was saved, but the email notification is unavailable. Luna can still find the saved request.')
-                    st.caption('Subject: ' + subject)
+                    st.error('Support storage unavailable. Your request has not been submitted; please try later.')
             else:
                 st.error('Incorrect, expired or exhausted code. Request a new verification code if needed.')
 
@@ -13921,7 +13939,6 @@ ALL_PAGES = [
     EPHEMERIS_ADMIN_REF,
     REPORTS_PAGE_REF,
     HOUSES_PAGE_REF,
-    CONTACT_PAGE_REF,
     SAMPLE_PAGE_REF,
     SOLAR_YEAR_PAGE_REF,
     NATAL_SNAPSHOT_REF,

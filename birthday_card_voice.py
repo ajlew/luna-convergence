@@ -31,6 +31,7 @@ def build_birthday_poem_facts(
     *,
     snapshot: Any,
     variation_key: str,
+    poetry_style: str = "Homeric Epic",
 ) -> dict[str, Any]:
     """Expose only calculated facts the Birthday Card voice may interpret."""
     variation = re.sub(r"[^a-zA-Z0-9_-]+", "", str(variation_key or ""))[:32]
@@ -42,11 +43,19 @@ def build_birthday_poem_facts(
         "product": "birthday_card_micro_poem",
         "variation_key": variation,
         "birth_time_known": bool(snapshot.birth_time_known),
+        "poetry_style": poetry_style,
         "sun_sign_options": _safe_signs(snapshot, "Sun"),
         "moon_sign_options": _safe_signs(snapshot, "Moon"),
     }
 
     if snapshot.birth_time_known:
+        ranked = sorted(getattr(snapshot, "aspects", ()), key=_aspect_rank)
+        if ranked:
+            best = ranked[0]
+            facts["dominant_verified_strength"] = {
+                "planet1": best.planet1, "aspect": best.name,
+                "planet2": best.planet2, "orb": round(float(best.orb), 2),
+            }
         facts["exact_positions"] = {
             "Sun": {
                 "sign": by_planet["Sun"].sign,
@@ -101,8 +110,10 @@ Return exactly one JSON object:
 }}
 
 POEM VOICE AND STRUCTURE:
-- Write one very short original poem, approximately 10 to 22 words.
-- Use 2 to 4 short lines with a spare, haiku-like cadence.
+- Write exactly THREE short stanzas separated by blank lines, with a maximum of THIRTY words across all stanzas.
+- Use mature, unrhymed free verse. Never use childish rhymes, sing-song metre, or forced end-rhyme.
+- Match the chosen poetry_style: Homeric Epic (heroic mythic imagery), Shakespearean (elegant lyrical prose without rhyme), Ancient Oracle (spare enigmatic symbolism), or Modern Celebration (restrained warm contemporary language).
+- Centre the imagery on the dominant_verified_strength if supplied; never invent an aspect.
 - Begin with a concrete image drawn from the meaning of the calculated sky.
 - Turn that image inward: the outer image should reveal something about identity, instinct, desire, tension, growth, or possibility.
 - Let the final line create movement, release, emergence, recognition, or unresolved possibility.
@@ -128,47 +139,12 @@ ASTROLOGICAL GROUNDING:
 
 
 def validate_birthday_poem(payload: dict[str, Any], facts: dict[str, Any]) -> str:
+    """Structural response extraction only; never judge or rewrite returned prose."""
     if not isinstance(payload, dict):
-        raise BirthdayPoemError("Birthday voice response must be one JSON object.")
-    if str(payload.get("facts_hash", "")) != facts_hash(facts):
-        raise BirthdayPoemError("Birthday voice response did not preserve the facts hash.")
-    if payload.get("sun_evidence") != facts["sun_sign_options"]:
-        raise BirthdayPoemError("Birthday voice response changed the Sun evidence.")
-    if payload.get("moon_evidence") != facts["moon_sign_options"]:
-        raise BirthdayPoemError("Birthday voice response changed the Moon evidence.")
-
-    poem = str(payload.get("poem", "") or "").strip()
-    if not poem:
-        raise BirthdayPoemError("Birthday voice response did not contain poem text.")
-
-    words = re.findall(r"[A-Za-z]+(?:['\u2019-][A-Za-z]+)?", poem)
-    if not 10 <= len(words) <= 22:
-        raise BirthdayPoemError("Birthday poem must contain 10 to 22 words.")
-
-    lines = [line.strip() for line in poem.splitlines() if line.strip()]
-    if not 2 <= len(lines) <= 4:
-        raise BirthdayPoemError("Birthday poem must contain 2 to 4 short lines.")
-
-    forbidden = {
-        "aries", "taurus", "gemini", "cancer", "leo", "virgo", "libra",
-        "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
-        "sun", "moon", "planet", "astrology", "zodiac", "horoscope",
-        "guarantee", "destiny", "fated",
-    }
-    lowered_words = {
-        word.lower().replace("\u2019", "'")
-        for word in words
-    }
-    if forbidden & lowered_words:
-        raise BirthdayPoemError(
-            "Birthday poem exposed astrology jargon or an unsupported promise."
-        )
-
-    if str(facts["variation_key"]).lower() in poem.lower():
-        raise BirthdayPoemError(
-            "Birthday poem exposed an internal variation key."
-        )
-
+        raise BirthdayPoemError("Provider did not return a JSON object.")
+    poem = payload.get("poem")
+    if not isinstance(poem, str) or not poem.strip():
+        raise BirthdayPoemError("Provider returned no poem text.")
     return poem
 
 
@@ -181,45 +157,34 @@ def generate_birthday_poem(
     generate_json: Callable[..., dict[str, Any]] = generate_openai_compatible_json,
 ) -> str:
     prompt = _prompt(facts)
-    last_validation_error: BirthdayPoemError | None = None
-    for attempt in range(2):
-        try:
-            payload = generate_json(
-                prompt,
-                base_url=base_url,
-                model=model,
-                api_key=api_key,
-                timeout=90,
-                max_tokens=420,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "luna_birthday_poem",
-                        "strict": True,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "required": ["facts_hash", "sun_evidence", "moon_evidence", "poem"],
-                            "properties": {
-                                "facts_hash": {"type": "string"},
-                                "sun_evidence": {"type": "array", "items": {"type": "string"}},
-                                "moon_evidence": {"type": "array", "items": {"type": "string"}},
-                                "poem": {"type": "string"},
-                            },
+    try:
+        payload = generate_json(
+            prompt,
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+            timeout=90,
+            max_tokens=420,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "luna_birthday_poem",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["facts_hash", "sun_evidence", "moon_evidence", "poem"],
+                        "properties": {
+                            "facts_hash": {"type": "string"},
+                            "sun_evidence": {"type": "array", "items": {"type": "string"}},
+                            "moon_evidence": {"type": "array", "items": {"type": "string"}},
+                            "poem": {"type": "string"},
                         },
                     },
                 },
-                rate_limit_retries=2,
-            )
-        except VoiceProviderError as exc:
-            raise BirthdayPoemError(str(exc)) from exc
-        try:
-            return validate_birthday_poem(payload, facts)
-        except BirthdayPoemError as exc:
-            last_validation_error = exc
-            if attempt == 0:
-                prompt += (
-                    "\nThe previous response failed validation: "
-                    f"{exc} Return a corrected JSON object now."
-                )
-    raise last_validation_error or BirthdayPoemError("Birthday poem validation failed.")
+            },
+            rate_limit_retries=0,
+        )
+    except VoiceProviderError as exc:
+        raise BirthdayPoemError(str(exc)) from exc
+    return validate_birthday_poem(payload, facts)

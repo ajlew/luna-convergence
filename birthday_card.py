@@ -11,6 +11,7 @@ import re
 from typing import TYPE_CHECKING
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from birthday_background_library import birthday_remote_image, birthday_remote_theme
 from reportlab.lib.pagesizes import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -145,7 +146,7 @@ def build_birthday_card(
         moon_label = moon_sign
 
     date_label = birth_date.strftime("%d %B").lstrip("0").upper()
-    clean_poem = " ".join(str(poem or "").split()).strip()
+    clean_poem = "\n".join(" ".join(line.split()) for line in str(poem or "").strip().splitlines())
     if not clean_poem:
         raise ValueError("A validated or customer-supplied birthday poem is required.")
 
@@ -171,7 +172,7 @@ def build_birthday_card(
         moon_calculation=moon_calculation,
         poem=clean_poem,
         birth_time_known=snapshot.birth_time_known,
-        theme=theme if theme in THEMES else "painted_blue",
+        theme=theme if (theme in THEMES or birthday_remote_theme(theme)) else "painted_blue",
     )
 
 
@@ -256,12 +257,23 @@ def _wrapped_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFo
 def _poem_layout(draw: ImageDraw.ImageDraw, text: str, max_width: int) -> tuple[ImageFont.ImageFont, list[str], int]:
     for size in range(92, 35, -2):
         font = _font("mono", size)
-        lines = _wrapped_lines(draw, text, font, max_width)
+        lines = _stanza_lines(draw, text, font, max_width)
         line_height = int(size * 1.48)
         if len(lines) <= 12 and len(lines) * line_height <= 740:
             return font, lines, line_height
     font = _font("mono", 22)
-    return font, _wrapped_lines(draw, text, font, max_width), 34
+    return font, _stanza_lines(draw, text, font, max_width), 34
+
+
+def _stanza_lines(draw, text, font, max_width):
+    blocks = [block.strip() for block in re.split(r"\n\s*\n", text) if block.strip()]
+    result = []
+    for block in blocks:
+        if result:
+            result.append("")  # Visible separation between stanzas.
+        for line in block.splitlines():
+            result.extend(_wrapped_lines(draw, line.strip(), font, max_width))
+    return result
 
 
 def _draw_calculation(
@@ -364,13 +376,20 @@ def _paste_celestial_asset(
 
 
 def _background_for(card: BirthdayCard) -> tuple[Image.Image, dict[str, object]]:
-    theme = THEMES.get(card.theme, THEMES["painted_blue"])
-    path = BACKGROUND_DIR / str(theme["asset"])
-    if path.is_file():
-        with Image.open(path) as source:
+    remote = birthday_remote_theme(card.theme)
+    theme = remote or THEMES.get(card.theme, THEMES["painted_blue"])
+    if remote:
+        # Keep previously purchased themes resolvable even when retired.
+        source_bytes = birthday_remote_image(card.theme)
+        with Image.open(BytesIO(source_bytes)) as source:
             image = ImageOps.fit(source.convert("RGB"), MASTER_SIZE, method=Image.Resampling.LANCZOS)
     else:
-        image = Image.new("RGB", MASTER_SIZE, BACKGROUND)
+        path = BACKGROUND_DIR / str(theme["asset"])
+        if path.is_file():
+            with Image.open(path) as source:
+                image = ImageOps.fit(source.convert("RGB"), MASTER_SIZE, method=Image.Resampling.LANCZOS)
+        else:
+            image = Image.new("RGB", MASTER_SIZE, BACKGROUND)
     overlay = Image.new("RGBA", MASTER_SIZE, tuple(theme["overlay"]))
     image.paste(Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB"))
     return image, theme
