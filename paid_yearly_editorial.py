@@ -654,8 +654,8 @@ def generate_paid_yearly_editorial(
             except Exception as exc:
                 _remember_yearly_daily_429(exc, window=daily_window_seconds)
                 raise RuntimeError(
-                    f'Year Ahead {job_name}: generation stopped after one provider attempt; '
-                    'no automatic retry or fallback provider was used.'
+                    f'Year Ahead {job_name}: {type(exc).__name__}: {str(exc)[:350]}. '
+                    'One provider attempt; no automatic retry or fallback.'
                 ) from exc
         prose = str(result or '').strip()
         if not prose:
@@ -782,8 +782,29 @@ def generate_paid_yearly_editorial(
          max(framing_output, int(os.environ.get('LUNA_YEARLY_NATAL_PORTRAIT_TOKENS', '1100')))),
         ('closing', 'Write a 90–130 word closing synthesis grounded only in the calculated annual themes.', 650),
     )
+    # Headlines/decks do not need full natal or a twelve-month catalogue.
+    # Minimising these packets reduces paid input tokens and avoids an oversized
+    # reasoning-context-to-output ratio for very short prose jobs.
+    short_framing_packet = {
+        'period': base.get('period'),
+        'reader_context': base.get('reader_context'),
+        'natal_signature': {
+            key: (compact.get('natal') or {}).get(key)
+            for key in ('sun', 'moon', 'ascendant')
+            if isinstance(compact.get('natal'), dict)
+            and (compact.get('natal') or {}).get(key) is not None
+        },
+        'game_titles': [g.get('customer_title') for g in compact.get('major_issues') or []],
+    }
     for slot, instruction, cap in framing_jobs:
-        written_slots[slot] = section('framing_' + slot, intro_packet, cap, instruction=instruction)
+        # Reasoning tokens share max_completion_tokens for GPT-OSS. A 260-token
+        # deck limit can end before its customer-facing words arrive.
+        if slot in ('headline', 'deck'):
+            packet = short_framing_packet
+            cap = max(cap, 450 if slot == 'headline' else 650)
+        else:
+            packet = intro_packet
+        written_slots[slot] = section('framing_' + slot, packet, cap, instruction=instruction)
     full_games = {int(g.get('number') or 0): g for g in material.get('major_issues') or []}
     # Individually bounded monthly slots are necessary for strict prose-only
     # output. Four free-form monthly texts cannot be separated deterministically
